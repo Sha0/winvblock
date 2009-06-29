@@ -1,0 +1,5 @@
+.gitignore
+aoe.0
+bin
+obj
+sizes.txt
