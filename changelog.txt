@@ -1,0 +1,13 @@
+0.97g:
+- added changelog.txt
+- fixed resend scheduler
+- some Makefile fixes
+- fixed some spelling in readme.txt
+- some changes to mount to not wait for a key after mount and unmount
+
+0.97f:
+- Initial public release
+- revamped Makefile and added bat files to make compiling user-friendly
+- Implemented new scheduler
+- Implemented multiple disk unmount support (still buggy!)
+- added alpha c version of aoe.0 (still disabled in favor of the asm version)
