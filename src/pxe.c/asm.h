@@ -25,20 +25,20 @@ asm ( ".code16gcc" );
 #include "lib.h"
 
 typedef struct s_cpu {
-	unsigned short gs;
-	unsigned short fs;
-	unsigned short es;
-	unsigned short ds;
-	unsigned int edi;
-	unsigned int esi;
-	unsigned int edx;
-	unsigned int ecx;
-	unsigned int ebx;
-	unsigned int eax;
-	union {
-		unsigned int eflags;
-		unsigned short flags;
-	};
+    unsigned short gs;
+    unsigned short fs;
+    unsigned short es;
+    unsigned short ds;
+    unsigned int edi;
+    unsigned int esi;
+    unsigned int edx;
+    unsigned int ecx;
+    unsigned int ebx;
+    unsigned int eax;
+    union {
+	unsigned int eflags;
+	unsigned short flags;
+    };
 } __attribute__ ( ( __packed__ ) ) t_cpu;
 
 extern void *end;		// end of image from linker

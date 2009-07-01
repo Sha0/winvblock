@@ -27,32 +27,32 @@ int apivector = 0;
 
 int pxeinit (  )
 {
-	int v;
-      asm ( "pushw	%%es\n\t" "movw	$0x5650, %%ax\n\t" "int	$0x1a\n\t" "cmpw	$0x564e, %%ax\n\t" "je	0f\n\t" "xorl	%%eax, %%eax\n\t" "jmp	1f\n" "0:	les	%%es:0x28(%%bx), %%bx\n\t" "movl	%%es:0x10(%%bx), %%eax\n" "1:	popw	%%es":"=a" ( v )
-      :
-      :      "ebx", "cc" );
-	apivector = v;
-	return v;
+    int v;
+  asm ( "pushw	%%es\n\t" "movw	$0x5650, %%ax\n\t" "int	$0x1a\n\t" "cmpw	$0x564e, %%ax\n\t" "je	0f\n\t" "xorl	%%eax, %%eax\n\t" "jmp	1f\n" "0:	les	%%es:0x28(%%bx), %%bx\n\t" "movl	%%es:0x10(%%bx), %%eax\n" "1:	popw	%%es":"=a" ( v )
+  :
+  :	  "ebx", "cc" );
+    apivector = v;
+    return v;
 }
 
 unsigned short api ( unsigned short command, void *commandstruct )
 {
-	unsigned short r;
-	asm volatile (
+    unsigned short r;
+    asm volatile (
 //    "pushfl\n\t"
 //    "pushw    %%ds\n\t"
 //    "pushw    %%es\n\t"
 //    "pushw    %%fs\n\t"
 //    "pushw    %%gs\n\t"
 //    "pushal\n\t"
-			      "xorw	%%ax, %%ax\n\t"
-			      "pushw	%%cs\n\t"
-			      "pushw	%%bx\n\t"
-			      "pushw	%%cx\n"
-			      ".code16\n\t"
-			      "lcall	*%%cs:_apivector\n" ".code16gcc\n\t"
+		      "xorw	%%ax, %%ax\n\t"
+		      "pushw	%%cs\n\t"
+		      "pushw	%%bx\n\t"
+		      "pushw	%%cx\n"
+		      ".code16\n\t"
+		      "lcall	*%%cs:_apivector\n" ".code16gcc\n\t"
 //    "cli\n\t"
-			      "addw	$6, %%sp\n\t"
+		      "addw	$6, %%sp\n\t"
 //    "movw     %%ax, %%gs\n\t"
 //    "popal\n\t"
 //    "movw     %%gs, %%ax\n\t"
@@ -61,14 +61,14 @@ unsigned short api ( unsigned short command, void *commandstruct )
 //    "popw     %%es\n\t"
 //    "popw     %%ds\n\t"
 //    "popfl"
-			      :"=a" ( r )
-			      :"b" ( commandstruct ), "c" ( command )
-			      :"cc", "memory" );
-	return r;
+		      :"=a" ( r )
+		      :"b" ( commandstruct ), "c" ( command )
+		      :"cc", "memory" );
+    return r;
 }
 
 void apierror ( char *message, unsigned short status )
 {
-	printf ( "%s: 0x%04x\n", message, status );
-	halt (  );
+    printf ( "%s: 0x%04x\n", message, status );
+    halt (  );
 }
