@@ -26,11 +26,15 @@
 #define htons(x) (USHORT)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
 #define ntohs(x) (USHORT)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
 
-typedef enum {Read, Write} REQUESTMODE, *PREQUESTMODE;
+typedef enum { Read, Write } REQUESTMODE, *PREQUESTMODE;
 
-BOOLEAN STDCALL AoESearchDrive(IN PDEVICEEXTENSION DeviceExtension);
-NTSTATUS STDCALL AoERequest(IN PDEVICEEXTENSION DeviceExtension, IN REQUESTMODE Mode, IN LONGLONG StartSector, IN ULONG SectorCount, IN PUCHAR Buffer, IN PIRP Irp);
-NTSTATUS STDCALL AoEReply(IN PUCHAR SourceMac, IN PUCHAR DestinationMac, IN PUCHAR Data, IN UINT DataSize);
-VOID STDCALL AoEResetProbe();
+BOOLEAN STDCALL AoESearchDrive ( IN PDEVICEEXTENSION DeviceExtension );
+NTSTATUS STDCALL AoERequest ( IN PDEVICEEXTENSION DeviceExtension,
+			      IN REQUESTMODE Mode, IN LONGLONG StartSector,
+			      IN ULONG SectorCount, IN PUCHAR Buffer,
+			      IN PIRP Irp );
+NTSTATUS STDCALL AoEReply ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
+			    IN PUCHAR Data, IN UINT DataSize );
+VOID STDCALL AoEResetProbe (  );
 
 #endif

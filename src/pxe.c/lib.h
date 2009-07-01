@@ -18,7 +18,7 @@
   along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-asm(".code16gcc");
+asm ( ".code16gcc" );
 #ifndef _LIB_H
 #define _LIB_H
 
@@ -33,40 +33,40 @@ typedef unsigned long size_t;
 #define cli() asm volatile ("cli")
 
 // in libasm.S
-int putchar(int c);
-unsigned char volatile inb(int p);
-void volatile outb(unsigned char v, int p);
-char getkey(int t);
-void halt();
-int volatile segmemcpy(int dest, int src, size_t n);
+int putchar ( int c );
+unsigned char volatile inb ( int p );
+void volatile outb ( unsigned char v, int p );
+char getkey ( int t );
+void halt (  );
+int volatile segmemcpy ( int dest, int src, size_t n );
 #ifndef MINIMAL
-int segmemset(int s, int c, size_t n);
+int segmemset ( int s, int c, size_t n );
 #define debug() asm volatile ("call _debug":::"memory")
 #else
 #define debug()
 #endif
 
 // in lib.c
-size_t strlen(const char *s);
-int puts(const char *s);
-int isspace(int c);
-int isdigit(int c);
-int isalpha(int c);
-int isupper(int c);
-int islower(int c);
-int toupper(int c);
-int tolower(int c);
-int memcmp(const void *s1, const void *s2, size_t n);
-void *memcpy(void *dest, const void *src, size_t n);
-void *memset(void *s, int c, size_t n);
+size_t strlen ( const char *s );
+int puts ( const char *s );
+int isspace ( int c );
+int isdigit ( int c );
+int isalpha ( int c );
+int isupper ( int c );
+int islower ( int c );
+int toupper ( int c );
+int tolower ( int c );
+int memcmp ( const void *s1, const void *s2, size_t n );
+void *memcpy ( void *dest, const void *src, size_t n );
+void *memset ( void *s, int c, size_t n );
 
 // From Public Domain CLib (PDPCLIB) by Paul Edwards
-long int strtol(const char *nptr, char **endptr, int base);
+long int strtol ( const char *nptr, char **endptr, int base );
 
 // From Public Domain printf.c
-int vsprintf(char *buf, const char *fmt, va_list args);
-int sprintf(char *buf, const char *fmt, ...);
-int vprintf(const char *fmt, va_list args);
-int printf(const char *fmt, ...);
+int vsprintf ( char *buf, const char *fmt, va_list args );
+int sprintf ( char *buf, const char *fmt, ... );
+int vprintf ( const char *fmt, va_list args );
+int printf ( const char *fmt, ... );
 
 #endif

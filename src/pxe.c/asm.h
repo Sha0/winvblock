@@ -18,40 +18,40 @@
   along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-asm(".code16gcc");
+asm ( ".code16gcc" );
 #ifndef _ASM_H
 #define _ASM_H
 
 #include "lib.h"
 
 typedef struct s_cpu {
-  unsigned short gs;
-  unsigned short fs;
-  unsigned short es;
-  unsigned short ds;
-  unsigned int edi;
-  unsigned int esi;
-  unsigned int edx;
-  unsigned int ecx;
-  unsigned int ebx;
-  unsigned int eax;
-  union {
-    unsigned int eflags;
-    unsigned short flags;
-  };
-} __attribute__((__packed__)) t_cpu;
+	unsigned short gs;
+	unsigned short fs;
+	unsigned short es;
+	unsigned short ds;
+	unsigned int edi;
+	unsigned int esi;
+	unsigned int edx;
+	unsigned int ecx;
+	unsigned int ebx;
+	unsigned int eax;
+	union {
+		unsigned int eflags;
+		unsigned short flags;
+	};
+} __attribute__ ( ( __packed__ ) ) t_cpu;
 
-extern void* end;		// end of image from linker
-//extern t_cpu cpu;		// cpu state struct in asm.S
+extern void *end;		// end of image from linker
+//extern t_cpu cpu;             // cpu state struct in asm.S
 extern unsigned short segment;	// target segment in asm.S
 extern int volatile oldint13;
 extern int volatile gotisr;
 extern int volatile timer;
 extern int irq;
 
-int GETVECTOR(int i);
-void SETVECTOR(int i, int v);
-int _CHAININTERRUPT(int v, t_cpu *cpu);
+int GETVECTOR ( int i );
+void SETVECTOR ( int i, int v );
+int _CHAININTERRUPT ( int v, t_cpu * cpu );
 
 #ifdef __MINGW32__
 #  define INTERRUPTPROTO(x) \
@@ -84,17 +84,17 @@ int _CHAININTERRUPT(int v, t_cpu *cpu);
 ); \
 void x (t_cpu *cpu)
 
-void int8();						// in asm.S
-void int13();						// in asm.S
-void isr();						// in asm.S
-void nmi();						// in asm.S
-void i0();						// in asm.S
-void i1();						// in asm.S
-void i2();						// in asm.S
-void i3();						// in asm.S
-void i4();						// in asm.S
-void i5();						// in asm.S
-void i6();						// in asm.S
-void i7();						// in asm.S
+void int8 (  );			// in asm.S
+void int13 (  );		// in asm.S
+void isr (  );			// in asm.S
+void nmi (  );			// in asm.S
+void i0 (  );			// in asm.S
+void i1 (  );			// in asm.S
+void i2 (  );			// in asm.S
+void i3 (  );			// in asm.S
+void i4 (  );			// in asm.S
+void i5 (  );			// in asm.S
+void i6 (  );			// in asm.S
+void i7 (  );			// in asm.S
 
 #endif

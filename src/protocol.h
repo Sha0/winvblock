@@ -22,8 +22,10 @@
 #define _PROTOCOL_H
 #include "portable.h"
 
-BOOLEAN STDCALL ProtocolSearchNIC(IN PUCHAR Mac);
-ULONG STDCALL ProtocolGetMTU(IN PUCHAR Mac);
-BOOLEAN STDCALL ProtocolSend(IN PUCHAR SourceMac, IN PUCHAR DestinationMac, IN PUCHAR Data, IN ULONG DataSize, IN PVOID PacketContext);
+BOOLEAN STDCALL ProtocolSearchNIC ( IN PUCHAR Mac );
+ULONG STDCALL ProtocolGetMTU ( IN PUCHAR Mac );
+BOOLEAN STDCALL ProtocolSend ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
+			       IN PUCHAR Data, IN ULONG DataSize,
+			       IN PVOID PacketContext );
 
 #endif
