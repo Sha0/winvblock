@@ -150,13 +150,13 @@ NTSTATUS STDCALL AoEStart (  )
     OBJECT_ATTRIBUTES ObjectAttributes;
     PVOID ThreadObject;
 
-    DbgPrint ( "AoEStart\n" );
+    DbgPrint ( "aoe.c: AoEStart(): Entry\n" );
 
     /* Allocate and zero-fill the global probe tag */
     if ( ( ProbeTag =
 	   ( PTAG ) ExAllocatePool ( NonPagedPool, sizeof ( TAG ) ) )
 	 == NULL ) {
-	DbgPrint ( "AddStart ExAllocatePool ProbeTag\n" );
+	DbgPrint ( "aoe.c: AoEStart(): Couldn't allocate ProbeTag; bye!\n" );
 	return STATUS_INSUFFICIENT_RESOURCES;
     }
     RtlZeroMemory ( ProbeTag, sizeof ( TAG ) );
@@ -168,7 +168,7 @@ NTSTATUS STDCALL AoEStart (  )
 							    ProbeTag->
 							    PacketSize ) )
 	 == NULL ) {
-	DbgPrint ( "AddStart ExAllocatePool ProbeTag->PacketData\n" );
+	DbgPrint ( "aoe.c: AoEStart(): Couldn't allocate ProbeTag->PacketData\n" );
 	ExFreePool ( ProbeTag );
     }
     ProbeTag->SendTime.QuadPart = 0LL;
@@ -221,7 +221,7 @@ VOID STDCALL AoEStop (  )
     PTAG Tag;
     KIRQL Irql;
 
-    DbgPrint ( "AoEStop\n" );
+    DbgPrint ( "aoe.c: AoEStop(): Entry\n" );
 
     /* If we're not already shutting down, signal the event */
     if ( !Stop ) {
@@ -298,7 +298,7 @@ BOOLEAN STDCALL AoESearchDrive ( IN PDEVICEEXTENSION DeviceExtension )
 							 sizeof
 							 ( DISKSEARCH ) ) )
 	 == NULL ) {
-	DbgPrint ( "AoESearchBootDrive ExAllocatePool DiskSearch\n" );
+	DbgPrint ( "aoe.c: AoESearchDrive(): Couldn't allocate DiskSearch; bye!\n" );
 	return FALSE;
     }
 
@@ -334,7 +334,7 @@ BOOLEAN STDCALL AoESearchDrive ( IN PDEVICEEXTENSION DeviceExtension )
 	KeWaitForSingleObject ( &DeviceExtension->Disk.SearchEvent, Executive,
 				KernelMode, FALSE, &Timeout );
 	if ( Stop ) {
-	    DbgPrint ( "AoESearchBootDrive cancled\n" );
+	    DbgPrint ( "aoe.c: AoESearchDrive(): AoE is shutting down; bye!\n" );
 	    return FALSE;
 	}
 
@@ -369,7 +369,7 @@ BOOLEAN STDCALL AoESearchDrive ( IN PDEVICEEXTENSION DeviceExtension )
 	    /* 2.500.000 * 100ns = 250.000.000 ns = 250ms */
 	    if ( CurrentTime.QuadPart >
 		 MaxSectorsPerPacketSendTime.QuadPart + 2500000LL ) {
-		DbgPrint ( "No reply after 250ms for MaxSectorsPerPacket %d, "
+		DbgPrint ( "aoe.c: AoESearchDrive(): No reply after 250ms for MaxSectorsPerPacket %d, "
 			   "giving up\n",
 			   DeviceExtension->Disk.MaxSectorsPerPacket );
 		DeviceExtension->Disk.MaxSectorsPerPacket--;
@@ -408,7 +408,7 @@ BOOLEAN STDCALL AoESearchDrive ( IN PDEVICEEXTENSION DeviceExtension )
 		    Tag->Next->Previous = Tag->Previous;
 		OutstandingTags--;
 		if ( OutstandingTags < 0 )
-		    DbgPrint ( "!!OutstandingTags < 0 (AoESearchDrive)!!\n" );
+		    DbgPrint ( "aoe.c: AoESearchDrive(): OutstandingTags < 0!!\n" );
 		/* Free our tag and its AoE packet */
 		ExFreePool ( Tag->PacketData );
 		ExFreePool ( Tag );
@@ -416,7 +416,7 @@ BOOLEAN STDCALL AoESearchDrive ( IN PDEVICEEXTENSION DeviceExtension )
 
 	    /* Disk search clean-up */
 	    if ( DiskSearchList == NULL ) {
-		DbgPrint ( "!!DiskSearchList == NULL!!\n" );
+		DbgPrint ( "aoe.c: AoESearchDrive(): DiskSearchList == NULL!!\n" );
 	    } else {
 		/* Find our disk search in the global list of disk searches */
 		DiskSearchWalker = DiskSearchList;
@@ -438,7 +438,7 @@ BOOLEAN STDCALL AoESearchDrive ( IN PDEVICEEXTENSION DeviceExtension )
 		    /* Free our disk search */
 		    ExFreePool ( DiskSearchWalker );
 		} else {
-		    DbgPrint ( "!!Disk not found in DiskSearchList!!\n" );
+		    DbgPrint ( "aoe.c: AoESearchDrive(): Disk not found in DiskSearchList!!\n" );
 		}
 	    }
 
@@ -446,7 +446,7 @@ BOOLEAN STDCALL AoESearchDrive ( IN PDEVICEEXTENSION DeviceExtension )
 	    KeReleaseSpinLock ( &SpinLock, InnerIrql );
 	    KeReleaseSpinLock ( &DeviceExtension->Disk.SpinLock, Irql );
 
-	    DbgPrint ( "Disk size: %I64uM cylinders: %I64u heads: %u "
+	    DbgPrint ( "aoe.c: AoESearchDrive(): Disk size: %I64uM cylinders: %I64u heads: %u "
 		       "sectors: %u sectors per packet: %u\n",
 		       DeviceExtension->Disk.LBADiskSize / 2048,
 		       DeviceExtension->Disk.Cylinders,
@@ -459,7 +459,7 @@ BOOLEAN STDCALL AoESearchDrive ( IN PDEVICEEXTENSION DeviceExtension )
 	/* Establish our tag */
 	if ( ( Tag = ( PTAG ) ExAllocatePool ( NonPagedPool, sizeof ( TAG ) ) )
 	     == NULL ) {
-	    DbgPrint ( "AoESearchBootDrive ExAllocatePool Tag\n" );
+	    DbgPrint ( "aoe.c: AoESearchDrive(): Couldn't allocate Tag\n" );
 	    KeReleaseSpinLock ( &DeviceExtension->Disk.SpinLock, Irql );
 	    /* Maybe next time around */
 	    continue;
@@ -473,7 +473,7 @@ BOOLEAN STDCALL AoESearchDrive ( IN PDEVICEEXTENSION DeviceExtension )
 	if ( ( Tag->PacketData = ( PAOE ) ExAllocatePool ( NonPagedPool,
 							   Tag->PacketSize ) )
 	     == NULL ) {
-	    DbgPrint ( "AoESearchBootDrive ExAllocatePool Tag->PacketData\n" );
+	    DbgPrint ( "aoe.c: AoESearchDrive(): Couldn't allocate Tag->PacketData\n" );
 	    ExFreePool ( Tag );
 	    Tag = NULL;
 	    KeReleaseSpinLock ( &DeviceExtension->Disk.SpinLock, Irql );
@@ -512,7 +512,7 @@ BOOLEAN STDCALL AoESearchDrive ( IN PDEVICEEXTENSION DeviceExtension )
 	    DeviceExtension->Disk.Timeout = 200000;
 	    break;
 	default:
-	    DbgPrint ( "AoESearchBootDrive Undefined SearchState!\n" );
+	    DbgPrint ( "aoe.c: AoESearchDrive(): Undefined SearchState!!\n" );
 	    ExFreePool ( Tag->PacketData );
 	    ExFreePool ( Tag );
 	    /* TODO: Do we need to nullify Tag here? */
@@ -567,7 +567,7 @@ NTSTATUS STDCALL AoERequest ( IN PDEVICEEXTENSION DeviceExtension,
 
     if ( SectorCount < 1 ) {
 	/* A silly request */
-	DbgPrint ( "AoERequest SectorCount < 1!!\n" );
+	DbgPrint ( "aoe.c: AoERequest(): SectorCount < 1; cancelling\n" );
 	Irp->IoStatus.Information = 0;
 	Irp->IoStatus.Status = STATUS_CANCELLED;
 	IoCompleteRequest ( Irp, IO_NO_INCREMENT );
@@ -578,7 +578,7 @@ NTSTATUS STDCALL AoERequest ( IN PDEVICEEXTENSION DeviceExtension,
     if ( ( Request = ( PREQUEST ) ExAllocatePool ( NonPagedPool,
 						   sizeof ( REQUEST ) ) )
 	 == NULL ) {
-	DbgPrint ( "AoERequest ExAllocatePool Request\n" );
+	DbgPrint ( "aoe.c: AoERequest(): Couldn't allocate Request; bye!\n" );
 	Irp->IoStatus.Information = 0;
 	Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
 	IoCompleteRequest ( Irp, IO_NO_INCREMENT );
@@ -599,7 +599,7 @@ NTSTATUS STDCALL AoERequest ( IN PDEVICEEXTENSION DeviceExtension,
 	/* Allocate each tag */
 	if ( ( Tag = ( PTAG ) ExAllocatePool ( NonPagedPool, sizeof ( TAG ) ) )
 	     == NULL ) {
-	    DbgPrint ( "AoERequest ExAllocatePool Tag\n" );
+	    DbgPrint ( "aoe.c: AoERequest(): Couldn't allocate Tag; bye!\n" );
 	    /* We failed while allocating tags; free the ones we built */
 	    Tag = NewTagList;
 	    while ( Tag != NULL ) {
@@ -635,7 +635,7 @@ NTSTATUS STDCALL AoERequest ( IN PDEVICEEXTENSION DeviceExtension,
 	if ( ( Tag->PacketData =
 	       ( PAOE ) ExAllocatePool ( NonPagedPool,
 					 Tag->PacketSize ) ) == NULL ) {
-	    DbgPrint ( "AoERequest ExAllocatePool Tag->PacketData\n" );
+	    DbgPrint ( "aoe.c: AoERequest(): Couldn't allocate Tag->PacketData; bye!\n" );
 	    /* We failed while allocating an AoE packet; free
 	     * the tags we built
 	     */
@@ -783,7 +783,7 @@ NTSTATUS STDCALL AoEReply ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
 	    Tag->Next->Previous = Tag->Previous;
 	OutstandingTags--;
 	if ( OutstandingTags < 0 )
-	    DbgPrint ( "!!OutstandingTags < 0 (AoEReply)!!\n" );
+	    DbgPrint ( "aoe.c: AoEReply(): OutstandingTags < 0!!\n" );
 	KeSetEvent ( &ThreadSignalEvent, 0, FALSE );
     }
     KeReleaseSpinLock ( &SpinLock, Irql );
@@ -792,7 +792,7 @@ NTSTATUS STDCALL AoEReply ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
     if ( RtlCompareMemory ( Tag->DeviceExtension->Disk.ServerMac,
 			    "\xff\xff\xff\xff\xff\xff", 6 ) == 6 ) {
 	RtlCopyMemory ( Tag->DeviceExtension->Disk.ServerMac, SourceMac, 6 );
-	DbgPrint ( "Major: %d minor: %d found on server "
+	DbgPrint ( "aoe.c: AoEReply(): Major: %d minor: %d found on server "
 		   "%02x:%02x:%02x:%02x:%02x:%02x\n",
 		   Tag->DeviceExtension->Disk.Major,
 		   Tag->DeviceExtension->Disk.Minor, SourceMac[0],
@@ -839,7 +839,7 @@ NTSTATUS STDCALL AoEReply ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
 	    DataSize -= sizeof ( AOE );
 	    if ( DataSize < ( Tag->DeviceExtension->Disk.MaxSectorsPerPacket *
 			      SECTORSIZE ) ) {
-		DbgPrint ( "AoEReply Packet size too low while getting "
+		DbgPrint ( "aoe.c: AoEReply(): Packet size too low while getting "
 			   "MaxSectorsPerPacket (tried %d, got size of %d)\n",
 			   Tag->DeviceExtension->Disk.MaxSectorsPerPacket,
 			   DataSize );
@@ -850,14 +850,14 @@ NTSTATUS STDCALL AoEReply ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
 			  ( ( Tag->DeviceExtension->Disk.MaxSectorsPerPacket +
 			      1 ) * SECTORSIZE ) ) ) {
 		DbgPrint
-		    ( "AoEReply Got MaxSectorsPerPacket %d at size of %d. "
+		    ( "aoe.c: AoEReply(): Got MaxSectorsPerPacket %d at size of %d. "
 		      "MTU of %d reached\n",
 		      Tag->DeviceExtension->Disk.MaxSectorsPerPacket, DataSize,
 		      Tag->DeviceExtension->Disk.MTU );
 		Tag->DeviceExtension->Disk.SearchState = Done;
 	    } else {
 		DbgPrint
-		    ( "AoEReply Got MaxSectorsPerPacket %d at size of %d, "
+		    ( "aoe.c: AoEReply(): Got MaxSectorsPerPacket %d at size of %d, "
 		      "trying next...\n",
 		      Tag->DeviceExtension->Disk.MaxSectorsPerPacket,
 		      DataSize );
@@ -866,7 +866,7 @@ NTSTATUS STDCALL AoEReply ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
 	    }
 	    break;
 	default:
-	    DbgPrint ( "AoEReply Undefined SearchState!\n" );
+	    DbgPrint ( "aoe.c: AoEReply(): Undefined SearchState!\n" );
 	    break;
 	}
 	KeReleaseSpinLock ( &Tag->DeviceExtension->Disk.SpinLock, Irql );
@@ -889,7 +889,7 @@ NTSTATUS STDCALL AoEReply ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
 	}
 	break;
     default:
-	DbgPrint ( "Unknown tag type??\n" );
+	DbgPrint ( "aoe.c: AoEReply(): Unknown tag type!!\n" );
 	break;
     }
 
@@ -916,7 +916,7 @@ VOID STDCALL Thread ( IN PVOID StartContext )
     ULONG Fails = 0;
     ULONG RequestTimeout = 0;
 
-    DbgPrint ( "Thread\n" );
+    DbgPrint ( "aoe.c: Thread(): Entry\n" );
     ReportTime.QuadPart = 0LL;
     ProbeTime.QuadPart = 0LL;
 
@@ -927,7 +927,7 @@ VOID STDCALL Thread ( IN PVOID StartContext )
 				FALSE, &Timeout );
 	KeResetEvent ( &ThreadSignalEvent );
 	if ( Stop ) {
-	    DbgPrint ( "Stopping thread...\n" );
+	    DbgPrint ( "aoe.c: Thread(): Stopping...\n" );
 	    PsTerminateSystemThread ( STATUS_SUCCESS );
 	}
 	BusCleanupTargetList (  );
@@ -935,7 +935,7 @@ VOID STDCALL Thread ( IN PVOID StartContext )
 	KeQuerySystemTime ( &CurrentTime );
 	/* TODO: Make the below value a #defined constant */
 	if ( CurrentTime.QuadPart > ( ReportTime.QuadPart + 10000000LL ) ) {
-	    DbgPrint ( "Sends: %d  Resends: %d  ResendFails: %d  Fails: %d  "
+	    DbgPrint ( "aoe.c: Thread(): Sends: %d  Resends: %d  ResendFails: %d  Fails: %d  "
 		       "OutstandingTags: %d  RequestTimeout: %d\n", Sends,
 		       Resends, ResendFails, Fails, OutstandingTags,
 		       RequestTimeout );
@@ -972,7 +972,7 @@ VOID STDCALL Thread ( IN PVOID StartContext )
 		if ( OutstandingTags <= 64 ) {
 		    /* if ( OutstandingTags <= 102400 ) { */
 		    if ( OutstandingTags < 0 )
-			DbgPrint ( "!!OutstandingTags < 0 (Thread)!!\n" );
+			DbgPrint ( "aoe.c: Thread(): OutstandingTags < 0!!\n" );
 		    Tag->Id = NextTagId++;
 		    if ( NextTagId == 0 )
 			NextTagId++;
@@ -1016,7 +1016,7 @@ VOID STDCALL Thread ( IN PVOID StartContext )
 	    }
 	    Tag = Tag->Next;
 	    if ( Tag == TagList ) {
-		DbgPrint ( "!!Taglist Cyclic!!\n" );
+		DbgPrint ( "aoe.c: Thread(): Taglist Cyclic!!\n" );
 		break;
 	    }
 	}
