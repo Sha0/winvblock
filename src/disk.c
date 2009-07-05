@@ -37,8 +37,8 @@ long long __divdi3 ( long long u, long long v )
 }
 #endif
 
-#ifdef _MSC_VER
 #if _WIN32_WINNT <= 0x0500
+#if 0 /* FIXME: To build with WINDDK 6001.18001 */
 #ifdef _MSC_VER
 #pragma pack(1)
 #endif
@@ -58,6 +58,7 @@ typedef union _EIGHT_BYTE {
 #ifdef _MSC_VER
 #pragma pack()
 #endif
+#endif /* To build with WINDDK 6001.18001 */
 
 #define REVERSE_BYTES_QUAD(Destination, Source) { \
   PEIGHT_BYTE d = (PEIGHT_BYTE)(Destination);     \
@@ -71,10 +72,10 @@ typedef union _EIGHT_BYTE {
   d->Byte1 = s->Byte6;                            \
   d->Byte0 = s->Byte7;                            \
 }
-#endif
-#endif
+#endif /* if _WIN32_WINNT <= 0x0500 */
 
 #if _WIN32_WINNT < 0x0502
+#if 0 /* FIXME: To build with WINDDK 6001.18001 */
 #ifdef _MSC_VER
 #pragma pack(1)
 #endif
@@ -86,7 +87,8 @@ typedef struct _READ_CAPACITY_DATA_EX {
 #ifdef _MSC_VER
 #pragma pack()
 #endif
-#endif
+#endif /* To build with WINDDK 6001.18001 */
+#endif /* _WIN32_WINNT < 0x0502 */
 
 #ifdef _MSC_VER
 #pragma pack(1)
