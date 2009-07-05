@@ -1,23 +1,25 @@
-/*
-  Copyright 2006-2008, V.
-  For contact information, see http://winaoe.org/
+/**
+ * Copyright 2006-2008, V.
+ * Portions copyright (C) 2009 Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * For contact information, see http://winaoe.org/
+ *
+ * This file is part of WinAoE.
+ *
+ * WinAoE is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * WinAoE is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-  This file is part of WinAoE.
-
-  WinAoE is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  WinAoE is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
+#include <stdarg.h>
 #include "portable.h"
 #include <ntddk.h>
 #include <srb.h>
@@ -28,6 +30,7 @@
 #include <ndis.h>
 #include "driver.h"
 #include "mount.h"
+#include "debug.h"
 
 typedef struct _IRPLIST {
     PIRP Irp;
@@ -58,6 +61,16 @@ PCHAR STDCALL DeviceIoControlString ( IN ULONG IoControlCode );
 PCHAR STDCALL DeviceTextTypeString ( IN DEVICE_TEXT_TYPE DeviceTextType );
 PCHAR STDCALL SCSIOPString ( IN UCHAR OperationCode );
 
+VOID STDCALL xDbgPrint ( IN PCHAR File, IN PCHAR Function, IN UINT Line,
+			 IN PCHAR DebugMessage, ... )
+{
+    va_list args;
+    va_start ( args, DebugMessage );
+    DbgPrint ( "%s: %s() @ line %d: ", File, Function, Line );
+    DbgPrint ( DebugMessage, args );
+    va_end ( args );
+}
+
 VOID STDCALL InitializeDebug (  )
 {
     KeInitializeSpinLock ( &SpinLock );
@@ -84,14 +97,14 @@ VOID STDCALL DebugIrpStart ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp )
 
     if ( ( DebugMessage =
 	   ( PCHAR ) ExAllocatePool ( NonPagedPool, 1024 ) ) == NULL ) {
-	DbgPrint ( "DebugIrpStart ExAllocatePool DebugMessage\n" );
+	DBG ( "ExAllocatePool DebugMessage\n" );
     }
     DecodeIrp ( DeviceObject, Irp, DebugMessage );
     if ( ( Record =
 	   ( PIRPLIST ) ExAllocatePool ( NonPagedPool,
 					 sizeof ( IRPLIST ) ) ) == NULL ) {
-	DbgPrint ( "DebugIrpStart ExAllocatePool Record\n" );
-	DbgPrint ( "IRP %s\n", DebugMessage );
+	DBG ( "ExAllocatePool Record\n" );
+	DBG ( "IRP %s\n", DebugMessage );
     }
     Record->Next = NULL;
     Record->Previous = NULL;
@@ -110,7 +123,7 @@ VOID STDCALL DebugIrpStart ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp )
 	Record->Previous = Temp;
     }
     KeReleaseSpinLock ( &SpinLock, Irql );
-    DbgPrint ( "IRP %d: %s\n", Record->Number, Record->DebugMessage );
+    DBG ( "IRP %d: %s\n", Record->Number, Record->DebugMessage );
 }
 
 VOID STDCALL DebugIrpEnd ( IN PIRP Irp, IN NTSTATUS Status )
@@ -119,7 +132,7 @@ VOID STDCALL DebugIrpEnd ( IN PIRP Irp, IN NTSTATUS Status )
     KIRQL Irql;
 
     if ( ( Record = IrpListRecord ( Irp ) ) == NULL ) {
-	DbgPrint ( "Irp not found in IrpList!! (returned 0x%08x, Status)\n" );
+	DBG ( "Irp not found in IrpList!! (returned 0x%08x, Status)\n" );
 	return;
     }
     // There is no race condition between getting the record and unlinking in IrpList, unless DebugIrpEnd
@@ -135,8 +148,8 @@ VOID STDCALL DebugIrpEnd ( IN PIRP Irp, IN NTSTATUS Status )
     }
     KeReleaseSpinLock ( &SpinLock, Irql );
 
-    DbgPrint ( "IRP %d: %s -> 0x%08x\n", Record->Number,
-	       Record->DebugMessage, Status );
+    DBG ( "IRP %d: %s -> 0x%08x\n", Record->Number,
+	  Record->DebugMessage, Status );
     ExFreePool ( Record->DebugMessage );
     ExFreePool ( Record );
 }
@@ -170,8 +183,8 @@ VOID STDCALL DecodeIrp ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 	    break;
 	case IRP_MN_QUERY_DEVICE_TEXT:
 	    sprintf ( DebugMessage, "%s %s", DebugMessage,
-		      DeviceTextTypeString ( Stack->
-					     Parameters.QueryDeviceText.DeviceTextType ) );
+		      DeviceTextTypeString ( Stack->Parameters.
+					     QueryDeviceText.DeviceTextType ) );
 	    break;
 	case IRP_MN_QUERY_DEVICE_RELATIONS:
 	    sprintf ( DebugMessage, "%s %s", DebugMessage,
@@ -183,8 +196,8 @@ VOID STDCALL DecodeIrp ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
     case IRP_MJ_DEVICE_CONTROL:
 	sprintf ( DebugMessage, "%s (0x%08x) %s", DebugMessage,
 		  ( int )Stack->Parameters.DeviceIoControl.IoControlCode,
-		  DeviceIoControlString ( Stack->
-					  Parameters.DeviceIoControl.IoControlCode ) );
+		  DeviceIoControlString ( Stack->Parameters.
+					  DeviceIoControl.IoControlCode ) );
 	if ( !DeviceExtension->IsBus
 	     && Stack->Parameters.DeviceIoControl.IoControlCode ==
 	     IOCTL_STORAGE_QUERY_PROPERTY ) {
