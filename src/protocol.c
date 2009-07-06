@@ -111,7 +111,7 @@ NTSTATUS STDCALL ProtocolStart (  )
     NDIS_STRING ProtocolName;
     NDIS_PROTOCOL_CHARACTERISTICS ProtocolCharacteristics;
 
-    DbgPrint ( "ProtocolStart\n" );
+    DBG ( "Entry\n" );
     KeInitializeEvent ( &ProtocolStopEvent, SynchronizationEvent, FALSE );
     KeInitializeSpinLock ( &SpinLock );
 
@@ -147,7 +147,7 @@ VOID STDCALL ProtocolStop (  )
 {
     NDIS_STATUS Status;
 
-    DbgPrint ( "ProtocolStop\n" );
+    DBG ( "Entry\n" );
     KeResetEvent ( &ProtocolStopEvent );
     NdisDeregisterProtocol ( &Status, ProtocolHandle );
     if ( !NT_SUCCESS ( Status ) )
@@ -195,7 +195,7 @@ BOOLEAN STDCALL ProtocolSend ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
     PNDIS_BUFFER Buffer;
     PHEADER DataBuffer;
 #if defined(DEBUGALLPROTOCOLCALLS)
-    DbgPrint ( "ProtocolSend\n" );
+    DBG ( "Entry\n" );
 #endif
 
     if ( RtlCompareMemory ( SourceMac, "\xff\xff\xff\xff\xff\xff", 6 ) == 6 ) {
@@ -213,16 +213,14 @@ BOOLEAN STDCALL ProtocolSend ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
 	Context = Context->Next;
     }
     if ( Context == NULL ) {
-	DbgPrint
-	    ( "ProtocolSend Can't find NIC %02x:%02x:%02x:%02x:%02x:%02x\n",
+	DBG ( "Can't find NIC %02x:%02x:%02x:%02x:%02x:%02x\n",
 	      SourceMac[0], SourceMac[1], SourceMac[2], SourceMac[3],
 	      SourceMac[4], SourceMac[5] );
 	return FALSE;
     }
 
     if ( DataSize > Context->MTU ) {
-	DbgPrint
-	    ( "ProtocolSend Tried to send oversized packet (size: %d, MTU:)\n",
+	DBG ( "Tried to send oversized packet (size: %d, MTU:)\n",
 	      DataSize, Context->MTU );
 	return FALSE;
     }
@@ -231,7 +229,7 @@ BOOLEAN STDCALL ProtocolSend ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
 	   ( PHEADER ) ExAllocatePool ( NonPagedPool,
 					( sizeof ( HEADER ) +
 					  DataSize ) ) ) == NULL ) {
-	DbgPrint ( "ProtocolSend ExAllocatePool\n" );
+	DBG ( "ExAllocatePool DataBuffer\n" );
 	return FALSE;
     }
 
@@ -272,8 +270,7 @@ VOID STDCALL ProtocolOpenAdapterComplete ( IN NDIS_HANDLE
 #if !defined(DEBUGMOSTPROTOCOLCALLS) && !defined(DEBUGALLPROTOCOLCALLS)
     if ( !NT_SUCCESS ( Status ) )
 #endif
-	DbgPrint ( "ProtocolOpenAdapterComplete: 0x%08x 0x%08x\n",
-		   Status, OpenErrorStatus );
+	DBG ( "0x%08x 0x%08x\n", Status, OpenErrorStatus );
 }
 
 VOID STDCALL ProtocolCloseAdapterComplete ( IN NDIS_HANDLE
@@ -303,7 +300,7 @@ VOID STDCALL ProtocolSendComplete ( IN NDIS_HANDLE ProtocolBindingContext,
 	ExFreePool ( DataBuffer );
 	NdisFreeBuffer ( Buffer );
     } else {
-	DbgPrint ( "ProtocolSendComplete: Buffer == NULL\n" );
+	DBG ( "Buffer == NULL\n" );
     }
     NdisFreePacket ( Packet );
 }
@@ -328,16 +325,14 @@ VOID STDCALL ProtocolTransferDataComplete ( IN NDIS_HANDLE
 	NdisQueryBuffer ( Buffer, &Data, &DataSize );
 	NdisFreeBuffer ( Buffer );
     } else {
-	DbgPrint
-	    ( "ProtocolTransferDataComplete Data (front) Buffer == NULL\n" );
+	DBG ( "Data (front) Buffer == NULL\n" );
     }
     NdisUnchainBufferAtBack ( Packet, &Buffer );
     if ( Buffer != NULL ) {
 	NdisQueryBuffer ( Buffer, &Header, &HeaderSize );
 	NdisFreeBuffer ( Buffer );
     } else {
-	DbgPrint
-	    ( "ProtocolTransferDataComplete Header (back) Buffer == NULL\n" );
+	DBG ( "Header (back) Buffer == NULL\n" );
     }
     if ( Header != NULL && Data != NULL )
 	AoEReply ( Header->SourceMac, Header->DestinationMac, Data, DataSize );
@@ -387,12 +382,11 @@ NDIS_STATUS STDCALL ProtocolReceive ( IN NDIS_HANDLE ProtocolBindingContext,
     PUCHAR HeaderCopy, Data;
     UINT BytesTransferred;
 #ifdef DEBUGALLPROTOCOLCALLS
-    DbgPrint ( "ProtocolReceive\n" );
+    DBG ( "Entry\n" );
 #endif
 
     if ( HeaderBufferSize != sizeof ( HEADER ) ) {
-	DbgPrint
-	    ( "ProtocolReceive HeaderBufferSize %d != sizeof(HEADER) %d\n" );
+	DBG ( "HeaderBufferSize %d != sizeof(HEADER) %d\n" );
 	return NDIS_STATUS_NOT_ACCEPTED;
     }
     Header = ( PHEADER ) HeaderBuffer;
@@ -408,13 +402,13 @@ NDIS_STATUS STDCALL ProtocolReceive ( IN NDIS_HANDLE ProtocolBindingContext,
     if ( ( HeaderCopy =
 	   ( PUCHAR ) ExAllocatePool ( NonPagedPool,
 				       HeaderBufferSize ) ) == NULL ) {
-	DbgPrint ( "ProtocolReceive ExAllocatePool HeaderCopy\n" );
+	DBG ( "ExAllocatePool HeaderCopy\n" );
 	return NDIS_STATUS_NOT_ACCEPTED;
     }
     RtlCopyMemory ( HeaderCopy, HeaderBuffer, HeaderBufferSize );
     if ( ( Data =
 	   ( PUCHAR ) ExAllocatePool ( NonPagedPool, PacketSize ) ) == NULL ) {
-	DbgPrint ( "ProtocolReceive ExAllocatePool HeaderData\n" );
+	DBG ( "ExAllocatePool HeaderData\n" );
 	ExFreePool ( HeaderCopy );
 	return NDIS_STATUS_NOT_ACCEPTED;
     }
@@ -461,7 +455,7 @@ NDIS_STATUS STDCALL ProtocolReceive ( IN NDIS_HANDLE ProtocolBindingContext,
 VOID STDCALL ProtocolReceiveComplete ( IN NDIS_HANDLE ProtocolBindingContext )
 {
 #ifdef DEBUGALLPROTOCOLCALLS
-    DbgPrint ( "ProtocolReceiveComplete\n" );
+    DBG ( "Entry\n" );
 #endif
 }
 
@@ -478,7 +472,7 @@ VOID STDCALL ProtocolStatus ( IN NDIS_HANDLE ProtocolBindingContext,
 VOID STDCALL ProtocolStatusComplete ( IN NDIS_HANDLE ProtocolBindingContext )
 {
 #if defined(DEBUGMOSTPROTOCOLCALLS) || defined(DEBUGALLPROTOCOLCALLS)
-    DbgPrint ( "ProtocolStatusComplete\n" );
+    DBG ( "Entry\n" );
 #endif
 }
 
@@ -499,14 +493,14 @@ VOID STDCALL ProtocolBindAdapter ( OUT PNDIS_STATUS StatusOut,
     UCHAR Mac[6];
     KIRQL Irql;
 #if defined(DEBUGMOSTPROTOCOLCALLS) || defined(DEBUGALLPROTOCOLCALLS)
-    DbgPrint ( "ProtocolBindAdapter\n" );
+    DBG ( "Entry\n" );
 #endif
 
     if ( ( Context =
 	   ( NDIS_HANDLE ) ExAllocatePool ( NonPagedPool,
 					    sizeof ( BINDINGCONTEXT ) ) ) ==
 	 NULL ) {
-	DbgPrint ( "ProtocolBindAdapter ExAllocatePool\n" );
+	DBG ( "ExAllocatePool Context\n" );
 	*StatusOut = NDIS_STATUS_RESOURCES;
 	return;
     }
@@ -536,8 +530,7 @@ VOID STDCALL ProtocolBindAdapter ( OUT PNDIS_STATUS StatusOut,
 		      ( sizeof ( MediumArray ) / sizeof ( NDIS_MEDIUM ) ),
 		      ProtocolHandle, Context, DeviceName, 0, NULL );
     if ( !NT_SUCCESS ( Status ) ) {
-	DbgPrint ( "ProtocolBindAdapter NdisOpenAdapter 0x%lx 0x%lx\n",
-		   Status, OpenErrorStatus );
+	DBG ( "NdisOpenAdapter 0x%lx 0x%lx\n", Status, OpenErrorStatus );
 	NdisFreePacketPool ( Context->PacketPoolHandle );
 	NdisFreeBufferPool ( Context->BufferPoolHandle );
 	ExFreePool ( Context->AdapterName );
@@ -547,8 +540,7 @@ VOID STDCALL ProtocolBindAdapter ( OUT PNDIS_STATUS StatusOut,
 	return;
     }
     if ( SelectedMediumIndex != 0 )
-	DbgPrint
-	    ( "ProtocolBindAdapter NdisOpenAdapter SelectedMediumIndex: %d\n",
+	DBG ( "NdisOpenAdapter SelectedMediumIndex: %d\n",
 	      SelectedMediumIndex );
 
     Context->AdapterName = NULL;
@@ -560,7 +552,7 @@ VOID STDCALL ProtocolBindAdapter ( OUT PNDIS_STATUS StatusOut,
 	       ( PWCHAR ) ExAllocatePool ( NonPagedPool,
 					   AdapterInstanceName.Length +
 					   sizeof ( WCHAR ) ) ) == NULL ) {
-	    DbgPrint ( "ProtocolBindAdapter ExAllocatePool AdapterName\n" );
+	    DBG ( "ExAllocatePool AdapterName\n" );
 	} else {
 	    RtlZeroMemory ( Context->AdapterName,
 			    AdapterInstanceName.Length + sizeof ( WCHAR ) );
@@ -579,7 +571,7 @@ VOID STDCALL ProtocolBindAdapter ( OUT PNDIS_STATUS StatusOut,
 	       ( PWCHAR ) ExAllocatePool ( NonPagedPool,
 					   DeviceName->Length +
 					   sizeof ( WCHAR ) ) ) == NULL ) {
-	    DbgPrint ( "ProtocolBindAdapter ExAllocatePool DeviceName\n" );
+	    DBG ( "ExAllocatePool DeviceName\n" );
 	} else {
 	    RtlZeroMemory ( Context->DeviceName,
 			    DeviceName->Length + sizeof ( WCHAR ) );
@@ -589,12 +581,12 @@ VOID STDCALL ProtocolBindAdapter ( OUT PNDIS_STATUS StatusOut,
     }
 
     if ( Context->AdapterName != NULL )
-	DbgPrint ( "Adapter: %S\n", Context->AdapterName );
+	DBG ( "Adapter: %S\n", Context->AdapterName );
     if ( Context->DeviceName != NULL )
-	DbgPrint ( "Device Name: %S\n", Context->DeviceName );
+	DBG ( "Device Name: %S\n", Context->DeviceName );
     if ( ( Context->AdapterName == NULL )
 	 && ( Context->DeviceName == NULL ) )
-	DbgPrint ( "Unnamed Adapter...\n" );
+	DBG ( "Unnamed Adapter...\n" );
 
     Request.RequestType = NdisRequestQueryInformation;
     Request.DATA.QUERY_INFORMATION.Oid = OID_802_3_CURRENT_ADDRESS;
@@ -612,8 +604,8 @@ VOID STDCALL ProtocolBindAdapter ( OUT PNDIS_STATUS StatusOut,
 	Error ( "ProtocolBindAdapter NdisRequest (Mac)", Status );
     } else {
 	RtlCopyMemory ( Context->Mac, Mac, 6 );
-	DbgPrint ( "Mac: %02x:%02x:%02x:%02x:%02x:%02x\n", Mac[0],
-		   Mac[1], Mac[2], Mac[3], Mac[4], Mac[5] );
+	DBG ( "Mac: %02x:%02x:%02x:%02x:%02x:%02x\n", Mac[0],
+	      Mac[1], Mac[2], Mac[3], Mac[4], Mac[5] );
     }
 
     Request.RequestType = NdisRequestQueryInformation;
@@ -632,7 +624,7 @@ VOID STDCALL ProtocolBindAdapter ( OUT PNDIS_STATUS StatusOut,
 	Error ( "ProtocolBindAdapter NdisRequest (MTU)", Status );
     } else {
 	Context->MTU = MTU;
-	DbgPrint ( "MTU: %d\n", MTU );
+	DBG ( "MTU: %d\n", MTU );
     }
 
     Request.RequestType = NdisRequestSetInformation;
@@ -674,7 +666,7 @@ VOID STDCALL ProtocolUnbindAdapter ( OUT PNDIS_STATUS StatusOut,
     NDIS_STATUS Status;
     KIRQL Irql;
 #if defined(DEBUGMOSTPROTOCOLCALLS) || defined(DEBUGALLPROTOCOLCALLS)
-    DbgPrint ( "ProtocolUnbindAdapter\n" );
+    DBG ( "Entry\n" );
 #endif
 
     PreviousContext = NULL;
@@ -683,7 +675,7 @@ VOID STDCALL ProtocolUnbindAdapter ( OUT PNDIS_STATUS StatusOut,
 	  Walker = Walker->Next )
 	PreviousContext = Walker;
     if ( Walker == NULL ) {
-	DbgPrint ( "Context not found in BindingContextList!!\n" );
+	DBG ( "Context not found in BindingContextList!!\n" );
 	KeReleaseSpinLock ( &SpinLock, Irql );
 	return;
     }
@@ -709,15 +701,14 @@ NDIS_STATUS STDCALL ProtocolPnPEvent ( IN NDIS_HANDLE ProtocolBindingContext,
 				       IN PNET_PNP_EVENT NetPnPEvent )
 {
 #if defined(DEBUGMOSTPROTOCOLCALLS) || defined(DEBUGALLPROTOCOLCALLS)
-    DbgPrint ( "ProtocolPnPEvent %s\n",
-	       NetEventString ( NetPnPEvent->NetEvent ) );
+    DBG ( "%s\n", NetEventString ( NetPnPEvent->NetEvent ) );
 #endif
     if ( ProtocolBindingContext == NULL
 	 && NetPnPEvent->NetEvent == NetEventReconfigure ) {
 #ifdef _MSC_VER
 	NdisReEnumerateProtocolBindings ( ProtocolHandle );
 #else
-	DbgPrint ( "No vector to NdisReEnumerateProtocolBindings\n" );
+	DBG ( "No vector to NdisReEnumerateProtocolBindings\n" );
 #endif
     }
     if ( NetPnPEvent->NetEvent == NetEventQueryRemoveDevice ) {
