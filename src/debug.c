@@ -19,7 +19,6 @@
  * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdarg.h>
 #include "portable.h"
 #include <ntddk.h>
 #include <srb.h>
@@ -61,14 +60,9 @@ PCHAR STDCALL DeviceIoControlString ( IN ULONG IoControlCode );
 PCHAR STDCALL DeviceTextTypeString ( IN DEVICE_TEXT_TYPE DeviceTextType );
 PCHAR STDCALL SCSIOPString ( IN UCHAR OperationCode );
 
-VOID STDCALL xDbgPrint ( IN PCHAR File, IN PCHAR Function, IN UINT Line,
-			 IN PCHAR DebugMessage, ... )
+NTSTATUS STDCALL xDbgPrint ( IN PCHAR File, IN PCHAR Function, IN UINT Line )
 {
-    va_list args;
-    va_start ( args, DebugMessage );
-    DbgPrint ( "%s: %s() @ line %d: ", File, Function, Line );
-    DbgPrint ( DebugMessage, args );
-    va_end ( args );
+    return DbgPrint ( "%s: %s() @ line %d: ", File, Function, Line );
 }
 
 VOID STDCALL InitializeDebug (  )

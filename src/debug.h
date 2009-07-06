@@ -29,10 +29,12 @@
  * function and line number in any debugging output messages.
  */
 
-#define DBG( ... ) xDbgPrint ( __FILE__, ( const PCHAR )__func__, __LINE__, \
-			       __VA_ARGS__ )
+#define DBG( ... ) xDbgPrint ( __FILE__, ( const PCHAR )__FUNCTION__, \
+			       __LINE__ ) == STATUS_SUCCESS ? \
+		   DbgPrint ( __VA_ARGS__ ) : \
+		   STATUS_UNSUCCESSFUL
 
-extern VOID STDCALL xDbgPrint ( IN PCHAR File, IN PCHAR Function, IN UINT Line,
-				IN PCHAR DebugMessage, ... );
+extern NTSTATUS STDCALL xDbgPrint ( IN PCHAR File, IN PCHAR Function,
+				    IN UINT Line );
 
-#endif			/* _DEBUG_H */
+#endif				/* _DEBUG_H */
