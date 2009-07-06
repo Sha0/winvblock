@@ -23,6 +23,7 @@
 #include "driver.h"
 #include "aoe.h"
 #include "mount.h"
+#include "debug.h"
 
 // in this file
 BOOLEAN STDCALL BusAddChild ( IN PDEVICE_OBJECT BusDeviceObject,

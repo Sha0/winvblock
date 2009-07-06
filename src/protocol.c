@@ -25,6 +25,7 @@
 #include "protocol.h"
 #include "driver.h"
 #include "aoe.h"
+#include "debug.h"
 
 // in this file
 VOID STDCALL ProtocolOpenAdapterComplete ( IN NDIS_HANDLE

@@ -29,6 +29,7 @@
 #include <initguid.h>
 #include "driver.h"
 #include "aoe.h"
+#include "debug.h"
 
 #ifndef _MSC_VER
 long long __divdi3 ( long long u, long long v )

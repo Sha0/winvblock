@@ -21,6 +21,7 @@
 #include "portable.h"
 #include <ntddk.h>
 #include "driver.h"
+#include "debug.h"
 
 // from registry.c
 NTSTATUS STDCALL CheckRegistry (  );
