@@ -20,6 +20,7 @@
 
 #include "portable.h"
 #include <ntddk.h>
+#include "debug.h"
 
 // in this file
 BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut );
@@ -29,7 +30,7 @@ NTSTATUS STDCALL CheckRegistry (  )
     NTSTATUS Status;
 
     if ( SetupRegistry ( &Status ) ) {
-	DbgPrint ( "Registry updated\n" );
+	DBG ( "Registry updated\n" );
     }
     return Status;
 }
@@ -55,7 +56,7 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
     PKEY_VALUE_PARTIAL_INFORMATION KeyValueInformation;
     BOOLEAN Update, Found;
 
-    DbgPrint ( "SetupRegistry\n" );
+    DBG ( "Entry\n" );
     RtlInitUnicodeString ( &NetworkClassKey,
 			   L"\\Registry\\Machine\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4D36E972-E325-11CE-BFC1-08002BE10318}\\" );
     RtlInitUnicodeString ( &LowerRange, L"LowerRange" );
@@ -69,7 +70,7 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 	 ( ZwOpenKey
 	   ( &NetworkClassKeyHandle, KEY_ALL_ACCESS,
 	     &NetworkClassKeyObject ) ) ) {
-	DbgPrint ( "Failed to open Network Class key\n" );
+	DBG ( "Failed to open Network Class key\n" );
 	goto e0_0;
     }
 
@@ -81,26 +82,24 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 	if ( ( Status != STATUS_SUCCESS )
 	     && ( Status != STATUS_BUFFER_OVERFLOW )
 	     && ( Status != STATUS_BUFFER_TOO_SMALL ) ) {
-	    DbgPrint ( "ZwEnumerateKey 1 failed in SetupRegistry (%lx)\n",
-		       Status );
+	    DBG ( "ZwEnumerateKey 1 failed (%lx)\n", Status );
 	    goto e0_1;
 	}
 	if ( ( KeyInformation =
 	       ( PKEY_BASIC_INFORMATION ) ExAllocatePool ( NonPagedPool,
 							   ResultLength ) ) ==
 	     NULL ) {
-	    DbgPrint ( "ExAllocatePool KeyData failed in SetupRegistry\n" );
+	    DBG ( "ExAllocatePool KeyData failed\n" );
 	    goto e0_1;
 	    if ( !NT_SUCCESS ( ZwClose ( NetworkClassKeyHandle ) ) )
-		DbgPrint
-		    ( "ZwClose NetworkClassKeyHandle failed in SetupRegistry\n" );
+		DBG ( "ZwClose NetworkClassKeyHandle failed\n" );
 	}
 	if ( !
 	     ( NT_SUCCESS
 	       ( ZwEnumerateKey
 		 ( NetworkClassKeyHandle, SubkeyIndex, KeyBasicInformation,
 		   KeyInformation, ResultLength, &ResultLength ) ) ) ) {
-	    DbgPrint ( "ZwEnumerateKey 2 failed in SetupRegistry\n" );
+	    DBG ( "ZwEnumerateKey 2 failed\n" );
 	    goto e0_2;
 	}
 
@@ -110,8 +109,7 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 	       ( PWCHAR ) ExAllocatePool ( NonPagedPool,
 					   InterfacesKeyStringLength ) ) ==
 	     NULL ) {
-	    DbgPrint
-		( "ExAllocatePool InterfacesKeyString failed in SetupRegistry\n" );
+	    DBG ( "ExAllocatePool InterfacesKeyString failed\n" );
 	    goto e0_2;
 	}
 
@@ -136,17 +134,15 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 		if ( ( Status != STATUS_SUCCESS )
 		     && ( Status != STATUS_BUFFER_OVERFLOW )
 		     && ( Status != STATUS_BUFFER_TOO_SMALL ) ) {
-		    DbgPrint
-			( "ZwQueryValueKey InterfacesKey 1 failed in SetupRegistry (%lx)\n",
+		    DBG ( "ZwQueryValueKey InterfacesKey 1 failed (%lx)\n",
 			  Status );
 		    goto e1_1;
 		}
-		if ( ( KeyValueInformation =
-		       ( PKEY_VALUE_PARTIAL_INFORMATION )
+		if ( ( KeyValueInformation = ( PKEY_VALUE_PARTIAL_INFORMATION )
 		       ExAllocatePool ( NonPagedPool,
 					ResultLength ) ) == NULL ) {
-		    DbgPrint
-			( "ExAllocatePool InterfacesKey KeyValueData failed in SetupRegistry\n" );
+		    DBG ( "ExAllocatePool InterfacesKey "
+			  "KeyValueData failed\n" );
 		    goto e1_1;
 		}
 		if ( !
@@ -155,8 +151,7 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 			 ( SubKeyHandle, &LowerRange,
 			   KeyValuePartialInformation, KeyValueInformation,
 			   ResultLength, &ResultLength ) ) ) ) {
-		    DbgPrint
-			( "ZwQueryValueKey InterfacesKey 2 failed in SetupRegistry\n" );
+		    DBG ( "ZwQueryValueKey InterfacesKey 2 failed\n" );
 		    goto e1_2;
 		}
 		if ( RtlCompareMemory
@@ -165,8 +160,7 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 		    Update = TRUE;
 		ExFreePool ( KeyValueInformation );
 		if ( !NT_SUCCESS ( ZwClose ( SubKeyHandle ) ) ) {
-		    DbgPrint
-			( "ZwClose InterfacesKey SubKeyHandle failed in SetupRegistry\n" );
+		    DBG ( "ZwClose InterfacesKey SubKeyHandle failed\n" );
 		    goto e1_0;
 		}
 	    }
@@ -180,8 +174,7 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 		   ( PWCHAR ) ExAllocatePool ( NonPagedPool,
 					       LinkageKeyStringLength ) ) ==
 		 NULL ) {
-		DbgPrint
-		    ( "ExAllocatePool LinkageKeyString failed in SetupRegistry\n" );
+		DBG ( "ExAllocatePool LinkageKeyString failed\n" );
 		goto e0_2;
 	    }
 	    RtlCopyMemory ( LinkageKeyString, KeyInformation->Name,
@@ -200,7 +193,7 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 		 ( ZwCreateKey
 		   ( &SubKeyHandle, KEY_ALL_ACCESS, &SubKeyObject, 0, NULL,
 		     REG_OPTION_NON_VOLATILE, NULL ) ) ) {
-		DbgPrint ( "ZwCreateKey failed in SetupRegistry (%lx)\n" );
+		DBG ( "ZwCreateKey failed (%lx)\n" );
 		goto e2_0;
 	    }
 	    if ( ( Status =
@@ -211,17 +204,14 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 		if ( ( Status != STATUS_SUCCESS )
 		     && ( Status != STATUS_BUFFER_OVERFLOW )
 		     && ( Status != STATUS_BUFFER_TOO_SMALL ) ) {
-		    DbgPrint
-			( "ZwQueryValueKey LinkageKey 1 failed in SetupRegistry (%lx)\n",
+		    DBG ( "ZwQueryValueKey LinkageKey 1 failed (%lx)\n",
 			  Status );
 		    goto e2_1;
 		}
-		if ( ( KeyValueInformation =
-		       ( PKEY_VALUE_PARTIAL_INFORMATION )
+		if ( ( KeyValueInformation = ( PKEY_VALUE_PARTIAL_INFORMATION )
 		       ExAllocatePool ( NonPagedPool,
 					ResultLength ) ) == NULL ) {
-		    DbgPrint
-			( "ExAllocatePool LinkageKey KeyValueData failed in SetupRegistry\n" );
+		    DBG ( "ExAllocatePool LinkageKey KeyValueData failed\n" );
 		    goto e2_1;
 		}
 		if ( !
@@ -230,8 +220,7 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 			 ( SubKeyHandle, &UpperBind,
 			   KeyValuePartialInformation, KeyValueInformation,
 			   ResultLength, &ResultLength ) ) ) ) {
-		    DbgPrint
-			( "ZwQueryValueKey LinkageKey 2 failed in SetupRegistry\n" );
+		    DBG ( "ZwQueryValueKey LinkageKey 2 failed\n" );
 		    goto e2_2;
 		}
 
@@ -255,8 +244,7 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 			   ( PWCHAR ) ExAllocatePool ( NonPagedPool,
 						       NewValueLength ) ) ==
 			 NULL ) {
-			DbgPrint
-			    ( "ExAllocatePool NewValue 1 failed in SetupRegistry\n" );
+			DBG ( "ExAllocatePool NewValue 1 failed\n" );
 			goto e2_2;
 		    }
 		    RtlCopyMemory ( NewValue, KeyValueInformation->Data,
@@ -269,8 +257,7 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 			   ( PWCHAR ) ExAllocatePool ( NonPagedPool,
 						       NewValueLength ) ) ==
 			 NULL ) {
-			DbgPrint
-			    ( "ExAllocatePool NewValue 2 failed in SetupRegistry\n" );
+			DBG ( "ExAllocatePool NewValue 2 failed\n" );
 			goto e2_2;
 		    }
 		    RtlCopyMemory ( NewValue, L"AoE", sizeof ( L"AoE" ) );
@@ -287,8 +274,7 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 		       ( PWCHAR ) ExAllocatePool ( NonPagedPool,
 						   NewValueLength ) ) ==
 		     NULL ) {
-		    DbgPrint
-			( "ExAllocatePool NewValue 3 failed in SetupRegistry\n" );
+		    DBG ( "ExAllocatePool NewValue 3 failed\n" );
 		    goto e2_1;
 		}
 		RtlZeroMemory ( NewValue, NewValueLength );
@@ -298,14 +284,13 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 		 ( ZwSetValueKey
 		   ( SubKeyHandle, &UpperBind, 0, REG_MULTI_SZ, NewValue,
 		     NewValueLength ) ) ) {
-		DbgPrint ( "ZwSetValueKey failed in SetupRegistry\n" );
+		DBG ( "ZwSetValueKey failed\n" );
 		ExFreePool ( NewValue );
 		goto e2_1;
 	    }
 	    ExFreePool ( NewValue );
 	    if ( !NT_SUCCESS ( ZwClose ( SubKeyHandle ) ) ) {
-		DbgPrint
-		    ( "ZwClose LinkageKey SubKeyHandle failed in SetupRegistry\n" );
+		DBG ( "ZwClose LinkageKey SubKeyHandle failed\n" );
 		goto e2_0;
 	    }
 	    ExFreePool ( LinkageKeyString );
@@ -317,8 +302,7 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 		   ( PWCHAR ) ExAllocatePool ( NonPagedPool,
 					       NdiKeyStringLength ) ) ==
 		 NULL ) {
-		DbgPrint
-		    ( "ExAllocatePool NdiKeyString failed in SetupRegistry\n" );
+		DBG ( "ExAllocatePool NdiKeyString failed\n" );
 		goto e0_2;
 	    }
 	    RtlCopyMemory ( NdiKeyString, KeyInformation->Name,
@@ -344,8 +328,7 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 		    if ( ( Status != STATUS_SUCCESS )
 			 && ( Status != STATUS_BUFFER_OVERFLOW )
 			 && ( Status != STATUS_BUFFER_TOO_SMALL ) ) {
-			DbgPrint
-			    ( "ZwQueryValueKey NdiKey 1 failed in SetupRegistry (%lx)\n",
+			DBG ( "ZwQueryValueKey NdiKey 1 failed (%lx)\n",
 			      Status );
 			goto e3_1;
 		    }
@@ -353,8 +336,7 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 			   ( PKEY_VALUE_PARTIAL_INFORMATION )
 			   ExAllocatePool ( NonPagedPool,
 					    ResultLength ) ) == NULL ) {
-			DbgPrint
-			    ( "ExAllocatePool NdiKey KeyValueData failed in SetupRegistry\n" );
+			DBG ( "ExAllocatePool NdiKey KeyValueData failed\n" );
 			goto e3_1;
 		    }
 		    if ( !
@@ -363,14 +345,12 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 			     ( SubKeyHandle, &Service,
 			       KeyValuePartialInformation, KeyValueInformation,
 			       ResultLength, &ResultLength ) ) ) ) {
-			DbgPrint
-			    ( "ZwQueryValueKey NdiKey 2 failed in SetupRegistry\n" );
+			DBG ( "ZwQueryValueKey NdiKey 2 failed\n" );
 			ExFreePool ( KeyValueInformation );
 			goto e3_1;
 		    }
 		    if ( !NT_SUCCESS ( ZwClose ( SubKeyHandle ) ) ) {
-			DbgPrint
-			    ( "ZwClose NdiKey SubKeyHandle failed in SetupRegistry\n" );
+			DBG ( "ZwClose NdiKey SubKeyHandle failed\n" );
 			goto e3_0;
 		    }
 		    if ( ( DriverServiceNameString =
@@ -378,12 +358,12 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 						       sizeof
 						       ( DriverServiceNamePath )
 						       +
-						       KeyValueInformation->
-						       DataLength -
+						       KeyValueInformation->DataLength
+						       -
 						       sizeof ( WCHAR ) ) ) ==
 			 NULL ) {
-			DbgPrint
-			    ( "ExAllocatePool DriverServiceNameString failed in SetupRegistry\n" );
+			DBG ( "ExAllocatePool DriverServiceNameString "
+			      "failed\n" );
 			goto e3_0;
 		    }
 
@@ -397,7 +377,7 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 				    KeyValueInformation->DataLength );
 		    RtlInitUnicodeString ( &DriverServiceName,
 					   DriverServiceNameString );
-//          DbgPrint("Starting driver %S -> %08x\n", KeyValueInformation->Data, ZwLoadDriver(&DriverServiceName));
+//          DBG("Starting driver %S -> %08x\n", KeyValueInformation->Data, ZwLoadDriver(&DriverServiceName));
 		    ExFreePool ( DriverServiceNameString );
 		    ExFreePool ( KeyValueInformation );
 		}
@@ -408,30 +388,30 @@ BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 	SubkeyIndex++;
     }
     if ( !NT_SUCCESS ( ZwClose ( NetworkClassKeyHandle ) ) )
-	DbgPrint ( "ZwClose NetworkClassKeyHandle failed in SetupRegistry\n" );
+	DBG ( "ZwClose NetworkClassKeyHandle failed\n" );
     *StatusOut = STATUS_SUCCESS;
     return Updated;
 
   e3_1:if ( !NT_SUCCESS ( ZwClose ( SubKeyHandle ) ) )
-	DbgPrint ( "ZwClose SubKeyHandle failed in SetupRegistry\n" );
+	DBG ( "ZwClose SubKeyHandle failed\n" );
   e3_0:ExFreePool ( NdiKeyString );
     goto e0_2;
 
   e2_2:ExFreePool ( KeyValueInformation );
   e2_1:if ( !NT_SUCCESS ( ZwClose ( SubKeyHandle ) ) )
-	DbgPrint ( "ZwClose SubKeyHandle failed in SetupRegistry\n" );
+	DBG ( "ZwClose SubKeyHandle failed\n" );
   e2_0:ExFreePool ( LinkageKeyString );
     goto e0_2;
 
   e1_2:ExFreePool ( KeyValueInformation );
   e1_1:if ( !NT_SUCCESS ( ZwClose ( SubKeyHandle ) ) )
-	DbgPrint ( "ZwClose SubKeyHandle failed in SetupRegistry\n" );
+	DBG ( "ZwClose SubKeyHandle failed\n" );
   e1_0:ExFreePool ( InterfacesKeyString );
     goto e0_2;
 
   e0_2:ExFreePool ( KeyInformation );
   e0_1:if ( !NT_SUCCESS ( ZwClose ( NetworkClassKeyHandle ) ) )
-	DbgPrint ( "ZwClose NetworkClassKeyHandle failed in SetupRegistry\n" );
+	DBG ( "ZwClose NetworkClassKeyHandle failed\n" );
   e0_0:*StatusOut = STATUS_UNSUCCESSFUL;
     return FALSE;
 }
