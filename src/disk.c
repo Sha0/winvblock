@@ -38,7 +38,7 @@ long long __divdi3 ( long long u, long long v )
 #endif
 
 #if _WIN32_WINNT <= 0x0500
-#if 0 /* FIXME: To build with WINDDK 6001.18001 */
+#if 0				/* FIXME: To build with WINDDK 6001.18001 */
 #ifdef _MSC_VER
 #pragma pack(1)
 #endif
@@ -58,7 +58,7 @@ typedef union _EIGHT_BYTE {
 #ifdef _MSC_VER
 #pragma pack()
 #endif
-#endif /* To build with WINDDK 6001.18001 */
+#endif				/* To build with WINDDK 6001.18001 */
 
 #define REVERSE_BYTES_QUAD(Destination, Source) { \
   PEIGHT_BYTE d = (PEIGHT_BYTE)(Destination);     \
@@ -72,10 +72,10 @@ typedef union _EIGHT_BYTE {
   d->Byte1 = s->Byte6;                            \
   d->Byte0 = s->Byte7;                            \
 }
-#endif /* if _WIN32_WINNT <= 0x0500 */
+#endif				/* if _WIN32_WINNT <= 0x0500 */
 
 #if _WIN32_WINNT < 0x0502
-#if 0 /* FIXME: To build with WINDDK 6001.18001 */
+#if 0				/* FIXME: To build with WINDDK 6001.18001 */
 #ifdef _MSC_VER
 #pragma pack(1)
 #endif
@@ -87,8 +87,8 @@ typedef struct _READ_CAPACITY_DATA_EX {
 #ifdef _MSC_VER
 #pragma pack()
 #endif
-#endif /* To build with WINDDK 6001.18001 */
-#endif /* _WIN32_WINNT < 0x0502 */
+#endif				/* To build with WINDDK 6001.18001 */
+#endif				/* _WIN32_WINNT < 0x0502 */
 
 #ifdef _MSC_VER
 #pragma pack(1)
@@ -134,7 +134,7 @@ NTSTATUS STDCALL DiskDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 	       ( PWCHAR ) ExAllocatePool ( NonPagedPool,
 					   ( 512 *
 					     sizeof ( WCHAR ) ) ) ) == NULL ) {
-	    DbgPrint ( "DiskDispatchPnP ExAllocatePool IRP_MN_QUERY_ID\n" );
+	    DBG ( "ExAllocatePool IRP_MN_QUERY_ID\n" );
 	    Status = STATUS_INSUFFICIENT_RESOURCES;
 	    break;
 	}
@@ -149,8 +149,7 @@ NTSTATUS STDCALL DiskDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 		   ( ULONG_PTR ) ExAllocatePool ( PagedPool,
 						  StringLength *
 						  sizeof ( WCHAR ) ) ) == 0 ) {
-		DbgPrint
-		    ( "DiskDispatchPnP ExAllocatePool BusQueryDeviceID\n" );
+		DBG ( "ExAllocatePool BusQueryDeviceID\n" );
 		Status = STATUS_INSUFFICIENT_RESOURCES;
 		break;
 	    }
@@ -167,8 +166,7 @@ NTSTATUS STDCALL DiskDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 		   ( ULONG_PTR ) ExAllocatePool ( PagedPool,
 						  StringLength *
 						  sizeof ( WCHAR ) ) ) == 0 ) {
-		DbgPrint
-		    ( "DiskDispatchPnP ExAllocatePool BusQueryInstanceID\n" );
+		DBG ( "ExAllocatePool BusQueryInstanceID\n" );
 		Status = STATUS_INSUFFICIENT_RESOURCES;
 		break;
 	    }
@@ -186,8 +184,7 @@ NTSTATUS STDCALL DiskDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 		   ( ULONG_PTR ) ExAllocatePool ( PagedPool,
 						  StringLength *
 						  sizeof ( WCHAR ) ) ) == 0 ) {
-		DbgPrint
-		    ( "DiskDispatchPnP ExAllocatePool BusQueryHardwareIDs\n" );
+		DBG ( "ExAllocatePool BusQueryHardwareIDs\n" );
 		Status = STATUS_INSUFFICIENT_RESOURCES;
 		break;
 	    }
@@ -201,8 +198,7 @@ NTSTATUS STDCALL DiskDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 		   ( ULONG_PTR ) ExAllocatePool ( PagedPool,
 						  StringLength *
 						  sizeof ( WCHAR ) ) ) == 0 ) {
-		DbgPrint
-		    ( "DiskDispatchPnP ExAllocatePool BusQueryCompatibleIDs\n" );
+		DBG ( "ExAllocatePool BusQueryCompatibleIDs\n" );
 		Status = STATUS_INSUFFICIENT_RESOURCES;
 		break;
 	    }
@@ -221,8 +217,7 @@ NTSTATUS STDCALL DiskDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 	       ( PWCHAR ) ExAllocatePool ( NonPagedPool,
 					   ( 512 *
 					     sizeof ( WCHAR ) ) ) ) == NULL ) {
-	    DbgPrint
-		( "DiskDispatchPnP ExAllocatePool IRP_MN_QUERY_DEVICE_TEXT\n" );
+	    DBG ( "ExAllocatePool IRP_MN_QUERY_DEVICE_TEXT\n" );
 	    Status = STATUS_INSUFFICIENT_RESOURCES;
 	    break;
 	}
@@ -234,8 +229,7 @@ NTSTATUS STDCALL DiskDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 		   ( ULONG_PTR ) ExAllocatePool ( PagedPool,
 						  StringLength *
 						  sizeof ( WCHAR ) ) ) == 0 ) {
-		DbgPrint
-		    ( "DiskDispatchPnP ExAllocatePool DeviceTextDescription\n" );
+		DBG ( "ExAllocatePool DeviceTextDescription\n" );
 		Status = STATUS_INSUFFICIENT_RESOURCES;
 		break;
 	    }
@@ -252,8 +246,7 @@ NTSTATUS STDCALL DiskDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 		   ( ULONG_PTR ) ExAllocatePool ( PagedPool,
 						  StringLength *
 						  sizeof ( WCHAR ) ) ) == 0 ) {
-		DbgPrint
-		    ( "DiskDispatchPnP ExAllocatePool DeviceTextLocationInformation\n" );
+		DBG ( "ExAllocatePool DeviceTextLocationInformation\n" );
 		Status = STATUS_INSUFFICIENT_RESOURCES;
 		break;
 	    }
@@ -281,8 +274,7 @@ NTSTATUS STDCALL DiskDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 						      sizeof
 						      ( PDEVICE_OBJECT ) ) )
 	     == NULL ) {
-	    DbgPrint
-		( "DiskDispatchPnP ExAllocatePool IRP_MN_QUERY_DEVICE_RELATIONS\n" );
+	    DBG ( "ExAllocatePool IRP_MN_QUERY_DEVICE_RELATIONS\n" );
 	    Status = STATUS_INSUFFICIENT_RESOURCES;
 	    break;
 	}
@@ -298,8 +290,7 @@ NTSTATUS STDCALL DiskDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 							 sizeof
 							 ( PNP_BUS_INFORMATION ) ) )
 	     == NULL ) {
-	    DbgPrint
-		( "DiskDispatchPnP ExAllocatePool IRP_MN_QUERY_BUS_INFORMATION\n" );
+	    DBG ( "ExAllocatePool IRP_MN_QUERY_BUS_INFORMATION\n" );
 	    Status = STATUS_INSUFFICIENT_RESOURCES;
 	    break;
 	}
@@ -318,10 +309,9 @@ NTSTATUS STDCALL DiskDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 	}
 	if ( !NT_SUCCESS
 	     ( Status = BusGetDeviceCapabilities ( ( ( PDEVICEEXTENSION )
-						     DeviceExtension->
-						     Disk.Parent->
-						     DeviceExtension )->Bus.
-						   LowerDeviceObject,
+						     DeviceExtension->Disk.
+						     Parent->DeviceExtension )->
+						   Bus.LowerDeviceObject,
 						   &ParentDeviceCapabilities ) ) )
 	    break;
 	RtlCopyMemory ( DeviceCapabilities->DeviceState,
@@ -472,28 +462,27 @@ NTSTATUS STDCALL DiskDispatchSCSI ( IN PDEVICE_OBJECT DeviceObject,
 			Cdb->CDB10.TransferBlocksLsb;
 		}
 		if ( StartSector >= DeviceExtension->Disk.LBADiskSize ) {
-		    DbgPrint
-			( "!! Fixed SectorCount (StartSector off disk) !!\n" );
+		    DBG ( "Fixed SectorCount (StartSector off disk)!!\n" );
 		    SectorCount = 0;
 		}
 		if ( ( StartSector + SectorCount >
 		       DeviceExtension->Disk.LBADiskSize )
 		     && SectorCount != 0 ) {
-		    DbgPrint
-			( "!! Fixed SectorCount (StartSector + SectorCount off disk) !!\n" );
+		    DBG ( "Fixed SectorCount (StartSector + "
+			  "SectorCount off disk)!!\n" );
 		    SectorCount =
 			( ULONG ) ( DeviceExtension->Disk.LBADiskSize -
 				    StartSector );
 		}
 		if ( SectorCount * SECTORSIZE > Srb->DataTransferLength ) {
-		    DbgPrint
-			( "!! Fixed SectorCount (DataTransferLength too small) !!\n" );
+		    DBG ( "Fixed SectorCount (DataTransferLength "
+			  "too small)!!\n" );
 		    SectorCount = Srb->DataTransferLength / SECTORSIZE;
 		}
 		if ( Srb->DataTransferLength % SECTORSIZE != 0 )
-		    DbgPrint ( "!! DataTransferLength not aligned !!\n" );
+		    DBG ( "DataTransferLength not aligned!!\n" );
 		if ( Srb->DataTransferLength > SectorCount * SECTORSIZE )
-		    DbgPrint ( "!! DataTransferLength too big !!\n" );
+		    DBG ( "DataTransferLength too big!!\n" );
 
 		Srb->DataTransferLength = SectorCount * SECTORSIZE;
 		Srb->SrbStatus = SRB_STATUS_SUCCESS;
@@ -566,14 +555,14 @@ NTSTATUS STDCALL DiskDispatchSCSI ( IN PDEVICE_OBJECT DeviceObject,
 				     Srb->DataBuffer )->BytesPerBlock ),
 				&Temp );
 		if ( ( DeviceExtension->Disk.LBADiskSize - 1 ) > 0xffffffff ) {
-		    ( ( PREAD_CAPACITY_DATA ) Srb->DataBuffer )->
-			LogicalBlockAddress = -1;
+		    ( ( PREAD_CAPACITY_DATA ) Srb->
+		      DataBuffer )->LogicalBlockAddress = -1;
 		} else {
 		    Temp = ( ULONG ) ( DeviceExtension->Disk.LBADiskSize - 1 );
 		    REVERSE_BYTES ( &
-				    ( ( ( PREAD_CAPACITY_DATA ) Srb->
-					DataBuffer )->LogicalBlockAddress ),
-				    &Temp );
+				    ( ( ( PREAD_CAPACITY_DATA )
+					Srb->DataBuffer )->
+				      LogicalBlockAddress ), &Temp );
 		}
 		Irp->IoStatus.Information = sizeof ( READ_CAPACITY_DATA );
 		Srb->SrbStatus = SRB_STATUS_SUCCESS;
@@ -586,9 +575,10 @@ NTSTATUS STDCALL DiskDispatchSCSI ( IN PDEVICE_OBJECT DeviceObject,
 				&Temp );
 		LargeTemp = DeviceExtension->Disk.LBADiskSize - 1;
 		REVERSE_BYTES_QUAD ( &
-				     ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->
-					 DataBuffer )->LogicalBlockAddress.
-				       QuadPart ), &LargeTemp );
+				     ( ( ( PREAD_CAPACITY_DATA_EX )
+					 Srb->DataBuffer )->
+				       LogicalBlockAddress.QuadPart ),
+				     &LargeTemp );
 		Irp->IoStatus.Information = sizeof ( READ_CAPACITY_DATA_EX );
 		Srb->SrbStatus = SRB_STATUS_SUCCESS;
 		Status = STATUS_SUCCESS;
@@ -616,7 +606,7 @@ NTSTATUS STDCALL DiskDispatchSCSI ( IN PDEVICE_OBJECT DeviceObject,
 		Status = STATUS_SUCCESS;
 		break;
 	    default:
-		DbgPrint ( "!!Invalid SCSIOP (%02x)!!\n", Cdb->AsByte[0] );
+		DBG ( "Invalid SCSIOP (%02x)!!\n", Cdb->AsByte[0] );
 		Srb->SrbStatus = SRB_STATUS_ERROR;
 		Status = STATUS_NOT_IMPLEMENTED;
 	    }
@@ -635,11 +625,11 @@ NTSTATUS STDCALL DiskDispatchSCSI ( IN PDEVICE_OBJECT DeviceObject,
 	    Srb->SrbStatus = SRB_STATUS_SUCCESS;
 	    break;
 	default:
-	    DbgPrint ( "!!Invalid SRB FUNCTION (%08x)!!\n", Srb->Function );
+	    DBG ( "Invalid SRB FUNCTION (%08x)!!\n", Srb->Function );
 	    Status = STATUS_NOT_IMPLEMENTED;
 	}
     } else {
-	DbgPrint ( "!!Invalid Lun!!\n" );
+	DBG ( "Invalid Lun!!\n" );
     }
 
     Irp->IoStatus.Status = Status;
@@ -670,9 +660,9 @@ NTSTATUS STDCALL DiskDispatchDeviceControl ( IN PDEVICE_OBJECT DeviceObject,
 	     && StoragePropertyQuery->QueryType == PropertyStandardQuery ) {
 	    CopySize =
 		( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-		  sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) ? Stack->Parameters.
-		  DeviceIoControl.OutputBufferLength :
-		  sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) );
+		  sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) ? Stack->
+		  Parameters.DeviceIoControl.
+		  OutputBufferLength : sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) );
 	    StorageAdapterDescriptor.Version =
 		sizeof ( STORAGE_ADAPTER_DESCRIPTOR );
 	    StorageAdapterDescriptor.Size =
@@ -697,9 +687,9 @@ NTSTATUS STDCALL DiskDispatchDeviceControl ( IN PDEVICE_OBJECT DeviceObject,
 	     && StoragePropertyQuery->QueryType == PropertyStandardQuery ) {
 	    CopySize =
 		( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-		  sizeof ( STORAGE_DEVICE_DESCRIPTOR ) ? Stack->Parameters.
-		  DeviceIoControl.OutputBufferLength :
-		  sizeof ( STORAGE_DEVICE_DESCRIPTOR ) );
+		  sizeof ( STORAGE_DEVICE_DESCRIPTOR ) ? Stack->
+		  Parameters.DeviceIoControl.
+		  OutputBufferLength : sizeof ( STORAGE_DEVICE_DESCRIPTOR ) );
 	    StorageDeviceDescriptor.Version =
 		sizeof ( STORAGE_DEVICE_DESCRIPTOR );
 	    StorageDeviceDescriptor.Size =
@@ -721,8 +711,8 @@ NTSTATUS STDCALL DiskDispatchDeviceControl ( IN PDEVICE_OBJECT DeviceObject,
 	}
 
 	if ( Status == STATUS_INVALID_PARAMETER ) {
-	    DbgPrint
-		( "!!Invalid IOCTL_STORAGE_QUERY_PROPERTY (PropertyId: %08x / QueryType: %08x)!!\n",
+	    DBG ( "!!Invalid IOCTL_STORAGE_QUERY_PROPERTY "
+		  "(PropertyId: %08x / QueryType: %08x)!!\n",
 		  StoragePropertyQuery->PropertyId,
 		  StoragePropertyQuery->QueryType );
 	}
@@ -730,9 +720,8 @@ NTSTATUS STDCALL DiskDispatchDeviceControl ( IN PDEVICE_OBJECT DeviceObject,
     case IOCTL_DISK_GET_DRIVE_GEOMETRY:
 	CopySize =
 	    ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-	      sizeof ( DISK_GEOMETRY ) ? Stack->
-	      Parameters.DeviceIoControl.OutputBufferLength :
-	      sizeof ( DISK_GEOMETRY ) );
+	      sizeof ( DISK_GEOMETRY ) ? Stack->Parameters.DeviceIoControl.
+	      OutputBufferLength : sizeof ( DISK_GEOMETRY ) );
 	DiskGeometry.MediaType = FixedMedia;
 	DiskGeometry.Cylinders.QuadPart = DeviceExtension->Disk.Cylinders;
 	DiskGeometry.TracksPerCylinder = DeviceExtension->Disk.Heads;
@@ -746,9 +735,8 @@ NTSTATUS STDCALL DiskDispatchDeviceControl ( IN PDEVICE_OBJECT DeviceObject,
     case IOCTL_SCSI_GET_ADDRESS:
 	CopySize =
 	    ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-	      sizeof ( SCSI_ADDRESS ) ? Stack->
-	      Parameters.DeviceIoControl.OutputBufferLength :
-	      sizeof ( SCSI_ADDRESS ) );
+	      sizeof ( SCSI_ADDRESS ) ? Stack->Parameters.DeviceIoControl.
+	      OutputBufferLength : sizeof ( SCSI_ADDRESS ) );
 	ScsiAdress.Length = sizeof ( SCSI_ADDRESS );
 	ScsiAdress.PortNumber = 0;
 	ScsiAdress.PathId = 0;
