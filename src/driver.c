@@ -92,7 +92,7 @@ NTSTATUS STDCALL DriverEntry ( IN PDRIVER_OBJECT DriverObject,
 //---
 //---
 
-    DbgPrint ( "DriverEntry\n" );
+    DBG ( "Entry\n" );
     InitializeDebug (  );
     if ( !NT_SUCCESS ( Status = CheckRegistry (  ) ) )
 	return Error ( "CheckRegistry", Status );
@@ -111,7 +111,7 @@ NTSTATUS STDCALL DriverEntry ( IN PDRIVER_OBJECT DriverObject,
     StateHandle = NULL;
     if ( ( StateHandle =
 	   PoRegisterSystemState ( NULL, ES_CONTINUOUS ) ) == NULL ) {
-	DbgPrint ( "Could not set system state to ES_CONTINUOUS!!\n" );
+	DBG ( "Could not set system state to ES_CONTINUOUS!!\n" );
     }
 
     for ( i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++ )
@@ -239,7 +239,7 @@ VOID STDCALL Unload ( IN PDRIVER_OBJECT DriverObject )
     ProtocolStop (  );
     AoEStop (  );
     BusStop (  );
-    DbgPrint ( "Unload\n" );
+    DBG ( "Done\n" );
 }
 
 VOID STDCALL CompletePendingIrp ( IN PIRP Irp )
@@ -252,6 +252,6 @@ VOID STDCALL CompletePendingIrp ( IN PIRP Irp )
 
 NTSTATUS STDCALL Error ( IN PCHAR Message, IN NTSTATUS Status )
 {
-    DbgPrint ( "%s: 0x%08x\n", Message, Status );
+    DBG ( "%s: 0x%08x\n", Message, Status );
     return Status;
 }
