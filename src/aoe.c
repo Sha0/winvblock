@@ -171,6 +171,7 @@ NTSTATUS STDCALL AoEStart (  )
 	 == NULL ) {
 	DBG ( "Couldn't allocate ProbeTag->PacketData\n" );
 	ExFreePool ( ProbeTag );
+	return STATUS_INSUFFICIENT_RESOURCES;
     }
     ProbeTag->SendTime.QuadPart = 0LL;
     RtlZeroMemory ( ProbeTag->PacketData, ProbeTag->PacketSize );
