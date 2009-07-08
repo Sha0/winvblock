@@ -30,9 +30,9 @@
  */
 
 #define DBG( ... ) xDbgPrint ( __FILE__, ( const PCHAR )__FUNCTION__, \
-			       __LINE__ ) == STATUS_SUCCESS ? \
+			       __LINE__ ) || 1 ? \
 		   DbgPrint ( __VA_ARGS__ ) : \
-		   STATUS_UNSUCCESSFUL
+		   0
 
 extern NTSTATUS STDCALL xDbgPrint ( IN PCHAR File, IN PCHAR Function,
 				    IN UINT Line );
