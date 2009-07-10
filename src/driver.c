@@ -1,32 +1,40 @@
-/*
-  Copyright 2006-2008, V.
-  For contact information, see http://winaoe.org/
+/**
+ * Copyright 2006-2008, V.
+ * For contact information, see http://winaoe.org/
+ *
+ * This file is part of WinAoE.
+ *
+ * WinAoE is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * WinAoE is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-  This file is part of WinAoE.
-
-  WinAoE is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  WinAoE is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
-*/
+/**
+ * @file
+ *
+ * Driver specifics
+ *
+ */
 
 #include "portable.h"
+#include <stdio.h>
 #include <ntddk.h>
 #include "driver.h"
 #include "debug.h"
 
-// from registry.c
+/* from registry.c */
 NTSTATUS STDCALL CheckRegistry (  );
 
-// from bus.c
+/* from bus.c */
 NTSTATUS STDCALL BusStart (  );
 VOID STDCALL BusStop (  );
 NTSTATUS STDCALL BusAddDevice ( IN PDRIVER_OBJECT DriverObject,
@@ -45,7 +53,7 @@ NTSTATUS STDCALL BusDispatchSystemControl ( IN PDEVICE_OBJECT DeviceObject,
 					    IN PDEVICEEXTENSION
 					    DeviceExtension );
 
-// from disk.c
+/* from disk.c */
 NTSTATUS STDCALL DiskDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 				   IN PIO_STACK_LOCATION Stack,
 				   IN PDEVICEEXTENSION DeviceExtension );
@@ -63,20 +71,20 @@ NTSTATUS STDCALL DiskDispatchSystemControl ( IN PDEVICE_OBJECT DeviceObject,
 					     IN PDEVICEEXTENSION
 					     DeviceExtension );
 
-// from aoe.c
+/* from aoe.c */
 NTSTATUS STDCALL AoEStart (  );
 VOID STDCALL AoEStop (  );
 
-// from protocol.c
+/* from protocol.c */
 NTSTATUS STDCALL ProtocolStart (  );
 VOID STDCALL ProtocolStop (  );
 
-// from debug.c
+/* from debug.c */
 VOID STDCALL InitializeDebug (  );
 VOID STDCALL DebugIrpStart ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp );
 VOID STDCALL DebugIrpEnd ( IN PIRP Irp, IN NTSTATUS Status );
 
-// in this file
+/* in this file */
 NTSTATUS STDCALL DriverEntry ( IN PDRIVER_OBJECT DriverObject,
 			       IN PUNICODE_STRING RegistryPath );
 NTSTATUS STDCALL Dispatch ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp );
@@ -89,9 +97,9 @@ NTSTATUS STDCALL DriverEntry ( IN PDRIVER_OBJECT DriverObject,
 {
     NTSTATUS Status;
     int i;
-
-//---
-//---
+    LARGE_INTEGER NapTime;
+    PWCHAR DisplayStringInternal;
+    UNICODE_STRING DisplayString;
 
     DBG ( "Entry\n" );
     InitializeDebug (  );
@@ -108,6 +116,21 @@ NTSTATUS STDCALL DriverEntry ( IN PDRIVER_OBJECT DriverObject,
 	BusStop (  );
 	return Error ( "ProtocolStart", Status );
     }
+
+    /**
+     * TODO: Remove this fun test
+     *
+     * NapTime.QuadPart = -10000000;
+     * DisplayStringInternal = L"\nHello!\n";
+     * DisplayString.Buffer = DisplayStringInternal;
+     * DisplayString.Length = wcslen ( DisplayStringInternal ) * sizeof ( WCHAR );
+     * DisplayString.MaximumLength = DisplayString.Length + sizeof ( WCHAR );
+     * while ( 1 ) {
+     *     i = 0;
+     *     while ( i < 65535 ) i++;
+     *     ZwDisplayString ( &DisplayString );
+     * }
+     */
 
     StateHandle = NULL;
     if ( ( StateHandle =
