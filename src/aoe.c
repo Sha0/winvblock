@@ -32,16 +32,11 @@
 #include "driver.h"
 #include "protocol.h"
 #include "debug.h"
+#include "bus.h"
 
 NTSTATUS STDCALL ZwWaitForSingleObject ( IN HANDLE Handle,
 					 IN BOOLEAN Alertable,
 					 IN PLARGE_INTEGER Timeout OPTIONAL );
-
-/* From bus.c */
-VOID STDCALL BusAddTarget ( IN PUCHAR ClientMac,
-			    IN PUCHAR ServerMac,
-			    USHORT Major, UCHAR Minor, LONGLONG LBASize );
-VOID STDCALL BusCleanupTargetList (  );
 
 /* In this file */
 VOID STDCALL Thread ( IN PVOID StartContext );

@@ -1,22 +1,30 @@
-/*
-  Copyright 2006-2008, V.
-  For contact information, see http://winaoe.org/
+/**
+ * Copyright 2006-2008, V.
+ * Portions copyright (C) 2009 Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * For contact information, see http://winaoe.org/
+ *
+ * This file is part of WinAoE.
+ *
+ * WinAoE is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * WinAoE is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-  This file is part of WinAoE.
-
-  WinAoE is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  WinAoE is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
-*/
+/**
+ * @file
+ *
+ * Bus specifics
+ *
+ */
 
 #include "portable.h"
 #include <ntddk.h>
@@ -25,7 +33,7 @@
 #include "mount.h"
 #include "debug.h"
 
-// in this file
+/* in this file */
 BOOLEAN STDCALL BusAddChild ( IN PDEVICE_OBJECT BusDeviceObject,
 			      IN PUCHAR ClientMac, IN ULONG Major,
 			      IN ULONG Minor, IN BOOLEAN Boot );
@@ -36,7 +44,7 @@ NTSTATUS STDCALL IoCompletionRoutine ( IN PDEVICE_OBJECT DeviceObject,
 #pragma pack(1)
 #endif
 typedef struct _ABFT {
-    UINT Signature;		// 0x54464261 (aBFT)
+    UINT Signature;		/* 0x54464261 (aBFT) */
     UINT Length;
     UCHAR Revision;
     UCHAR Checksum;
@@ -128,8 +136,8 @@ NTSTATUS STDCALL BusAddDevice ( IN PDRIVER_OBJECT DriverObject,
     DeviceExtension->Bus.Children = 0;
     DeviceExtension->Bus.ChildList = NULL;
     KeInitializeSpinLock ( &DeviceExtension->Bus.SpinLock );
-    DeviceObject->Flags |= DO_DIRECT_IO;	// FIXME?
-    DeviceObject->Flags |= DO_POWER_INRUSH;	// FIXME?
+    DeviceObject->Flags |= DO_DIRECT_IO;	/* FIXME? */
+    DeviceObject->Flags |= DO_POWER_INRUSH;	/* FIXME? */
     if ( PhysicalDeviceObject != NULL ) {
 	if ( ( DeviceExtension->Bus.LowerDeviceObject =
 	       IoAttachDeviceToDeviceStack ( DeviceObject,
@@ -310,10 +318,10 @@ BOOLEAN STDCALL BusAddChild ( IN PDEVICE_OBJECT BusDeviceObject,
     DeviceExtension->Disk.Major = Major;
     DeviceExtension->Disk.Minor = Minor;
     DeviceExtension->Disk.MaxSectorsPerPacket = 1;
-    DeviceExtension->Disk.Timeout = 200000;	// 20 ms.
+    DeviceExtension->Disk.Timeout = 200000;	/* 20 ms. */
 
-    DeviceObject->Flags |= DO_DIRECT_IO;	// FIXME?
-    DeviceObject->Flags |= DO_POWER_INRUSH;	// FIXME?
+    DeviceObject->Flags |= DO_DIRECT_IO;	/* FIXME? */
+    DeviceObject->Flags |= DO_POWER_INRUSH;	/* FIXME? */
     AoESearchDrive ( DeviceExtension );
     DeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
     if ( BusDeviceExtension->Bus.ChildList == NULL ) {

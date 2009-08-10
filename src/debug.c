@@ -19,6 +19,13 @@
  * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/**
+ * @file
+ *
+ * Debugging specifics
+ *
+ */
+
 #include "portable.h"
 #include <ntddk.h>
 #include <srb.h>
@@ -45,7 +52,7 @@ ULONG Number = 0;
 
 extern int sprintf ( char *, const char *, ... );
 
-// in this file
+/* in this file */
 PIRPLIST STDCALL IrpListRecord ( IN PIRP Irp );
 VOID STDCALL DecodeIrp ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 			 IN PCHAR DebugMessage );
@@ -129,8 +136,10 @@ VOID STDCALL DebugIrpEnd ( IN PIRP Irp, IN NTSTATUS Status )
 	DBG ( "Irp not found in IrpList!! (returned 0x%08x, Status)\n" );
 	return;
     }
-    // There is no race condition between getting the record and unlinking in IrpList, unless DebugIrpEnd
-    // is called more than once on an irp (which itself is a bug, it should only be called one time).
+    /* There is no race condition between getting the record and unlinking in
+     * IrpList, unless DebugIrpEnd is called more than once on an irp (which
+     * itself is a bug, it should only be called one time).
+     */
     KeAcquireSpinLock ( &SpinLock, &Irql );
     if ( Record->Previous == NULL ) {
 	IrpList = Record->Next;
@@ -267,7 +276,8 @@ PCHAR STDCALL MajorFunctionString ( IN UCHAR MajorFunction )
     switch ( MajorFunction ) {
     case IRP_MJ_CREATE:
 	return "CREATE";
-//    case IRP_MJ_NAMED_PIPE:               return "NAMED_PIPE";
+/*    case IRP_MJ_NAMED_PIPE:               return "NAMED_PIPE";
+ */
     case IRP_MJ_CLOSE:
 	return "CLOSE";
     case IRP_MJ_READ:
@@ -294,7 +304,8 @@ PCHAR STDCALL MajorFunctionString ( IN UCHAR MajorFunction )
 	return "FILE_SYSTEM_CONTROL";
     case IRP_MJ_DEVICE_CONTROL:
 	return "DEVICE_CONTROL";
-//    case IRP_MJ_INTERNAL_DEVICE_CONTROL:  return "INTERNAL_DEVICE_CONTROL";
+/*    case IRP_MJ_INTERNAL_DEVICE_CONTROL:  return "INTERNAL_DEVICE_CONTROL";
+ */
     case IRP_MJ_SCSI:
 	return "SCSI";
     case IRP_MJ_SHUTDOWN:
@@ -321,8 +332,9 @@ PCHAR STDCALL MajorFunctionString ( IN UCHAR MajorFunction )
 	return "SET_QUOTA";
     case IRP_MJ_PNP:
 	return "PNP";
-//    case IRP_MJ_PNP_POWER:                return "PNP_POWER";
-//    case IRP_MJ_MAXIMUM_FUNCTION:         return "MAXIMUM_FUNCTION";
+/*    case IRP_MJ_PNP_POWER:                return "PNP_POWER";
+ *    case IRP_MJ_MAXIMUM_FUNCTION:         return "MAXIMUM_FUNCTION";
+ */
     default:
 	return "UNKNOWN";
     }
@@ -379,7 +391,8 @@ PCHAR STDCALL PnPMinorFunctionString ( IN UCHAR MinorFunction )
 	return "SURPRISE_REMOVAL";
     case IRP_MN_QUERY_LEGACY_BUS_INFORMATION:
 	return "QUERY_LEGACY_BUS_INFORMATION";
-//    case IRP_MN_BUS_RESET:                    return "BUS_RESET"
+/*    case IRP_MN_BUS_RESET:                    return "BUS_RESET"
+ */
     default:
 	return "UNKNOWN";
     }
@@ -408,7 +421,8 @@ PCHAR STDCALL SystemControlMinorFunctionString ( IN UCHAR MinorFunction )
 	return "REGINFO";
     case IRP_MN_EXECUTE_METHOD:
 	return "EXECUTE_METHOD";
-//    case IRP_MN_REGINFO_EX:             return "REGINFO_EX";
+/*    case IRP_MN_REGINFO_EX:             return "REGINFO_EX";
+ */
     default:
 	return "UNKNOWN";
     }
@@ -505,7 +519,8 @@ PCHAR STDCALL SrbFunctionString ( IN UCHAR Function )
 	return "LOCK_QUEUE";
     case SRB_FUNCTION_UNLOCK_QUEUE:
 	return "UNLOCK_QUEUE";
-//    case SRB_FUNCTION_RESET_LOGICAL_UNIT: return "RESET_LOGICAL_UNIT";
+/*    case SRB_FUNCTION_RESET_LOGICAL_UNIT: return "RESET_LOGICAL_UNIT";
+ */
     default:
 	return "SRB_FUNCTION_UNKNOWN";
     }
@@ -532,7 +547,9 @@ PCHAR STDCALL DeviceIoControlString ( IN ULONG IoControlCode )
 	return "IOCTL_DISK_CHECK_VERIFY";
     case IOCTL_DISK_CONTROLLER_NUMBER:
 	return "IOCTL_DISK_CONTROLLER_NUMBER";
-//    case IOCTL_DISK_CREATE_DISK:                return "IOCTL_DISK_CREATE_DISK";
+/*    case IOCTL_DISK_CREATE_DISK:
+ *    return "IOCTL_DISK_CREATE_DISK";
+ */
     case IOCTL_DISK_DELETE_DRIVE_LAYOUT:
 	return "IOCTL_DISK_DELETE_DRIVE_LAYOUT";
     case IOCTL_DISK_FIND_NEW_DEVICES:
@@ -545,16 +562,24 @@ PCHAR STDCALL DeviceIoControlString ( IN ULONG IoControlCode )
 	return "IOCTL_DISK_GET_CACHE_INFORMATION";
     case IOCTL_DISK_GET_DRIVE_GEOMETRY:
 	return "IOCTL_DISK_GET_DRIVE_GEOMETRY";
-//    case IOCTL_DISK_GET_DRIVE_GEOMETRY_EX:      return "IOCTL_DISK_GET_DRIVE_GEOMETRY_EX";
+/*    case IOCTL_DISK_GET_DRIVE_GEOMETRY_EX:
+ *    return "IOCTL_DISK_GET_DRIVE_GEOMETRY_EX";
+ */
     case IOCTL_DISK_GET_DRIVE_LAYOUT:
 	return "IOCTL_DISK_GET_DRIVE_LAYOUT";
-//    case IOCTL_DISK_GET_DRIVE_LAYOUT_EX:        return "IOCTL_DISK_GET_DRIVE_LAYOUT_EX";
+/*    case IOCTL_DISK_GET_DRIVE_LAYOUT_EX:
+ *    return "IOCTL_DISK_GET_DRIVE_LAYOUT_EX";
+ */
     case IOCTL_DISK_GET_MEDIA_TYPES:
 	return "IOCTL_DISK_GET_MEDIA_TYPES";
-//    case IOCTL_DISK_GET_LENGTH_INFO:            return "IOCTL_DISK_GET_LENGTH_INFO";
+/*    case IOCTL_DISK_GET_LENGTH_INFO:
+ *    return "IOCTL_DISK_GET_LENGTH_INFO";
+ */
     case IOCTL_DISK_GET_PARTITION_INFO:
 	return "IOCTL_DISK_GET_PARTITION_INFO";
-//    case IOCTL_DISK_GET_PARTITION_INFO_EX:      return "IOCTL_DISK_GET_PARTITION_INFO_EX";
+/*    case IOCTL_DISK_GET_PARTITION_INFO_EX:
+ *    return "IOCTL_DISK_GET_PARTITION_INFO_EX";
+ */
     case IOCTL_DISK_GROW_PARTITION:
 	return "IOCTL_DISK_GROW_PARTITION";
     case IOCTL_DISK_INTERNAL_CLEAR_VERIFY:
@@ -565,7 +590,9 @@ PCHAR STDCALL DeviceIoControlString ( IN ULONG IoControlCode )
 	return "IOCTL_DISK_IS_WRITABLE";
     case IOCTL_DISK_PERFORMANCE:
 	return "IOCTL_DISK_PERFORMANCE";
-//    case IOCTL_DISK_PERFORMANCE_OFF:            return "IOCTL_DISK_PERFORMANCE_OFF";
+/*    case IOCTL_DISK_PERFORMANCE_OFF:
+ *    return "IOCTL_DISK_PERFORMANCE_OFF";
+ */
     case IOCTL_DISK_REASSIGN_BLOCKS:
 	return "IOCTL_DISK_REASSIGN_BLOCKS";
     case IOCTL_DISK_RESERVE:
@@ -574,10 +601,14 @@ PCHAR STDCALL DeviceIoControlString ( IN ULONG IoControlCode )
 	return "IOCTL_DISK_SET_CACHE_INFORMATION";
     case IOCTL_DISK_SET_DRIVE_LAYOUT:
 	return "IOCTL_DISK_SET_DRIVE_LAYOUT";
-//    case IOCTL_DISK_SET_DRIVE_LAYOUT_EX:        return "IOCTL_DISK_SET_DRIVE_LAYOUT_EX";
+/*    case IOCTL_DISK_SET_DRIVE_LAYOUT_EX:
+ *    return "IOCTL_DISK_SET_DRIVE_LAYOUT_EX";
+ */
     case IOCTL_DISK_SET_PARTITION_INFO:
 	return "IOCTL_DISK_SET_PARTITION_INFO";
-//    case IOCTL_DISK_SET_PARTITION_INFO_EX:      return "IOCTL_DISK_SET_PARTITION_INFO_EX";
+/*    case IOCTL_DISK_SET_PARTITION_INFO_EX:
+ *    return "IOCTL_DISK_SET_PARTITION_INFO_EX";
+ */
     case IOCTL_DISK_VERIFY:
 	return "IOCTL_DISK_VERIFY";
     case SMART_GET_VERSION:
@@ -598,7 +629,9 @@ PCHAR STDCALL DeviceIoControlString ( IN ULONG IoControlCode )
 	return "IOCTL_STORAGE_FIND_NEW_DEVICES";
     case IOCTL_STORAGE_GET_DEVICE_NUMBER:
 	return "IOCTL_STORAGE_GET_DEVICE_NUMBER";
-//    case IOCTL_STORAGE_GET_MEDIA_SERIAL_NUMBER: return "IOCTL_STORAGE_GET_MEDIA_SERIAL_NUMBER";
+/*    case IOCTL_STORAGE_GET_MEDIA_SERIAL_NUMBER:
+ *    return "IOCTL_STORAGE_GET_MEDIA_SERIAL_NUMBER";
+ */
     case IOCTL_STORAGE_GET_MEDIA_TYPES:
 	return "IOCTL_STORAGE_GET_MEDIA_TYPES";
     case IOCTL_STORAGE_GET_MEDIA_TYPES_EX:

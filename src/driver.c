@@ -1,5 +1,6 @@
 /**
  * Copyright 2006-2008, V.
+ * Portions copyright (C) 2009 Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * For contact information, see http://winaoe.org/
  *
  * This file is part of WinAoE.
@@ -30,59 +31,12 @@
 #include <ntddk.h>
 #include "driver.h"
 #include "debug.h"
-
-/* from registry.c */
-NTSTATUS STDCALL CheckRegistry (  );
-
-/* from bus.c */
-NTSTATUS STDCALL BusStart (  );
-VOID STDCALL BusStop (  );
-NTSTATUS STDCALL BusAddDevice ( IN PDRIVER_OBJECT DriverObject,
-				IN PDEVICE_OBJECT PhysicalDeviceObject );
-NTSTATUS STDCALL BusDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
-				  IN PIO_STACK_LOCATION Stack,
-				  IN PDEVICEEXTENSION DeviceExtension );
-NTSTATUS STDCALL BusDispatchDeviceControl ( IN PDEVICE_OBJECT DeviceObject,
-					    IN PIRP Irp,
-					    IN PIO_STACK_LOCATION Stack,
-					    IN PDEVICEEXTENSION
-					    DeviceExtension );
-NTSTATUS STDCALL BusDispatchSystemControl ( IN PDEVICE_OBJECT DeviceObject,
-					    IN PIRP Irp,
-					    IN PIO_STACK_LOCATION Stack,
-					    IN PDEVICEEXTENSION
-					    DeviceExtension );
-
-/* from disk.c */
-NTSTATUS STDCALL DiskDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
-				   IN PIO_STACK_LOCATION Stack,
-				   IN PDEVICEEXTENSION DeviceExtension );
-NTSTATUS STDCALL DiskDispatchSCSI ( IN PDEVICE_OBJECT DeviceObject,
-				    IN PIRP Irp, IN PIO_STACK_LOCATION Stack,
-				    IN PDEVICEEXTENSION DeviceExtension );
-NTSTATUS STDCALL DiskDispatchDeviceControl ( IN PDEVICE_OBJECT DeviceObject,
-					     IN PIRP Irp,
-					     IN PIO_STACK_LOCATION Stack,
-					     IN PDEVICEEXTENSION
-					     DeviceExtension );
-NTSTATUS STDCALL DiskDispatchSystemControl ( IN PDEVICE_OBJECT DeviceObject,
-					     IN PIRP Irp,
-					     IN PIO_STACK_LOCATION Stack,
-					     IN PDEVICEEXTENSION
-					     DeviceExtension );
-
-/* from aoe.c */
-NTSTATUS STDCALL AoEStart (  );
-VOID STDCALL AoEStop (  );
-
-/* from protocol.c */
-NTSTATUS STDCALL ProtocolStart (  );
-VOID STDCALL ProtocolStop (  );
-
-/* from debug.c */
-VOID STDCALL InitializeDebug (  );
-VOID STDCALL DebugIrpStart ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp );
-VOID STDCALL DebugIrpEnd ( IN PIRP Irp, IN NTSTATUS Status );
+#include "registry.h"
+#include "bus.h"
+#include "disk.h"
+#include "aoe.h"
+#include "protocol.h"
+#include "debug.h"
 
 /* in this file */
 NTSTATUS STDCALL DriverEntry ( IN PDRIVER_OBJECT DriverObject,
@@ -97,9 +51,13 @@ NTSTATUS STDCALL DriverEntry ( IN PDRIVER_OBJECT DriverObject,
 {
     NTSTATUS Status;
     int i;
-    LARGE_INTEGER NapTime;
-    PWCHAR DisplayStringInternal;
-    UNICODE_STRING DisplayString;
+    /**
+     * TODO: Remove this fun test
+     *
+     * LARGE_INTEGER NapTime;
+     * PWCHAR DisplayStringInternal;
+     * UNICODE_STRING DisplayString;
+     */
 
     DBG ( "Entry\n" );
     InitializeDebug (  );

@@ -1,22 +1,30 @@
-/*
-  Copyright 2006-2008, V.
-  For contact information, see http://winaoe.org/
+/**
+ * Copyright 2006-2008, V.
+ * Portions copyright (C) 2009 Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * For contact information, see http://winaoe.org/
+ *
+ * This file is part of WinAoE.
+ *
+ * WinAoE is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * WinAoE is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-  This file is part of WinAoE.
-
-  WinAoE is free software: you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation, either version 3 of the License, or
-  (at your option) any later version.
-
-  WinAoE is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
-*/
+/**
+ * @file
+ *
+ * Disk specifics
+ *
+ */
 
 #include "portable.h"
 #include <stdio.h>
@@ -112,7 +120,7 @@ typedef struct _PORTABLE_CDB16 {
 DEFINE_GUID ( GUID_BUS_TYPE_INTERNAL, 0x2530ea73L, 0x086b, 0x11d1, 0xa0, 0x9f,
 	      0x00, 0xc0, 0x4f, 0xc3, 0x40, 0xb1 );
 
-// in this file
+/* in this file */
 NTSTATUS STDCALL BusGetDeviceCapabilities ( IN PDEVICE_OBJECT DeviceObject,
 					    IN PDEVICE_CAPABILITIES
 					    DeviceCapabilities );
@@ -328,7 +336,11 @@ NTSTATUS STDCALL DiskDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 	     PowerDeviceD0 )
 	    DeviceCapabilities->DeviceState[PowerSystemSleeping2] =
 		PowerDeviceD3;
-//      if (DeviceCapabilities->DeviceState[PowerSystemSleeping3] != PowerDeviceD0) DeviceCapabilities->DeviceState[PowerSystemSleeping3] = PowerDeviceD3;
+/*      if (DeviceCapabilities->DeviceState[PowerSystemSleeping3] !=
+ *          PowerDeviceD0)
+ *         DeviceCapabilities->DeviceState[PowerSystemSleeping3] =
+ *             PowerDeviceD3;
+ */
 	DeviceCapabilities->DeviceWake = PowerDeviceD1;
 	DeviceCapabilities->DeviceD1 = TRUE;
 	DeviceCapabilities->DeviceD2 = FALSE;
@@ -345,8 +357,9 @@ NTSTATUS STDCALL DiskDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 	DeviceCapabilities->SurpriseRemovalOK = FALSE;
 	DeviceCapabilities->UniqueID = FALSE;
 	DeviceCapabilities->SilentInstall = FALSE;
-//      DeviceCapabilities->Address = DeviceObject->SerialNo;
-//      DeviceCapabilities->UINumber = DeviceObject->SerialNo;
+/*      DeviceCapabilities->Address = DeviceObject->SerialNo;
+ *      DeviceCapabilities->UINumber = DeviceObject->SerialNo;
+ */
 	Status = STATUS_SUCCESS;
 	break;
     case IRP_MN_DEVICE_USAGE_NOTIFICATION:
@@ -547,7 +560,8 @@ NTSTATUS STDCALL DiskDispatchSCSI ( IN PDEVICE_OBJECT DeviceObject,
 			( Cdb->CDB10.TransferBlocksMsb << 8 ) +
 			Cdb->CDB10.TransferBlocksLsb;
 		}
-//            Srb->DataTransferLength = SectorCount * SECTORSIZE;
+/*            Srb->DataTransferLength = SectorCount * SECTORSIZE;
+ */
 		Srb->SrbStatus = SRB_STATUS_SUCCESS;
 		break;
 	    case SCSIOP_READ_CAPACITY:
@@ -670,7 +684,8 @@ NTSTATUS STDCALL DiskDispatchDeviceControl ( IN PDEVICE_OBJECT DeviceObject,
 		sizeof ( STORAGE_ADAPTER_DESCRIPTOR );
 	    StorageAdapterDescriptor.MaximumTransferLength =
 		SECTORSIZE * DeviceExtension->Disk.MaxSectorsPerPacket;
-//        StorageAdapterDescriptor.MaximumTransferLength = SECTORSIZE * POOLSIZE;
+/*        StorageAdapterDescriptor.MaximumTransferLength = SECTORSIZE * POOLSIZE;
+ */
 	    StorageAdapterDescriptor.MaximumPhysicalPages = ( ULONG ) - 1;
 	    StorageAdapterDescriptor.AlignmentMask = 0;
 	    StorageAdapterDescriptor.AdapterUsesPio = TRUE;
@@ -771,7 +786,7 @@ NTSTATUS STDCALL DiskDispatchSystemControl ( IN PDEVICE_OBJECT DeviceObject,
     return Status;
 }
 
-// FIXME put in SCSI
+/* FIXME put in SCSI */
 NTSTATUS STDCALL BusGetDeviceCapabilities ( IN PDEVICE_OBJECT DeviceObject,
 					    IN PDEVICE_CAPABILITIES
 					    DeviceCapabilities )
