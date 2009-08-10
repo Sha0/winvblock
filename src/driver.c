@@ -42,7 +42,7 @@
 static NTSTATUS STDCALL Dispatch ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp );
 static VOID STDCALL Unload ( IN PDRIVER_OBJECT DriverObject );
 
-PVOID StateHandle;
+static PVOID StateHandle;
 
 NTSTATUS STDCALL DriverEntry ( IN PDRIVER_OBJECT DriverObject,
 			       IN PUNICODE_STRING RegistryPath )

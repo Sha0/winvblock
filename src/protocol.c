@@ -109,10 +109,10 @@ typedef struct _BINDINGCONTEXT {
     struct _BINDINGCONTEXT *Next;
 } BINDINGCONTEXT, *PBINDINGCONTEXT;
 
-KEVENT ProtocolStopEvent;
-KSPIN_LOCK SpinLock;
-PBINDINGCONTEXT BindingContextList = NULL;
-NDIS_HANDLE ProtocolHandle = NULL;
+static KEVENT ProtocolStopEvent;
+static KSPIN_LOCK SpinLock;
+static PBINDINGCONTEXT BindingContextList = NULL;
+static NDIS_HANDLE ProtocolHandle = NULL;
 
 NTSTATUS STDCALL ProtocolStart (  )
 {

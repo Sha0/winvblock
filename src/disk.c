@@ -40,7 +40,7 @@
 #include "debug.h"
 
 #ifndef _MSC_VER
-long long __divdi3 ( long long u, long long v )
+static long long __divdi3 ( long long u, long long v )
 {
     return u / v;
 }

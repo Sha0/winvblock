@@ -38,6 +38,8 @@
 #include "mount.h"
 #include "debug.h"
 
+extern int sprintf ( char *, const char *, ... );
+
 typedef struct _IRPLIST {
     PIRP Irp;
     ULONG Number;
@@ -46,11 +48,9 @@ typedef struct _IRPLIST {
     struct _IRPLIST *Previous;
 } IRPLIST, *PIRPLIST;
 
-PIRPLIST IrpList = NULL;
-KSPIN_LOCK SpinLock;
-ULONG Number = 0;
-
-extern int sprintf ( char *, const char *, ... );
+static PIRPLIST IrpList = NULL;
+static KSPIN_LOCK SpinLock;
+static ULONG Number = 0;
 
 /* in this file */
 static PIRPLIST STDCALL IrpListRecord ( IN PIRP Irp );

@@ -126,15 +126,15 @@ typedef struct _DISKSEARCH {
 } DISKSEARCH, *PDISKSEARCH;
 
 /** Globals */
-BOOLEAN Stop = FALSE;
-KSPIN_LOCK SpinLock;
-KEVENT ThreadSignalEvent;
-PTAG TagList = NULL;
-PTAG TagListLast = NULL;
-PTAG ProbeTag = NULL;
-PDISKSEARCH DiskSearchList = NULL;
-LONG OutstandingTags = 0;
-HANDLE ThreadHandle;
+static BOOLEAN Stop = FALSE;
+static KSPIN_LOCK SpinLock;
+static KEVENT ThreadSignalEvent;
+static PTAG TagList = NULL;
+static PTAG TagListLast = NULL;
+static PTAG ProbeTag = NULL;
+static PDISKSEARCH DiskSearchList = NULL;
+static LONG OutstandingTags = 0;
+static HANDLE ThreadHandle;
 
 /**
  * Start AoE operations

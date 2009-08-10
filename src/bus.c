@@ -65,9 +65,9 @@ typedef struct _TARGETLIST {
     struct _TARGETLIST *Next;
 } TARGETLIST, *PTARGETLIST;
 
-PTARGETLIST TargetList = NULL;
-KSPIN_LOCK TargetListSpinLock;
-ULONG NextDisk = 0;
+static PTARGETLIST TargetList = NULL;
+static KSPIN_LOCK TargetListSpinLock;
+static ULONG NextDisk = 0;
 
 NTSTATUS STDCALL BusStart (  )
 {
