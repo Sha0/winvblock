@@ -34,12 +34,12 @@
 #include "debug.h"
 #include "bus.h"
 
-NTSTATUS STDCALL ZwWaitForSingleObject ( IN HANDLE Handle,
+extern NTSTATUS STDCALL ZwWaitForSingleObject ( IN HANDLE Handle,
 					 IN BOOLEAN Alertable,
 					 IN PLARGE_INTEGER Timeout OPTIONAL );
 
 /* In this file */
-VOID STDCALL Thread ( IN PVOID StartContext );
+static VOID STDCALL Thread ( IN PVOID StartContext );
 
 #ifdef _MSC_VER
 #pragma pack(1)
@@ -538,12 +538,12 @@ BOOLEAN STDCALL AoESearchDrive ( IN PDEVICEEXTENSION DeviceExtension )
 /**
  * I/O Request
  *
- * @v DeviceExtension		The device extension for the disk
- * @v Mode			Read / write mode
+ * @v DeviceExtension	The device extension for the disk
+ * @v Mode		        Read / write mode
  * @v StartSector		First sector for request
  * @v SectorCount		Number of sectors to work with
  * @v Buffer			Buffer to read / write sectors to / from
- * @v Irp			Interrupt request packet for this request
+ * @v Irp			    Interrupt request packet for this request
  */
 NTSTATUS STDCALL AoERequest ( IN PDEVICEEXTENSION DeviceExtension,
 			      IN REQUESTMODE Mode, IN LONGLONG StartSector,
@@ -900,7 +900,7 @@ VOID STDCALL AoEResetProbe (  )
     ProbeTag->SendTime.QuadPart = 0LL;
 }
 
-VOID STDCALL Thread ( IN PVOID StartContext )
+static VOID STDCALL Thread ( IN PVOID StartContext )
 {
     LARGE_INTEGER Timeout, CurrentTime, ProbeTime, ReportTime;
     ULONG NextTagId = 1;

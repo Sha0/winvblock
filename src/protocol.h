@@ -30,12 +30,12 @@
 
 #include "portable.h"
 
-BOOLEAN STDCALL ProtocolSearchNIC ( IN PUCHAR Mac );
-ULONG STDCALL ProtocolGetMTU ( IN PUCHAR Mac );
-BOOLEAN STDCALL ProtocolSend ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
+extern BOOLEAN STDCALL ProtocolSearchNIC ( IN PUCHAR Mac );
+extern ULONG STDCALL ProtocolGetMTU ( IN PUCHAR Mac );
+extern BOOLEAN STDCALL ProtocolSend ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
 			       IN PUCHAR Data, IN ULONG DataSize,
 			       IN PVOID PacketContext );
-NTSTATUS STDCALL ProtocolStart (  );
-VOID STDCALL ProtocolStop (  );
+extern NTSTATUS STDCALL ProtocolStart (  );
+extern VOID STDCALL ProtocolStop (  );
 
 #endif				/* _PROTOCOL_H */

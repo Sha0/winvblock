@@ -39,10 +39,8 @@
 #include "debug.h"
 
 /* in this file */
-NTSTATUS STDCALL DriverEntry ( IN PDRIVER_OBJECT DriverObject,
-			       IN PUNICODE_STRING RegistryPath );
-NTSTATUS STDCALL Dispatch ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp );
-VOID STDCALL Unload ( IN PDRIVER_OBJECT DriverObject );
+static NTSTATUS STDCALL Dispatch ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp );
+static VOID STDCALL Unload ( IN PDRIVER_OBJECT DriverObject );
 
 PVOID StateHandle;
 
@@ -123,7 +121,7 @@ NTSTATUS STDCALL DriverEntry ( IN PDRIVER_OBJECT DriverObject,
 #endif
 }
 
-NTSTATUS STDCALL Dispatch ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp )
+static NTSTATUS STDCALL Dispatch ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp )
 {
     NTSTATUS Status;
     PIO_STACK_LOCATION Stack;
@@ -214,7 +212,7 @@ NTSTATUS STDCALL Dispatch ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp )
     return Status;
 }
 
-VOID STDCALL Unload ( IN PDRIVER_OBJECT DriverObject )
+static VOID STDCALL Unload ( IN PDRIVER_OBJECT DriverObject )
 {
     if ( StateHandle != NULL )
 	PoUnregisterSystemState ( StateHandle );

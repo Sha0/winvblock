@@ -37,7 +37,7 @@
 extern NTSTATUS STDCALL xDbgPrint ( IN PCHAR File, IN PCHAR Function,
 				    IN UINT Line );
 extern VOID STDCALL InitializeDebug (  );
-VOID STDCALL DebugIrpStart ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp );
-VOID STDCALL DebugIrpEnd ( IN PIRP Irp, IN NTSTATUS Status );
+extern VOID STDCALL DebugIrpStart ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp );
+extern VOID STDCALL DebugIrpEnd ( IN PIRP Irp, IN NTSTATUS Status );
 
 #endif				/* _DEBUG_H */

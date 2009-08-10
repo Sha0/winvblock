@@ -29,9 +29,10 @@
 #include "portable.h"
 #include <ntddk.h>
 #include "debug.h"
+#include "registry.h"
 
 /* in this file */
-BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut );
+static BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut );
 
 NTSTATUS STDCALL CheckRegistry (  )
 {
@@ -43,7 +44,7 @@ NTSTATUS STDCALL CheckRegistry (  )
     return Status;
 }
 
-BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
+static BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut )
 {
     NTSTATUS Status;
     BOOLEAN Updated = FALSE;

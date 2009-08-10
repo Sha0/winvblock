@@ -28,26 +28,26 @@
  *
  */
 
-NTSTATUS STDCALL BusStart (  );
-VOID STDCALL BusStop (  );
-NTSTATUS STDCALL BusAddDevice ( IN PDRIVER_OBJECT DriverObject,
+extern NTSTATUS STDCALL BusStart (  );
+extern VOID STDCALL BusStop (  );
+extern NTSTATUS STDCALL BusAddDevice ( IN PDRIVER_OBJECT DriverObject,
 				IN PDEVICE_OBJECT PhysicalDeviceObject );
-NTSTATUS STDCALL BusDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
-				  IN PIO_STACK_LOCATION Stack,
+extern NTSTATUS STDCALL BusDispatchPnP ( IN PDEVICE_OBJECT DeviceObject,
+                  IN PIRP Irp, IN PIO_STACK_LOCATION Stack,
 				  IN PDEVICEEXTENSION DeviceExtension );
-NTSTATUS STDCALL BusDispatchDeviceControl ( IN PDEVICE_OBJECT DeviceObject,
+extern NTSTATUS STDCALL BusDispatchDeviceControl ( IN PDEVICE_OBJECT DeviceObject,
 					    IN PIRP Irp,
 					    IN PIO_STACK_LOCATION Stack,
 					    IN PDEVICEEXTENSION
 					    DeviceExtension );
-NTSTATUS STDCALL BusDispatchSystemControl ( IN PDEVICE_OBJECT DeviceObject,
+extern NTSTATUS STDCALL BusDispatchSystemControl ( IN PDEVICE_OBJECT DeviceObject,
 					    IN PIRP Irp,
 					    IN PIO_STACK_LOCATION Stack,
 					    IN PDEVICEEXTENSION
 					    DeviceExtension );
-VOID STDCALL BusAddTarget ( IN PUCHAR ClientMac,
+extern VOID STDCALL BusAddTarget ( IN PUCHAR ClientMac,
 			    IN PUCHAR ServerMac,
 			    USHORT Major, UCHAR Minor, LONGLONG LBASize );
-VOID STDCALL BusCleanupTargetList (  );
+extern VOID STDCALL BusCleanupTargetList (  );
 
 #endif				/* _BUS_H */

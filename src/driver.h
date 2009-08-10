@@ -90,7 +90,9 @@ typedef struct _DEVICEEXTENSION {
     };
 } DEVICEEXTENSION, *PDEVICEEXTENSION;
 
-VOID STDCALL CompletePendingIrp ( IN PIRP Irp );
-NTSTATUS STDCALL Error ( IN PCHAR Message, IN NTSTATUS Status );
+extern VOID STDCALL CompletePendingIrp ( IN PIRP Irp );
+extern NTSTATUS STDCALL Error ( IN PCHAR Message, IN NTSTATUS Status );
+extern NTSTATUS STDCALL DriverEntry ( IN PDRIVER_OBJECT DriverObject,
+			       IN PUNICODE_STRING RegistryPath );
 
 #endif				/* _DRIVER_H */

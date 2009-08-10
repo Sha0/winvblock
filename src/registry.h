@@ -28,6 +28,6 @@
  *
  */
 
-NTSTATUS STDCALL CheckRegistry (  );
+extern NTSTATUS STDCALL CheckRegistry (  );
 
 #endif				/* _REGISTRY_H */

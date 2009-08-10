@@ -34,10 +34,10 @@
 #include "debug.h"
 
 /* in this file */
-BOOLEAN STDCALL BusAddChild ( IN PDEVICE_OBJECT BusDeviceObject,
+static BOOLEAN STDCALL BusAddChild ( IN PDEVICE_OBJECT BusDeviceObject,
 			      IN PUCHAR ClientMac, IN ULONG Major,
 			      IN ULONG Minor, IN BOOLEAN Boot );
-NTSTATUS STDCALL IoCompletionRoutine ( IN PDEVICE_OBJECT DeviceObject,
+static NTSTATUS STDCALL IoCompletionRoutine ( IN PDEVICE_OBJECT DeviceObject,
 				       IN PIRP Irp, IN PKEVENT Event );
 
 #ifdef _MSC_VER
@@ -274,7 +274,7 @@ VOID STDCALL BusCleanupTargetList (  )
 {
 }
 
-BOOLEAN STDCALL BusAddChild ( IN PDEVICE_OBJECT BusDeviceObject,
+static BOOLEAN STDCALL BusAddChild ( IN PDEVICE_OBJECT BusDeviceObject,
 			      IN PUCHAR ClientMac, IN ULONG Major,
 			      IN ULONG Minor, IN BOOLEAN Boot )
 {
@@ -649,7 +649,7 @@ NTSTATUS STDCALL BusDispatchSystemControl ( IN PDEVICE_OBJECT DeviceObject,
     return IoCallDriver ( DeviceExtension->Bus.LowerDeviceObject, Irp );
 }
 
-NTSTATUS STDCALL IoCompletionRoutine ( IN PDEVICE_OBJECT DeviceObject,
+static NTSTATUS STDCALL IoCompletionRoutine ( IN PDEVICE_OBJECT DeviceObject,
 				       IN PIRP Irp, IN PKEVENT Event )
 {
     KeSetEvent ( Event, 0, FALSE );

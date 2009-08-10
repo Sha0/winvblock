@@ -36,50 +36,50 @@
 #include "debug.h"
 
 /* in this file */
-VOID STDCALL ProtocolOpenAdapterComplete ( IN NDIS_HANDLE
+static VOID STDCALL ProtocolOpenAdapterComplete ( IN NDIS_HANDLE
 					   ProtocolBindingContext,
 					   IN NDIS_STATUS Status,
 					   IN NDIS_STATUS OpenErrorStatus );
-VOID STDCALL ProtocolCloseAdapterComplete ( IN NDIS_HANDLE
+static VOID STDCALL ProtocolCloseAdapterComplete ( IN NDIS_HANDLE
 					    ProtocolBindingContext,
 					    IN NDIS_STATUS Status );
-VOID STDCALL ProtocolSendComplete ( IN NDIS_HANDLE ProtocolBindingContext,
+static VOID STDCALL ProtocolSendComplete ( IN NDIS_HANDLE ProtocolBindingContext,
 				    IN PNDIS_PACKET Packet,
 				    IN NDIS_STATUS Status );
-VOID STDCALL ProtocolTransferDataComplete ( IN NDIS_HANDLE
+static VOID STDCALL ProtocolTransferDataComplete ( IN NDIS_HANDLE
 					    ProtocolBindingContext,
 					    IN PNDIS_PACKET Packet,
 					    IN NDIS_STATUS Status,
 					    IN UINT BytesTransferred );
-VOID STDCALL ProtocolResetComplete ( IN NDIS_HANDLE ProtocolBindingContext,
+static VOID STDCALL ProtocolResetComplete ( IN NDIS_HANDLE ProtocolBindingContext,
 				     IN NDIS_STATUS Status );
-VOID STDCALL ProtocolRequestComplete ( IN NDIS_HANDLE ProtocolBindingContext,
+static VOID STDCALL ProtocolRequestComplete ( IN NDIS_HANDLE ProtocolBindingContext,
 				       IN PNDIS_REQUEST NdisRequest,
 				       IN NDIS_STATUS Status );
-NDIS_STATUS STDCALL ProtocolReceive ( IN NDIS_HANDLE ProtocolBindingContext,
+static NDIS_STATUS STDCALL ProtocolReceive ( IN NDIS_HANDLE ProtocolBindingContext,
 				      IN NDIS_HANDLE MacReceiveContext,
 				      IN PVOID HeaderBuffer,
 				      IN UINT HeaderBufferSize,
 				      IN PVOID LookAheadBuffer,
 				      IN UINT LookaheadBufferSize,
 				      IN UINT PacketSize );
-VOID STDCALL ProtocolReceiveComplete ( IN NDIS_HANDLE ProtocolBindingContext );
-VOID STDCALL ProtocolStatus ( IN NDIS_HANDLE ProtocolBindingContext,
+static VOID STDCALL ProtocolReceiveComplete ( IN NDIS_HANDLE ProtocolBindingContext );
+static VOID STDCALL ProtocolStatus ( IN NDIS_HANDLE ProtocolBindingContext,
 			      IN NDIS_STATUS GeneralStatus,
 			      IN PVOID StatusBuffer,
 			      IN UINT StatusBufferSize );
-VOID STDCALL ProtocolStatusComplete ( IN NDIS_HANDLE ProtocolBindingContext );
-VOID STDCALL ProtocolBindAdapter ( OUT PNDIS_STATUS Status,
+static VOID STDCALL ProtocolStatusComplete ( IN NDIS_HANDLE ProtocolBindingContext );
+static VOID STDCALL ProtocolBindAdapter ( OUT PNDIS_STATUS Status,
 				   IN NDIS_HANDLE BindContext,
 				   IN PNDIS_STRING DeviceName,
 				   IN PVOID SystemSpecific1,
 				   IN PVOID SystemSpecific2 );
-VOID STDCALL ProtocolUnbindAdapter ( OUT PNDIS_STATUS Status,
+static VOID STDCALL ProtocolUnbindAdapter ( OUT PNDIS_STATUS Status,
 				     IN NDIS_HANDLE ProtocolBindingContext,
 				     IN NDIS_HANDLE UnbindContext );
-NDIS_STATUS STDCALL ProtocolPnPEvent ( IN NDIS_HANDLE ProtocolBindingContext,
+static NDIS_STATUS STDCALL ProtocolPnPEvent ( IN NDIS_HANDLE ProtocolBindingContext,
 				       IN PNET_PNP_EVENT NetPnPEvent );
-PCHAR STDCALL NetEventString ( IN NET_PNP_EVENT_CODE NetEvent );
+static PCHAR STDCALL NetEventString ( IN NET_PNP_EVENT_CODE NetEvent );
 
 #ifdef _MSC_VER
 #pragma pack(1)
@@ -271,7 +271,7 @@ BOOLEAN STDCALL ProtocolSend ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
     return TRUE;
 }
 
-VOID STDCALL ProtocolOpenAdapterComplete ( IN NDIS_HANDLE
+static VOID STDCALL ProtocolOpenAdapterComplete ( IN NDIS_HANDLE
 					   ProtocolBindingContext,
 					   IN NDIS_STATUS Status,
 					   IN NDIS_STATUS OpenErrorStatus )
@@ -282,7 +282,7 @@ VOID STDCALL ProtocolOpenAdapterComplete ( IN NDIS_HANDLE
 	DBG ( "0x%08x 0x%08x\n", Status, OpenErrorStatus );
 }
 
-VOID STDCALL ProtocolCloseAdapterComplete ( IN NDIS_HANDLE
+static VOID STDCALL ProtocolCloseAdapterComplete ( IN NDIS_HANDLE
 					    ProtocolBindingContext,
 					    IN NDIS_STATUS Status )
 {
@@ -292,7 +292,7 @@ VOID STDCALL ProtocolCloseAdapterComplete ( IN NDIS_HANDLE
 	Error ( "ProtocolCloseAdapterComplete", Status );
 }
 
-VOID STDCALL ProtocolSendComplete ( IN NDIS_HANDLE ProtocolBindingContext,
+static VOID STDCALL ProtocolSendComplete ( IN NDIS_HANDLE ProtocolBindingContext,
 				    IN PNDIS_PACKET Packet,
 				    IN NDIS_STATUS Status )
 {
@@ -314,7 +314,7 @@ VOID STDCALL ProtocolSendComplete ( IN NDIS_HANDLE ProtocolBindingContext,
     NdisFreePacket ( Packet );
 }
 
-VOID STDCALL ProtocolTransferDataComplete ( IN NDIS_HANDLE
+static VOID STDCALL ProtocolTransferDataComplete ( IN NDIS_HANDLE
 					    ProtocolBindingContext,
 					    IN PNDIS_PACKET Packet,
 					    IN NDIS_STATUS Status,
@@ -352,7 +352,7 @@ VOID STDCALL ProtocolTransferDataComplete ( IN NDIS_HANDLE
     NdisFreePacket ( Packet );
 }
 
-VOID STDCALL ProtocolResetComplete ( IN NDIS_HANDLE ProtocolBindingContext,
+static VOID STDCALL ProtocolResetComplete ( IN NDIS_HANDLE ProtocolBindingContext,
 				     IN NDIS_STATUS Status )
 {
 #if !defined(DEBUGMOSTPROTOCOLCALLS) && !defined(DEBUGALLPROTOCOLCALLS)
@@ -361,7 +361,7 @@ VOID STDCALL ProtocolResetComplete ( IN NDIS_HANDLE ProtocolBindingContext,
 	Error ( "ProtocolResetComplete", Status );
 }
 
-VOID STDCALL ProtocolRequestComplete ( IN NDIS_HANDLE ProtocolBindingContext,
+static VOID STDCALL ProtocolRequestComplete ( IN NDIS_HANDLE ProtocolBindingContext,
 				       IN PNDIS_REQUEST NdisRequest,
 				       IN NDIS_STATUS Status )
 {
@@ -375,7 +375,7 @@ VOID STDCALL ProtocolRequestComplete ( IN NDIS_HANDLE ProtocolBindingContext,
     KeSetEvent ( &Context->Event, 0, FALSE );
 }
 
-NDIS_STATUS STDCALL ProtocolReceive ( IN NDIS_HANDLE ProtocolBindingContext,
+static NDIS_STATUS STDCALL ProtocolReceive ( IN NDIS_HANDLE ProtocolBindingContext,
 				      IN NDIS_HANDLE MacReceiveContext,
 				      IN PVOID HeaderBuffer,
 				      IN UINT HeaderBufferSize,
@@ -461,14 +461,14 @@ NDIS_STATUS STDCALL ProtocolReceive ( IN NDIS_HANDLE ProtocolBindingContext,
     return Status;
 }
 
-VOID STDCALL ProtocolReceiveComplete ( IN NDIS_HANDLE ProtocolBindingContext )
+static VOID STDCALL ProtocolReceiveComplete ( IN NDIS_HANDLE ProtocolBindingContext )
 {
 #ifdef DEBUGALLPROTOCOLCALLS
     DBG ( "Entry\n" );
 #endif
 }
 
-VOID STDCALL ProtocolStatus ( IN NDIS_HANDLE ProtocolBindingContext,
+static VOID STDCALL ProtocolStatus ( IN NDIS_HANDLE ProtocolBindingContext,
 			      IN NDIS_STATUS GeneralStatus,
 			      IN PVOID StatusBuffer, IN UINT StatusBufferSize )
 {
@@ -478,14 +478,14 @@ VOID STDCALL ProtocolStatus ( IN NDIS_HANDLE ProtocolBindingContext,
 	Error ( "ProtocolStatus", GeneralStatus );
 }
 
-VOID STDCALL ProtocolStatusComplete ( IN NDIS_HANDLE ProtocolBindingContext )
+static VOID STDCALL ProtocolStatusComplete ( IN NDIS_HANDLE ProtocolBindingContext )
 {
 #if defined(DEBUGMOSTPROTOCOLCALLS) || defined(DEBUGALLPROTOCOLCALLS)
     DBG ( "Entry\n" );
 #endif
 }
 
-VOID STDCALL ProtocolBindAdapter ( OUT PNDIS_STATUS StatusOut,
+static VOID STDCALL ProtocolBindAdapter ( OUT PNDIS_STATUS StatusOut,
 				   IN NDIS_HANDLE BindContext,
 				   IN PNDIS_STRING DeviceName,
 				   IN PVOID SystemSpecific1,
@@ -666,7 +666,7 @@ VOID STDCALL ProtocolBindAdapter ( OUT PNDIS_STATUS StatusOut,
     *StatusOut = NDIS_STATUS_SUCCESS;
 }
 
-VOID STDCALL ProtocolUnbindAdapter ( OUT PNDIS_STATUS StatusOut,
+static VOID STDCALL ProtocolUnbindAdapter ( OUT PNDIS_STATUS StatusOut,
 				     IN NDIS_HANDLE ProtocolBindingContext,
 				     IN NDIS_HANDLE UnbindContext )
 {
@@ -706,7 +706,7 @@ VOID STDCALL ProtocolUnbindAdapter ( OUT PNDIS_STATUS StatusOut,
     *StatusOut = NDIS_STATUS_SUCCESS;
 }
 
-NDIS_STATUS STDCALL ProtocolPnPEvent ( IN NDIS_HANDLE ProtocolBindingContext,
+static NDIS_STATUS STDCALL ProtocolPnPEvent ( IN NDIS_HANDLE ProtocolBindingContext,
 				       IN PNET_PNP_EVENT NetPnPEvent )
 {
 #if defined(DEBUGMOSTPROTOCOLCALLS) || defined(DEBUGALLPROTOCOLCALLS)
@@ -727,7 +727,7 @@ NDIS_STATUS STDCALL ProtocolPnPEvent ( IN NDIS_HANDLE ProtocolBindingContext,
     }
 }
 
-PCHAR STDCALL NetEventString ( IN NET_PNP_EVENT_CODE NetEvent )
+static PCHAR STDCALL NetEventString ( IN NET_PNP_EVENT_CODE NetEvent )
 {
     switch ( NetEvent ) {
     case NetEventSetPower:

@@ -121,7 +121,7 @@ DEFINE_GUID ( GUID_BUS_TYPE_INTERNAL, 0x2530ea73L, 0x086b, 0x11d1, 0xa0, 0x9f,
 	      0x00, 0xc0, 0x4f, 0xc3, 0x40, 0xb1 );
 
 /* in this file */
-NTSTATUS STDCALL BusGetDeviceCapabilities ( IN PDEVICE_OBJECT DeviceObject,
+static NTSTATUS STDCALL BusGetDeviceCapabilities ( IN PDEVICE_OBJECT DeviceObject,
 					    IN PDEVICE_CAPABILITIES
 					    DeviceCapabilities );
 
@@ -787,7 +787,7 @@ NTSTATUS STDCALL DiskDispatchSystemControl ( IN PDEVICE_OBJECT DeviceObject,
 }
 
 /* FIXME put in SCSI */
-NTSTATUS STDCALL BusGetDeviceCapabilities ( IN PDEVICE_OBJECT DeviceObject,
+static NTSTATUS STDCALL BusGetDeviceCapabilities ( IN PDEVICE_OBJECT DeviceObject,
 					    IN PDEVICE_CAPABILITIES
 					    DeviceCapabilities )
 {

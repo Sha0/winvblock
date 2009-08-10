@@ -36,15 +36,15 @@
 
 typedef enum { Read, Write } REQUESTMODE, *PREQUESTMODE;
 
-BOOLEAN STDCALL AoESearchDrive ( IN PDEVICEEXTENSION DeviceExtension );
-NTSTATUS STDCALL AoERequest ( IN PDEVICEEXTENSION DeviceExtension,
+extern BOOLEAN STDCALL AoESearchDrive ( IN PDEVICEEXTENSION DeviceExtension );
+extern NTSTATUS STDCALL AoERequest ( IN PDEVICEEXTENSION DeviceExtension,
 			      IN REQUESTMODE Mode, IN LONGLONG StartSector,
 			      IN ULONG SectorCount, IN PUCHAR Buffer,
 			      IN PIRP Irp );
-NTSTATUS STDCALL AoEReply ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
+extern NTSTATUS STDCALL AoEReply ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
 			    IN PUCHAR Data, IN UINT DataSize );
-VOID STDCALL AoEResetProbe (  );
-NTSTATUS STDCALL AoEStart (  );
-VOID STDCALL AoEStop (  );
+extern VOID STDCALL AoEResetProbe (  );
+extern NTSTATUS STDCALL AoEStart (  );
+extern VOID STDCALL AoEStop (  );
 
 #endif				/* _AOE_H */

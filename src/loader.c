@@ -37,7 +37,7 @@
 /* typedef BOOL WINAPI (*PROC)(HWND, LPCTSTR, LPCTSTR, DWORD, PBOOL OPTIONAL);
  */
 
-void DisplayError ( char *String )
+static void DisplayError ( char *String )
 {
     CHAR ErrorString[1024];
     UINT ErrorCode = GetLastError (  );

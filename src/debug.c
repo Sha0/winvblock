@@ -53,19 +53,19 @@ ULONG Number = 0;
 extern int sprintf ( char *, const char *, ... );
 
 /* in this file */
-PIRPLIST STDCALL IrpListRecord ( IN PIRP Irp );
-VOID STDCALL DecodeIrp ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
+static PIRPLIST STDCALL IrpListRecord ( IN PIRP Irp );
+static VOID STDCALL DecodeIrp ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 			 IN PCHAR DebugMessage );
-PCHAR STDCALL MajorFunctionString ( IN UCHAR MajorFunction );
-PCHAR STDCALL PnPMinorFunctionString ( IN UCHAR MinorFunction );
-PCHAR STDCALL SystemControlMinorFunctionString ( IN UCHAR MinorFunction );
-PCHAR STDCALL PowerMinorFunctionString ( IN UCHAR MinorFunction );
-PCHAR STDCALL QueryDeviceRelationsString ( IN DEVICE_RELATION_TYPE Type );
-PCHAR STDCALL QueryIdString ( IN BUS_QUERY_ID_TYPE IdType );
-PCHAR STDCALL SrbFunctionString ( IN UCHAR Function );
-PCHAR STDCALL DeviceIoControlString ( IN ULONG IoControlCode );
-PCHAR STDCALL DeviceTextTypeString ( IN DEVICE_TEXT_TYPE DeviceTextType );
-PCHAR STDCALL SCSIOPString ( IN UCHAR OperationCode );
+static PCHAR STDCALL MajorFunctionString ( IN UCHAR MajorFunction );
+static PCHAR STDCALL PnPMinorFunctionString ( IN UCHAR MinorFunction );
+static PCHAR STDCALL SystemControlMinorFunctionString ( IN UCHAR MinorFunction );
+static PCHAR STDCALL PowerMinorFunctionString ( IN UCHAR MinorFunction );
+static PCHAR STDCALL QueryDeviceRelationsString ( IN DEVICE_RELATION_TYPE Type );
+static PCHAR STDCALL QueryIdString ( IN BUS_QUERY_ID_TYPE IdType );
+static PCHAR STDCALL SrbFunctionString ( IN UCHAR Function );
+static PCHAR STDCALL DeviceIoControlString ( IN ULONG IoControlCode );
+static PCHAR STDCALL DeviceTextTypeString ( IN DEVICE_TEXT_TYPE DeviceTextType );
+static PCHAR STDCALL SCSIOPString ( IN UCHAR OperationCode );
 
 NTSTATUS STDCALL xDbgPrint ( IN PCHAR File, IN PCHAR Function, IN UINT Line )
 {
@@ -77,7 +77,7 @@ VOID STDCALL InitializeDebug (  )
     KeInitializeSpinLock ( &SpinLock );
 }
 
-PIRPLIST STDCALL IrpListRecord ( IN PIRP Irp )
+static PIRPLIST STDCALL IrpListRecord ( IN PIRP Irp )
 {
     PIRPLIST Record;
     KIRQL Irql;
@@ -157,7 +157,7 @@ VOID STDCALL DebugIrpEnd ( IN PIRP Irp, IN NTSTATUS Status )
     ExFreePool ( Record );
 }
 
-VOID STDCALL DecodeIrp ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
+static VOID STDCALL DecodeIrp ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
 			 IN PCHAR DebugMessage )
 {
     PDEVICEEXTENSION DeviceExtension =
@@ -271,7 +271,7 @@ VOID STDCALL DecodeIrp ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
     }
 }
 
-PCHAR STDCALL MajorFunctionString ( IN UCHAR MajorFunction )
+static PCHAR STDCALL MajorFunctionString ( IN UCHAR MajorFunction )
 {
     switch ( MajorFunction ) {
     case IRP_MJ_CREATE:
@@ -340,7 +340,7 @@ PCHAR STDCALL MajorFunctionString ( IN UCHAR MajorFunction )
     }
 }
 
-PCHAR STDCALL PnPMinorFunctionString ( IN UCHAR MinorFunction )
+static PCHAR STDCALL PnPMinorFunctionString ( IN UCHAR MinorFunction )
 {
     switch ( MinorFunction ) {
     case IRP_MN_START_DEVICE:
@@ -398,7 +398,7 @@ PCHAR STDCALL PnPMinorFunctionString ( IN UCHAR MinorFunction )
     }
 }
 
-PCHAR STDCALL SystemControlMinorFunctionString ( IN UCHAR MinorFunction )
+static PCHAR STDCALL SystemControlMinorFunctionString ( IN UCHAR MinorFunction )
 {
     switch ( MinorFunction ) {
     case IRP_MN_QUERY_ALL_DATA:
@@ -428,7 +428,7 @@ PCHAR STDCALL SystemControlMinorFunctionString ( IN UCHAR MinorFunction )
     }
 }
 
-PCHAR STDCALL PowerMinorFunctionString ( IN UCHAR MinorFunction )
+static PCHAR STDCALL PowerMinorFunctionString ( IN UCHAR MinorFunction )
 {
     switch ( MinorFunction ) {
     case IRP_MN_WAIT_WAKE:
@@ -444,7 +444,7 @@ PCHAR STDCALL PowerMinorFunctionString ( IN UCHAR MinorFunction )
     }
 }
 
-PCHAR STDCALL QueryDeviceRelationsString ( IN DEVICE_RELATION_TYPE Type )
+static PCHAR STDCALL QueryDeviceRelationsString ( IN DEVICE_RELATION_TYPE Type )
 {
     switch ( Type ) {
     case BusRelations:
@@ -460,7 +460,7 @@ PCHAR STDCALL QueryDeviceRelationsString ( IN DEVICE_RELATION_TYPE Type )
     }
 }
 
-PCHAR STDCALL QueryIdString ( IN BUS_QUERY_ID_TYPE IdType )
+static PCHAR STDCALL QueryIdString ( IN BUS_QUERY_ID_TYPE IdType )
 {
     switch ( IdType ) {
     case BusQueryDeviceID:
@@ -478,7 +478,7 @@ PCHAR STDCALL QueryIdString ( IN BUS_QUERY_ID_TYPE IdType )
     }
 }
 
-PCHAR STDCALL SrbFunctionString ( IN UCHAR Function )
+static PCHAR STDCALL SrbFunctionString ( IN UCHAR Function )
 {
     switch ( Function ) {
     case SRB_FUNCTION_EXECUTE_SCSI:
@@ -526,7 +526,7 @@ PCHAR STDCALL SrbFunctionString ( IN UCHAR Function )
     }
 }
 
-PCHAR STDCALL DeviceIoControlString ( IN ULONG IoControlCode )
+static PCHAR STDCALL DeviceIoControlString ( IN ULONG IoControlCode )
 {
     switch ( IoControlCode ) {
     case IOCTL_SCSI_GET_INQUIRY_DATA:
@@ -669,7 +669,7 @@ PCHAR STDCALL DeviceIoControlString ( IN ULONG IoControlCode )
     }
 }
 
-PCHAR STDCALL DeviceTextTypeString ( IN DEVICE_TEXT_TYPE DeviceTextType )
+static PCHAR STDCALL DeviceTextTypeString ( IN DEVICE_TEXT_TYPE DeviceTextType )
 {
     switch ( DeviceTextType ) {
     case DeviceTextDescription:
@@ -681,7 +681,7 @@ PCHAR STDCALL DeviceTextTypeString ( IN DEVICE_TEXT_TYPE DeviceTextType )
     }
 }
 
-PCHAR STDCALL SCSIOPString ( IN UCHAR OperationCode )
+static PCHAR STDCALL SCSIOPString ( IN UCHAR OperationCode )
 {
     switch ( OperationCode ) {
     case SCSIOP_TEST_UNIT_READY:
