@@ -19,7 +19,7 @@
  * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
  */
 #ifndef _PROTOCOL_H
-#define _PROTOCOL_H
+#  define _PROTOCOL_H
 
 /**
  * @file
@@ -28,14 +28,26 @@
  *
  */
 
-#include "portable.h"
+#  include "portable.h"
 
-extern BOOLEAN STDCALL ProtocolSearchNIC ( IN PUCHAR Mac );
-extern ULONG STDCALL ProtocolGetMTU ( IN PUCHAR Mac );
-extern BOOLEAN STDCALL ProtocolSend ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
-			       IN PUCHAR Data, IN ULONG DataSize,
-			       IN PVOID PacketContext );
-extern NTSTATUS STDCALL ProtocolStart ( void );
-extern VOID STDCALL ProtocolStop ( void );
+extern BOOLEAN STDCALL ProtocolSearchNIC (
+	IN PUCHAR Mac
+ );
+extern ULONG STDCALL ProtocolGetMTU (
+	IN PUCHAR Mac
+ );
+extern BOOLEAN STDCALL ProtocolSend (
+	IN PUCHAR SourceMac,
+	IN PUCHAR DestinationMac,
+	IN PUCHAR Data,
+	IN ULONG DataSize,
+	IN PVOID PacketContext
+ );
+extern NTSTATUS STDCALL ProtocolStart (
+	void
+ );
+extern VOID STDCALL ProtocolStop (
+	void
+ );
 
-#endif				/* _PROTOCOL_H */
+#endif													/* _PROTOCOL_H */

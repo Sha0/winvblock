@@ -19,7 +19,7 @@
  * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
  */
 #ifndef _DISK_H
-#define _DISK_H
+#  define _DISK_H
 
 /**
  * @file
@@ -28,21 +28,32 @@
  *
  */
 
-extern NTSTATUS STDCALL DiskDispatchPnP ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp,
-				   IN PIO_STACK_LOCATION Stack,
-				   IN PDEVICEEXTENSION DeviceExtension );
-extern NTSTATUS STDCALL DiskDispatchSCSI ( IN PDEVICE_OBJECT DeviceObject,
-				    IN PIRP Irp, IN PIO_STACK_LOCATION Stack,
-				    IN PDEVICEEXTENSION DeviceExtension );
-extern NTSTATUS STDCALL DiskDispatchDeviceControl ( IN PDEVICE_OBJECT DeviceObject,
-					     IN PIRP Irp,
-					     IN PIO_STACK_LOCATION Stack,
-					     IN PDEVICEEXTENSION
-					     DeviceExtension );
-extern NTSTATUS STDCALL DiskDispatchSystemControl ( IN PDEVICE_OBJECT DeviceObject,
-					     IN PIRP Irp,
-					     IN PIO_STACK_LOCATION Stack,
-					     IN PDEVICEEXTENSION
-					     DeviceExtension );
+extern NTSTATUS STDCALL DiskDispatchPnP (
+	IN PDEVICE_OBJECT DeviceObject,
+	IN PIRP Irp,
+	IN PIO_STACK_LOCATION Stack,
+	IN PDEVICEEXTENSION DeviceExtension
+ );
 
-#endif				/* _DISK_H */
+extern NTSTATUS STDCALL DiskDispatchSCSI (
+	IN PDEVICE_OBJECT DeviceObject,
+	IN PIRP Irp,
+	IN PIO_STACK_LOCATION Stack,
+	IN PDEVICEEXTENSION DeviceExtension
+ );
+
+extern NTSTATUS STDCALL DiskDispatchDeviceControl (
+	IN PDEVICE_OBJECT DeviceObject,
+	IN PIRP Irp,
+	IN PIO_STACK_LOCATION Stack,
+	IN PDEVICEEXTENSION DeviceExtension
+ );
+
+extern NTSTATUS STDCALL DiskDispatchSystemControl (
+	IN PDEVICE_OBJECT DeviceObject,
+	IN PIRP Irp,
+	IN PIO_STACK_LOCATION Stack,
+	IN PDEVICEEXTENSION DeviceExtension
+ );
+
+#endif													/* _DISK_H */

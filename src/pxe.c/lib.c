@@ -26,152 +26,214 @@ asm ( ".code16gcc" );
 #include "lib.h"
 #include "asm.h"
 
-size_t strlen ( const char *s )
+size_t
+strlen (
+	const char *s
+ )
 {
-    int l = 0;
-    while ( s[l] )
-	l++;
-    return l;
+	int l = 0;
+	while ( s[l] )
+		l++;
+	return l;
 }
 
-int puts ( const char *s )
+int
+puts (
+	const char *s
+ )
 {
-    while ( *s )
-	putchar ( *s++ );
-    putchar ( '\n' );
-    return -1;
+	while ( *s )
+		putchar ( *s++ );
+	putchar ( '\n' );
+	return -1;
 }
 
-int isspace ( int c )
+int
+isspace (
+	int c
+ )
 {
-    switch ( c ) {
-    case ' ':
-    case '\f':
-    case '\n':
-    case '\r':
-    case '\t':
-    case '\v':
-	return 1;
-    }
-    return 0;
-}
-
-int isdigit ( int c )
-{
-    if ( ( c >= '0' ) && ( c <= '9' ) )
-	return 1;
-    return 0;
-}
-
-int isalpha ( int c )
-{
-    return ( isupper ( c ) || islower ( c ) );
-}
-
-int isupper ( int c )
-{
-    if ( ( c >= 'A' ) && ( c <= 'Z' ) )
-	return 1;
-    return 0;
-}
-
-int islower ( int c )
-{
-    if ( ( c >= 'a' ) && ( c <= 'z' ) )
-	return 1;
-    return 0;
-}
-
-int toupper ( int c )
-{
-    if ( islower ( c ) )
-	return ( ( c & ~0x20 ) & 0xff );
-    return c;
-}
-
-int tolower ( int c )
-{
-    if ( isupper ( c ) )
-	return ( c | 0x20 );
-    return c;
-}
-
-int memcmp ( const void *s1, const void *s2, size_t n )
-{
-    int i;
-    if ( s1 == s2 )
+	switch ( c )
+		{
+			case ' ':
+			case '\f':
+			case '\n':
+			case '\r':
+			case '\t':
+			case '\v':
+				return 1;
+		}
 	return 0;
-    for ( i = 0; i < n; i++ ) {
-	if ( ( ( unsigned char * )s1 )[i] < ( ( unsigned char * )s2 )[i] )
-	    return -1;
-	if ( ( ( unsigned char * )s1 )[i] > ( ( unsigned char * )s2 )[i] )
-	    return 1;
-    }
-    return 0;
 }
 
-void *memcpy ( void *dest, const void *src, size_t n )
+int
+isdigit (
+	int c
+ )
 {
-    int i;
-    if ( src == dest )
-	return dest;
-    if ( src < dest ) {
-	for ( i = n - 1; i >= 0; i-- )
-	    ( ( unsigned char * )dest )[i] = ( ( unsigned char * )src )[i];
-    } else {
+	if ( ( c >= '0' ) && ( c <= '9' ) )
+		return 1;
+	return 0;
+}
+
+int
+isalpha (
+	int c
+ )
+{
+	return ( isupper ( c ) || islower ( c ) );
+}
+
+int
+isupper (
+	int c
+ )
+{
+	if ( ( c >= 'A' ) && ( c <= 'Z' ) )
+		return 1;
+	return 0;
+}
+
+int
+islower (
+	int c
+ )
+{
+	if ( ( c >= 'a' ) && ( c <= 'z' ) )
+		return 1;
+	return 0;
+}
+
+int
+toupper (
+	int c
+ )
+{
+	if ( islower ( c ) )
+		return ( ( c & ~0x20 ) & 0xff );
+	return c;
+}
+
+int
+tolower (
+	int c
+ )
+{
+	if ( isupper ( c ) )
+		return ( c | 0x20 );
+	return c;
+}
+
+int
+memcmp (
+	const void *s1,
+	const void *s2,
+	size_t n
+ )
+{
+	int i;
+	if ( s1 == s2 )
+		return 0;
 	for ( i = 0; i < n; i++ )
-	    ( ( unsigned char * )dest )[i] = ( ( unsigned char * )src )[i];
-    }
-    return dest;
+		{
+			if ( ( ( unsigned char * )s1 )[i] < ( ( unsigned char * )s2 )[i] )
+				return -1;
+			if ( ( ( unsigned char * )s1 )[i] > ( ( unsigned char * )s2 )[i] )
+				return 1;
+		}
+	return 0;
 }
 
-void *memset ( void *s, int c, size_t n )
+void *
+memcpy (
+	void *dest,
+	const void *src,
+	size_t n
+ )
 {
-    int i;
-    for ( i = 0; i < n; i++ )
-	( ( unsigned char * )s )[i] = c;
-    return s;
+	int i;
+	if ( src == dest )
+		return dest;
+	if ( src < dest )
+		{
+			for ( i = n - 1; i >= 0; i-- )
+				( ( unsigned char * )dest )[i] = ( ( unsigned char * )src )[i];
+		}
+	else
+		{
+			for ( i = 0; i < n; i++ )
+				( ( unsigned char * )dest )[i] = ( ( unsigned char * )src )[i];
+		}
+	return dest;
+}
+
+void *
+memset (
+	void *s,
+	int c,
+	size_t n
+ )
+{
+	int i;
+	for ( i = 0; i < n; i++ )
+		( ( unsigned char * )s )[i] = c;
+	return s;
 }
 
 // From Public Domain CLib (PDPCLIB) by Paul Edwards
-long int strtol ( const char *nptr, char **endptr, int base )
+long int
+strtol (
+	const char *nptr,
+	char **endptr,
+	int base
+ )
 {
-    long x = 0;
-    int undecided = 0;
+	long x = 0;
+	int undecided = 0;
 
-    if ( base == 0 )
-	undecided = 1;
-    while ( 1 ) {
-	if ( isdigit ( *nptr ) ) {
-	    if ( base == 0 ) {
-		if ( *nptr == '0' )
-		    base = 8;
-		else {
-		    base = 10;
-		    undecided = 0;
+	if ( base == 0 )
+		undecided = 1;
+	while ( 1 )
+		{
+			if ( isdigit ( *nptr ) )
+				{
+					if ( base == 0 )
+						{
+							if ( *nptr == '0' )
+								base = 8;
+							else
+								{
+									base = 10;
+									undecided = 0;
+								}
+						}
+					x = x * base + ( *nptr - '0' );
+					nptr++;
+				}
+			else if ( isalpha ( *nptr ) )
+				{
+					if ( ( *nptr == 'X' ) || ( *nptr == 'x' ) )
+						{
+							if ( ( base == 0 ) || ( ( base == 8 ) && undecided ) )
+								{
+									base = 16;
+									undecided = 0;
+								}
+							else
+								break;
+						}
+					else
+						{
+							x = x * base + ( toupper ( ( unsigned char )*nptr ) - 'A' ) + 10;
+							nptr++;
+						}
+				}
+			else
+				break;
 		}
-	    }
-	    x = x * base + ( *nptr - '0' );
-	    nptr++;
-	} else if ( isalpha ( *nptr ) ) {
-	    if ( ( *nptr == 'X' ) || ( *nptr == 'x' ) ) {
-		if ( ( base == 0 )
-		     || ( ( base == 8 ) && undecided ) ) {
-		    base = 16;
-		    undecided = 0;
-		} else
-		    break;
-	    } else {
-		x = x * base +
-		    ( toupper ( ( unsigned char )*nptr ) - 'A' ) + 10;
-		nptr++;
-	    }
-	} else
-	    break;
-    }
-    if ( endptr != NULL )
-	*endptr = ( char * )nptr;
-    return ( x );
+	if ( endptr != NULL )
+		*endptr = ( char * )nptr;
+	return ( x );
 }
 
 // Include Public Domain printf.c

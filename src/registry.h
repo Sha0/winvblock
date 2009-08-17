@@ -19,7 +19,7 @@
  * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
  */
 #ifndef _REGISTRY_H
-#define _REGISTRY_H
+#  define _REGISTRY_H
 
 /**
  * @file
@@ -28,6 +28,8 @@
  *
  */
 
-extern NTSTATUS STDCALL CheckRegistry ( void );
+extern NTSTATUS STDCALL CheckRegistry (
+	void
+ );
 
-#endif				/* _REGISTRY_H */
+#endif													/* _REGISTRY_H */

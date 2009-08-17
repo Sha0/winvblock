@@ -19,7 +19,7 @@
  * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
  */
 #ifndef _PORTABLE_H
-#define _PORTABLE_H
+#  define _PORTABLE_H
 
 /**
  * @file
@@ -28,19 +28,20 @@
  *
  */
 
-#define NDIS50 1
-#define OBJ_KERNEL_HANDLE 0x00000200L
-#ifdef _MSC_VER
-#define STDCALL
-#define __attribute__(x)
-typedef unsigned int UINT, *PUINT;
-#endif
+#  define NDIS50 1
+#  define OBJ_KERNEL_HANDLE 0x00000200L
+#  ifdef _MSC_VER
+#    define STDCALL
+#    define __attribute__(x)
+typedef unsigned int UINT,
+*PUINT;
+#  endif
 
-#if _WIN32_WINNT < 0x0502
-#define SCSIOP_READ16 0x88
-#define SCSIOP_WRITE16 0x8a
-#define SCSIOP_VERIFY16 0x8f
-#define SCSIOP_READ_CAPACITY16 0x9e
-#endif
+#  if _WIN32_WINNT < 0x0502
+#    define SCSIOP_READ16 0x88
+#    define SCSIOP_WRITE16 0x8a
+#    define SCSIOP_VERIFY16 0x8f
+#    define SCSIOP_READ_CAPACITY16 0x9e
+#  endif
 
-#endif				/* _PORTABLE_H */
+#endif													/* _PORTABLE_H */

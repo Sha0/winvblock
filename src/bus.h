@@ -19,7 +19,7 @@
  * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
  */
 #ifndef _BUS_H
-#define _BUS_H
+#  define _BUS_H
 
 /**
  * @file
@@ -28,26 +28,50 @@
  *
  */
 
-extern NTSTATUS STDCALL BusStart ( void );
-extern VOID STDCALL BusStop ( void );
-extern NTSTATUS STDCALL BusAddDevice ( IN PDRIVER_OBJECT DriverObject,
-				IN PDEVICE_OBJECT PhysicalDeviceObject );
-extern NTSTATUS STDCALL BusDispatchPnP ( IN PDEVICE_OBJECT DeviceObject,
-                  IN PIRP Irp, IN PIO_STACK_LOCATION Stack,
-				  IN PDEVICEEXTENSION DeviceExtension );
-extern NTSTATUS STDCALL BusDispatchDeviceControl ( IN PDEVICE_OBJECT DeviceObject,
-					    IN PIRP Irp,
-					    IN PIO_STACK_LOCATION Stack,
-					    IN PDEVICEEXTENSION
-					    DeviceExtension );
-extern NTSTATUS STDCALL BusDispatchSystemControl ( IN PDEVICE_OBJECT DeviceObject,
-					    IN PIRP Irp,
-					    IN PIO_STACK_LOCATION Stack,
-					    IN PDEVICEEXTENSION
-					    DeviceExtension );
-extern VOID STDCALL BusAddTarget ( IN PUCHAR ClientMac,
-			    IN PUCHAR ServerMac,
-			    USHORT Major, UCHAR Minor, LONGLONG LBASize );
-extern VOID STDCALL BusCleanupTargetList ( void );
+extern NTSTATUS STDCALL BusStart (
+	void
+ );
 
-#endif				/* _BUS_H */
+extern VOID STDCALL BusStop (
+	void
+ );
+
+extern NTSTATUS STDCALL BusAddDevice (
+	IN PDRIVER_OBJECT DriverObject,
+	IN PDEVICE_OBJECT PhysicalDeviceObject
+ );
+
+extern NTSTATUS STDCALL BusDispatchPnP (
+	IN PDEVICE_OBJECT DeviceObject,
+	IN PIRP Irp,
+	IN PIO_STACK_LOCATION Stack,
+	IN PDEVICEEXTENSION DeviceExtension
+ );
+
+extern NTSTATUS STDCALL BusDispatchDeviceControl (
+	IN PDEVICE_OBJECT DeviceObject,
+	IN PIRP Irp,
+	IN PIO_STACK_LOCATION Stack,
+	IN PDEVICEEXTENSION DeviceExtension
+ );
+
+extern NTSTATUS STDCALL BusDispatchSystemControl (
+	IN PDEVICE_OBJECT DeviceObject,
+	IN PIRP Irp,
+	IN PIO_STACK_LOCATION Stack,
+	IN PDEVICEEXTENSION DeviceExtension
+ );
+
+extern VOID STDCALL BusAddTarget (
+	IN PUCHAR ClientMac,
+	IN PUCHAR ServerMac,
+	USHORT Major,
+	UCHAR Minor,
+	LONGLONG LBASize
+ );
+
+extern VOID STDCALL BusCleanupTargetList (
+	void
+ );
+
+#endif													/* _BUS_H */

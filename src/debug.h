@@ -18,7 +18,7 @@
  * Jul-03-2009@22:39: Initial revision.
  */
 #ifndef _DEBUG_H
-#define _DEBUG_H
+#  define _DEBUG_H
 
 /**
  * @file
@@ -29,15 +29,26 @@
  * function and line number in any debugging output messages.
  */
 
-#define DBG( ... ) xDbgPrint ( __FILE__, ( const PCHAR )__FUNCTION__, \
-			       __LINE__ ) || 1 ? \
-		   DbgPrint ( __VA_ARGS__ ) : \
-		   0
+#  define DBG( ... ) xDbgPrint ( __FILE__, ( const PCHAR )__FUNCTION__, \
+                                  __LINE__ ) || 1 ? \
+                                  DbgPrint ( __VA_ARGS__ ) : \
+                                  0
 
-extern NTSTATUS STDCALL xDbgPrint ( IN PCHAR File, IN PCHAR Function,
-				    IN UINT Line );
-extern VOID STDCALL InitializeDebug ( void );
-extern VOID STDCALL DebugIrpStart ( IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp );
-extern VOID STDCALL DebugIrpEnd ( IN PIRP Irp, IN NTSTATUS Status );
+extern NTSTATUS STDCALL xDbgPrint (
+	IN PCHAR File,
+	IN PCHAR Function,
+	IN UINT Line
+ );
+extern VOID STDCALL InitializeDebug (
+	void
+ );
+extern VOID STDCALL DebugIrpStart (
+	IN PDEVICE_OBJECT DeviceObject,
+	IN PIRP Irp
+ );
+extern VOID STDCALL DebugIrpEnd (
+	IN PIRP Irp,
+	IN NTSTATUS Status
+ );
 
-#endif				/* _DEBUG_H */
+#endif													/* _DEBUG_H */

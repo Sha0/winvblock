@@ -19,7 +19,7 @@
  * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
  */
 #ifndef _AOE_H
-#define _AOE_H
+#  define _AOE_H
 
 /**
  * @file
@@ -28,23 +28,41 @@
  *
  */
 
-#include "portable.h"
-#include "driver.h"
+#  include "portable.h"
+#  include "driver.h"
 
-#define htons(x) (USHORT)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
-#define ntohs(x) (USHORT)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
+#  define htons(x) (USHORT)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
+#  define ntohs(x) (USHORT)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
 
-typedef enum { Read, Write } REQUESTMODE, *PREQUESTMODE;
+typedef enum
+{ Read, Write } REQUESTMODE,
+*PREQUESTMODE;
 
-extern BOOLEAN STDCALL AoESearchDrive ( IN PDEVICEEXTENSION DeviceExtension );
-extern NTSTATUS STDCALL AoERequest ( IN PDEVICEEXTENSION DeviceExtension,
-			      IN REQUESTMODE Mode, IN LONGLONG StartSector,
-			      IN ULONG SectorCount, IN PUCHAR Buffer,
-			      IN PIRP Irp );
-extern NTSTATUS STDCALL AoEReply ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
-			    IN PUCHAR Data, IN UINT DataSize );
-extern VOID STDCALL AoEResetProbe ( void );
-extern NTSTATUS STDCALL AoEStart ( void );
-extern VOID STDCALL AoEStop ( void );
+extern BOOLEAN STDCALL AoESearchDrive (
+	IN PDEVICEEXTENSION DeviceExtension
+ );
+extern NTSTATUS STDCALL AoERequest (
+	IN PDEVICEEXTENSION DeviceExtension,
+	IN REQUESTMODE Mode,
+	IN LONGLONG StartSector,
+	IN ULONG SectorCount,
+	IN PUCHAR Buffer,
+	IN PIRP Irp
+ );
+extern NTSTATUS STDCALL AoEReply (
+	IN PUCHAR SourceMac,
+	IN PUCHAR DestinationMac,
+	IN PUCHAR Data,
+	IN UINT DataSize
+ );
+extern VOID STDCALL AoEResetProbe (
+	void
+ );
+extern NTSTATUS STDCALL AoEStart (
+	void
+ );
+extern VOID STDCALL AoEStop (
+	void
+ );
 
-#endif				/* _AOE_H */
+#endif													/* _AOE_H */

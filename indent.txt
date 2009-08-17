@@ -1,0 +1,32 @@
+indent
+ -bap   Force blank lines after procedure bodies
+ -bc    Force newline after comma in declaration
+ -bfda  Break the line before all arguments in a declaration
+ -bfde  Break the line after the last argument in a declaration
+ -bl    Put braces on line after if, etc.
+ -bli2  Indent braces 2 spaces
+ -bls   Put braces on the line after struct declaration
+ -cbi2  Indent braces after a case label 2 spaces
+ -cdb   Put comment delimiters on blank lines
+ -cdw   Cuddle while of do {} while with preceding right-brace
+ -ci2   Continuation indent of 2 spaces
+ -cli2  Case label indent of 2 spaces
+ -i2    Set indent level to 2 spaces
+ -ip2   Indent parameter types in old-style function definitions by 2 spaces
+ -kr    Use Kernighan & Ritchie coding style
+ -l79   Set maximum line length for non-comment lines to 79
+ -lp    Line up continued lines at parentheses
+ -nce    Do not cuddle else and preceding right-brace
+ -ncs   Do not put a space after cast operators
+ -nhnl  Do not prefer to break long lines at the position of newlines in the input
+ -pcs   Insert a space between the name of the procedure being called and the left-bracket
+ -pi2   Space 2 spaces of indentation per open parentheses
+ -ppi2  Request indentation of preprocessor conditional statements
+ -prs   Put a space after every left- and before every right-bracket
+ -psl   Put the type of a procedure on the line before its name
+ -saf   Put a space after each for
+ -sai   Put a space after each if
+ -saw   Put a space after each while
+ -sc    Put the start character at the left of comments
+ -sob   Swallow optional blank lines
+ -ts2   Set tab size to 2 spaces

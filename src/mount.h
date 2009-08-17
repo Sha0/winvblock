@@ -19,7 +19,7 @@
  * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
  */
 #ifndef _MOUNT_H
-#define _MOUNT_H
+#  define _MOUNT_H
 
 /**
  * @file
@@ -28,47 +28,55 @@
  *
  */
 
-#include "portable.h"
+#  include "portable.h"
 
-#define IOCTL_AOE_SCAN CTL_CODE(FILE_DEVICE_CONTROLLER, 0x800,\
+#  define IOCTL_AOE_SCAN CTL_CODE(FILE_DEVICE_CONTROLLER, 0x800,\
                                 METHOD_BUFFERED,\
                                 FILE_READ_DATA | FILE_WRITE_DATA)
-#define IOCTL_AOE_SHOW CTL_CODE(FILE_DEVICE_CONTROLLER, 0x801,\
+#  define IOCTL_AOE_SHOW CTL_CODE(FILE_DEVICE_CONTROLLER, 0x801,\
                                 METHOD_BUFFERED,\
                                 FILE_READ_DATA | FILE_WRITE_DATA)
-#define IOCTL_AOE_MOUNT CTL_CODE(FILE_DEVICE_CONTROLLER, 0x802,\
+#  define IOCTL_AOE_MOUNT CTL_CODE(FILE_DEVICE_CONTROLLER, 0x802,\
                                  METHOD_BUFFERED,\
                                  FILE_READ_DATA | FILE_WRITE_DATA)
-#define IOCTL_AOE_UMOUNT CTL_CODE(FILE_DEVICE_CONTROLLER, 0x803,\
+#  define IOCTL_AOE_UMOUNT CTL_CODE(FILE_DEVICE_CONTROLLER, 0x803,\
                                   METHOD_BUFFERED,\
                                   FILE_READ_DATA | FILE_WRITE_DATA)
 
-typedef struct _TARGET {
-    UCHAR ClientMac[6];
-    UCHAR ServerMac[6];
-    ULONG Major;
-    ULONG Minor;
-    LONGLONG LBASize;
-    LARGE_INTEGER ProbeTime;
-} TARGET, *PTARGET;
+typedef struct _TARGET
+{
+	UCHAR ClientMac[6];
+	UCHAR ServerMac[6];
+	ULONG Major;
+	ULONG Minor;
+	LONGLONG LBASize;
+	LARGE_INTEGER ProbeTime;
+} TARGET,
+*PTARGET;
 
-typedef struct _TARGETS {
-    ULONG Count;
-    TARGET Target[];
-} TARGETS, *PTARGETS;
+typedef struct _TARGETS
+{
+	ULONG Count;
+	TARGET Target[];
+} TARGETS,
+*PTARGETS;
 
-typedef struct _DISK {
-    ULONG Disk;
-    UCHAR ClientMac[6];
-    UCHAR ServerMac[6];
-    ULONG Major;
-    ULONG Minor;
-    LONGLONG LBASize;
-} DISK, *PDISK;
+typedef struct _DISK
+{
+	ULONG Disk;
+	UCHAR ClientMac[6];
+	UCHAR ServerMac[6];
+	ULONG Major;
+	ULONG Minor;
+	LONGLONG LBASize;
+} DISK,
+*PDISK;
 
-typedef struct _DISKS {
-    ULONG Count;
-    DISK Disk[];
-} DISKS, *PDISKS;
+typedef struct _DISKS
+{
+	ULONG Count;
+	DISK Disk[];
+} DISKS,
+*PDISKS;
 
-#endif				/* _MOUNT_H */
+#endif													/* _MOUNT_H */
