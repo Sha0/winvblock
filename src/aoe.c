@@ -141,7 +141,7 @@ static HANDLE ThreadHandle;
  *
  * @ret Status		Return status code
  */
-NTSTATUS STDCALL AoEStart (  )
+NTSTATUS STDCALL AoEStart ( void )
 {
     NTSTATUS Status;
     OBJECT_ATTRIBUTES ObjectAttributes;
@@ -211,7 +211,7 @@ NTSTATUS STDCALL AoEStart (  )
 /**
  * Stop AoE operations
  */
-VOID STDCALL AoEStop (  )
+VOID STDCALL AoEStop ( void )
 {
     NTSTATUS Status;
     PDISKSEARCH DiskSearch, PreviousDiskSearch;
@@ -895,7 +895,7 @@ NTSTATUS STDCALL AoEReply ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
     return STATUS_SUCCESS;
 }
 
-VOID STDCALL AoEResetProbe (  )
+VOID STDCALL AoEResetProbe ( void )
 {
     ProbeTag->SendTime.QuadPart = 0LL;
 }

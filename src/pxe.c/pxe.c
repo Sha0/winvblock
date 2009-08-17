@@ -25,7 +25,7 @@ asm ( ".code16gcc\n" );
 
 int apivector = 0;
 
-int pxeinit (  )
+int pxeinit ( void )
 {
     int v;
   asm ( "pushw	%%es\n\t" "movw	$0x5650, %%ax\n\t" "int	$0x1a\n\t" "cmpw	$0x564e, %%ax\n\t" "je	0f\n\t" "xorl	%%eax, %%eax\n\t" "jmp	1f\n" "0:	les	%%es:0x28(%%bx), %%bx\n\t" "movl	%%es:0x10(%%bx), %%eax\n" "1:	popw	%%es":"=a" ( v )

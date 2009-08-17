@@ -72,7 +72,7 @@ NTSTATUS STDCALL xDbgPrint ( IN PCHAR File, IN PCHAR Function, IN UINT Line )
     return DbgPrint ( "%s: %s() @ line %d: ", File, Function, Line );
 }
 
-VOID STDCALL InitializeDebug (  )
+VOID STDCALL InitializeDebug ( void )
 {
     KeInitializeSpinLock ( &SpinLock );
 }

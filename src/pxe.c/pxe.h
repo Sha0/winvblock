@@ -22,7 +22,7 @@ asm ( ".code16gcc" );
 #ifndef _PXE_H
 #define _PXE_H
 
-int pxeinit (  );
+int pxeinit ( void );
 unsigned short api ( unsigned short command, void *commandstruct );
 void apierror ( char *message, unsigned short status );
 

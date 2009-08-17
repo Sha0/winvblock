@@ -46,18 +46,18 @@ t_abft _abft;
 t_abft *abft;
 int checksum = 0;
 
-int getbootinfo (  );
-void getbootdriveinfo (  );
+int getbootinfo ( void );
+void getbootdriveinfo ( void );
 void readwrite ( unsigned char read, unsigned int lba, int count,
 		 unsigned short seg, unsigned short off );
-int pollisr (  );
+int pollisr ( void );
 void sendreceive ( t_aoe * sendbuffer, int sendsize, t_aoe * receivebuffer,
 		   int *receivesize );
 void sendpacket ( void *packet, int size );
 int processpacket ( void *buffer, int *size );
 void printbuffer ( unsigned short seg, unsigned short off, size_t n );
 
-int chk (  )
+int chk ( void )
 {
     int i1, i2, r = 0;
     unsigned char buffer[16];
@@ -169,7 +169,7 @@ int _main ( t_cpu * cpu )
     return 0;
 }
 
-int getbootinfo (  )
+int getbootinfo ( void )
 {
     t_PXENV_GET_CACHED_INFO getinfo;
     BOOTPLAYER info;
@@ -271,7 +271,7 @@ int getbootinfo (  )
     return 1;
 }
 
-void getbootdriveinfo (  )
+void getbootdriveinfo ( void )
 {
     unsigned char sendbuffer[MAXPACKETSIZE];
     unsigned char receivebuffer[MAXPACKETSIZE];
@@ -633,7 +633,7 @@ void readwrite ( unsigned char read, unsigned int lba, int count,
     }
 }
 
-int pollisr (  )
+int pollisr ( void )
 {
     t_PXENV_UNDI_ISR isr;
     memset ( ( void * )&isr, 0, sizeof ( isr ) );

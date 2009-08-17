@@ -35,7 +35,7 @@ extern ULONG STDCALL ProtocolGetMTU ( IN PUCHAR Mac );
 extern BOOLEAN STDCALL ProtocolSend ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
 			       IN PUCHAR Data, IN ULONG DataSize,
 			       IN PVOID PacketContext );
-extern NTSTATUS STDCALL ProtocolStart (  );
-extern VOID STDCALL ProtocolStop (  );
+extern NTSTATUS STDCALL ProtocolStart ( void );
+extern VOID STDCALL ProtocolStop ( void );
 
 #endif				/* _PROTOCOL_H */

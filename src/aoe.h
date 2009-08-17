@@ -43,8 +43,8 @@ extern NTSTATUS STDCALL AoERequest ( IN PDEVICEEXTENSION DeviceExtension,
 			      IN PIRP Irp );
 extern NTSTATUS STDCALL AoEReply ( IN PUCHAR SourceMac, IN PUCHAR DestinationMac,
 			    IN PUCHAR Data, IN UINT DataSize );
-extern VOID STDCALL AoEResetProbe (  );
-extern NTSTATUS STDCALL AoEStart (  );
-extern VOID STDCALL AoEStop (  );
+extern VOID STDCALL AoEResetProbe ( void );
+extern NTSTATUS STDCALL AoEStart ( void );
+extern VOID STDCALL AoEStop ( void );
 
 #endif				/* _AOE_H */

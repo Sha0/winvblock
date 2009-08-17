@@ -84,17 +84,17 @@ int _CHAININTERRUPT ( int v, t_cpu * cpu );
 ); \
 void x (t_cpu *cpu)
 
-void int8 (  );			// in asm.S
-void int13 (  );		// in asm.S
-void isr (  );			// in asm.S
-void nmi (  );			// in asm.S
-void i0 (  );			// in asm.S
-void i1 (  );			// in asm.S
-void i2 (  );			// in asm.S
-void i3 (  );			// in asm.S
-void i4 (  );			// in asm.S
-void i5 (  );			// in asm.S
-void i6 (  );			// in asm.S
-void i7 (  );			// in asm.S
+void int8 ( void );			// in asm.S
+void int13 ( void );		// in asm.S
+void isr ( void );			// in asm.S
+void nmi ( void );			// in asm.S
+void i0 ( void );			// in asm.S
+void i1 ( void );			// in asm.S
+void i2 ( void );			// in asm.S
+void i3 ( void );			// in asm.S
+void i4 ( void );			// in asm.S
+void i5 ( void );			// in asm.S
+void i6 ( void );			// in asm.S
+void i7 ( void );			// in asm.S
 
 #endif

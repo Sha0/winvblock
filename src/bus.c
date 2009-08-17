@@ -69,14 +69,14 @@ static PTARGETLIST TargetList = NULL;
 static KSPIN_LOCK TargetListSpinLock;
 static ULONG NextDisk = 0;
 
-NTSTATUS STDCALL BusStart (  )
+NTSTATUS STDCALL BusStart ( void )
 {
     DBG ( "Entry\n" );
     KeInitializeSpinLock ( &TargetListSpinLock );
     return STATUS_SUCCESS;
 }
 
-VOID STDCALL BusStop (  )
+VOID STDCALL BusStop ( void )
 {
     UNICODE_STRING DosDeviceName;
     PTARGETLIST Walker, Next;
@@ -270,7 +270,7 @@ VOID STDCALL BusAddTarget ( IN PUCHAR ClientMac, IN PUCHAR ServerMac,
     KeReleaseSpinLock ( &TargetListSpinLock, Irql );
 }
 
-VOID STDCALL BusCleanupTargetList (  )
+VOID STDCALL BusCleanupTargetList ( void )
 {
 }
 

@@ -34,7 +34,7 @@
 /* in this file */
 static BOOLEAN STDCALL SetupRegistry ( OUT PNTSTATUS StatusOut );
 
-NTSTATUS STDCALL CheckRegistry (  )
+NTSTATUS STDCALL CheckRegistry ( void )
 {
     NTSTATUS Status;
 

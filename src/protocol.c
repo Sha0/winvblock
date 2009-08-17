@@ -114,7 +114,7 @@ static KSPIN_LOCK SpinLock;
 static PBINDINGCONTEXT BindingContextList = NULL;
 static NDIS_HANDLE ProtocolHandle = NULL;
 
-NTSTATUS STDCALL ProtocolStart (  )
+NTSTATUS STDCALL ProtocolStart ( void )
 {
     NDIS_STATUS Status;
     NDIS_STRING ProtocolName;
@@ -152,7 +152,7 @@ NTSTATUS STDCALL ProtocolStart (  )
     return Status;
 }
 
-VOID STDCALL ProtocolStop (  )
+VOID STDCALL ProtocolStop ( void )
 {
     NDIS_STATUS Status;
 

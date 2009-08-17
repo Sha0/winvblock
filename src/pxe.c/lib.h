@@ -37,7 +37,7 @@ int putchar ( int c );
 unsigned char volatile inb ( int p );
 void volatile outb ( unsigned char v, int p );
 char getkey ( int t );
-void halt (  );
+void halt ( void );
 int volatile segmemcpy ( int dest, int src, size_t n );
 #ifndef MINIMAL
 int segmemset ( int s, int c, size_t n );

@@ -34,7 +34,7 @@
 
 typedef enum { CommandScan, CommandShow, CommandMount, CommandUmount } COMMAND;
 
-static void Help (  )
+static void Help ( void )
 {
     printf ( "aoe <scan|show|mount|umount>\n\n" );
     printf ( "  scan\n        Shows the reachable AoE targets.\n\n" );

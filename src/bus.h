@@ -28,8 +28,8 @@
  *
  */
 
-extern NTSTATUS STDCALL BusStart (  );
-extern VOID STDCALL BusStop (  );
+extern NTSTATUS STDCALL BusStart ( void );
+extern VOID STDCALL BusStop ( void );
 extern NTSTATUS STDCALL BusAddDevice ( IN PDRIVER_OBJECT DriverObject,
 				IN PDEVICE_OBJECT PhysicalDeviceObject );
 extern NTSTATUS STDCALL BusDispatchPnP ( IN PDEVICE_OBJECT DeviceObject,
@@ -48,6 +48,6 @@ extern NTSTATUS STDCALL BusDispatchSystemControl ( IN PDEVICE_OBJECT DeviceObjec
 extern VOID STDCALL BusAddTarget ( IN PUCHAR ClientMac,
 			    IN PUCHAR ServerMac,
 			    USHORT Major, UCHAR Minor, LONGLONG LBASize );
-extern VOID STDCALL BusCleanupTargetList (  );
+extern VOID STDCALL BusCleanupTargetList ( void );
 
 #endif				/* _BUS_H */
