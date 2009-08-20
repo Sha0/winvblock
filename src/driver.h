@@ -58,6 +58,7 @@ typedef enum
 typedef struct _DEVICEEXTENSION
 {
 	BOOLEAN IsBus;
+	BOOLEAN IsMemdisk;
 	PDEVICE_OBJECT Self;
 	PDRIVER_OBJECT DriverObject;
 	STATE State;
@@ -82,18 +83,29 @@ typedef struct _DEVICEEXTENSION
 			BOOLEAN BootDrive;
 			BOOLEAN Unmount;
 			ULONG DiskNumber;
-			ULONG MTU;
-			UCHAR ClientMac[6];
-			UCHAR ServerMac[6];
-			ULONG Major;
-			ULONG Minor;
+			union
+			{
+        struct
+        {
+    			ULONG MTU;
+		    	UCHAR ClientMac[6];
+    			UCHAR ServerMac[6];
+    			ULONG Major;
+    			ULONG Minor;
+		    	ULONG MaxSectorsPerPacket;
+    			ULONG Timeout;
+        } AoE;
+        struct
+        {
+          UINT32 DiskBuf;
+          UINT32 DiskSize;
+        } RAMDisk;
+      };
 			LONGLONG LBADiskSize;
 			LONGLONG Cylinders;
 			ULONG Heads;
 			ULONG Sectors;
-			ULONG MaxSectorsPerPacket;
 			ULONG SpecialFileCount;
-			ULONG Timeout;
 		} Disk;
 	};
 } DEVICEEXTENSION,

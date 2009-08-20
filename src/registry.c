@@ -424,8 +424,9 @@ SetupRegistry (
 																										 sizeof
 																										 ( DriverServiceNamePath )
 																										 +
-																										 KeyValueInformation->DataLength
-																										 - sizeof ( WCHAR ) ) ) ==
+																										 KeyValueInformation->
+																										 DataLength -
+																										 sizeof ( WCHAR ) ) ) ==
 											 NULL )
 										{
 											DBG ( "ExAllocatePool DriverServiceNameString "

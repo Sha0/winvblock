@@ -254,23 +254,21 @@ DecodeIrp (
 							break;
 						case IRP_MN_QUERY_DEVICE_TEXT:
 							sprintf ( DebugMessage, "%s %s", DebugMessage,
-												DeviceTextTypeString ( Stack->
-																							 Parameters.QueryDeviceText.
-																							 DeviceTextType ) );
+												DeviceTextTypeString ( Stack->Parameters.
+																							 QueryDeviceText.DeviceTextType ) );
 							break;
 						case IRP_MN_QUERY_DEVICE_RELATIONS:
 							sprintf ( DebugMessage, "%s %s", DebugMessage,
-												QueryDeviceRelationsString ( Stack->Parameters.
-																										 QueryDeviceRelations.
-																										 Type ) );
+												QueryDeviceRelationsString ( Stack->
+																										 Parameters.QueryDeviceRelations.Type ) );
 							break;
 					}
 				break;
 			case IRP_MJ_DEVICE_CONTROL:
 				sprintf ( DebugMessage, "%s (0x%08x) %s", DebugMessage,
 									( int )Stack->Parameters.DeviceIoControl.IoControlCode,
-									DeviceIoControlString ( Stack->Parameters.DeviceIoControl.
-																					IoControlCode ) );
+									DeviceIoControlString ( Stack->Parameters.
+																					DeviceIoControl.IoControlCode ) );
 				if ( !DeviceExtension->IsBus
 						 && Stack->Parameters.DeviceIoControl.IoControlCode ==
 						 IOCTL_STORAGE_QUERY_PROPERTY )

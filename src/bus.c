@@ -32,6 +32,7 @@
 #include "aoe.h"
 #include "mount.h"
 #include "debug.h"
+#include "mdi.h"
 
 /* in this file */
 static BOOLEAN STDCALL BusAddChild (
@@ -78,6 +79,7 @@ typedef struct _TARGETLIST
 static PTARGETLIST TargetList = NULL;
 static KSPIN_LOCK TargetListSpinLock;
 static ULONG NextDisk = 0;
+static MEMDISKPATCHAREA BootMemdisk;
 
 NTSTATUS STDCALL
 BusStart (
@@ -122,11 +124,16 @@ BusAddDevice (
 	NTSTATUS Status;
 	PHYSICAL_ADDRESS PhysicalAddress;
 	PUCHAR PhysicalMemory;
+	PMEMDISKPATCHAREA MemdiskPtr;
+	UINT32 Int13Hook;
+	UINT16 RealSeg,
+	 RealOff;
 	UINT Offset,
 	 Checksum,
 	 i;
 	ABFT AOEBootRecord;
-	BOOLEAN FoundAbft = FALSE;
+	BOOLEAN FoundAbft = FALSE,
+		FoundMemdisk = FALSE;
 	UNICODE_STRING DeviceName,
 	 DosDeviceName;
 	PDEVICEEXTENSION DeviceExtension;
@@ -176,6 +183,49 @@ BusAddDevice (
 		}
 	DeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
 
+	/*
+	 * Find a MEMDISK.  Start by looking at the IDT and following
+	 * the INT 0x13 hook.  This discovery strategy is extremely poor
+	 * at the moment.  The eventual goal is to discover MEMDISK RAM disks
+	 * as well as GRUB4DOS-mapped RAM disks.  Slight modifications to both
+	 * will help with this.
+	 */
+	PhysicalAddress.QuadPart = 0LL;
+	PhysicalMemory = MmMapIoSpace ( PhysicalAddress, 0x100000, MmNonCached );
+	if ( !PhysicalMemory )
+		{
+			DBG ( "Could not map low memory\n" );
+		}
+	else
+		{
+			RealSeg = *( ( PUINT16 ) & PhysicalMemory[0x13 * 4 + 2] );
+			RealOff = *( ( PUINT16 ) & PhysicalMemory[0x13 * 4] );
+			Int13Hook = ( ( ( UINT32 ) RealSeg ) << 4 ) + ( ( UINT32 ) RealOff );
+			DBG ( "INT 0x13 Segment: 0x%04x\n", RealSeg );
+			DBG ( "INT 0x13 Offset: 0x%04x\n", RealOff );
+			DBG ( "INT 0x13 Hook: 0x%08x\n", Int13Hook );
+			for ( Offset = Int13Hook; Offset < 0x100000; Offset += 2 )
+				{
+					MemdiskPtr = ( PMEMDISKPATCHAREA ) & PhysicalMemory[Offset];
+					if ( MemdiskPtr->mdi_bytes != 0x1e )
+						continue;
+					DBG ( "Found MEMDISK sig #1: 0x%08x\n", Offset );
+					if ( ( MemdiskPtr->mdi_version_major != 3 )
+							 || ( MemdiskPtr->mdi_version_minor != 82 ) )
+						continue;
+					DBG ( "Found MEMDISK sig #2\n" );
+					DBG ( "MEMDISK DiskBuf: 0x%08x\n", MemdiskPtr->diskbuf );
+					DBG ( "MEMDISK DiskSize: 0x%08x\n", MemdiskPtr->disksize );
+					FoundMemdisk = TRUE;
+					RtlCopyMemory ( &BootMemdisk, MemdiskPtr,
+													sizeof ( MEMDISKPATCHAREA ) );
+					break;
+				}
+			MmUnmapIoSpace ( PhysicalMemory, 0x100000 );
+		}
+	/*
+	 * Find aBFT
+	 */
 	PhysicalAddress.QuadPart = 0LL;
 	PhysicalMemory = MmMapIoSpace ( PhysicalAddress, 0xa0000, MmNonCached );
 	if ( !PhysicalMemory )
@@ -220,6 +270,22 @@ BusAddDevice (
 	AOEBootRecord.Minor = 10;
 #endif
 
+	if ( FoundMemdisk )
+		{
+			if ( !BusAddChild ( DeviceObject, NULL, 0, 0, TRUE ) )
+				DBG ( "BusAddChild() failed for MEMDISK\n" );
+			else if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
+				{
+					IoInvalidateDeviceRelations ( DeviceExtension->
+																				Bus.PhysicalDeviceObject,
+																				BusRelations );
+				}
+		}
+	else
+		{
+			DBG ( "Not booting from MEMDISK...\n" );
+		}
+
 	if ( FoundAbft )
 		{
 			DBG ( "Boot from client NIC %02x:%02x:%02x:%02x:%02x:%02x to major: "
@@ -231,19 +297,20 @@ BusAddDevice (
 			if ( !BusAddChild
 					 ( DeviceObject, AOEBootRecord.ClientMac, AOEBootRecord.Major,
 						 AOEBootRecord.Minor, TRUE ) )
-				{
-					DBG ( "BusAddChild() failed\n" );
-				}
+				DBG ( "BusAddChild() failed for aBFT AoE disk\n" );
 			else
 				{
 					if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
-						IoInvalidateDeviceRelations ( DeviceExtension->Bus.
-																					PhysicalDeviceObject, BusRelations );
+						{
+							IoInvalidateDeviceRelations ( DeviceExtension->
+																						Bus.PhysicalDeviceObject,
+																						BusRelations );
+						}
 				}
 		}
 	else
 		{
-			DBG ( "Not booting...\n" );
+			DBG ( "Not booting from aBFT AoE disk...\n" );
 		}
 #ifdef RIS
 	DeviceExtension->State = Started;
@@ -367,16 +434,35 @@ BusAddChild (
 	DeviceExtension->Disk.BootDrive = Boot;
 	DeviceExtension->Disk.Unmount = FALSE;
 	DeviceExtension->Disk.DiskNumber = InterlockedIncrement ( &NextDisk ) - 1;
-	RtlCopyMemory ( DeviceExtension->Disk.ClientMac, ClientMac, 6 );
-	RtlFillMemory ( DeviceExtension->Disk.ServerMac, 6, 0xff );
-	DeviceExtension->Disk.Major = Major;
-	DeviceExtension->Disk.Minor = Minor;
-	DeviceExtension->Disk.MaxSectorsPerPacket = 1;
-	DeviceExtension->Disk.Timeout = 200000;	/* 20 ms. */
+	if ( ClientMac )
+		{
+			RtlCopyMemory ( DeviceExtension->Disk.AoE.ClientMac, ClientMac, 6 );
+			RtlFillMemory ( DeviceExtension->Disk.AoE.ServerMac, 6, 0xff );
+			DeviceExtension->Disk.AoE.Major = Major;
+			DeviceExtension->Disk.AoE.Minor = Minor;
+			DeviceExtension->Disk.AoE.MaxSectorsPerPacket = 1;
+			DeviceExtension->Disk.AoE.Timeout = 200000;	/* 20 ms. */
+		}
+	else
+		{
+			DeviceExtension->Disk.RAMDisk.DiskBuf = BootMemdisk.diskbuf;
+			DeviceExtension->Disk.LBADiskSize =
+				DeviceExtension->Disk.RAMDisk.DiskSize = BootMemdisk.disksize;
+			DeviceExtension->IsMemdisk = TRUE;
+		}
 
 	DeviceObject->Flags |= DO_DIRECT_IO;	/* FIXME? */
 	DeviceObject->Flags |= DO_POWER_INRUSH;	/* FIXME? */
-	AoESearchDrive ( DeviceExtension );
+	if ( ClientMac )
+		{
+			AoESearchDrive ( DeviceExtension );
+		}
+	else
+		{
+			DeviceExtension->Disk.Cylinders = BootMemdisk.cylinders;
+			DeviceExtension->Disk.Heads = BootMemdisk.heads;
+			DeviceExtension->Disk.Sectors = BootMemdisk.disksize;
+		}
 	DeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
 	if ( BusDeviceExtension->Bus.ChildList == NULL )
 		{
@@ -592,14 +678,15 @@ BusDispatchDeviceControl (
 						TargetWalker = TargetWalker->Next;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Targets,
-												( Stack->Parameters.
-													DeviceIoControl.OutputBufferLength <
+												( Stack->Parameters.DeviceIoControl.
+													OutputBufferLength <
 													( sizeof ( TARGETS ) +
 														( Count *
-															sizeof ( TARGET ) ) ) ? Stack->
-													Parameters.DeviceIoControl.OutputBufferLength
-													: ( sizeof ( TARGETS ) +
-															( Count * sizeof ( TARGET ) ) ) ) );
+															sizeof ( TARGET ) ) ) ? Stack->Parameters.
+													DeviceIoControl.
+													OutputBufferLength : ( sizeof ( TARGETS ) +
+																								 ( Count *
+																									 sizeof ( TARGET ) ) ) ) );
 				ExFreePool ( Targets );
 
 				KeReleaseSpinLock ( &TargetListSpinLock, Irql );
@@ -637,24 +724,25 @@ BusDispatchDeviceControl (
 					{
 						Disks->Disk[Count].Disk = DiskWalker->Disk.DiskNumber;
 						RtlCopyMemory ( &Disks->Disk[Count].ClientMac,
-														&DiskWalker->Disk.ClientMac, 6 );
+														&DiskWalker->Disk.AoE.ClientMac, 6 );
 						RtlCopyMemory ( &Disks->Disk[Count].ServerMac,
-														&DiskWalker->Disk.ServerMac, 6 );
-						Disks->Disk[Count].Major = DiskWalker->Disk.Major;
-						Disks->Disk[Count].Minor = DiskWalker->Disk.Minor;
+														&DiskWalker->Disk.AoE.ServerMac, 6 );
+						Disks->Disk[Count].Major = DiskWalker->Disk.AoE.Major;
+						Disks->Disk[Count].Minor = DiskWalker->Disk.AoE.Minor;
 						Disks->Disk[Count].LBASize = DiskWalker->Disk.LBADiskSize;
 						Count++;
 						DiskWalker = DiskWalker->Disk.Next;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Disks,
-												( Stack->Parameters.
-													DeviceIoControl.OutputBufferLength <
+												( Stack->Parameters.DeviceIoControl.
+													OutputBufferLength <
 													( sizeof ( DISKS ) +
 														( Count *
-															sizeof ( DISK ) ) ) ? Stack->
-													Parameters.DeviceIoControl.OutputBufferLength
-													: ( sizeof ( DISKS ) +
-															( Count * sizeof ( DISK ) ) ) ) );
+															sizeof ( DISK ) ) ) ? Stack->Parameters.
+													DeviceIoControl.
+													OutputBufferLength : ( sizeof ( DISKS ) +
+																								 ( Count *
+																									 sizeof ( DISK ) ) ) ) );
 				ExFreePool ( Disks );
 
 				Status = STATUS_SUCCESS;
@@ -667,15 +755,15 @@ BusDispatchDeviceControl (
 							( UCHAR ) Buffer[8] );
 				if ( !BusAddChild
 						 ( DeviceObject, Buffer, *( PUSHORT ) ( &Buffer[6] ),
-							 ( UCHAR ) Buffer[8], FALSE ) )
+							 ( UCHAR ) Buffer[8], 0, 0, FALSE ) )
 					{
 						DBG ( "BusAddChild() failed\n" );
 					}
 				else
 					{
 						if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
-							IoInvalidateDeviceRelations ( DeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( DeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 					}
 				Irp->IoStatus.Information = 0;
@@ -706,8 +794,8 @@ BusDispatchDeviceControl (
 						DiskWalker->Disk.Unmount = TRUE;
 						DiskWalker->Disk.Next = NULL;
 						if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
-							IoInvalidateDeviceRelations ( DeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( DeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 					}
 				DeviceExtension->Bus.Children--;

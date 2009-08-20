@@ -430,7 +430,7 @@ AoESearchDrive (
 
 			if ( DeviceExtension->Disk.SearchState == SearchNIC )
 				{
-					if ( !ProtocolSearchNIC ( DeviceExtension->Disk.ClientMac ) )
+					if ( !ProtocolSearchNIC ( DeviceExtension->Disk.AoE.ClientMac ) )
 						{
 							KeReleaseSpinLock ( &DeviceExtension->Disk.SpinLock, Irql );
 							continue;
@@ -440,8 +440,8 @@ AoESearchDrive (
 							/*
 							 * We found the adapter to use, get MTU next 
 							 */
-							DeviceExtension->Disk.MTU =
-								ProtocolGetMTU ( DeviceExtension->Disk.ClientMac );
+							DeviceExtension->Disk.AoE.MTU =
+								ProtocolGetMTU ( DeviceExtension->Disk.AoE.ClientMac );
 							DeviceExtension->Disk.SearchState = GetSize;
 						}
 				}
@@ -475,8 +475,9 @@ AoESearchDrive (
 							 MaxSectorsPerPacketSendTime.QuadPart + 2500000LL )
 						{
 							DBG ( "No reply after 250ms for MaxSectorsPerPacket %d, "
-										"giving up\n", DeviceExtension->Disk.MaxSectorsPerPacket );
-							DeviceExtension->Disk.MaxSectorsPerPacket--;
+										"giving up\n",
+										DeviceExtension->Disk.AoE.MaxSectorsPerPacket );
+							DeviceExtension->Disk.AoE.MaxSectorsPerPacket--;
 							DeviceExtension->Disk.SearchState = Done;
 						}
 					else
@@ -590,7 +591,7 @@ AoESearchDrive (
 								DeviceExtension->Disk.LBADiskSize / 2048,
 								DeviceExtension->Disk.Cylinders, DeviceExtension->Disk.Heads,
 								DeviceExtension->Disk.Sectors,
-								DeviceExtension->Disk.MaxSectorsPerPacket );
+								DeviceExtension->Disk.AoE.MaxSectorsPerPacket );
 					return TRUE;
 				}
 
@@ -635,8 +636,8 @@ AoESearchDrive (
 			RtlZeroMemory ( Tag->PacketData, Tag->PacketSize );
 			Tag->PacketData->Ver = AOEPROTOCOLVER;
 			Tag->PacketData->Major =
-				htons ( ( USHORT ) DeviceExtension->Disk.Major );
-			Tag->PacketData->Minor = ( UCHAR ) DeviceExtension->Disk.Minor;
+				htons ( ( USHORT ) DeviceExtension->Disk.AoE.Major );
+			Tag->PacketData->Minor = ( UCHAR ) DeviceExtension->Disk.AoE.Minor;
 			Tag->PacketData->ExtendedAFlag = TRUE;
 
 			/*
@@ -666,13 +667,13 @@ AoESearchDrive (
 						 */
 						Tag->PacketData->Cmd = 0x24;	/* READ SECTOR */
 						Tag->PacketData->Count =
-							( UCHAR ) ( ++DeviceExtension->Disk.MaxSectorsPerPacket );
+							( UCHAR ) ( ++DeviceExtension->Disk.AoE.MaxSectorsPerPacket );
 						KeQuerySystemTime ( &MaxSectorsPerPacketSendTime );
 						DeviceExtension->Disk.SearchState = GettingMaxSectorsPerPacket;
 						/*
 						 * TODO: Make the below value into a #defined constant 
 						 */
-						DeviceExtension->Disk.Timeout = 200000;
+						DeviceExtension->Disk.AoE.Timeout = 200000;
 						break;
 					default:
 						DBG ( "Undefined SearchState!!\n" );
@@ -733,6 +734,8 @@ AoERequest (
 		PreviousTag = NULL;
 	KIRQL Irql;
 	ULONG i;
+	PHYSICAL_ADDRESS PhysicalAddress;
+	static PUCHAR PhysicalMemory = NULL;
 
 	if ( Stop )
 		{
@@ -755,6 +758,39 @@ AoERequest (
 			Irp->IoStatus.Status = STATUS_CANCELLED;
 			IoCompleteRequest ( Irp, IO_NO_INCREMENT );
 			return STATUS_CANCELLED;
+		}
+
+	/*
+	 * Handle the MEMDISK case
+	 */
+	if ( DeviceExtension->IsMemdisk )
+		{
+			if ( !PhysicalMemory )
+				{
+					PhysicalAddress.QuadPart = DeviceExtension->Disk.RAMDisk.DiskBuf;
+					PhysicalMemory =
+						MmMapIoSpace ( PhysicalAddress,
+													 DeviceExtension->Disk.LBADiskSize * SECTORSIZE,
+													 MmNonCached );
+					if ( !PhysicalMemory )
+						{
+							DBG ( "Could not map low memory\n" );
+							Irp->IoStatus.Information = 0;
+							Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+							IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+							return STATUS_INSUFFICIENT_RESOURCES;
+						}
+				}
+			if ( Mode == Write )
+				RtlCopyMemory ( &PhysicalMemory[StartSector * SECTORSIZE], Buffer,
+												SectorCount * SECTORSIZE );
+			else
+				RtlCopyMemory ( Buffer, &PhysicalMemory[StartSector * SECTORSIZE],
+												SectorCount * SECTORSIZE );
+			Irp->IoStatus.Information = SectorCount * SECTORSIZE;
+			Irp->IoStatus.Status = STATUS_SUCCESS;
+			IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+			return STATUS_SUCCESS;
 		}
 
 	/*
@@ -782,10 +818,10 @@ AoERequest (
 	Request->TagCount = 0;
 
 	/*
-	 * Split the requested sectors into packets in tags 
+	 * Split the requested sectors into packets in tags
 	 */
 	for ( i = 0; i < SectorCount;
-				i += DeviceExtension->Disk.MaxSectorsPerPacket )
+				i += DeviceExtension->Disk.AoE.MaxSectorsPerPacket )
 		{
 			/*
 			 * Allocate each tag 
@@ -825,8 +861,8 @@ AoERequest (
 			Tag->BufferOffset = i * SECTORSIZE;
 			Tag->SectorCount =
 				( ( SectorCount - i ) <
-					DeviceExtension->Disk.MaxSectorsPerPacket ? SectorCount -
-					i : DeviceExtension->Disk.MaxSectorsPerPacket );
+					DeviceExtension->Disk.AoE.MaxSectorsPerPacket ? SectorCount -
+					i : DeviceExtension->Disk.AoE.MaxSectorsPerPacket );
 
 			/*
 			 * Allocate and initialize each tag's AoE packet 
@@ -861,8 +897,8 @@ AoERequest (
 			RtlZeroMemory ( Tag->PacketData, Tag->PacketSize );
 			Tag->PacketData->Ver = AOEPROTOCOLVER;
 			Tag->PacketData->Major =
-				htons ( ( USHORT ) DeviceExtension->Disk.Major );
-			Tag->PacketData->Minor = ( UCHAR ) DeviceExtension->Disk.Minor;
+				htons ( ( USHORT ) DeviceExtension->Disk.AoE.Major );
+			Tag->PacketData->Minor = ( UCHAR ) DeviceExtension->Disk.AoE.Minor;
 			Tag->PacketData->Tag = 0;
 			Tag->PacketData->Command = 0;
 			Tag->PacketData->ExtendedAFlag = TRUE;
@@ -1039,27 +1075,27 @@ AoEReply (
 	 * If our tag was a discovery request, note the server 
 	 */
 	if ( RtlCompareMemory
-			 ( Tag->DeviceExtension->Disk.ServerMac, "\xff\xff\xff\xff\xff\xff",
+			 ( Tag->DeviceExtension->Disk.AoE.ServerMac, "\xff\xff\xff\xff\xff\xff",
 				 6 ) == 6 )
 		{
-			RtlCopyMemory ( Tag->DeviceExtension->Disk.ServerMac, SourceMac, 6 );
+			RtlCopyMemory ( Tag->DeviceExtension->Disk.AoE.ServerMac, SourceMac, 6 );
 			DBG ( "Major: %d minor: %d found on server "
 						"%02x:%02x:%02x:%02x:%02x:%02x\n",
-						Tag->DeviceExtension->Disk.Major, Tag->DeviceExtension->Disk.Minor,
-						SourceMac[0], SourceMac[1], SourceMac[2], SourceMac[3],
-						SourceMac[4], SourceMac[5] );
+						Tag->DeviceExtension->Disk.AoE.Major,
+						Tag->DeviceExtension->Disk.AoE.Minor, SourceMac[0], SourceMac[1],
+						SourceMac[2], SourceMac[3], SourceMac[4], SourceMac[5] );
 		}
 
 	KeQuerySystemTime ( &CurrentTime );
-	Tag->DeviceExtension->Disk.Timeout -=
-		( ULONG ) ( ( Tag->DeviceExtension->Disk.Timeout -
+	Tag->DeviceExtension->Disk.AoE.Timeout -=
+		( ULONG ) ( ( Tag->DeviceExtension->Disk.AoE.Timeout -
 									( CurrentTime.QuadPart -
 										Tag->FirstSendTime.QuadPart ) ) / 1024 );
 	/*
 	 * TODO: Replace the values below with #defined constants 
 	 */
-	if ( Tag->DeviceExtension->Disk.Timeout > 100000000 )
-		Tag->DeviceExtension->Disk.Timeout = 100000000;
+	if ( Tag->DeviceExtension->Disk.AoE.Timeout > 100000000 )
+		Tag->DeviceExtension->Disk.AoE.Timeout = 100000000;
 
 	switch ( Tag->Type )
 		{
@@ -1100,32 +1136,32 @@ AoEReply (
 						case GettingMaxSectorsPerPacket:
 							DataSize -= sizeof ( AOE );
 							if ( DataSize <
-									 ( Tag->DeviceExtension->Disk.MaxSectorsPerPacket *
+									 ( Tag->DeviceExtension->Disk.AoE.MaxSectorsPerPacket *
 										 SECTORSIZE ) )
 								{
 									DBG ( "Packet size too low while getting "
 												"MaxSectorsPerPacket (tried %d, got size of %d)\n",
-												Tag->DeviceExtension->Disk.MaxSectorsPerPacket,
+												Tag->DeviceExtension->Disk.AoE.MaxSectorsPerPacket,
 												DataSize );
-									Tag->DeviceExtension->Disk.MaxSectorsPerPacket--;
+									Tag->DeviceExtension->Disk.AoE.MaxSectorsPerPacket--;
 									Tag->DeviceExtension->Disk.SearchState = Done;
 								}
-							else if ( Tag->DeviceExtension->Disk.MTU <
+							else if ( Tag->DeviceExtension->Disk.AoE.MTU <
 												( sizeof ( AOE ) +
-													( ( Tag->DeviceExtension->Disk.MaxSectorsPerPacket +
-															1 ) * SECTORSIZE ) ) )
+													( ( Tag->DeviceExtension->Disk.
+															AoE.MaxSectorsPerPacket + 1 ) * SECTORSIZE ) ) )
 								{
 									DBG ( "Got MaxSectorsPerPacket %d at size of %d. "
 												"MTU of %d reached\n",
-												Tag->DeviceExtension->Disk.MaxSectorsPerPacket,
-												DataSize, Tag->DeviceExtension->Disk.MTU );
+												Tag->DeviceExtension->Disk.AoE.MaxSectorsPerPacket,
+												DataSize, Tag->DeviceExtension->Disk.AoE.MTU );
 									Tag->DeviceExtension->Disk.SearchState = Done;
 								}
 							else
 								{
 									DBG ( "Got MaxSectorsPerPacket %d at size of %d, "
 												"trying next...\n",
-												Tag->DeviceExtension->Disk.MaxSectorsPerPacket,
+												Tag->DeviceExtension->Disk.AoE.MaxSectorsPerPacket,
 												DataSize );
 									Tag->DeviceExtension->Disk.SearchState =
 										GetMaxSectorsPerPacket;
@@ -1260,7 +1296,7 @@ Thread (
 			Tag = TagList;
 			while ( Tag != NULL )
 				{
-					RequestTimeout = Tag->DeviceExtension->Disk.Timeout;
+					RequestTimeout = Tag->DeviceExtension->Disk.AoE.Timeout;
 					if ( Tag->Id == 0 )
 						{
 							if ( OutstandingTags <= 64 )
@@ -1275,8 +1311,8 @@ Thread (
 										NextTagId++;
 									Tag->PacketData->Tag = Tag->Id;
 									if ( ProtocolSend
-											 ( Tag->DeviceExtension->Disk.ClientMac,
-												 Tag->DeviceExtension->Disk.ServerMac,
+											 ( Tag->DeviceExtension->Disk.AoE.ClientMac,
+												 Tag->DeviceExtension->Disk.AoE.ServerMac,
 												 ( PUCHAR ) Tag->PacketData, Tag->PacketSize, Tag ) )
 										{
 											KeQuerySystemTime ( &Tag->FirstSendTime );
@@ -1297,19 +1333,19 @@ Thread (
 							KeQuerySystemTime ( &CurrentTime );
 							if ( CurrentTime.QuadPart >
 									 ( Tag->SendTime.QuadPart +
-										 ( LONGLONG ) ( Tag->DeviceExtension->Disk.Timeout *
+										 ( LONGLONG ) ( Tag->DeviceExtension->Disk.AoE.Timeout *
 																		2 ) ) )
 								{
 									if ( ProtocolSend
-											 ( Tag->DeviceExtension->Disk.ClientMac,
-												 Tag->DeviceExtension->Disk.ServerMac,
+											 ( Tag->DeviceExtension->Disk.AoE.ClientMac,
+												 Tag->DeviceExtension->Disk.AoE.ServerMac,
 												 ( PUCHAR ) Tag->PacketData, Tag->PacketSize, Tag ) )
 										{
 											KeQuerySystemTime ( &Tag->SendTime );
-											Tag->DeviceExtension->Disk.Timeout +=
-												Tag->DeviceExtension->Disk.Timeout / 1000;
-											if ( Tag->DeviceExtension->Disk.Timeout > 100000000 )
-												Tag->DeviceExtension->Disk.Timeout = 100000000;
+											Tag->DeviceExtension->Disk.AoE.Timeout +=
+												Tag->DeviceExtension->Disk.AoE.Timeout / 1000;
+											if ( Tag->DeviceExtension->Disk.AoE.Timeout > 100000000 )
+												Tag->DeviceExtension->Disk.AoE.Timeout = 100000000;
 											Resends++;
 										}
 									else
