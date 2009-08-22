@@ -39,17 +39,21 @@
 #include "debug.h"
 
 /* in this file */
-static NTSTATUS STDCALL Dispatch (
+static NTSTATUS STDCALL Driver_Dispatch (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp
  );
 
-static VOID STDCALL Unload (
+static VOID STDCALL Driver_Unload (
 	IN PDRIVER_OBJECT DriverObject
  );
 
-static PVOID StateHandle;
+static PVOID Driver_Globals_StateHandle;
 
+/*
+ * Note the exception to the function naming convention.
+ * TODO: See if a Makefile change is good enough
+ */
 NTSTATUS STDCALL
 DriverEntry (
 	IN PDRIVER_OBJECT DriverObject,
@@ -68,21 +72,21 @@ DriverEntry (
      */
 
 	DBG ( "Entry\n" );
-	InitializeDebug (  );
-	if ( !NT_SUCCESS ( Status = CheckRegistry (  ) ) )
-		return Error ( "CheckRegistry", Status );
-	if ( !NT_SUCCESS ( Status = BusStart (  ) ) )
-		return Error ( "BusStart", Status );
-	if ( !NT_SUCCESS ( Status = AoEStart (  ) ) )
+	Debug_Initialize (  );
+	if ( !NT_SUCCESS ( Status = Registry_Check (  ) ) )
+		return Error ( "Registry_Check", Status );
+	if ( !NT_SUCCESS ( Status = Bus_Start (  ) ) )
+		return Error ( "Bus_Start", Status );
+	if ( !NT_SUCCESS ( Status = AoE_Start (  ) ) )
 		{
-			BusStop (  );
-			return Error ( "AoEStart", Status );
+			Bus_Stop (  );
+			return Error ( "AoE_Start", Status );
 		}
-	if ( !NT_SUCCESS ( Status = ProtocolStart (  ) ) )
+	if ( !NT_SUCCESS ( Status = Protocol_Start (  ) ) )
 		{
-			AoEStop (  );
-			BusStop (  );
-			return Error ( "ProtocolStart", Status );
+			AoE_Stop (  );
+			Bus_Stop (  );
+			return Error ( "Protocol_Start", Status );
 		}
 
 		/**
@@ -100,33 +104,33 @@ DriverEntry (
      * }
      */
 
-	StateHandle = NULL;
+	Driver_Globals_StateHandle = NULL;
 
-	if ( ( StateHandle =
+	if ( ( Driver_Globals_StateHandle =
 				 PoRegisterSystemState ( NULL, ES_CONTINUOUS ) ) == NULL )
 		{
 			DBG ( "Could not set system state to ES_CONTINUOUS!!\n" );
 		}
 
 	for ( i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++ )
-		DriverObject->MajorFunction[i] = Dispatch;
-	DriverObject->DriverExtension->AddDevice = BusAddDevice;
-	DriverObject->MajorFunction[IRP_MJ_PNP] = Dispatch;
-	DriverObject->MajorFunction[IRP_MJ_POWER] = Dispatch;
-	DriverObject->MajorFunction[IRP_MJ_CREATE] = Dispatch;
-	DriverObject->MajorFunction[IRP_MJ_CLOSE] = Dispatch;
-	DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = Dispatch;
-	DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = Dispatch;
-	DriverObject->MajorFunction[IRP_MJ_SCSI] = Dispatch;
-	DriverObject->DriverUnload = Unload;
+		DriverObject->MajorFunction[i] = Driver_Dispatch;
+	DriverObject->DriverExtension->AddDevice = Bus_AddDevice;
+	DriverObject->MajorFunction[IRP_MJ_PNP] = Driver_Dispatch;
+	DriverObject->MajorFunction[IRP_MJ_POWER] = Driver_Dispatch;
+	DriverObject->MajorFunction[IRP_MJ_CREATE] = Driver_Dispatch;
+	DriverObject->MajorFunction[IRP_MJ_CLOSE] = Driver_Dispatch;
+	DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = Driver_Dispatch;
+	DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = Driver_Dispatch;
+	DriverObject->MajorFunction[IRP_MJ_SCSI] = Driver_Dispatch;
+	DriverObject->DriverUnload = Driver_Unload;
 #ifdef RIS
 	IoReportDetectedDevice ( DriverObject, InterfaceTypeUndefined, -1, -1, NULL,
 													 NULL, FALSE, &PDODeviceObject );
 	if ( !NT_SUCCESS
-			 ( Status = BusAddDevice ( DriverObject, PDODeviceObject ) ) )
+			 ( Status = Bus_AddDevice ( DriverObject, PDODeviceObject ) ) )
 		{
-			ProtocolStop (  );
-			AoEStop (  );
+			Protocol_Stop (  );
+			AoE_Stop (  );
 			Error ( "AddDevice", Status );
 		}
 	return Status;
@@ -136,7 +140,7 @@ DriverEntry (
 }
 
 static NTSTATUS STDCALL
-Dispatch (
+Driver_Dispatch (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp
  )
@@ -147,7 +151,7 @@ Dispatch (
 	PDEVICEEXTENSION DeviceExtension;
 
 #ifdef DEBUGIRPS
-	DebugIrpStart ( DeviceObject, Irp );
+	Debug_IrpStart ( DeviceObject, Irp );
 #endif
 	Stack = IoGetCurrentIrpStackLocation ( Irp );
 	DeviceExtension = ( PDEVICEEXTENSION ) DeviceObject->DeviceExtension;
@@ -159,7 +163,7 @@ Dispatch (
 			Irp->IoStatus.Status = STATUS_NO_SUCH_DEVICE;
 			IoCompleteRequest ( Irp, IO_NO_INCREMENT );
 #ifdef DEBUGIRPS
-			DebugIrpEnd ( Irp, STATUS_NO_SUCH_DEVICE );
+			Debug_IrpEnd ( Irp, STATUS_NO_SUCH_DEVICE );
 #endif
 			return STATUS_NO_SUCH_DEVICE;
 		}
@@ -184,30 +188,30 @@ Dispatch (
 			case IRP_MJ_PNP:
 				if ( DeviceExtension->IsBus )
 					Status =
-						BusDispatchPnP ( DeviceObject, Irp, Stack, DeviceExtension );
+						Bus_DispatchPnP ( DeviceObject, Irp, Stack, DeviceExtension );
 				else
 					Status =
-						DiskDispatchPnP ( DeviceObject, Irp, Stack, DeviceExtension );
+						Disk_DispatchPnP ( DeviceObject, Irp, Stack, DeviceExtension );
 				break;
 			case IRP_MJ_SYSTEM_CONTROL:
 				if ( DeviceExtension->IsBus )
 					Status =
-						BusDispatchSystemControl ( DeviceObject, Irp, Stack,
-																			 DeviceExtension );
+						Bus_DispatchSystemControl ( DeviceObject, Irp, Stack,
+																				DeviceExtension );
 				else
 					Status =
-						DiskDispatchSystemControl ( DeviceObject, Irp, Stack,
-																				DeviceExtension );
+						Disk_DispatchSystemControl ( DeviceObject, Irp, Stack,
+																				 DeviceExtension );
 				break;
 			case IRP_MJ_DEVICE_CONTROL:
 				if ( DeviceExtension->IsBus )
 					Status =
-						BusDispatchDeviceControl ( DeviceObject, Irp, Stack,
-																			 DeviceExtension );
+						Bus_DispatchDeviceControl ( DeviceObject, Irp, Stack,
+																				DeviceExtension );
 				else
 					Status =
-						DiskDispatchDeviceControl ( DeviceObject, Irp, Stack,
-																				DeviceExtension );
+						Disk_DispatchDeviceControl ( DeviceObject, Irp, Stack,
+																				 DeviceExtension );
 				break;
 			case IRP_MJ_CREATE:
 			case IRP_MJ_CLOSE:
@@ -219,7 +223,7 @@ Dispatch (
 				if ( !DeviceExtension->IsBus )
 					{
 						Status =
-							DiskDispatchSCSI ( DeviceObject, Irp, Stack, DeviceExtension );
+							Disk_DispatchSCSI ( DeviceObject, Irp, Stack, DeviceExtension );
 						break;
 					}
 			default:
@@ -229,35 +233,38 @@ Dispatch (
 		}
 #ifdef DEBUGIRPS
 	if ( Status != STATUS_PENDING )
-		DebugIrpEnd ( Irp, Status );
+		Debug_IrpEnd ( Irp, Status );
 #endif
 	return Status;
 }
 
 static VOID STDCALL
-Unload (
+Driver_Unload (
 	IN PDRIVER_OBJECT DriverObject
  )
 {
-	if ( StateHandle != NULL )
-		PoUnregisterSystemState ( StateHandle );
-	ProtocolStop (  );
-	AoEStop (  );
-	BusStop (  );
+	if ( Driver_Globals_StateHandle != NULL )
+		PoUnregisterSystemState ( Driver_Globals_StateHandle );
+	Protocol_Stop (  );
+	AoE_Stop (  );
+	Bus_Stop (  );
 	DBG ( "Done\n" );
 }
 
 VOID STDCALL
-CompletePendingIrp (
+Driver_CompletePendingIrp (
 	IN PIRP Irp
  )
 {
 #ifdef DEBUGIRPS
-	DebugIrpEnd ( Irp, Irp->IoStatus.Status );
+	Debug_IrpEnd ( Irp, Irp->IoStatus.Status );
 #endif
 	IoCompleteRequest ( Irp, IO_NO_INCREMENT );
 }
 
+/*
+ * Note the exception to the function naming convention
+ */
 NTSTATUS STDCALL
 Error (
 	IN PCHAR Message,

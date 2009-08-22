@@ -85,22 +85,22 @@ typedef struct _DEVICEEXTENSION
 			ULONG DiskNumber;
 			union
 			{
-        struct
-        {
-    			ULONG MTU;
-		    	UCHAR ClientMac[6];
-    			UCHAR ServerMac[6];
-    			ULONG Major;
-    			ULONG Minor;
-		    	ULONG MaxSectorsPerPacket;
-    			ULONG Timeout;
-        } AoE;
-        struct
-        {
-          UINT32 DiskBuf;
-          UINT32 DiskSize;
-        } RAMDisk;
-      };
+				struct
+				{
+					ULONG MTU;
+					UCHAR ClientMac[6];
+					UCHAR ServerMac[6];
+					ULONG Major;
+					ULONG Minor;
+					ULONG MaxSectorsPerPacket;
+					ULONG Timeout;
+				} AoE;
+				struct
+				{
+					UINT32 DiskBuf;
+					UINT32 DiskSize;
+				} RAMDisk;
+			};
 			LONGLONG LBADiskSize;
 			LONGLONG Cylinders;
 			ULONG Heads;
@@ -111,13 +111,19 @@ typedef struct _DEVICEEXTENSION
 } DEVICEEXTENSION,
 *PDEVICEEXTENSION;
 
-extern VOID STDCALL CompletePendingIrp (
+extern VOID STDCALL Driver_CompletePendingIrp (
 	IN PIRP Irp
  );
+/*
+ * Note the exception to the function naming convention
+ */
 extern NTSTATUS STDCALL Error (
 	IN PCHAR Message,
 	IN NTSTATUS Status
  );
+/*
+ * Note the exception to the function naming convention
+ */
 extern NTSTATUS STDCALL DriverEntry (
 	IN PDRIVER_OBJECT DriverObject,
 	IN PUNICODE_STRING RegistryPath

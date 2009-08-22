@@ -35,33 +35,33 @@
 #  define ntohs(x) (USHORT)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
 
 typedef enum
-{ Read, Write } REQUESTMODE,
-*PREQUESTMODE;
+{ AoE_RequestMode_Read, AoE_RequestMode_Write } AOE_REQUESTMODE,
+*PAOE_REQUESTMODE;
 
-extern BOOLEAN STDCALL AoESearchDrive (
+extern BOOLEAN STDCALL AoE_SearchDrive (
 	IN PDEVICEEXTENSION DeviceExtension
  );
-extern NTSTATUS STDCALL AoERequest (
+extern NTSTATUS STDCALL AoE_Request (
 	IN PDEVICEEXTENSION DeviceExtension,
-	IN REQUESTMODE Mode,
+	IN AOE_REQUESTMODE Mode,
 	IN LONGLONG StartSector,
 	IN ULONG SectorCount,
 	IN PUCHAR Buffer,
 	IN PIRP Irp
  );
-extern NTSTATUS STDCALL AoEReply (
+extern NTSTATUS STDCALL AoE_Reply (
 	IN PUCHAR SourceMac,
 	IN PUCHAR DestinationMac,
 	IN PUCHAR Data,
 	IN UINT DataSize
  );
-extern VOID STDCALL AoEResetProbe (
+extern VOID STDCALL AoE_ResetProbe (
 	void
  );
-extern NTSTATUS STDCALL AoEStart (
+extern NTSTATUS STDCALL AoE_Start (
 	void
  );
-extern VOID STDCALL AoEStop (
+extern VOID STDCALL AoE_Stop (
 	void
  );
 

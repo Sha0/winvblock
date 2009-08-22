@@ -39,14 +39,14 @@ extern NTSTATUS STDCALL xDbgPrint (
 	IN PCHAR Function,
 	IN UINT Line
  );
-extern VOID STDCALL InitializeDebug (
+extern VOID STDCALL Debug_Initialize (
 	void
  );
-extern VOID STDCALL DebugIrpStart (
+extern VOID STDCALL Debug_IrpStart (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp
  );
-extern VOID STDCALL DebugIrpEnd (
+extern VOID STDCALL Debug_IrpEnd (
 	IN PIRP Irp,
 	IN NTSTATUS Status
  );

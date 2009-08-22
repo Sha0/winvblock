@@ -28,7 +28,7 @@
  *
  */
 
-extern NTSTATUS STDCALL CheckRegistry (
+extern NTSTATUS STDCALL Registry_Check (
 	void
  );
 

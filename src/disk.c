@@ -109,7 +109,7 @@ typedef struct _READ_CAPACITY_DATA_EX
 #ifdef _MSC_VER
 #  pragma pack(1)
 #endif
-typedef struct _PORTABLE_CDB16
+typedef struct _DISK_CDB16
 {
 	UCHAR OperationCode;
 	UCHAR Reserved1:3;
@@ -120,7 +120,7 @@ typedef struct _PORTABLE_CDB16
 	UCHAR TransferLength[4];
 	UCHAR Reserved2;
 	UCHAR Control;
-} __attribute__ ( ( __packed__ ) ) CDB16, *PCDB16;
+} __attribute__ ( ( __packed__ ) ) DISK_CDB16, *PDISK_CDB16;
 #ifdef _MSC_VER
 #  pragma pack()
 #endif
@@ -128,14 +128,14 @@ typedef struct _PORTABLE_CDB16
 DEFINE_GUID ( GUID_BUS_TYPE_INTERNAL, 0x2530ea73L, 0x086b, 0x11d1, 0xa0, 0x9f,
 							0x00, 0xc0, 0x4f, 0xc3, 0x40, 0xb1 );
 
-/* in this file */
+/* in this file -- but shouldn't be */
 static NTSTATUS STDCALL BusGetDeviceCapabilities (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PDEVICE_CAPABILITIES DeviceCapabilities
  );
 
 NTSTATUS STDCALL
-DiskDispatchPnP (
+Disk_DispatchPnP (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PIO_STACK_LOCATION Stack,
@@ -463,7 +463,7 @@ DiskDispatchPnP (
 }
 
 NTSTATUS STDCALL
-DiskDispatchSCSI (
+Disk_DispatchSCSI (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PIO_STACK_LOCATION Stack,
@@ -504,10 +504,10 @@ DiskDispatchSCSI (
 											 || Cdb->AsByte[0] == SCSIOP_WRITE16 )
 										{
 											REVERSE_BYTES_QUAD ( &StartSector,
-																					 &( ( ( PCDB16 )
+																					 &( ( ( PDISK_CDB16 )
 																								Cdb )->LogicalBlock[0] ) );
 											REVERSE_BYTES ( &SectorCount,
-																			&( ( ( PCDB16 )
+																			&( ( ( PDISK_CDB16 )
 																					 Cdb )->TransferLength[0] ) );
 										}
 									else
@@ -571,29 +571,31 @@ DiskDispatchSCSI (
 									if ( Cdb->AsByte[0] == SCSIOP_READ
 											 || Cdb->AsByte[0] == SCSIOP_READ16 )
 										{
-											return AoERequest ( DeviceExtension, Read, StartSector,
-																					SectorCount,
-																					( ( PUCHAR ) Srb->DataBuffer -
-																						( PUCHAR )
-																						MmGetMdlVirtualAddress
-																						( Irp->MdlAddress ) ) +
-																					( PUCHAR )
-																					MmGetSystemAddressForMdlSafe
-																					( Irp->MdlAddress,
-																						HighPagePriority ), Irp );
+											return AoE_Request ( DeviceExtension,
+																					 AoE_RequestMode_Read, StartSector,
+																					 SectorCount,
+																					 ( ( PUCHAR ) Srb->DataBuffer -
+																						 ( PUCHAR )
+																						 MmGetMdlVirtualAddress
+																						 ( Irp->MdlAddress ) ) +
+																					 ( PUCHAR )
+																					 MmGetSystemAddressForMdlSafe
+																					 ( Irp->MdlAddress,
+																						 HighPagePriority ), Irp );
 										}
 									else
 										{
-											return AoERequest ( DeviceExtension, Write, StartSector,
-																					SectorCount,
-																					( ( PUCHAR ) Srb->DataBuffer -
-																						( PUCHAR )
-																						MmGetMdlVirtualAddress
-																						( Irp->MdlAddress ) ) +
-																					( PUCHAR )
-																					MmGetSystemAddressForMdlSafe
-																					( Irp->MdlAddress,
-																						HighPagePriority ), Irp );
+											return AoE_Request ( DeviceExtension,
+																					 AoE_RequestMode_Write, StartSector,
+																					 SectorCount,
+																					 ( ( PUCHAR ) Srb->DataBuffer -
+																						 ( PUCHAR )
+																						 MmGetMdlVirtualAddress
+																						 ( Irp->MdlAddress ) ) +
+																					 ( PUCHAR )
+																					 MmGetSystemAddressForMdlSafe
+																					 ( Irp->MdlAddress,
+																						 HighPagePriority ), Irp );
 										}
 									break;
 								case SCSIOP_VERIFY:
@@ -601,10 +603,10 @@ DiskDispatchSCSI (
 									if ( Cdb->AsByte[0] == SCSIOP_VERIFY16 )
 										{
 											REVERSE_BYTES_QUAD ( &StartSector,
-																					 &( ( ( PCDB16 )
+																					 &( ( ( PDISK_CDB16 )
 																								Cdb )->LogicalBlock[0] ) );
 											REVERSE_BYTES ( &SectorCount,
-																			&( ( ( PCDB16 )
+																			&( ( ( PDISK_CDB16 )
 																					 Cdb )->TransferLength[0] ) );
 										}
 									else
@@ -721,7 +723,7 @@ DiskDispatchSCSI (
 }
 
 NTSTATUS STDCALL
-DiskDispatchDeviceControl (
+Disk_DispatchDeviceControl (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PIO_STACK_LOCATION Stack,
@@ -848,7 +850,7 @@ DiskDispatchDeviceControl (
 }
 
 NTSTATUS STDCALL
-DiskDispatchSystemControl (
+Disk_DispatchSystemControl (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PIO_STACK_LOCATION Stack,

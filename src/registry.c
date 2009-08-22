@@ -32,18 +32,18 @@
 #include "registry.h"
 
 /* in this file */
-static BOOLEAN STDCALL SetupRegistry (
+static BOOLEAN STDCALL Registry_Setup (
 	OUT PNTSTATUS StatusOut
  );
 
 NTSTATUS STDCALL
-CheckRegistry (
+Registry_Check (
 	void
  )
 {
 	NTSTATUS Status;
 
-	if ( SetupRegistry ( &Status ) )
+	if ( Registry_Setup ( &Status ) )
 		{
 			DBG ( "Registry updated\n" );
 		}
@@ -51,7 +51,7 @@ CheckRegistry (
 }
 
 static BOOLEAN STDCALL
-SetupRegistry (
+Registry_Setup (
 	OUT PNTSTATUS StatusOut
  )
 {
@@ -424,9 +424,8 @@ SetupRegistry (
 																										 sizeof
 																										 ( DriverServiceNamePath )
 																										 +
-																										 KeyValueInformation->
-																										 DataLength -
-																										 sizeof ( WCHAR ) ) ) ==
+																										 KeyValueInformation->DataLength
+																										 - sizeof ( WCHAR ) ) ) ==
 											 NULL )
 										{
 											DBG ( "ExAllocatePool DriverServiceNameString "

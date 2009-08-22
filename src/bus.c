@@ -35,14 +35,14 @@
 #include "mdi.h"
 
 /* in this file */
-static BOOLEAN STDCALL BusAddChild (
+static BOOLEAN STDCALL Bus_AddChild (
 	IN PDEVICE_OBJECT BusDeviceObject,
 	IN PUCHAR ClientMac,
 	IN ULONG Major,
 	IN ULONG Minor,
 	IN BOOLEAN Boot
  );
-static NTSTATUS STDCALL IoCompletionRoutine (
+static NTSTATUS STDCALL Bus_IoCompletionRoutine (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PKEVENT Event
@@ -51,7 +51,7 @@ static NTSTATUS STDCALL IoCompletionRoutine (
 #ifdef _MSC_VER
 #  pragma pack(1)
 #endif
-typedef struct _ABFT
+typedef struct _BUS_ABFT
 {
 	UINT Signature;								/* 0x54464261 (aBFT) */
 	UINT Length;
@@ -64,59 +64,59 @@ typedef struct _ABFT
 	UCHAR Minor;
 	UCHAR Reserved2;
 	UCHAR ClientMac[6];
-} __attribute__ ( ( __packed__ ) ) ABFT, *PABFT;
+} __attribute__ ( ( __packed__ ) ) BUS_ABFT, *PBUS_ABFT;
 #ifdef _MSC_VER
 #  pragma pack()
 #endif
 
-typedef struct _TARGETLIST
+typedef struct _BUS_TARGETLIST
 {
 	TARGET Target;
 	struct _TARGETLIST *Next;
-} TARGETLIST,
-*PTARGETLIST;
+} BUS_TARGETLIST,
+*PBUS_TARGETLIST;
 
-static PTARGETLIST TargetList = NULL;
-static KSPIN_LOCK TargetListSpinLock;
-static ULONG NextDisk = 0;
-static MEMDISKPATCHAREA BootMemdisk;
+static PBUS_TARGETLIST Bus_Globals_TargetList = NULL;
+static KSPIN_LOCK Bus_Globals_TargetListSpinLock;
+static ULONG Bus_Globals_NextDisk = 0;
+static MEMDISKPATCHAREA Bus_Globals_BootMemdisk;
 
 NTSTATUS STDCALL
-BusStart (
+Bus_Start (
 	void
  )
 {
 	DBG ( "Entry\n" );
-	KeInitializeSpinLock ( &TargetListSpinLock );
+	KeInitializeSpinLock ( &Bus_Globals_TargetListSpinLock );
 	return STATUS_SUCCESS;
 }
 
 VOID STDCALL
-BusStop (
+Bus_Stop (
 	void
  )
 {
 	UNICODE_STRING DosDeviceName;
-	PTARGETLIST Walker,
+	PBUS_TARGETLIST Walker,
 	 Next;
 	KIRQL Irql;
 
 	DBG ( "Entry\n" );
-	KeAcquireSpinLock ( &TargetListSpinLock, &Irql );
-	Walker = TargetList;
+	KeAcquireSpinLock ( &Bus_Globals_TargetListSpinLock, &Irql );
+	Walker = Bus_Globals_TargetList;
 	while ( Walker != NULL )
 		{
 			Next = Walker->Next;
 			ExFreePool ( Walker );
 			Walker = Next;
 		}
-	KeReleaseSpinLock ( &TargetListSpinLock, Irql );
+	KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
 	RtlInitUnicodeString ( &DosDeviceName, L"\\DosDevices\\AoE" );
 	IoDeleteSymbolicLink ( &DosDeviceName );
 }
 
 NTSTATUS STDCALL
-BusAddDevice (
+Bus_AddDevice (
 	IN PDRIVER_OBJECT DriverObject,
 	IN PDEVICE_OBJECT PhysicalDeviceObject
  )
@@ -131,7 +131,7 @@ BusAddDevice (
 	UINT Offset,
 	 Checksum,
 	 i;
-	ABFT AOEBootRecord;
+	BUS_ABFT AOEBootRecord;
 	BOOLEAN FoundAbft = FALSE,
 		FoundMemdisk = FALSE;
 	UNICODE_STRING DeviceName,
@@ -148,13 +148,13 @@ BusAddDevice (
 													&DeviceName, FILE_DEVICE_CONTROLLER,
 													FILE_DEVICE_SECURE_OPEN, FALSE, &DeviceObject ) ) )
 		{
-			return Error ( "BusAddDevice IoCreateDevice", Status );
+			return Error ( "Bus_AddDevice IoCreateDevice", Status );
 		}
 	if ( !NT_SUCCESS
 			 ( Status = IoCreateSymbolicLink ( &DosDeviceName, &DeviceName ) ) )
 		{
 			IoDeleteDevice ( DeviceObject );
-			return Error ( "BusAddDevice IoCreateSymbolicLink", Status );
+			return Error ( "Bus_AddDevice IoCreateSymbolicLink", Status );
 		}
 
 	DeviceExtension = ( PDEVICEEXTENSION ) DeviceObject->DeviceExtension;
@@ -217,7 +217,7 @@ BusAddDevice (
 					DBG ( "MEMDISK DiskBuf: 0x%08x\n", MemdiskPtr->diskbuf );
 					DBG ( "MEMDISK DiskSize: 0x%08x\n", MemdiskPtr->disksize );
 					FoundMemdisk = TRUE;
-					RtlCopyMemory ( &BootMemdisk, MemdiskPtr,
+					RtlCopyMemory ( &Bus_Globals_BootMemdisk, MemdiskPtr,
 													sizeof ( MEMDISKPATCHAREA ) );
 					break;
 				}
@@ -236,26 +236,27 @@ BusAddDevice (
 		{
 			for ( Offset = 0; Offset < 0xa0000; Offset += 0x10 )
 				{
-					if ( ( ( PABFT ) & PhysicalMemory[Offset] )->Signature ==
+					if ( ( ( PBUS_ABFT ) & PhysicalMemory[Offset] )->Signature ==
 							 0x54464261 )
 						{
 							Checksum = 0;
-							for ( i = 0; i < ( ( PABFT ) & PhysicalMemory[Offset] )->Length;
+							for ( i = 0;
+										i < ( ( PBUS_ABFT ) & PhysicalMemory[Offset] )->Length;
 										i++ )
 								Checksum += PhysicalMemory[Offset + i];
 							if ( Checksum & 0xff )
 								continue;
-							if ( ( ( PABFT ) & PhysicalMemory[Offset] )->Revision != 1 )
+							if ( ( ( PBUS_ABFT ) & PhysicalMemory[Offset] )->Revision != 1 )
 								{
 									DBG ( "Found aBFT with mismatched revision v%d at "
 												"segment 0x%4x. want v1.\n",
-												( ( PABFT ) & PhysicalMemory[Offset] )->Revision,
+												( ( PBUS_ABFT ) & PhysicalMemory[Offset] )->Revision,
 												( Offset / 0x10 ) );
 									continue;
 								}
 							DBG ( "Found aBFT at segment: 0x%04x\n", ( Offset / 0x10 ) );
 							RtlCopyMemory ( &AOEBootRecord, &PhysicalMemory[Offset],
-															sizeof ( ABFT ) );
+															sizeof ( BUS_ABFT ) );
 							FoundAbft = TRUE;
 							break;
 						}
@@ -272,13 +273,12 @@ BusAddDevice (
 
 	if ( FoundMemdisk )
 		{
-			if ( !BusAddChild ( DeviceObject, NULL, 0, 0, TRUE ) )
-				DBG ( "BusAddChild() failed for MEMDISK\n" );
+			if ( !Bus_AddChild ( DeviceObject, NULL, 0, 0, TRUE ) )
+				DBG ( "Bus_AddChild() failed for MEMDISK\n" );
 			else if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
 				{
-					IoInvalidateDeviceRelations ( DeviceExtension->
-																				Bus.PhysicalDeviceObject,
-																				BusRelations );
+					IoInvalidateDeviceRelations ( DeviceExtension->Bus.
+																				PhysicalDeviceObject, BusRelations );
 				}
 		}
 	else
@@ -294,16 +294,16 @@ BusAddDevice (
 						AOEBootRecord.ClientMac[3], AOEBootRecord.ClientMac[4],
 						AOEBootRecord.ClientMac[5], AOEBootRecord.Major,
 						AOEBootRecord.Minor );
-			if ( !BusAddChild
+			if ( !Bus_AddChild
 					 ( DeviceObject, AOEBootRecord.ClientMac, AOEBootRecord.Major,
 						 AOEBootRecord.Minor, TRUE ) )
-				DBG ( "BusAddChild() failed for aBFT AoE disk\n" );
+				DBG ( "Bus_AddChild() failed for aBFT AoE disk\n" );
 			else
 				{
 					if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( DeviceExtension->
-																						Bus.PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( DeviceExtension->Bus.
+																						PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
@@ -319,7 +319,7 @@ BusAddDevice (
 }
 
 VOID STDCALL
-BusAddTarget (
+Bus_AddTarget (
 	IN PUCHAR ClientMac,
 	IN PUCHAR ServerMac,
 	USHORT Major,
@@ -327,13 +327,13 @@ BusAddTarget (
 	LONGLONG LBASize
  )
 {
-	PTARGETLIST Walker,
+	PBUS_TARGETLIST Walker,
 	 Last;
 	KIRQL Irql;
 
-	KeAcquireSpinLock ( &TargetListSpinLock, &Irql );
-	Last = TargetList;
-	Walker = TargetList;
+	KeAcquireSpinLock ( &Bus_Globals_TargetListSpinLock, &Irql );
+	Last = Bus_Globals_TargetList;
+	Walker = Bus_Globals_TargetList;
 	while ( Walker != NULL )
 		{
 			if ( ( RtlCompareMemory ( &Walker->Target.ClientMac, ClientMac, 6 ) ==
@@ -349,7 +349,7 @@ BusAddTarget (
 							Walker->Target.LBASize = LBASize;
 						}
 					KeQuerySystemTime ( &Walker->Target.ProbeTime );
-					KeReleaseSpinLock ( &TargetListSpinLock, Irql );
+					KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
 					return;
 				}
 			Last = Walker;
@@ -357,11 +357,12 @@ BusAddTarget (
 		}
 
 	if ( ( Walker =
-				 ( PTARGETLIST ) ExAllocatePool ( NonPagedPool,
-																					sizeof ( TARGETLIST ) ) ) == NULL )
+				 ( PBUS_TARGETLIST ) ExAllocatePool ( NonPagedPool,
+																							sizeof ( BUS_TARGETLIST ) ) ) ==
+			 NULL )
 		{
 			DBG ( "ExAllocatePool Target\n" );
-			KeReleaseSpinLock ( &TargetListSpinLock, Irql );
+			KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
 			return;
 		}
 	Walker->Next = NULL;
@@ -374,24 +375,24 @@ BusAddTarget (
 
 	if ( Last == NULL )
 		{
-			TargetList = Walker;
+			Bus_Globals_TargetList = Walker;
 		}
 	else
 		{
 			Last->Next = Walker;
 		}
-	KeReleaseSpinLock ( &TargetListSpinLock, Irql );
+	KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
 }
 
 VOID STDCALL
-BusCleanupTargetList (
+Bus_CleanupTargetList (
 	void
  )
 {
 }
 
 static BOOLEAN STDCALL
-BusAddChild (
+Bus_AddChild (
 	IN PDEVICE_OBJECT BusDeviceObject,
 	IN PUCHAR ClientMac,
 	IN ULONG Major,
@@ -414,7 +415,7 @@ BusAddChild (
 													FILE_AUTOGENERATED_DEVICE_NAME |
 													FILE_DEVICE_SECURE_OPEN, FALSE, &DeviceObject ) ) )
 		{
-			Error ( "BusAddChild IoCreateDevice", Status );
+			Error ( "Bus_AddChild IoCreateDevice", Status );
 			return FALSE;
 		}
 	DeviceExtension = ( PDEVICEEXTENSION ) DeviceObject->DeviceExtension;
@@ -433,7 +434,8 @@ BusAddChild (
 	KeInitializeSpinLock ( &DeviceExtension->Disk.SpinLock );
 	DeviceExtension->Disk.BootDrive = Boot;
 	DeviceExtension->Disk.Unmount = FALSE;
-	DeviceExtension->Disk.DiskNumber = InterlockedIncrement ( &NextDisk ) - 1;
+	DeviceExtension->Disk.DiskNumber =
+		InterlockedIncrement ( &Bus_Globals_NextDisk ) - 1;
 	if ( ClientMac )
 		{
 			RtlCopyMemory ( DeviceExtension->Disk.AoE.ClientMac, ClientMac, 6 );
@@ -445,9 +447,10 @@ BusAddChild (
 		}
 	else
 		{
-			DeviceExtension->Disk.RAMDisk.DiskBuf = BootMemdisk.diskbuf;
+			DeviceExtension->Disk.RAMDisk.DiskBuf = Bus_Globals_BootMemdisk.diskbuf;
 			DeviceExtension->Disk.LBADiskSize =
-				DeviceExtension->Disk.RAMDisk.DiskSize = BootMemdisk.disksize;
+				DeviceExtension->Disk.RAMDisk.DiskSize =
+				Bus_Globals_BootMemdisk.disksize;
 			DeviceExtension->IsMemdisk = TRUE;
 		}
 
@@ -455,13 +458,13 @@ BusAddChild (
 	DeviceObject->Flags |= DO_POWER_INRUSH;	/* FIXME? */
 	if ( ClientMac )
 		{
-			AoESearchDrive ( DeviceExtension );
+			AoE_SearchDrive ( DeviceExtension );
 		}
 	else
 		{
-			DeviceExtension->Disk.Cylinders = BootMemdisk.cylinders;
-			DeviceExtension->Disk.Heads = BootMemdisk.heads;
-			DeviceExtension->Disk.Sectors = BootMemdisk.disksize;
+			DeviceExtension->Disk.Cylinders = Bus_Globals_BootMemdisk.cylinders;
+			DeviceExtension->Disk.Heads = Bus_Globals_BootMemdisk.heads;
+			DeviceExtension->Disk.Sectors = Bus_Globals_BootMemdisk.disksize;
 		}
 	DeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
 	if ( BusDeviceExtension->Bus.ChildList == NULL )
@@ -480,7 +483,7 @@ BusAddChild (
 }
 
 NTSTATUS STDCALL
-BusDispatchPnP (
+Bus_DispatchPnP (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PIO_STACK_LOCATION Stack,
@@ -501,8 +504,8 @@ BusDispatchPnP (
 				IoCopyCurrentIrpStackLocationToNext ( Irp );
 				IoSetCompletionRoutine ( Irp,
 																 ( PIO_COMPLETION_ROUTINE )
-																 IoCompletionRoutine, ( PVOID ) & Event, TRUE,
-																 TRUE, TRUE );
+																 Bus_IoCompletionRoutine, ( PVOID ) & Event,
+																 TRUE, TRUE, TRUE );
 				Status = IoCallDriver ( DeviceExtension->Bus.LowerDeviceObject, Irp );
 				if ( Status == STATUS_PENDING )
 					{
@@ -621,7 +624,7 @@ BusDispatchPnP (
 }
 
 NTSTATUS STDCALL
-BusDispatchDeviceControl (
+Bus_DispatchDeviceControl (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PIO_STACK_LOCATION Stack,
@@ -631,7 +634,7 @@ BusDispatchDeviceControl (
 	NTSTATUS Status;
 	PUCHAR Buffer;
 	ULONG Count;
-	PTARGETLIST TargetWalker;
+	PBUS_TARGETLIST TargetWalker;
 	PDEVICEEXTENSION DiskWalker,
 	 DiskWalkerPrevious;
 	PTARGETS Targets;
@@ -642,10 +645,10 @@ BusDispatchDeviceControl (
 		{
 			case IOCTL_AOE_SCAN:
 				DBG ( "Got IOCTL_AOE_SCAN...\n" );
-				KeAcquireSpinLock ( &TargetListSpinLock, &Irql );
+				KeAcquireSpinLock ( &Bus_Globals_TargetListSpinLock, &Irql );
 
 				Count = 0;
-				TargetWalker = TargetList;
+				TargetWalker = Bus_Globals_TargetList;
 				while ( TargetWalker != NULL )
 					{
 						Count++;
@@ -669,7 +672,7 @@ BusDispatchDeviceControl (
 				Targets->Count = Count;
 
 				Count = 0;
-				TargetWalker = TargetList;
+				TargetWalker = Bus_Globals_TargetList;
 				while ( TargetWalker != NULL )
 					{
 						RtlCopyMemory ( &Targets->Target[Count], &TargetWalker->Target,
@@ -678,18 +681,17 @@ BusDispatchDeviceControl (
 						TargetWalker = TargetWalker->Next;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Targets,
-												( Stack->Parameters.DeviceIoControl.
-													OutputBufferLength <
+												( Stack->Parameters.
+													DeviceIoControl.OutputBufferLength <
 													( sizeof ( TARGETS ) +
 														( Count *
-															sizeof ( TARGET ) ) ) ? Stack->Parameters.
-													DeviceIoControl.
-													OutputBufferLength : ( sizeof ( TARGETS ) +
-																								 ( Count *
-																									 sizeof ( TARGET ) ) ) ) );
+															sizeof ( TARGET ) ) ) ? Stack->
+													Parameters.DeviceIoControl.OutputBufferLength
+													: ( sizeof ( TARGETS ) +
+															( Count * sizeof ( TARGET ) ) ) ) );
 				ExFreePool ( Targets );
 
-				KeReleaseSpinLock ( &TargetListSpinLock, Irql );
+				KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
 				Status = STATUS_SUCCESS;
 				break;
 			case IOCTL_AOE_SHOW:
@@ -734,15 +736,14 @@ BusDispatchDeviceControl (
 						DiskWalker = DiskWalker->Disk.Next;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Disks,
-												( Stack->Parameters.DeviceIoControl.
-													OutputBufferLength <
+												( Stack->Parameters.
+													DeviceIoControl.OutputBufferLength <
 													( sizeof ( DISKS ) +
 														( Count *
-															sizeof ( DISK ) ) ) ? Stack->Parameters.
-													DeviceIoControl.
-													OutputBufferLength : ( sizeof ( DISKS ) +
-																								 ( Count *
-																									 sizeof ( DISK ) ) ) ) );
+															sizeof ( DISK ) ) ) ? Stack->
+													Parameters.DeviceIoControl.OutputBufferLength
+													: ( sizeof ( DISKS ) +
+															( Count * sizeof ( DISK ) ) ) ) );
 				ExFreePool ( Disks );
 
 				Status = STATUS_SUCCESS;
@@ -753,17 +754,17 @@ BusDispatchDeviceControl (
 							"Major:%d Minor:%d\n", Buffer[0], Buffer[1], Buffer[2],
 							Buffer[3], Buffer[4], Buffer[5], *( PUSHORT ) ( &Buffer[6] ),
 							( UCHAR ) Buffer[8] );
-				if ( !BusAddChild
+				if ( !Bus_AddChild
 						 ( DeviceObject, Buffer, *( PUSHORT ) ( &Buffer[6] ),
 							 ( UCHAR ) Buffer[8], 0, 0, FALSE ) )
 					{
-						DBG ( "BusAddChild() failed\n" );
+						DBG ( "Bus_AddChild() failed\n" );
 					}
 				else
 					{
 						if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
-							IoInvalidateDeviceRelations ( DeviceExtension->
-																						Bus.PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( DeviceExtension->Bus.
+																						PhysicalDeviceObject,
 																						BusRelations );
 					}
 				Irp->IoStatus.Information = 0;
@@ -794,8 +795,8 @@ BusDispatchDeviceControl (
 						DiskWalker->Disk.Unmount = TRUE;
 						DiskWalker->Disk.Next = NULL;
 						if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
-							IoInvalidateDeviceRelations ( DeviceExtension->
-																						Bus.PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( DeviceExtension->Bus.
+																						PhysicalDeviceObject,
 																						BusRelations );
 					}
 				DeviceExtension->Bus.Children--;
@@ -813,7 +814,7 @@ BusDispatchDeviceControl (
 }
 
 NTSTATUS STDCALL
-BusDispatchSystemControl (
+Bus_DispatchSystemControl (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PIO_STACK_LOCATION Stack,
@@ -826,7 +827,7 @@ BusDispatchSystemControl (
 }
 
 static NTSTATUS STDCALL
-IoCompletionRoutine (
+Bus_IoCompletionRoutine (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PKEVENT Event

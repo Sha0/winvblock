@@ -28,28 +28,28 @@
  *
  */
 
-extern NTSTATUS STDCALL DiskDispatchPnP (
+extern NTSTATUS STDCALL Disk_DispatchPnP (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PIO_STACK_LOCATION Stack,
 	IN PDEVICEEXTENSION DeviceExtension
  );
 
-extern NTSTATUS STDCALL DiskDispatchSCSI (
+extern NTSTATUS STDCALL Disk_DispatchSCSI (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PIO_STACK_LOCATION Stack,
 	IN PDEVICEEXTENSION DeviceExtension
  );
 
-extern NTSTATUS STDCALL DiskDispatchDeviceControl (
+extern NTSTATUS STDCALL Disk_DispatchDeviceControl (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PIO_STACK_LOCATION Stack,
 	IN PDEVICEEXTENSION DeviceExtension
  );
 
-extern NTSTATUS STDCALL DiskDispatchSystemControl (
+extern NTSTATUS STDCALL Disk_DispatchSystemControl (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PIO_STACK_LOCATION Stack,

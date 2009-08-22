@@ -44,57 +44,57 @@ extern int sprintf (
 	...
  );
 
-typedef struct _IRPLIST
+typedef struct _DEBUG_IRPLIST
 {
 	PIRP Irp;
 	ULONG Number;
 	PCHAR DebugMessage;
-	struct _IRPLIST *Next;
-	struct _IRPLIST *Previous;
-} IRPLIST,
-*PIRPLIST;
+	struct _DEBUG_IRPLIST *Next;
+	struct _DEBUG_IRPLIST *Previous;
+} DEBUG_IRPLIST,
+*PDEBUG_IRPLIST;
 
-static PIRPLIST IrpList = NULL;
-static KSPIN_LOCK SpinLock;
-static ULONG Number = 0;
+static PDEBUG_IRPLIST Debug_Globals_IrpList = NULL;
+static KSPIN_LOCK Debug_Globals_SpinLock;
+static ULONG Debug_Globals_Number = 0;
 
 /* in this file */
-static PIRPLIST STDCALL IrpListRecord (
+static PDEBUG_IRPLIST STDCALL Debug_IrpListRecord (
 	IN PIRP Irp
  );
-static VOID STDCALL DecodeIrp (
+static VOID STDCALL Debug_DecodeIrp (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PCHAR DebugMessage
  );
-static PCHAR STDCALL MajorFunctionString (
+static PCHAR STDCALL Debug_MajorFunctionString (
 	IN UCHAR MajorFunction
  );
-static PCHAR STDCALL PnPMinorFunctionString (
+static PCHAR STDCALL Debug_PnPMinorFunctionString (
 	IN UCHAR MinorFunction
  );
-static PCHAR STDCALL SystemControlMinorFunctionString (
+static PCHAR STDCALL Debug_SystemControlMinorFunctionString (
 	IN UCHAR MinorFunction
  );
-static PCHAR STDCALL PowerMinorFunctionString (
+static PCHAR STDCALL Debug_PowerMinorFunctionString (
 	IN UCHAR MinorFunction
  );
-static PCHAR STDCALL QueryDeviceRelationsString (
+static PCHAR STDCALL Debug_QueryDeviceRelationsString (
 	IN DEVICE_RELATION_TYPE Type
  );
-static PCHAR STDCALL QueryIdString (
+static PCHAR STDCALL Debug_QueryIdString (
 	IN BUS_QUERY_ID_TYPE IdType
  );
-static PCHAR STDCALL SrbFunctionString (
+static PCHAR STDCALL Debug_SrbFunctionString (
 	IN UCHAR Function
  );
-static PCHAR STDCALL DeviceIoControlString (
+static PCHAR STDCALL Debug_DeviceIoControlString (
 	IN ULONG IoControlCode
  );
-static PCHAR STDCALL DeviceTextTypeString (
+static PCHAR STDCALL Debug_DeviceTextTypeString (
 	IN DEVICE_TEXT_TYPE DeviceTextType
  );
-static PCHAR STDCALL SCSIOPString (
+static PCHAR STDCALL Debug_SCSIOPString (
 	IN UCHAR OperationCode
  );
 
@@ -109,37 +109,37 @@ xDbgPrint (
 }
 
 VOID STDCALL
-InitializeDebug (
+Debug_Initialize (
 	void
  )
 {
-	KeInitializeSpinLock ( &SpinLock );
+	KeInitializeSpinLock ( &Debug_Globals_SpinLock );
 }
 
-static PIRPLIST STDCALL
-IrpListRecord (
+static PDEBUG_IRPLIST STDCALL
+Debug_IrpListRecord (
 	IN PIRP Irp
  )
 {
-	PIRPLIST Record;
+	PDEBUG_IRPLIST Record;
 	KIRQL Irql;
 
-	KeAcquireSpinLock ( &SpinLock, &Irql );
-	Record = IrpList;
+	KeAcquireSpinLock ( &Debug_Globals_SpinLock, &Irql );
+	Record = Debug_Globals_IrpList;
 	while ( Record != NULL && Record->Irp != Irp )
 		Record = Record->Next;
-	KeReleaseSpinLock ( &SpinLock, Irql );
+	KeReleaseSpinLock ( &Debug_Globals_SpinLock, Irql );
 	return Record;
 }
 
 VOID STDCALL
-DebugIrpStart (
+Debug_IrpStart (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp
  )
 {
 	PCHAR DebugMessage;
-	PIRPLIST Record,
+	PDEBUG_IRPLIST Record,
 	 Temp;
 	KIRQL Irql;
 
@@ -148,10 +148,11 @@ DebugIrpStart (
 		{
 			DBG ( "ExAllocatePool DebugMessage\n" );
 		}
-	DecodeIrp ( DeviceObject, Irp, DebugMessage );
+	Debug_DecodeIrp ( DeviceObject, Irp, DebugMessage );
 	if ( ( Record =
-				 ( PIRPLIST ) ExAllocatePool ( NonPagedPool,
-																			 sizeof ( IRPLIST ) ) ) == NULL )
+				 ( PDEBUG_IRPLIST ) ExAllocatePool ( NonPagedPool,
+																						 sizeof ( DEBUG_IRPLIST ) ) ) ==
+			 NULL )
 		{
 			DBG ( "ExAllocatePool Record\n" );
 			DBG ( "IRP %s\n", DebugMessage );
@@ -160,48 +161,49 @@ DebugIrpStart (
 	Record->Previous = NULL;
 	Record->Irp = Irp;
 	Record->DebugMessage = DebugMessage;
-	Record->Number = InterlockedIncrement ( &Number );;
-	KeAcquireSpinLock ( &SpinLock, &Irql );
-	if ( IrpList == NULL )
+	Record->Number = InterlockedIncrement ( &Debug_Globals_Number );;
+	KeAcquireSpinLock ( &Debug_Globals_SpinLock, &Irql );
+	if ( Debug_Globals_IrpList == NULL )
 		{
-			IrpList = Record;
+			Debug_Globals_IrpList = Record;
 			Record->Previous = NULL;
 		}
 	else
 		{
-			Temp = IrpList;
+			Temp = Debug_Globals_IrpList;
 			while ( Temp->Next != NULL )
 				Temp = Temp->Next;
 			Temp->Next = Record;
 			Record->Previous = Temp;
 		}
-	KeReleaseSpinLock ( &SpinLock, Irql );
+	KeReleaseSpinLock ( &Debug_Globals_SpinLock, Irql );
 	DBG ( "IRP %d: %s\n", Record->Number, Record->DebugMessage );
 }
 
 VOID STDCALL
-DebugIrpEnd (
+Debug_IrpEnd (
 	IN PIRP Irp,
 	IN NTSTATUS Status
  )
 {
-	PIRPLIST Record;
+	PDEBUG_IRPLIST Record;
 	KIRQL Irql;
 
-	if ( ( Record = IrpListRecord ( Irp ) ) == NULL )
+	if ( ( Record = Debug_IrpListRecord ( Irp ) ) == NULL )
 		{
-			DBG ( "Irp not found in IrpList!! (returned 0x%08x, Status)\n" );
+			DBG
+				( "Irp not found in Debug_Globals_IrpList!! (returned 0x%08x, Status)\n" );
 			return;
 		}
 	/*
 	 * There is no race condition between getting the record and unlinking in
-	 * * IrpList, unless DebugIrpEnd is called more than once on an irp (which
-	 * * itself is a bug, it should only be called one time).
+	 * Debug_Globals_IrpList, unless Debug_IrpEnd is called more than once on
+	 * an irp (which itself is a bug, it should only be called one time).
 	 */
-	KeAcquireSpinLock ( &SpinLock, &Irql );
+	KeAcquireSpinLock ( &Debug_Globals_SpinLock, &Irql );
 	if ( Record->Previous == NULL )
 		{
-			IrpList = Record->Next;
+			Debug_Globals_IrpList = Record->Next;
 		}
 	else
 		{
@@ -211,7 +213,7 @@ DebugIrpEnd (
 		{
 			Record->Next->Previous = Record->Previous;
 		}
-	KeReleaseSpinLock ( &SpinLock, Irql );
+	KeReleaseSpinLock ( &Debug_Globals_SpinLock, Irql );
 
 	DBG ( "IRP %d: %s -> 0x%08x\n", Record->Number, Record->DebugMessage,
 				Status );
@@ -220,7 +222,7 @@ DebugIrpEnd (
 }
 
 static VOID STDCALL
-DecodeIrp (
+Debug_DecodeIrp (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PCHAR DebugMessage
@@ -236,39 +238,44 @@ DecodeIrp (
 	PSTORAGE_PROPERTY_QUERY StoragePropertyQuery;
 
 	sprintf ( DebugMessage, "%s %s", ( DeviceExtension->IsBus ? "Bus" : "Disk" ),
-						MajorFunctionString ( Stack->MajorFunction ) );
+						Debug_MajorFunctionString ( Stack->MajorFunction ) );
 	switch ( Stack->MajorFunction )
 		{
 			case IRP_MJ_SYSTEM_CONTROL:
 				sprintf ( DebugMessage, "%s %s", DebugMessage,
-									SystemControlMinorFunctionString ( Stack->MinorFunction ) );
+									Debug_SystemControlMinorFunctionString ( Stack->
+																													 MinorFunction ) );
 				break;
 			case IRP_MJ_PNP:
 				sprintf ( DebugMessage, "%s %s", DebugMessage,
-									PnPMinorFunctionString ( Stack->MinorFunction ) );
+									Debug_PnPMinorFunctionString ( Stack->MinorFunction ) );
 				switch ( Stack->MinorFunction )
 					{
 						case IRP_MN_QUERY_ID:
 							sprintf ( DebugMessage, "%s %s", DebugMessage,
-												QueryIdString ( Stack->Parameters.QueryId.IdType ) );
+												Debug_QueryIdString ( Stack->Parameters.QueryId.
+																							IdType ) );
 							break;
 						case IRP_MN_QUERY_DEVICE_TEXT:
 							sprintf ( DebugMessage, "%s %s", DebugMessage,
-												DeviceTextTypeString ( Stack->Parameters.
-																							 QueryDeviceText.DeviceTextType ) );
+												Debug_DeviceTextTypeString ( Stack->
+																										 Parameters.QueryDeviceText.
+																										 DeviceTextType ) );
 							break;
 						case IRP_MN_QUERY_DEVICE_RELATIONS:
 							sprintf ( DebugMessage, "%s %s", DebugMessage,
-												QueryDeviceRelationsString ( Stack->
-																										 Parameters.QueryDeviceRelations.Type ) );
+												Debug_QueryDeviceRelationsString ( Stack->Parameters.
+																													 QueryDeviceRelations.
+																													 Type ) );
 							break;
 					}
 				break;
 			case IRP_MJ_DEVICE_CONTROL:
 				sprintf ( DebugMessage, "%s (0x%08x) %s", DebugMessage,
 									( int )Stack->Parameters.DeviceIoControl.IoControlCode,
-									DeviceIoControlString ( Stack->Parameters.
-																					DeviceIoControl.IoControlCode ) );
+									Debug_DeviceIoControlString ( Stack->
+																								Parameters.DeviceIoControl.
+																								IoControlCode ) );
 				if ( !DeviceExtension->IsBus
 						 && Stack->Parameters.DeviceIoControl.IoControlCode ==
 						 IOCTL_STORAGE_QUERY_PROPERTY )
@@ -310,11 +317,11 @@ DecodeIrp (
 						Srb = Stack->Parameters.Scsi.Srb;
 						Cdb = ( PCDB ) Srb->Cdb;
 						sprintf ( DebugMessage, "%s %s", DebugMessage,
-											SrbFunctionString ( Srb->Function ) );
+											Debug_SrbFunctionString ( Srb->Function ) );
 						if ( Srb->Lun == 0 && Srb->Function == SRB_FUNCTION_EXECUTE_SCSI )
 							{
 								sprintf ( DebugMessage, "%s %s", DebugMessage,
-													SCSIOPString ( Cdb->AsByte[0] ) );
+													Debug_SCSIOPString ( Cdb->AsByte[0] ) );
 								if ( Cdb->AsByte[0] == SCSIOP_READ
 										 || Cdb->AsByte[0] == SCSIOP_WRITE
 										 || Cdb->AsByte[0] == SCSIOP_VERIFY )
@@ -343,7 +350,7 @@ DecodeIrp (
 }
 
 static PCHAR STDCALL
-MajorFunctionString (
+Debug_MajorFunctionString (
 	IN UCHAR MajorFunction
  )
 {
@@ -416,7 +423,7 @@ MajorFunctionString (
 }
 
 static PCHAR STDCALL
-PnPMinorFunctionString (
+Debug_PnPMinorFunctionString (
 	IN UCHAR MinorFunction
  )
 {
@@ -478,7 +485,7 @@ PnPMinorFunctionString (
 }
 
 static PCHAR STDCALL
-SystemControlMinorFunctionString (
+Debug_SystemControlMinorFunctionString (
 	IN UCHAR MinorFunction
  )
 {
@@ -512,7 +519,7 @@ SystemControlMinorFunctionString (
 }
 
 static PCHAR STDCALL
-PowerMinorFunctionString (
+Debug_PowerMinorFunctionString (
 	IN UCHAR MinorFunction
  )
 {
@@ -532,7 +539,7 @@ PowerMinorFunctionString (
 }
 
 static PCHAR STDCALL
-QueryDeviceRelationsString (
+Debug_QueryDeviceRelationsString (
 	IN DEVICE_RELATION_TYPE Type
  )
 {
@@ -552,7 +559,7 @@ QueryDeviceRelationsString (
 }
 
 static PCHAR STDCALL
-QueryIdString (
+Debug_QueryIdString (
 	IN BUS_QUERY_ID_TYPE IdType
  )
 {
@@ -574,7 +581,7 @@ QueryIdString (
 }
 
 static PCHAR STDCALL
-SrbFunctionString (
+Debug_SrbFunctionString (
 	IN UCHAR Function
  )
 {
@@ -626,7 +633,7 @@ SrbFunctionString (
 }
 
 static PCHAR STDCALL
-DeviceIoControlString (
+Debug_DeviceIoControlString (
 	IN ULONG IoControlCode
  )
 {
@@ -773,7 +780,7 @@ DeviceIoControlString (
 }
 
 static PCHAR STDCALL
-DeviceTextTypeString (
+Debug_DeviceTextTypeString (
 	IN DEVICE_TEXT_TYPE DeviceTextType
  )
 {
@@ -789,7 +796,7 @@ DeviceTextTypeString (
 }
 
 static PCHAR STDCALL
-SCSIOPString (
+Debug_SCSIOPString (
 	IN UCHAR OperationCode
  )
 {

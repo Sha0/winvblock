@@ -30,23 +30,23 @@
 
 #  include "portable.h"
 
-extern BOOLEAN STDCALL ProtocolSearchNIC (
+extern BOOLEAN STDCALL Protocol_SearchNIC (
 	IN PUCHAR Mac
  );
-extern ULONG STDCALL ProtocolGetMTU (
+extern ULONG STDCALL Protocol_GetMTU (
 	IN PUCHAR Mac
  );
-extern BOOLEAN STDCALL ProtocolSend (
+extern BOOLEAN STDCALL Protocol_Send (
 	IN PUCHAR SourceMac,
 	IN PUCHAR DestinationMac,
 	IN PUCHAR Data,
 	IN ULONG DataSize,
 	IN PVOID PacketContext
  );
-extern NTSTATUS STDCALL ProtocolStart (
+extern NTSTATUS STDCALL Protocol_Start (
 	void
  );
-extern VOID STDCALL ProtocolStop (
+extern VOID STDCALL Protocol_Stop (
 	void
  );
 
