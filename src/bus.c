@@ -79,7 +79,7 @@ typedef struct _BUS_TARGETLIST
 static PBUS_TARGETLIST Bus_Globals_TargetList = NULL;
 static KSPIN_LOCK Bus_Globals_TargetListSpinLock;
 static ULONG Bus_Globals_NextDisk = 0;
-static MEMDISKPATCHAREA Bus_Globals_BootMemdisk;
+static MDI_PATCHAREA Bus_Globals_BootMemdisk;
 
 NTSTATUS STDCALL
 Bus_Start (
@@ -124,7 +124,7 @@ Bus_AddDevice (
 	NTSTATUS Status;
 	PHYSICAL_ADDRESS PhysicalAddress;
 	PUCHAR PhysicalMemory;
-	PMEMDISKPATCHAREA MemdiskPtr;
+	PMDI_PATCHAREA MemdiskPtr;
 	UINT32 Int13Hook;
 	UINT16 RealSeg,
 	 RealOff;
@@ -206,7 +206,7 @@ Bus_AddDevice (
 			DBG ( "INT 0x13 Hook: 0x%08x\n", Int13Hook );
 			for ( Offset = Int13Hook; Offset < 0x100000; Offset += 2 )
 				{
-					MemdiskPtr = ( PMEMDISKPATCHAREA ) & PhysicalMemory[Offset];
+					MemdiskPtr = ( PMDI_PATCHAREA ) & PhysicalMemory[Offset];
 					if ( MemdiskPtr->mdi_bytes != 0x1e )
 						continue;
 					DBG ( "Found MEMDISK sig #1: 0x%08x\n", Offset );
@@ -218,7 +218,7 @@ Bus_AddDevice (
 					DBG ( "MEMDISK DiskSize: 0x%08x\n", MemdiskPtr->disksize );
 					FoundMemdisk = TRUE;
 					RtlCopyMemory ( &Bus_Globals_BootMemdisk, MemdiskPtr,
-													sizeof ( MEMDISKPATCHAREA ) );
+													sizeof ( MDI_PATCHAREA ) );
 					break;
 				}
 			MmUnmapIoSpace ( PhysicalMemory, 0x100000 );
@@ -277,8 +277,9 @@ Bus_AddDevice (
 				DBG ( "Bus_AddChild() failed for MEMDISK\n" );
 			else if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
 				{
-					IoInvalidateDeviceRelations ( DeviceExtension->Bus.
-																				PhysicalDeviceObject, BusRelations );
+					IoInvalidateDeviceRelations ( DeviceExtension->
+																				Bus.PhysicalDeviceObject,
+																				BusRelations );
 				}
 		}
 	else
@@ -302,8 +303,8 @@ Bus_AddDevice (
 				{
 					if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( DeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( DeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
@@ -681,14 +682,15 @@ Bus_DispatchDeviceControl (
 						TargetWalker = TargetWalker->Next;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Targets,
-												( Stack->Parameters.
-													DeviceIoControl.OutputBufferLength <
+												( Stack->Parameters.DeviceIoControl.
+													OutputBufferLength <
 													( sizeof ( TARGETS ) +
 														( Count *
-															sizeof ( TARGET ) ) ) ? Stack->
-													Parameters.DeviceIoControl.OutputBufferLength
-													: ( sizeof ( TARGETS ) +
-															( Count * sizeof ( TARGET ) ) ) ) );
+															sizeof ( TARGET ) ) ) ? Stack->Parameters.
+													DeviceIoControl.
+													OutputBufferLength : ( sizeof ( TARGETS ) +
+																								 ( Count *
+																									 sizeof ( TARGET ) ) ) ) );
 				ExFreePool ( Targets );
 
 				KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
@@ -736,14 +738,15 @@ Bus_DispatchDeviceControl (
 						DiskWalker = DiskWalker->Disk.Next;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Disks,
-												( Stack->Parameters.
-													DeviceIoControl.OutputBufferLength <
+												( Stack->Parameters.DeviceIoControl.
+													OutputBufferLength <
 													( sizeof ( DISKS ) +
 														( Count *
-															sizeof ( DISK ) ) ) ? Stack->
-													Parameters.DeviceIoControl.OutputBufferLength
-													: ( sizeof ( DISKS ) +
-															( Count * sizeof ( DISK ) ) ) ) );
+															sizeof ( DISK ) ) ) ? Stack->Parameters.
+													DeviceIoControl.
+													OutputBufferLength : ( sizeof ( DISKS ) +
+																								 ( Count *
+																									 sizeof ( DISK ) ) ) ) );
 				ExFreePool ( Disks );
 
 				Status = STATUS_SUCCESS;
@@ -763,8 +766,8 @@ Bus_DispatchDeviceControl (
 				else
 					{
 						if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
-							IoInvalidateDeviceRelations ( DeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( DeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 					}
 				Irp->IoStatus.Information = 0;
@@ -795,8 +798,8 @@ Bus_DispatchDeviceControl (
 						DiskWalker->Disk.Unmount = TRUE;
 						DiskWalker->Disk.Next = NULL;
 						if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
-							IoInvalidateDeviceRelations ( DeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( DeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 					}
 				DeviceExtension->Bus.Children--;

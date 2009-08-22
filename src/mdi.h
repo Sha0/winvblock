@@ -21,7 +21,7 @@
  *
  */
 
-typedef struct _MEMDISKPATCHAREA
+typedef struct _MDI_PATCHAREA
 {
 	UINT16 mdi_bytes;
 	UINT8 mdi_version_minor;
@@ -50,7 +50,7 @@ typedef struct _MEMDISKPATCHAREA
 	/*
 	 * WinAoE does not need anything more 
 	 */
-} MEMDISKPATCHAREA,
-*PMEMDISKPATCHAREA;
+} MDI_PATCHAREA,
+*PMDI_PATCHAREA;
 
 #endif													/* _MDI_H */
