@@ -141,6 +141,7 @@ static KEVENT Protocol_Globals_StopEvent;
 static KSPIN_LOCK Protocol_Globals_SpinLock;
 static PPROTOCOL_BINDINGCONTEXT Protocol_Globals_BindingContextList = NULL;
 static NDIS_HANDLE Protocol_Globals_Handle = NULL;
+static BOOLEAN Protocol_Globals_Started = FALSE;
 
 NTSTATUS STDCALL
 Protocol_Start (
@@ -152,6 +153,8 @@ Protocol_Start (
 	NDIS_PROTOCOL_CHARACTERISTICS ProtocolCharacteristics;
 
 	DBG ( "Entry\n" );
+	if ( Protocol_Globals_Started )
+		return STATUS_SUCCESS;
 	KeInitializeEvent ( &Protocol_Globals_StopEvent, SynchronizationEvent,
 											FALSE );
 	KeInitializeSpinLock ( &Protocol_Globals_SpinLock );
@@ -181,6 +184,7 @@ Protocol_Start (
 	NdisRegisterProtocol ( ( PNDIS_STATUS ) & Status, &Protocol_Globals_Handle,
 												 &ProtocolCharacteristics,
 												 sizeof ( NDIS_PROTOCOL_CHARACTERISTICS ) );
+	Protocol_Globals_Started = TRUE;
 	return Status;
 }
 
@@ -192,6 +196,8 @@ Protocol_Stop (
 	NDIS_STATUS Status;
 
 	DBG ( "Entry\n" );
+	if ( !Protocol_Globals_Started )
+		return;
 	KeResetEvent ( &Protocol_Globals_StopEvent );
 	NdisDeregisterProtocol ( &Status, Protocol_Globals_Handle );
 	if ( !NT_SUCCESS ( Status ) )
@@ -199,6 +205,7 @@ Protocol_Stop (
 	if ( Protocol_Globals_BindingContextList != NULL )
 		KeWaitForSingleObject ( &Protocol_Globals_StopEvent, Executive, KernelMode,
 														FALSE, NULL );
+	Protocol_Globals_Started = FALSE;
 }
 
 BOOLEAN STDCALL

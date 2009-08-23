@@ -33,6 +33,7 @@
 #include "mount.h"
 #include "debug.h"
 #include "mdi.h"
+#include "protocol.h"
 
 /* in this file */
 static BOOLEAN STDCALL Bus_AddChild (
@@ -138,8 +139,11 @@ Bus_AddDevice (
 	 DosDeviceName;
 	PDEVICEEXTENSION DeviceExtension;
 	PDEVICE_OBJECT DeviceObject;
+	static BOOLEAN Started = FALSE;
 
 	DBG ( "Entry\n" );
+	if ( Started )
+		return STATUS_SUCCESS;
 	RtlInitUnicodeString ( &DeviceName, L"\\Device\\AoE" );
 	RtlInitUnicodeString ( &DosDeviceName, L"\\DosDevices\\AoE" );
 	if ( !NT_SUCCESS
@@ -204,7 +208,8 @@ Bus_AddDevice (
 			DBG ( "INT 0x13 Segment: 0x%04x\n", RealSeg );
 			DBG ( "INT 0x13 Offset: 0x%04x\n", RealOff );
 			DBG ( "INT 0x13 Hook: 0x%08x\n", Int13Hook );
-			for ( Offset = Int13Hook; Offset < 0x100000; Offset += 2 )
+			for ( Offset = 0; Offset < 0x100000 - sizeof ( MDI_PATCHAREA );
+						Offset += 2 )
 				{
 					MemdiskPtr = ( PMDI_PATCHAREA ) & PhysicalMemory[Offset];
 					if ( MemdiskPtr->mdi_bytes != 0x1e )
@@ -316,6 +321,7 @@ Bus_AddDevice (
 #ifdef RIS
 	DeviceExtension->State = Started;
 #endif
+	Started = TRUE;
 	return STATUS_SUCCESS;
 }
 
@@ -392,6 +398,17 @@ Bus_CleanupTargetList (
 {
 }
 
+/**
+ * Add a child node to the bus
+ *
+ * @v BusDeviceObject The bus to add the node to
+ * @v ClientMac       The AoE client's MAC address
+ * @v Major           The AoE shelf
+ * @v Minor           The AoE slot
+ * @v Boot            Is this a boot device?
+ *
+ * Returns TRUE for success, FALSE for failure
+ */
 static BOOLEAN STDCALL
 Bus_AddChild (
 	IN PDEVICE_OBJECT BusDeviceObject,
@@ -401,6 +418,13 @@ Bus_AddChild (
 	IN BOOLEAN Boot
  )
 {
+	/**
+   * @v Status              Status of last operation
+   * @v BusDeviceExtension  Shortcut to the bus' device extension
+   * @v DeviceObject        The new node's device object
+   * @v DeviceExtension     The new node's device extension
+   * @v Walker              Walks the child nodes
+   */
 	NTSTATUS Status;
 	PDEVICEEXTENSION BusDeviceExtension =
 		( PDEVICEEXTENSION ) BusDeviceObject->DeviceExtension;
@@ -409,6 +433,9 @@ Bus_AddChild (
 	 Walker;
 
 	DBG ( "Entry\n" );
+	/*
+	 * Create the child device
+	 */
 	if ( !NT_SUCCESS
 			 ( Status =
 				 IoCreateDevice ( BusDeviceExtension->DriverObject,
@@ -419,9 +446,14 @@ Bus_AddChild (
 			Error ( "Bus_AddChild IoCreateDevice", Status );
 			return FALSE;
 		}
+	/*
+	 * Establish a shotcut to the child device's extension
+	 */
 	DeviceExtension = ( PDEVICEEXTENSION ) DeviceObject->DeviceExtension;
+	/*
+	 * Clear the extension and establish parameters
+	 */
 	RtlZeroMemory ( DeviceExtension, sizeof ( DEVICEEXTENSION ) );
-
 	DeviceExtension->IsBus = FALSE;
 	DeviceExtension->Self = DeviceObject;
 	DeviceExtension->DriverObject = BusDeviceExtension->DriverObject;
@@ -437,8 +469,12 @@ Bus_AddChild (
 	DeviceExtension->Disk.Unmount = FALSE;
 	DeviceExtension->Disk.DiskNumber =
 		InterlockedIncrement ( &Bus_Globals_NextDisk ) - 1;
+	/*
+	 * Handle the AoE and MEMDISK cases
+	 */
 	if ( ClientMac )
 		{
+			Protocol_Start (  );
 			RtlCopyMemory ( DeviceExtension->Disk.AoE.ClientMac, ClientMac, 6 );
 			RtlFillMemory ( DeviceExtension->Disk.AoE.ServerMac, 6, 0xff );
 			DeviceExtension->Disk.AoE.Major = Major;
@@ -454,9 +490,14 @@ Bus_AddChild (
 				Bus_Globals_BootMemdisk.disksize;
 			DeviceExtension->IsMemdisk = TRUE;
 		}
-
+	/*
+	 * Some device parameters
+	 */
 	DeviceObject->Flags |= DO_DIRECT_IO;	/* FIXME? */
 	DeviceObject->Flags |= DO_POWER_INRUSH;	/* FIXME? */
+	/*
+	 * Determine the disk's geometry differently for AoE/MEMDISK
+	 */
 	if ( ClientMac )
 		{
 			AoE_SearchDrive ( DeviceExtension );
@@ -467,7 +508,11 @@ Bus_AddChild (
 			DeviceExtension->Disk.Heads = Bus_Globals_BootMemdisk.heads;
 			DeviceExtension->Disk.Sectors = Bus_Globals_BootMemdisk.disksize;
 		}
+
 	DeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
+	/*
+	 * Add the new device's extension to the bus' list of children
+	 */
 	if ( BusDeviceExtension->Bus.ChildList == NULL )
 		{
 			BusDeviceExtension->Bus.ChildList = DeviceExtension;

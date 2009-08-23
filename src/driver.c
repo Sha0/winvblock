@@ -61,6 +61,7 @@ DriverEntry (
  )
 {
 	NTSTATUS Status;
+	PDEVICE_OBJECT PDODeviceObject = NULL;
 	int i;
 
 		/**
@@ -81,12 +82,6 @@ DriverEntry (
 		{
 			Bus_Stop (  );
 			return Error ( "AoE_Start", Status );
-		}
-	if ( !NT_SUCCESS ( Status = Protocol_Start (  ) ) )
-		{
-			AoE_Stop (  );
-			Bus_Stop (  );
-			return Error ( "Protocol_Start", Status );
 		}
 
 		/**
@@ -112,9 +107,12 @@ DriverEntry (
 			DBG ( "Could not set system state to ES_CONTINUOUS!!\n" );
 		}
 
+	/*
+	 * Set up IRP MajorFunction function table for devices
+	 * this driver handles.  Not sure about redundancy here
+	 */
 	for ( i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++ )
 		DriverObject->MajorFunction[i] = Driver_Dispatch;
-	DriverObject->DriverExtension->AddDevice = Bus_AddDevice;
 	DriverObject->MajorFunction[IRP_MJ_PNP] = Driver_Dispatch;
 	DriverObject->MajorFunction[IRP_MJ_POWER] = Driver_Dispatch;
 	DriverObject->MajorFunction[IRP_MJ_CREATE] = Driver_Dispatch;
@@ -122,8 +120,12 @@ DriverEntry (
 	DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = Driver_Dispatch;
 	DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = Driver_Dispatch;
 	DriverObject->MajorFunction[IRP_MJ_SCSI] = Driver_Dispatch;
+	/*
+	 * Other functions this driver handles
+	 */
+	DriverObject->DriverExtension->AddDevice = Bus_AddDevice;
 	DriverObject->DriverUnload = Driver_Unload;
-#ifdef RIS
+//#ifdef RIS
 	IoReportDetectedDevice ( DriverObject, InterfaceTypeUndefined, -1, -1, NULL,
 													 NULL, FALSE, &PDODeviceObject );
 	if ( !NT_SUCCESS
@@ -131,12 +133,12 @@ DriverEntry (
 		{
 			Protocol_Stop (  );
 			AoE_Stop (  );
-			Error ( "AddDevice", Status );
+			Error ( "Bus_AddDevice", Status );
 		}
 	return Status;
-#else
+//#else
 	return STATUS_SUCCESS;
-#endif
+//#endif
 }
 
 static NTSTATUS STDCALL
