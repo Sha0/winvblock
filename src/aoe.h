@@ -39,10 +39,10 @@ typedef enum
 *PAOE_REQUESTMODE;
 
 extern BOOLEAN STDCALL AoE_SearchDrive (
-	IN PDEVICEEXTENSION DeviceExtension
+	IN PDRIVER_DEVICEEXTENSION DeviceExtension
  );
 extern NTSTATUS STDCALL AoE_Request (
-	IN PDEVICEEXTENSION DeviceExtension,
+	IN PDRIVER_DEVICEEXTENSION DeviceExtension,
 	IN AOE_REQUESTMODE Mode,
 	IN LONGLONG StartSector,
 	IN ULONG SectorCount,

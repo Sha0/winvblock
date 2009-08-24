@@ -18,70 +18,54 @@
  * You should have received a copy of the GNU General Public License
  * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _BUS_H
-#  define _BUS_H
+#ifndef _AOEDISK_H
+#  define _AOEDISK_H
 
 /**
  * @file
  *
- * Bus specifics
+ * AoE disk specifics
  *
  */
 
-typedef struct _BUS_BUS
+typedef struct _AOEDISK_AOEDISK
 {
-	PDEVICE_OBJECT LowerDeviceObject;
-	PDEVICE_OBJECT PhysicalDeviceObject;
-	ULONG Children;
-	PDRIVER_DEVICEEXTENSION ChildList;
-	KSPIN_LOCK SpinLock;
-} BUS_BUS,
-*PBUS_BUS;
+	ULONG MTU;
+	UCHAR ClientMac[6];
+	UCHAR ServerMac[6];
+	ULONG Major;
+	ULONG Minor;
+	ULONG MaxSectorsPerPacket;
+	ULONG Timeout;
+} AOEDISK_AOEDISK,
+*PAOEDISK_AOEDISK;
 
-extern NTSTATUS STDCALL Bus_Start (
-	void
- );
-
-extern VOID STDCALL Bus_Stop (
-	void
- );
-
-extern NTSTATUS STDCALL Bus_AddDevice (
-	IN PDRIVER_OBJECT DriverObject,
-	IN PDEVICE_OBJECT PhysicalDeviceObject
- );
-
-extern NTSTATUS STDCALL Bus_DispatchPnP (
+extern NTSTATUS STDCALL Disk_DispatchPnP (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PIO_STACK_LOCATION Stack,
 	IN PDRIVER_DEVICEEXTENSION DeviceExtension
  );
 
-extern NTSTATUS STDCALL Bus_DispatchDeviceControl (
+extern NTSTATUS STDCALL Disk_DispatchSCSI (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PIO_STACK_LOCATION Stack,
 	IN PDRIVER_DEVICEEXTENSION DeviceExtension
  );
 
-extern NTSTATUS STDCALL Bus_DispatchSystemControl (
+extern NTSTATUS STDCALL Disk_DispatchDeviceControl (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp,
 	IN PIO_STACK_LOCATION Stack,
 	IN PDRIVER_DEVICEEXTENSION DeviceExtension
  );
 
-extern VOID STDCALL Bus_AddTarget (
-	IN PUCHAR ClientMac,
-	IN PUCHAR ServerMac,
-	USHORT Major,
-	UCHAR Minor,
-	LONGLONG LBASize
+extern NTSTATUS STDCALL Disk_DispatchSystemControl (
+	IN PDEVICE_OBJECT DeviceObject,
+	IN PIRP Irp,
+	IN PIO_STACK_LOCATION Stack,
+	IN PDRIVER_DEVICEEXTENSION DeviceExtension
  );
 
-extern VOID STDCALL Bus_CleanupTargetList (
-	void
- );
-
-#endif													/* _BUS_H */
+#endif													/* _AOEDISK_H */

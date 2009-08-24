@@ -117,7 +117,7 @@ typedef struct _AOE_REQUEST
 typedef struct _AOE_TAG
 {
 	AOE_TAGTYPE Type;
-	PDEVICEEXTENSION DeviceExtension;
+	PDRIVER_DEVICEEXTENSION DeviceExtension;
 	PAOE_REQUEST Request;
 	ULONG Id;
 	PAOE_PACKET PacketData;
@@ -134,7 +134,7 @@ typedef struct _AOE_TAG
 /** A disk search */
 typedef struct _AOE_DISKSEARCH
 {
-	PDEVICEEXTENSION DeviceExtension;
+	PDRIVER_DEVICEEXTENSION DeviceExtension;
 	PAOE_TAG Tag;
 	struct _AOE_DISKSEARCH *Next;
 } AOE_DISKSEARCH,
@@ -188,8 +188,8 @@ AoE_Start (
 	 */
 	if ( ( AoE_Globals_ProbeTag->PacketData =
 				 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-																					AoE_Globals_ProbeTag->PacketSize ) )
-			 == NULL )
+																					AoE_Globals_ProbeTag->
+																					PacketSize ) ) == NULL )
 		{
 			DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
 			ExFreePool ( AoE_Globals_ProbeTag );
@@ -347,7 +347,7 @@ AoE_Stop (
  */
 BOOLEAN STDCALL
 AoE_SearchDrive (
-	IN PDEVICEEXTENSION DeviceExtension
+	IN PDRIVER_DEVICEEXTENSION DeviceExtension
  )
 {
 	PAOE_DISKSEARCH DiskSearch,
@@ -728,7 +728,7 @@ AoE_SearchDrive (
  */
 NTSTATUS STDCALL
 AoE_Request (
-	IN PDEVICEEXTENSION DeviceExtension,
+	IN PDRIVER_DEVICEEXTENSION DeviceExtension,
 	IN AOE_REQUESTMODE Mode,
 	IN LONGLONG StartSector,
 	IN ULONG SectorCount,
@@ -776,6 +776,9 @@ AoE_Request (
 			if ( !PhysicalMemory )
 				{
 					PhysicalAddress.QuadPart = DeviceExtension->Disk.RAMDisk.DiskBuf;
+					/*
+					 * Possible precision loss from LONGLONG to SIZE_T here
+					 */
 					PhysicalMemory =
 						MmMapIoSpace ( PhysicalAddress,
 													 DeviceExtension->Disk.LBADiskSize * SECTORSIZE,
@@ -1156,8 +1159,8 @@ AoE_Reply (
 								}
 							else if ( Tag->DeviceExtension->Disk.AoE.MTU <
 												( sizeof ( AOE_PACKET ) +
-													( ( Tag->DeviceExtension->Disk.AoE.
-															MaxSectorsPerPacket + 1 ) * SECTORSIZE ) ) )
+													( ( Tag->DeviceExtension->Disk.
+															AoE.MaxSectorsPerPacket + 1 ) * SECTORSIZE ) ) )
 								{
 									DBG ( "Got MaxSectorsPerPacket %d at size of %d. "
 												"MTU of %d reached\n",

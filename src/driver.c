@@ -33,12 +33,17 @@
 #include "debug.h"
 #include "registry.h"
 #include "bus.h"
-#include "disk.h"
+#include "aoedisk.h"
 #include "aoe.h"
 #include "protocol.h"
 #include "debug.h"
 
 /* in this file */
+static NTSTATUS STDCALL Driver_DispatchNotSupported (
+	IN PDEVICE_OBJECT DeviceObject,
+	IN PIRP Irp
+ );
+
 static NTSTATUS STDCALL Driver_Dispatch (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp
@@ -109,10 +114,10 @@ DriverEntry (
 
 	/*
 	 * Set up IRP MajorFunction function table for devices
-	 * this driver handles.  Not sure about redundancy here
+	 * this driver handles.
 	 */
 	for ( i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++ )
-		DriverObject->MajorFunction[i] = Driver_Dispatch;
+		DriverObject->MajorFunction[i] = Driver_DispatchNotSupported;
 	DriverObject->MajorFunction[IRP_MJ_PNP] = Driver_Dispatch;
 	DriverObject->MajorFunction[IRP_MJ_POWER] = Driver_Dispatch;
 	DriverObject->MajorFunction[IRP_MJ_CREATE] = Driver_Dispatch;
@@ -125,7 +130,6 @@ DriverEntry (
 	 */
 	DriverObject->DriverExtension->AddDevice = Bus_AddDevice;
 	DriverObject->DriverUnload = Driver_Unload;
-//#ifdef RIS
 	IoReportDetectedDevice ( DriverObject, InterfaceTypeUndefined, -1, -1, NULL,
 													 NULL, FALSE, &PDODeviceObject );
 	if ( !NT_SUCCESS
@@ -136,9 +140,17 @@ DriverEntry (
 			Error ( "Bus_AddDevice", Status );
 		}
 	return Status;
-//#else
-	return STATUS_SUCCESS;
-//#endif
+}
+
+static NTSTATUS STDCALL
+Driver_DispatchNotSupported (
+	IN PDEVICE_OBJECT DeviceObject,
+	IN PIRP Irp
+ )
+{
+	Irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
+	IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+	return Irp->IoStatus.Status;
 }
 
 static NTSTATUS STDCALL
@@ -147,16 +159,15 @@ Driver_Dispatch (
 	IN PIRP Irp
  )
 {
-
 	NTSTATUS Status;
 	PIO_STACK_LOCATION Stack;
-	PDEVICEEXTENSION DeviceExtension;
+	PDRIVER_DEVICEEXTENSION DeviceExtension;
 
 #ifdef DEBUGIRPS
 	Debug_IrpStart ( DeviceObject, Irp );
 #endif
 	Stack = IoGetCurrentIrpStackLocation ( Irp );
-	DeviceExtension = ( PDEVICEEXTENSION ) DeviceObject->DeviceExtension;
+	DeviceExtension = ( PDRIVER_DEVICEEXTENSION ) DeviceObject->DeviceExtension;
 	if ( DeviceExtension->State == Deleted )
 		{
 			if ( Stack->MajorFunction == IRP_MJ_POWER )

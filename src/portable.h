@@ -38,10 +38,22 @@ typedef unsigned int UINT,
 #  endif
 
 #  if _WIN32_WINNT < 0x0502
-#    define SCSIOP_READ16 0x88
-#    define SCSIOP_WRITE16 0x8a
-#    define SCSIOP_VERIFY16 0x8f
-#    define SCSIOP_READ_CAPACITY16 0x9e
+#    ifdef SCSIOP_READ16
+#      undef SCSIOP_READ16
+#      define SCSIOP_READ16 0x88
+#    endif
+#    ifdef SCSIOP_WRITE16
+#      undef SCSIOP_WRITE16
+#      define SCSIOP_WRITE16 0x8a
+#    endif
+#    ifdef SCSIOP_VERIFY16
+#      undef SCSIOP_VERIFY16
+#      define SCSIOP_VERIFY16 0x8f
+#    endif
+#    ifdef SCSIOP_READ_CAPACITY16
+#      undef SCSIOP_READ_CAPACITY16
+#      define SCSIOP_READ_CAPACITY16 0x9e
+#    endif
 #  endif
 
 #endif													/* _PORTABLE_H */

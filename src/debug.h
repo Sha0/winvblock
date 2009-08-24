@@ -29,6 +29,9 @@
  * function and line number in any debugging output messages.
  */
 
+#  ifdef DBG
+#    undef DBG
+#  endif
 #  define DBG( ... ) xDbgPrint ( __FILE__, ( const PCHAR )__FUNCTION__, \
                                   __LINE__ ) || 1 ? \
                                   DbgPrint ( __VA_ARGS__ ) : \

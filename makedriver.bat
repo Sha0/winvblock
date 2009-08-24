@@ -74,9 +74,9 @@ copy obj%obj%\%arch%\%name%.sys ..\bin >nul
 copy obj%obj%\%arch%\%name%.pdb ..\bin >nul
 del makefile
 del sources
-del build%obj%.log
-del build%obj%.wrn 2>nul
-del build%obj%.err 2>nul
+rem del build%obj%.log
+rem del build%obj%.wrn 2>nul
+rem del build%obj%.err 2>nul
 rd /s /q obj%obj%
 cd ..
 

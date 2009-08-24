@@ -55,7 +55,25 @@ typedef enum
 } SEARCHSTATE,
 *PSEARCHSTATE;
 
-typedef struct _DEVICEEXTENSION
+/*
+ * Forward declarations for BUS_BUS and DISK_DISK types
+ */
+typedef struct _DRIVER_DEVICEEXTENSION DRIVER_DEVICEEXTENSION,
+*PDRIVER_DEVICEEXTENSION;
+
+#  include "bus.h"
+#  include "disk.h"
+
+typedef NTSTATUS STDCALL (
+	*DRIVER_DISPATCHFUNCTION
+ ) (
+	IN PDEVICE_OBJECT DeviceObject,
+	IN PIRP Irp,
+	IN PIO_STACK_LOCATION Stack,
+	IN PDRIVER_DEVICEEXTENSION DeviceExtension
+ );
+
+struct _DRIVER_DEVICEEXTENSION
 {
 	BOOLEAN IsBus;
 	BOOLEAN IsMemdisk;
@@ -63,53 +81,13 @@ typedef struct _DEVICEEXTENSION
 	PDRIVER_OBJECT DriverObject;
 	STATE State;
 	STATE OldState;
+	DRIVER_DISPATCHFUNCTION *DispatchTable;
 	union
 	{
-		struct
-		{
-			PDEVICE_OBJECT LowerDeviceObject;
-			PDEVICE_OBJECT PhysicalDeviceObject;
-			ULONG Children;
-			struct _DEVICEEXTENSION *ChildList;
-			KSPIN_LOCK SpinLock;
-		} Bus;
-		struct
-		{
-			PDEVICE_OBJECT Parent;
-			struct _DEVICEEXTENSION *Next;
-			KEVENT SearchEvent;
-			SEARCHSTATE SearchState;
-			KSPIN_LOCK SpinLock;
-			BOOLEAN BootDrive;
-			BOOLEAN Unmount;
-			ULONG DiskNumber;
-			union
-			{
-				struct
-				{
-					ULONG MTU;
-					UCHAR ClientMac[6];
-					UCHAR ServerMac[6];
-					ULONG Major;
-					ULONG Minor;
-					ULONG MaxSectorsPerPacket;
-					ULONG Timeout;
-				} AoE;
-				struct
-				{
-					UINT32 DiskBuf;
-					UINT32 DiskSize;
-				} RAMDisk;
-			};
-			LONGLONG LBADiskSize;
-			LONGLONG Cylinders;
-			ULONG Heads;
-			ULONG Sectors;
-			ULONG SpecialFileCount;
-		} Disk;
+		struct _BUS_BUS Bus;
+		struct _DISK_DISK Disk;
 	};
-} DEVICEEXTENSION,
-*PDEVICEEXTENSION;
+};
 
 extern VOID STDCALL Driver_CompletePendingIrp (
 	IN PIRP Irp
