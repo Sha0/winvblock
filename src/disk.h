@@ -17,40 +17,41 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
- */  
+ */
 #ifndef _DISK_H
 #  define _DISK_H
-	
+
 /**
  * @file
  *
  * Disk specifics
  *
- */ 
-	
+ */
+
 #  include "aoedisk.h"
 #  include "ramdisk.h"
-typedef struct _DISK_DISK 
+
+typedef struct _DISK_DISK
 {
-	PDEVICE_OBJECT Parent;
-	PDRIVER_DEVICEEXTENSION Next;
-	KEVENT SearchEvent;
-	SEARCHSTATE SearchState;
-	KSPIN_LOCK SpinLock;
-	BOOLEAN BootDrive;
-	BOOLEAN Unmount;
-	ULONG DiskNumber;
-	union 
+	PDEVICE_OBJECT Parent;
+	PDRIVER_DEVICEEXTENSION Next;
+	KEVENT SearchEvent;
+	SEARCHSTATE SearchState;
+	KSPIN_LOCK SpinLock;
+	BOOLEAN BootDrive;
+	BOOLEAN Unmount;
+	ULONG DiskNumber;
+	union
 	{
-		AOEDISK_AOEDISK AoE;
-		RAMDISK_RAMDISK RAMDisk;
-	};
-	LONGLONG LBADiskSize;
-	LONGLONG Cylinders;
-	ULONG Heads;
-	ULONG Sectors;
-	ULONG SpecialFileCount;
-} DISK_DISK,
-*PDISK_DISK;
-
+		AOEDISK_AOEDISK AoE;
+		RAMDISK_RAMDISK RAMDisk;
+	};
+	LONGLONG LBADiskSize;
+	LONGLONG Cylinders;
+	ULONG Heads;
+	ULONG Sectors;
+	ULONG SpecialFileCount;
+} DISK_DISK,
+*PDISK_DISK;
+
 #endif													/* _DISK_H */

@@ -24,7 +24,7 @@
 /**
  * @file
  *
- * Mount command header
+ * Mount command and device control code header
  *
  */
 
@@ -43,7 +43,7 @@
                                   METHOD_BUFFERED,\
                                   FILE_READ_DATA | FILE_WRITE_DATA)
 
-typedef struct _TARGET
+typedef struct _MOUNT_TARGET
 {
 	UCHAR ClientMac[6];
 	UCHAR ServerMac[6];
@@ -51,17 +51,17 @@ typedef struct _TARGET
 	ULONG Minor;
 	LONGLONG LBASize;
 	LARGE_INTEGER ProbeTime;
-} TARGET,
-*PTARGET;
+} MOUNT_TARGET,
+*PMOUNT_TARGET;
 
-typedef struct _TARGETS
+typedef struct _MOUNT_TARGETS
 {
 	ULONG Count;
-	TARGET Target[];
-} TARGETS,
-*PTARGETS;
+	MOUNT_TARGET Target[];
+} MOUNT_TARGETS,
+*PMOUNT_TARGETS;
 
-typedef struct _DISK
+typedef struct _MOUNT_DISK
 {
 	ULONG Disk;
 	UCHAR ClientMac[6];
@@ -69,14 +69,14 @@ typedef struct _DISK
 	ULONG Major;
 	ULONG Minor;
 	LONGLONG LBASize;
-} DISK,
-*PDISK;
+} MOUNT_DISK,
+*PMOUNT_DISK;
 
-typedef struct _DISKS
+typedef struct _MOUNT_DISKS
 {
 	ULONG Count;
-	DISK Disk[];
-} DISKS,
-*PDISKS;
+	MOUNT_DISK Disk[];
+} MOUNT_DISKS,
+*PMOUNT_DISKS;
 
 #endif													/* _MOUNT_H */

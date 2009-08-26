@@ -1,7 +1,7 @@
 INCLUDES := $(shell echo | cpp -v 2>&1 | sed -n '/\#include "..." search starts here:/,/End of search list./p' | grep "^ " | sed "s/^ \(.*\)$$/-I\1\/ddk/" | tr "\n" " " | sed "s/ $$//" | sed ":start;s/\/[^\/]*\/\.\.\//\//;t start")
 
 # Next line is duplicated in config.bat, edit both when adding files.
-c := driver.c registry.c bus.c aoedisk.c aoe.c protocol.c debug.c
+c := driver.c registry.c bus.c aoedisk.c aoe.c protocol.c debug.c probe.c
 h := driver.h aoe.h protocol.h mount.h portable.h
 
 # This is also duplicated in config.bat.
@@ -95,10 +95,15 @@ src/obj/debug.o: src/debug.c src/portable.h src/driver.h src/mount.h Makefile
 	@rm -rf src/obj/debug.o src/obj/aoe.tmp src/obj/aoe.exp bin/aoe32.sys bin/aoe64.sys bin/aoe32.pdb bin/aoe64.pdb bin/loader64.exe
 	gcc $(INCLUDES) -c -Wall src/debug.c -o src/obj/debug.o
 
-src/obj/aoe.tmp: src/obj/driver.o src/obj/registry.o src/obj/bus.o src/obj/aoedisk.o src/obj/aoe.o src/obj/protocol.o src/obj/debug.o Makefile
+src/obj/probe.o: src/probe.c src/portable.h src/driver.h src/mount.h Makefile
+	@mkdir -p src/obj
+	@rm -rf src/obj/probe.o src/obj/aoe.tmp src/obj/aoe.exp bin/aoe32.sys bin/aoe64.sys bin/aoe32.pdb bin/aoe64.pdb bin/loader64.exe
+	gcc $(INCLUDES) -c -Wall src/probe.c -o src/obj/probe.o
+
+src/obj/aoe.tmp: src/obj/driver.o src/obj/registry.o src/obj/bus.o src/obj/aoedisk.o src/obj/aoe.o src/obj/protocol.o src/obj/debug.o probe.o Makefile
 	@mkdir -p src/obj
 	@rm -rf src/obj/aoe.tmp src/obj/aoe.exp bin/aoe32.sys bin/aoe64.sys bin/aoe32.pdb bin/aoe64.pdb bin/loader64.exe
-	@gcc -Wall src/obj/driver.o src/obj/registry.o src/obj/bus.o src/obj/aoedisk.o src/obj/aoe.o src/obj/protocol.o src/obj/debug.o -Wl,--base-file,src/obj/aoe.tmp -Wl,--entry,_DriverEntry@8 -nostartfiles -nostdlib -lntoskrnl -lhal -lndis -o null
+	@gcc -Wall src/obj/driver.o src/obj/registry.o src/obj/bus.o src/obj/aoedisk.o src/obj/aoe.o src/obj/protocol.o src/obj/debug.o src/obj/probe.o -Wl,--base-file,src/obj/aoe.tmp -Wl,--entry,_DriverEntry@8 -nostartfiles -nostdlib -lntoskrnl -lhal -lndis -o null
 	@rm -rf null.exe
 
 src/obj/aoe.exp: src/obj/aoe.tmp Makefile
@@ -106,8 +111,8 @@ src/obj/aoe.exp: src/obj/aoe.tmp Makefile
 	@rm -rf src/obj/aoe.exp bin/aoe32.sys bin/aoe64.sys bin/aoe32.pdb bin/aoe64.pdb bin/loader64.exe
 	@dlltool --dllname aoe32.sys --base-file src/obj/aoe.tmp --output-exp src/obj/aoe.exp
 
-bin/aoe32.sys: src/obj/driver.o src/obj/registry.o src/obj/bus.o src/obj/aoedisk.o src/obj/aoe.o src/obj/protocol.o src/obj/debug.o src/obj/aoe.exp Makefile
+bin/aoe32.sys: src/obj/driver.o src/obj/registry.o src/obj/bus.o src/obj/aoedisk.o src/obj/aoe.o src/obj/protocol.o src/obj/debug.o src/obj/probe.o src/obj/aoe.exp Makefile
 	@mkdir -p bin
 	@rm -rf bin/aoe32.sys bin/aoe64.sys bin/aoe32.pdb bin/aoe64.pdb bin/loader64.exe
-	@gcc -Wall src/obj/driver.o src/obj/registry.o src/obj/bus.o src/obj/aoedisk.o src/obj/aoe.o src/obj/protocol.o src/obj/debug.o -Wl,--subsystem,native -Wl,--entry,_DriverEntry@8 -Wl,src/obj/aoe.exp -mdll -nostartfiles -nostdlib -lntoskrnl -lhal -lndis -o bin/aoe32.sys
+	@gcc -Wall src/obj/driver.o src/obj/registry.o src/obj/bus.o src/obj/aoedisk.o src/obj/aoe.o src/obj/protocol.o src/obj/debug.o src/obj/probe.o -Wl,--subsystem,native -Wl,--entry,_DriverEntry@8 -Wl,src/obj/aoe.exp -mdll -nostartfiles -nostdlib -lntoskrnl -lhal -lndis -o bin/aoe32.sys
 #	strip bin/aoe32.sys

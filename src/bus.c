@@ -34,9 +34,16 @@
 #include "debug.h"
 #include "mdi.h"
 #include "protocol.h"
+#include "probe.h"
 
 /* in this file */
-static BOOLEAN STDCALL Bus_AddChild (
+static IRPHandler_Declaration (
+	Bus_DispatchNotSupported
+ );
+static IRPHandler_Declaration (
+	Bus_DispatchPower
+ );
+BOOLEAN STDCALL Bus_AddChild (
 	IN PDEVICE_OBJECT BusDeviceObject,
 	IN PUCHAR ClientMac,
 	IN ULONG Major,
@@ -72,7 +79,7 @@ typedef struct _BUS_ABFT
 
 typedef struct _BUS_TARGETLIST
 {
-	TARGET Target;
+	MOUNT_TARGET Target;
 	struct _BUS_TARGETLIST *Next;
 } BUS_TARGETLIST,
 *PBUS_TARGETLIST;
@@ -80,7 +87,7 @@ typedef struct _BUS_TARGETLIST
 static PBUS_TARGETLIST Bus_Globals_TargetList = NULL;
 static KSPIN_LOCK Bus_Globals_TargetListSpinLock;
 static ULONG Bus_Globals_NextDisk = 0;
-static MDI_PATCHAREA Bus_Globals_BootMemdisk;
+PDEVICE_OBJECT Bus_Globals_Self = NULL;
 
 NTSTATUS STDCALL
 Bus_Start (
@@ -114,214 +121,6 @@ Bus_Stop (
 	KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
 	RtlInitUnicodeString ( &DosDeviceName, L"\\DosDevices\\AoE" );
 	IoDeleteSymbolicLink ( &DosDeviceName );
-}
-
-NTSTATUS STDCALL
-Bus_AddDevice (
-	IN PDRIVER_OBJECT DriverObject,
-	IN PDEVICE_OBJECT PhysicalDeviceObject
- )
-{
-	NTSTATUS Status;
-	PHYSICAL_ADDRESS PhysicalAddress;
-	PUCHAR PhysicalMemory;
-	PMDI_PATCHAREA MemdiskPtr;
-	UINT32 Int13Hook;
-	UINT16 RealSeg,
-	 RealOff;
-	UINT Offset,
-	 Checksum,
-	 i;
-	BUS_ABFT AOEBootRecord;
-	BOOLEAN FoundAbft = FALSE,
-		FoundMemdisk = FALSE;
-	UNICODE_STRING DeviceName,
-	 DosDeviceName;
-	PDRIVER_DEVICEEXTENSION DeviceExtension;
-	PDEVICE_OBJECT DeviceObject;
-	static BOOLEAN Started = FALSE;
-
-	DBG ( "Entry\n" );
-	if ( Started )
-		return STATUS_SUCCESS;
-	RtlInitUnicodeString ( &DeviceName, L"\\Device\\AoE" );
-	RtlInitUnicodeString ( &DosDeviceName, L"\\DosDevices\\AoE" );
-	if ( !NT_SUCCESS
-			 ( Status =
-				 IoCreateDevice ( DriverObject, sizeof ( DRIVER_DEVICEEXTENSION ),
-													&DeviceName, FILE_DEVICE_CONTROLLER,
-													FILE_DEVICE_SECURE_OPEN, FALSE, &DeviceObject ) ) )
-		{
-			return Error ( "Bus_AddDevice IoCreateDevice", Status );
-		}
-	if ( !NT_SUCCESS
-			 ( Status = IoCreateSymbolicLink ( &DosDeviceName, &DeviceName ) ) )
-		{
-			IoDeleteDevice ( DeviceObject );
-			return Error ( "Bus_AddDevice IoCreateSymbolicLink", Status );
-		}
-
-	DeviceExtension = ( PDRIVER_DEVICEEXTENSION ) DeviceObject->DeviceExtension;
-	RtlZeroMemory ( DeviceExtension, sizeof ( DRIVER_DEVICEEXTENSION ) );
-	DeviceExtension->IsBus = TRUE;
-	DeviceExtension->DriverObject = DriverObject;
-	DeviceExtension->Self = DeviceObject;
-	DeviceExtension->State = NotStarted;
-	DeviceExtension->OldState = NotStarted;
-	DeviceExtension->Bus.PhysicalDeviceObject = PhysicalDeviceObject;
-	DeviceExtension->Bus.Children = 0;
-	DeviceExtension->Bus.ChildList = NULL;
-	KeInitializeSpinLock ( &DeviceExtension->Bus.SpinLock );
-	DeviceObject->Flags |= DO_DIRECT_IO;	/* FIXME? */
-	DeviceObject->Flags |= DO_POWER_INRUSH;	/* FIXME? */
-	if ( PhysicalDeviceObject != NULL )
-		{
-			if ( ( DeviceExtension->Bus.LowerDeviceObject =
-						 IoAttachDeviceToDeviceStack ( DeviceObject,
-																					 PhysicalDeviceObject ) ) == NULL )
-				{
-					IoDeleteDevice ( DeviceObject );
-					return Error ( "AddDevice IoAttachDeviceToDeviceStack",
-												 STATUS_NO_SUCH_DEVICE );
-				}
-		}
-	DeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
-
-	/*
-	 * Find a MEMDISK.  Start by looking at the IDT and following
-	 * the INT 0x13 hook.  This discovery strategy is extremely poor
-	 * at the moment.  The eventual goal is to discover MEMDISK RAM disks
-	 * as well as GRUB4DOS-mapped RAM disks.  Slight modifications to both
-	 * will help with this.
-	 */
-	PhysicalAddress.QuadPart = 0LL;
-	PhysicalMemory = MmMapIoSpace ( PhysicalAddress, 0x100000, MmNonCached );
-	if ( !PhysicalMemory )
-		{
-			DBG ( "Could not map low memory\n" );
-		}
-	else
-		{
-			RealSeg = *( ( PUINT16 ) & PhysicalMemory[0x13 * 4 + 2] );
-			RealOff = *( ( PUINT16 ) & PhysicalMemory[0x13 * 4] );
-			Int13Hook = ( ( ( UINT32 ) RealSeg ) << 4 ) + ( ( UINT32 ) RealOff );
-			DBG ( "INT 0x13 Segment: 0x%04x\n", RealSeg );
-			DBG ( "INT 0x13 Offset: 0x%04x\n", RealOff );
-			DBG ( "INT 0x13 Hook: 0x%08x\n", Int13Hook );
-			for ( Offset = 0; Offset < 0x100000 - sizeof ( MDI_PATCHAREA );
-						Offset += 2 )
-				{
-					MemdiskPtr = ( PMDI_PATCHAREA ) & PhysicalMemory[Offset];
-					if ( MemdiskPtr->mdi_bytes != 0x1e )
-						continue;
-					DBG ( "Found MEMDISK sig #1: 0x%08x\n", Offset );
-					if ( ( MemdiskPtr->mdi_version_major != 3 )
-							 || ( MemdiskPtr->mdi_version_minor != 82 ) )
-						continue;
-					DBG ( "Found MEMDISK sig #2\n" );
-					DBG ( "MEMDISK DiskBuf: 0x%08x\n", MemdiskPtr->diskbuf );
-					DBG ( "MEMDISK DiskSize: 0x%08x sectors\n", MemdiskPtr->disksize );
-					FoundMemdisk = TRUE;
-					RtlCopyMemory ( &Bus_Globals_BootMemdisk, MemdiskPtr,
-													sizeof ( MDI_PATCHAREA ) );
-					break;
-				}
-			MmUnmapIoSpace ( PhysicalMemory, 0x100000 );
-		}
-	/*
-	 * Find aBFT
-	 */
-	PhysicalAddress.QuadPart = 0LL;
-	PhysicalMemory = MmMapIoSpace ( PhysicalAddress, 0xa0000, MmNonCached );
-	if ( !PhysicalMemory )
-		{
-			DBG ( "Could not map low memory\n" );
-		}
-	else
-		{
-			for ( Offset = 0; Offset < 0xa0000; Offset += 0x10 )
-				{
-					if ( ( ( PBUS_ABFT ) & PhysicalMemory[Offset] )->Signature ==
-							 0x54464261 )
-						{
-							Checksum = 0;
-							for ( i = 0;
-										i < ( ( PBUS_ABFT ) & PhysicalMemory[Offset] )->Length;
-										i++ )
-								Checksum += PhysicalMemory[Offset + i];
-							if ( Checksum & 0xff )
-								continue;
-							if ( ( ( PBUS_ABFT ) & PhysicalMemory[Offset] )->Revision != 1 )
-								{
-									DBG ( "Found aBFT with mismatched revision v%d at "
-												"segment 0x%4x. want v1.\n",
-												( ( PBUS_ABFT ) & PhysicalMemory[Offset] )->Revision,
-												( Offset / 0x10 ) );
-									continue;
-								}
-							DBG ( "Found aBFT at segment: 0x%04x\n", ( Offset / 0x10 ) );
-							RtlCopyMemory ( &AOEBootRecord, &PhysicalMemory[Offset],
-															sizeof ( BUS_ABFT ) );
-							FoundAbft = TRUE;
-							break;
-						}
-				}
-			MmUnmapIoSpace ( PhysicalMemory, 0xa0000 );
-		}
-
-#ifdef RIS
-	FoundAbft = TRUE;
-	RtlCopyMemory ( AOEBootRecord.ClientMac, "\x00\x0c\x29\x34\x69\x34", 6 );
-	AOEBootRecord.Major = 0;
-	AOEBootRecord.Minor = 10;
-#endif
-
-	if ( FoundMemdisk )
-		{
-			if ( !Bus_AddChild ( DeviceObject, NULL, 0, 0, TRUE ) )
-				DBG ( "Bus_AddChild() failed for MEMDISK\n" );
-			else if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
-				{
-					IoInvalidateDeviceRelations ( DeviceExtension->Bus.
-																				PhysicalDeviceObject, BusRelations );
-				}
-		}
-	else
-		{
-			DBG ( "Not booting from MEMDISK...\n" );
-		}
-
-	if ( FoundAbft )
-		{
-			DBG ( "Boot from client NIC %02x:%02x:%02x:%02x:%02x:%02x to major: "
-						"%d minor: %d\n", AOEBootRecord.ClientMac[0],
-						AOEBootRecord.ClientMac[1], AOEBootRecord.ClientMac[2],
-						AOEBootRecord.ClientMac[3], AOEBootRecord.ClientMac[4],
-						AOEBootRecord.ClientMac[5], AOEBootRecord.Major,
-						AOEBootRecord.Minor );
-			if ( !Bus_AddChild
-					 ( DeviceObject, AOEBootRecord.ClientMac, AOEBootRecord.Major,
-						 AOEBootRecord.Minor, TRUE ) )
-				DBG ( "Bus_AddChild() failed for aBFT AoE disk\n" );
-			else
-				{
-					if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
-						{
-							IoInvalidateDeviceRelations ( DeviceExtension->Bus.
-																						PhysicalDeviceObject,
-																						BusRelations );
-						}
-				}
-		}
-	else
-		{
-			DBG ( "Not booting from aBFT AoE disk...\n" );
-		}
-#ifdef RIS
-	DeviceExtension->State = Started;
-#endif
-	Started = TRUE;
-	return STATUS_SUCCESS;
 }
 
 VOID STDCALL
@@ -408,7 +207,7 @@ Bus_CleanupTargetList (
  *
  * Returns TRUE for success, FALSE for failure
  */
-static BOOLEAN STDCALL
+BOOLEAN STDCALL
 Bus_AddChild (
 	IN PDEVICE_OBJECT BusDeviceObject,
 	IN PUCHAR ClientMac,
@@ -455,6 +254,7 @@ Bus_AddChild (
 	 */
 	RtlZeroMemory ( DeviceExtension, sizeof ( DRIVER_DEVICEEXTENSION ) );
 	DeviceExtension->IsBus = FALSE;
+	DeviceExtension->Dispatch = Disk_Dispatch;
 	DeviceExtension->Self = DeviceObject;
 	DeviceExtension->DriverObject = BusDeviceExtension->DriverObject;
 	DeviceExtension->State = NotStarted;
@@ -484,10 +284,11 @@ Bus_AddChild (
 		}
 	else
 		{
-			DeviceExtension->Disk.RAMDisk.DiskBuf = Bus_Globals_BootMemdisk.diskbuf;
+			DeviceExtension->Disk.RAMDisk.DiskBuf =
+				Probe_Globals_BootMemdisk.diskbuf;
 			DeviceExtension->Disk.LBADiskSize =
 				DeviceExtension->Disk.RAMDisk.DiskSize =
-				Bus_Globals_BootMemdisk.disksize;
+				Probe_Globals_BootMemdisk.disksize;
 			DeviceExtension->IsMemdisk = TRUE;
 		}
 	/*
@@ -504,9 +305,9 @@ Bus_AddChild (
 		}
 	else
 		{
-			DeviceExtension->Disk.Cylinders = Bus_Globals_BootMemdisk.cylinders;
-			DeviceExtension->Disk.Heads = Bus_Globals_BootMemdisk.heads;
-			DeviceExtension->Disk.Sectors = Bus_Globals_BootMemdisk.disksize;
+			DeviceExtension->Disk.Cylinders = Probe_Globals_BootMemdisk.cylinders;
+			DeviceExtension->Disk.Heads = Probe_Globals_BootMemdisk.heads;
+			DeviceExtension->Disk.Sectors = Probe_Globals_BootMemdisk.disksize;
 		}
 
 	DeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
@@ -528,13 +329,7 @@ Bus_AddChild (
 	return TRUE;
 }
 
-NTSTATUS STDCALL
-Bus_DispatchPnP (
-	IN PDEVICE_OBJECT DeviceObject,
-	IN PIRP Irp,
-	IN PIO_STACK_LOCATION Stack,
-	IN PDRIVER_DEVICEEXTENSION DeviceExtension
- )
+IRPHandler_Declaration ( Bus_DispatchPnP )
 {
 	NTSTATUS Status;
 	KEVENT Event;
@@ -601,14 +396,12 @@ Bus_DispatchPnP (
 						Count++;
 						Walker = Walker->Disk.Next;
 					}
-
-				if ( ( DeviceRelations =
-							 ( PDEVICE_RELATIONS ) ExAllocatePool ( NonPagedPool,
-																											sizeof
-																											( DEVICE_RELATIONS ) +
-																											( sizeof
-																												( PDEVICE_OBJECT ) *
-																												Count ) ) ) == NULL )
+				DeviceRelations =
+					( PDEVICE_RELATIONS ) ExAllocatePool ( NonPagedPool,
+																								 sizeof ( DEVICE_RELATIONS ) +
+																								 ( sizeof ( PDEVICE_OBJECT ) *
+																									 Count ) );
+				if ( DeviceRelations == NULL )
 					{
 						Irp->IoStatus.Information = 0;
 						Status = STATUS_INSUFFICIENT_RESOURCES;
@@ -669,13 +462,7 @@ Bus_DispatchPnP (
 	return Status;
 }
 
-NTSTATUS STDCALL
-Bus_DispatchDeviceControl (
-	IN PDEVICE_OBJECT DeviceObject,
-	IN PIRP Irp,
-	IN PIO_STACK_LOCATION Stack,
-	IN PDRIVER_DEVICEEXTENSION DeviceExtension
- )
+IRPHandler_Declaration ( Bus_DispatchDeviceControl )
 {
 	NTSTATUS Status;
 	PUCHAR Buffer;
@@ -683,8 +470,8 @@ Bus_DispatchDeviceControl (
 	PBUS_TARGETLIST TargetWalker;
 	PDRIVER_DEVICEEXTENSION DiskWalker,
 	 DiskWalkerPrevious;
-	PTARGETS Targets;
-	PDISKS Disks;
+	PMOUNT_TARGETS Targets;
+	PMOUNT_DISKS Disks;
 	KIRQL Irql;
 
 	switch ( Stack->Parameters.DeviceIoControl.IoControlCode )
@@ -702,10 +489,11 @@ Bus_DispatchDeviceControl (
 					}
 
 				if ( ( Targets =
-							 ( PTARGETS ) ExAllocatePool ( NonPagedPool,
-																						 sizeof ( TARGETS ) +
-																						 ( Count *
-																							 sizeof ( TARGET ) ) ) ) ==
+							 ( PMOUNT_TARGETS ) ExAllocatePool ( NonPagedPool,
+																									 sizeof ( MOUNT_TARGETS ) +
+																									 ( Count *
+																										 sizeof
+																										 ( MOUNT_TARGET ) ) ) ) ==
 						 NULL )
 					{
 						DBG ( "ExAllocatePool Targets\n" );
@@ -714,7 +502,7 @@ Bus_DispatchDeviceControl (
 						break;
 					}
 				Irp->IoStatus.Information =
-					sizeof ( TARGETS ) + ( Count * sizeof ( TARGET ) );
+					sizeof ( MOUNT_TARGETS ) + ( Count * sizeof ( MOUNT_TARGET ) );
 				Targets->Count = Count;
 
 				Count = 0;
@@ -722,19 +510,19 @@ Bus_DispatchDeviceControl (
 				while ( TargetWalker != NULL )
 					{
 						RtlCopyMemory ( &Targets->Target[Count], &TargetWalker->Target,
-														sizeof ( TARGET ) );
+														sizeof ( MOUNT_TARGET ) );
 						Count++;
 						TargetWalker = TargetWalker->Next;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Targets,
 												( Stack->Parameters.
 													DeviceIoControl.OutputBufferLength <
-													( sizeof ( TARGETS ) +
+													( sizeof ( MOUNT_TARGETS ) +
 														( Count *
-															sizeof ( TARGET ) ) ) ? Stack->
+															sizeof ( MOUNT_TARGET ) ) ) ? Stack->
 													Parameters.DeviceIoControl.OutputBufferLength
-													: ( sizeof ( TARGETS ) +
-															( Count * sizeof ( TARGET ) ) ) ) );
+													: ( sizeof ( MOUNT_TARGETS ) +
+															( Count * sizeof ( MOUNT_TARGET ) ) ) ) );
 				ExFreePool ( Targets );
 
 				KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
@@ -752,10 +540,11 @@ Bus_DispatchDeviceControl (
 					}
 
 				if ( ( Disks =
-							 ( PDISKS ) ExAllocatePool ( NonPagedPool,
-																					 sizeof ( DISKS ) +
-																					 ( Count * sizeof ( DISK ) ) ) ) ==
-						 NULL )
+							 ( PMOUNT_DISKS ) ExAllocatePool ( NonPagedPool,
+																								 sizeof ( MOUNT_DISKS ) +
+																								 ( Count *
+																									 sizeof ( MOUNT_DISK ) ) ) )
+						 == NULL )
 					{
 						DBG ( "ExAllocatePool Disks\n" );
 						Irp->IoStatus.Information = 0;
@@ -763,7 +552,7 @@ Bus_DispatchDeviceControl (
 						break;
 					}
 				Irp->IoStatus.Information =
-					sizeof ( DISKS ) + ( Count * sizeof ( DISK ) );
+					sizeof ( MOUNT_DISKS ) + ( Count * sizeof ( MOUNT_DISK ) );
 				Disks->Count = Count;
 
 				Count = 0;
@@ -784,12 +573,12 @@ Bus_DispatchDeviceControl (
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Disks,
 												( Stack->Parameters.
 													DeviceIoControl.OutputBufferLength <
-													( sizeof ( DISKS ) +
+													( sizeof ( MOUNT_DISKS ) +
 														( Count *
-															sizeof ( DISK ) ) ) ? Stack->
+															sizeof ( MOUNT_DISK ) ) ) ? Stack->
 													Parameters.DeviceIoControl.OutputBufferLength
-													: ( sizeof ( DISKS ) +
-															( Count * sizeof ( DISK ) ) ) ) );
+													: ( sizeof ( MOUNT_DISKS ) +
+															( Count * sizeof ( MOUNT_DISK ) ) ) ) );
 				ExFreePool ( Disks );
 
 				Status = STATUS_SUCCESS;
@@ -859,17 +648,42 @@ Bus_DispatchDeviceControl (
 	return Status;
 }
 
-NTSTATUS STDCALL
-Bus_DispatchSystemControl (
-	IN PDEVICE_OBJECT DeviceObject,
-	IN PIRP Irp,
-	IN PIO_STACK_LOCATION Stack,
-	IN PDRIVER_DEVICEEXTENSION DeviceExtension
- )
+IRPHandler_Declaration ( Bus_DispatchSystemControl )
 {
 	DBG ( "...\n" );
 	IoSkipCurrentIrpStackLocation ( Irp );
 	return IoCallDriver ( DeviceExtension->Bus.LowerDeviceObject, Irp );
+}
+
+IRPHandler_Declaration ( Bus_Dispatch )
+{
+	NTSTATUS Status;
+
+	switch ( Stack->MajorFunction )
+		{
+			case IRP_MJ_POWER:
+				PoStartNextPowerIrp ( Irp );
+				IoSkipCurrentIrpStackLocation ( Irp );
+				Status = PoCallDriver ( DeviceExtension->Bus.LowerDeviceObject, Irp );
+				break;
+			case IRP_MJ_PNP:
+				Status = Bus_DispatchPnP ( DeviceObject, Irp, Stack, DeviceExtension );
+				break;
+			case IRP_MJ_SYSTEM_CONTROL:
+				Status =
+					Bus_DispatchSystemControl ( DeviceObject, Irp, Stack,
+																			DeviceExtension );
+				break;
+			case IRP_MJ_DEVICE_CONTROL:
+				Status =
+					Bus_DispatchDeviceControl ( DeviceObject, Irp, Stack,
+																			DeviceExtension );
+				break;
+			default:
+				Status = STATUS_NOT_SUPPORTED;
+				Irp->IoStatus.Status = Status;
+				IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+		}
 }
 
 static NTSTATUS STDCALL
@@ -881,4 +695,121 @@ Bus_IoCompletionRoutine (
 {
 	KeSetEvent ( Event, 0, FALSE );
 	return STATUS_MORE_PROCESSING_REQUIRED;
+}
+
+NTSTATUS STDCALL
+Bus_GetDeviceCapabilities (
+	IN PDEVICE_OBJECT DeviceObject,
+	IN PDEVICE_CAPABILITIES DeviceCapabilities
+ )
+{
+	IO_STATUS_BLOCK ioStatus;
+	KEVENT pnpEvent;
+	NTSTATUS status;
+	PDEVICE_OBJECT targetObject;
+	PIO_STACK_LOCATION irpStack;
+	PIRP pnpIrp;
+
+	RtlZeroMemory ( DeviceCapabilities, sizeof ( DEVICE_CAPABILITIES ) );
+	DeviceCapabilities->Size = sizeof ( DEVICE_CAPABILITIES );
+	DeviceCapabilities->Version = 1;
+	DeviceCapabilities->Address = -1;
+	DeviceCapabilities->UINumber = -1;
+
+	KeInitializeEvent ( &pnpEvent, NotificationEvent, FALSE );
+	targetObject = IoGetAttachedDeviceReference ( DeviceObject );
+	pnpIrp =
+		IoBuildSynchronousFsdRequest ( IRP_MJ_PNP, targetObject, NULL, 0, NULL,
+																	 &pnpEvent, &ioStatus );
+	if ( pnpIrp == NULL )
+		{
+			status = STATUS_INSUFFICIENT_RESOURCES;
+		}
+	else
+		{
+			pnpIrp->IoStatus.Status = STATUS_NOT_SUPPORTED;
+			irpStack = IoGetNextIrpStackLocation ( pnpIrp );
+			RtlZeroMemory ( irpStack, sizeof ( IO_STACK_LOCATION ) );
+			irpStack->MajorFunction = IRP_MJ_PNP;
+			irpStack->MinorFunction = IRP_MN_QUERY_CAPABILITIES;
+			irpStack->Parameters.DeviceCapabilities.Capabilities =
+				DeviceCapabilities;
+			status = IoCallDriver ( targetObject, pnpIrp );
+			if ( status == STATUS_PENDING )
+				{
+					KeWaitForSingleObject ( &pnpEvent, Executive, KernelMode, FALSE,
+																	NULL );
+					status = ioStatus.Status;
+				}
+		}
+	ObDereferenceObject ( targetObject );
+	return status;
+}
+
+NTSTATUS STDCALL
+Bus_AddDevice (
+	IN PDRIVER_OBJECT DriverObject,
+	IN PDEVICE_OBJECT PhysicalDeviceObject
+ )
+{
+	NTSTATUS Status;
+	UNICODE_STRING DeviceName,
+	 DosDeviceName;
+	PDRIVER_DEVICEEXTENSION DeviceExtension;
+	PDEVICE_OBJECT DeviceObject;
+
+	DBG ( "Entry\n" );
+	if ( Bus_Globals_Self )
+		return STATUS_SUCCESS;
+	RtlInitUnicodeString ( &DeviceName, L"\\Device\\AoE" );
+	RtlInitUnicodeString ( &DosDeviceName, L"\\DosDevices\\AoE" );
+	if ( !NT_SUCCESS
+			 ( Status =
+				 IoCreateDevice ( DriverObject, sizeof ( DRIVER_DEVICEEXTENSION ),
+													&DeviceName, FILE_DEVICE_CONTROLLER,
+													FILE_DEVICE_SECURE_OPEN, FALSE, &DeviceObject ) ) )
+		{
+			return Error ( "Bus_AddDevice IoCreateDevice", Status );
+		}
+	if ( !NT_SUCCESS
+			 ( Status = IoCreateSymbolicLink ( &DosDeviceName, &DeviceName ) ) )
+		{
+			IoDeleteDevice ( DeviceObject );
+			return Error ( "Bus_AddDevice IoCreateSymbolicLink", Status );
+		}
+
+	DeviceExtension = ( PDRIVER_DEVICEEXTENSION ) DeviceObject->DeviceExtension;
+	RtlZeroMemory ( DeviceExtension, sizeof ( DRIVER_DEVICEEXTENSION ) );
+	DeviceExtension->IsBus = TRUE;
+	DeviceExtension->Dispatch = Bus_Dispatch;
+	DeviceExtension->DriverObject = DriverObject;
+	DeviceExtension->Self = DeviceObject;
+	DeviceExtension->State = NotStarted;
+	DeviceExtension->OldState = NotStarted;
+	DeviceExtension->Bus.PhysicalDeviceObject = PhysicalDeviceObject;
+	DeviceExtension->Bus.Children = 0;
+	DeviceExtension->Bus.ChildList = NULL;
+	KeInitializeSpinLock ( &DeviceExtension->Bus.SpinLock );
+	DeviceObject->Flags |= DO_DIRECT_IO;	/* FIXME? */
+	DeviceObject->Flags |= DO_POWER_INRUSH;	/* FIXME? */
+	/*
+	 * Add the bus to the device tree
+	 */
+	if ( PhysicalDeviceObject != NULL )
+		{
+			if ( ( DeviceExtension->Bus.LowerDeviceObject =
+						 IoAttachDeviceToDeviceStack ( DeviceObject,
+																					 PhysicalDeviceObject ) ) == NULL )
+				{
+					IoDeleteDevice ( DeviceObject );
+					return Error ( "AddDevice IoAttachDeviceToDeviceStack",
+												 STATUS_NO_SUCH_DEVICE );
+				}
+		}
+	DeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
+#ifdef RIS
+	DeviceExtension->State = Started;
+#endif
+	Bus_Globals_Self = DeviceObject;
+	return STATUS_SUCCESS;
 }

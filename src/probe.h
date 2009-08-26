@@ -18,46 +18,27 @@
  * You should have received a copy of the GNU General Public License
  * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _AOEDISK_H
-#  define _AOEDISK_H
+#ifndef _PROBE_H
+#  define _PROBE_H
 
 /**
  * @file
  *
- * AoE disk specifics
+ * Boot-time disk probing specifics
  *
  */
 
-typedef struct _AOEDISK_AOEDISK
-{
-	ULONG MTU;
-	UCHAR ClientMac[6];
-	UCHAR ServerMac[6];
-	ULONG Major;
-	ULONG Minor;
-	ULONG MaxSectorsPerPacket;
-	ULONG Timeout;
-} AOEDISK_AOEDISK,
-*PAOEDISK_AOEDISK;
+#  include <ntddk.h>
+#  include "mdi.h"
 
-extern IRPHandler_Declaration (
-	Disk_Dispatch
+extern MDI_PATCHAREA Probe_Globals_BootMemdisk;
+
+extern VOID STDCALL Probe_MemDisk (
+	PDEVICE_OBJECT BusDeviceObject
  );
 
-extern IRPHandler_Declaration (
-	Disk_DispatchPnP
+extern VOID STDCALL Probe_AoE (
+	PDEVICE_OBJECT BusDeviceObject
  );
 
-extern IRPHandler_Declaration (
-	Disk_DispatchSCSI
- );
-
-extern IRPHandler_Declaration (
-	Disk_DispatchDeviceControl
- );
-
-extern IRPHandler_Declaration (
-	Disk_DispatchSystemControl
- );
-
-#endif													/* _AOEDISK_H */
+#endif													/* _PROBE_H */

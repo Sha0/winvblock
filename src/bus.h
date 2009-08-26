@@ -51,25 +51,16 @@ extern NTSTATUS STDCALL Bus_AddDevice (
 	IN PDEVICE_OBJECT PhysicalDeviceObject
  );
 
-extern NTSTATUS STDCALL Bus_DispatchPnP (
-	IN PDEVICE_OBJECT DeviceObject,
-	IN PIRP Irp,
-	IN PIO_STACK_LOCATION Stack,
-	IN PDRIVER_DEVICEEXTENSION DeviceExtension
+extern IRPHandler_Declaration (
+	Bus_DispatchPnP
  );
 
-extern NTSTATUS STDCALL Bus_DispatchDeviceControl (
-	IN PDEVICE_OBJECT DeviceObject,
-	IN PIRP Irp,
-	IN PIO_STACK_LOCATION Stack,
-	IN PDRIVER_DEVICEEXTENSION DeviceExtension
+extern IRPHandler_Declaration (
+	Bus_DispatchDeviceControl
  );
 
-extern NTSTATUS STDCALL Bus_DispatchSystemControl (
-	IN PDEVICE_OBJECT DeviceObject,
-	IN PIRP Irp,
-	IN PIO_STACK_LOCATION Stack,
-	IN PDRIVER_DEVICEEXTENSION DeviceExtension
+extern IRPHandler_Declaration (
+	Bus_DispatchSystemControl
  );
 
 extern VOID STDCALL Bus_AddTarget (
@@ -83,5 +74,20 @@ extern VOID STDCALL Bus_AddTarget (
 extern VOID STDCALL Bus_CleanupTargetList (
 	void
  );
+
+extern NTSTATUS STDCALL Bus_GetDeviceCapabilities (
+	IN PDEVICE_OBJECT DeviceObject,
+	IN PDEVICE_CAPABILITIES DeviceCapabilities
+ );
+
+extern BOOLEAN STDCALL Bus_AddChild (
+	IN PDEVICE_OBJECT BusDeviceObject,
+	IN PUCHAR ClientMac,
+	IN ULONG Major,
+	IN ULONG Minor,
+	IN BOOLEAN Boot
+ );
+
+extern PDEVICE_OBJECT Bus_Globals_Self;
 
 #endif													/* _BUS_H */

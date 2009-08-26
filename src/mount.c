@@ -59,8 +59,8 @@ main (
 	HANDLE DeviceHandle;
 	UCHAR InBuffer[1024];
 	UCHAR String[256];
-	PTARGETS Targets;
-	PDISKS Disks;
+	PMOUNT_TARGETS Targets;
+	PMOUNT_DISKS Disks;
 	UCHAR Mac[6];
 	DWORD BytesReturned;
 	ULONG Major,
@@ -112,15 +112,17 @@ main (
 		{
 			case CommandScan:
 				if ( ( Targets =
-							 ( PTARGETS ) malloc ( sizeof ( TARGETS ) +
-																		 ( 32 * sizeof ( TARGET ) ) ) ) == NULL )
+							 ( PMOUNT_TARGETS ) malloc ( sizeof ( MOUNT_TARGETS ) +
+																					 ( 32 *
+																						 sizeof ( MOUNT_TARGET ) ) ) ) ==
+						 NULL )
 					{
 						printf ( "Out of memory\n" );
 						break;
 					}
 				if ( !DeviceIoControl
 						 ( DeviceHandle, IOCTL_AOE_SCAN, NULL, 0, Targets,
-							 ( sizeof ( TARGETS ) + ( 32 * sizeof ( TARGET ) ) ),
+							 ( sizeof ( MOUNT_TARGETS ) + ( 32 * sizeof ( MOUNT_TARGET ) ) ),
 							 &BytesReturned, ( LPOVERLAPPED ) NULL ) )
 					{
 						printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
@@ -163,16 +165,17 @@ main (
 				break;
 			case CommandShow:
 				if ( ( Disks =
-							 ( PDISKS ) malloc ( sizeof ( DISKS ) +
-																	 ( 32 * sizeof ( DISK ) ) ) ) == NULL )
+							 ( PMOUNT_DISKS ) malloc ( sizeof ( MOUNT_DISKS ) +
+																				 ( 32 * sizeof ( MOUNT_DISK ) ) ) ) ==
+						 NULL )
 					{
 						printf ( "Out of memory\n" );
 						break;
 					}
 				if ( !DeviceIoControl
 						 ( DeviceHandle, IOCTL_AOE_SHOW, NULL, 0, Disks,
-							 ( sizeof ( DISKS ) + ( 32 * sizeof ( DISK ) ) ), &BytesReturned,
-							 ( LPOVERLAPPED ) NULL ) )
+							 ( sizeof ( MOUNT_DISKS ) + ( 32 * sizeof ( MOUNT_DISK ) ) ),
+							 &BytesReturned, ( LPOVERLAPPED ) NULL ) )
 					{
 						printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
 						free ( Disks );

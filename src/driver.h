@@ -61,17 +61,22 @@ typedef enum
 typedef struct _DRIVER_DEVICEEXTENSION DRIVER_DEVICEEXTENSION,
 *PDRIVER_DEVICEEXTENSION;
 
+#  define IRPHandler_Declaration(x) NTSTATUS STDCALL\
+                                  x (\
+                                  	IN PDEVICE_OBJECT DeviceObject,\
+                                  	IN PIRP Irp,\
+                                  	IN PIO_STACK_LOCATION Stack,\
+                                  	IN PDRIVER_DEVICEEXTENSION DeviceExtension\
+                                   )
+/*
+ * Function-type for an IRP handler. 'indent' mangles this, so it looks weird
+ */
+typedef IRPHandler_Declaration (
+	 ( *DRIVER_IRPHANDLER )
+ );
+
 #  include "bus.h"
 #  include "disk.h"
-
-typedef NTSTATUS STDCALL (
-	*DRIVER_DISPATCHFUNCTION
- ) (
-	IN PDEVICE_OBJECT DeviceObject,
-	IN PIRP Irp,
-	IN PIO_STACK_LOCATION Stack,
-	IN PDRIVER_DEVICEEXTENSION DeviceExtension
- );
 
 struct _DRIVER_DEVICEEXTENSION
 {
@@ -81,7 +86,7 @@ struct _DRIVER_DEVICEEXTENSION
 	PDRIVER_OBJECT DriverObject;
 	STATE State;
 	STATE OldState;
-	DRIVER_DISPATCHFUNCTION *DispatchTable;
+	DRIVER_IRPHANDLER Dispatch;
 	union
 	{
 		struct _BUS_BUS Bus;
@@ -105,6 +110,11 @@ extern NTSTATUS STDCALL Error (
 extern NTSTATUS STDCALL DriverEntry (
 	IN PDRIVER_OBJECT DriverObject,
 	IN PUNICODE_STRING RegistryPath
+ );
+
+extern NTSTATUS STDCALL Driver_Dispatch (
+	IN PDEVICE_OBJECT DeviceObject,
+	IN PIRP Irp
  );
 
 #endif													/* _DRIVER_H */

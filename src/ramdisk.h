@@ -32,6 +32,6 @@ typedef struct _RAMDISK_RAMDISK
 	UINT32 DiskBuf;
 	UINT32 DiskSize;
 } RAMDISK_RAMDISK,
- *PRAMDISK_RAMDISK;
+*PRAMDISK_RAMDISK;
 
 #endif													/* _RAMDISK_H */

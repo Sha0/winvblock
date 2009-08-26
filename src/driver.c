@@ -37,14 +37,10 @@
 #include "aoe.h"
 #include "protocol.h"
 #include "debug.h"
+#include "probe.h"
 
 /* in this file */
 static NTSTATUS STDCALL Driver_DispatchNotSupported (
-	IN PDEVICE_OBJECT DeviceObject,
-	IN PIRP Irp
- );
-
-static NTSTATUS STDCALL Driver_Dispatch (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp
  );
@@ -114,7 +110,7 @@ DriverEntry (
 
 	/*
 	 * Set up IRP MajorFunction function table for devices
-	 * this driver handles.
+	 * this driver handles
 	 */
 	for ( i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++ )
 		DriverObject->MajorFunction[i] = Driver_DispatchNotSupported;
@@ -137,8 +133,10 @@ DriverEntry (
 		{
 			Protocol_Stop (  );
 			AoE_Stop (  );
-			Error ( "Bus_AddDevice", Status );
+			return Error ( "Bus_AddDevice", Status );
 		}
+	Probe_MemDisk ( Bus_Globals_Self );
+	Probe_AoE ( Bus_Globals_Self );
 	return Status;
 }
 
@@ -153,7 +151,7 @@ Driver_DispatchNotSupported (
 	return Irp->IoStatus.Status;
 }
 
-static NTSTATUS STDCALL
+NTSTATUS STDCALL
 Driver_Dispatch (
 	IN PDEVICE_OBJECT DeviceObject,
 	IN PIRP Irp
@@ -182,67 +180,16 @@ Driver_Dispatch (
 		}
 	switch ( Stack->MajorFunction )
 		{
-			case IRP_MJ_POWER:
-				if ( DeviceExtension->IsBus )
-					{
-						PoStartNextPowerIrp ( Irp );
-						IoSkipCurrentIrpStackLocation ( Irp );
-						Status =
-							PoCallDriver ( DeviceExtension->Bus.LowerDeviceObject, Irp );
-					}
-				else
-					{
-						PoStartNextPowerIrp ( Irp );
-						Irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
-						IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-						Status = STATUS_NOT_SUPPORTED;
-					}
-				break;
-			case IRP_MJ_PNP:
-				if ( DeviceExtension->IsBus )
-					Status =
-						Bus_DispatchPnP ( DeviceObject, Irp, Stack, DeviceExtension );
-				else
-					Status =
-						Disk_DispatchPnP ( DeviceObject, Irp, Stack, DeviceExtension );
-				break;
-			case IRP_MJ_SYSTEM_CONTROL:
-				if ( DeviceExtension->IsBus )
-					Status =
-						Bus_DispatchSystemControl ( DeviceObject, Irp, Stack,
-																				DeviceExtension );
-				else
-					Status =
-						Disk_DispatchSystemControl ( DeviceObject, Irp, Stack,
-																				 DeviceExtension );
-				break;
-			case IRP_MJ_DEVICE_CONTROL:
-				if ( DeviceExtension->IsBus )
-					Status =
-						Bus_DispatchDeviceControl ( DeviceObject, Irp, Stack,
-																				DeviceExtension );
-				else
-					Status =
-						Disk_DispatchDeviceControl ( DeviceObject, Irp, Stack,
-																				 DeviceExtension );
-				break;
 			case IRP_MJ_CREATE:
 			case IRP_MJ_CLOSE:
 				Status = STATUS_SUCCESS;
 				Irp->IoStatus.Status = Status;
 				IoCompleteRequest ( Irp, IO_NO_INCREMENT );
 				break;
-			case IRP_MJ_SCSI:
-				if ( !DeviceExtension->IsBus )
-					{
-						Status =
-							Disk_DispatchSCSI ( DeviceObject, Irp, Stack, DeviceExtension );
-						break;
-					}
 			default:
-				Status = STATUS_NOT_SUPPORTED;
-				Irp->IoStatus.Status = Status;
-				IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+				Status =
+					DeviceExtension->Dispatch ( DeviceObject, Irp, Stack,
+																			DeviceExtension );
 		}
 #ifdef DEBUGIRPS
 	if ( Status != STATUS_PENDING )
