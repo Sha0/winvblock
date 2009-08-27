@@ -45,9 +45,7 @@ static IRPHandler_Declaration (
  );
 BOOLEAN STDCALL Bus_AddChild (
 	IN PDEVICE_OBJECT BusDeviceObject,
-	IN PUCHAR ClientMac,
-	IN ULONG Major,
-	IN ULONG Minor,
+	IN DISK_DISK Disk,
 	IN BOOLEAN Boot
  );
 static NTSTATUS STDCALL Bus_IoCompletionRoutine (
@@ -55,27 +53,6 @@ static NTSTATUS STDCALL Bus_IoCompletionRoutine (
 	IN PIRP Irp,
 	IN PKEVENT Event
  );
-
-#ifdef _MSC_VER
-#  pragma pack(1)
-#endif
-typedef struct _BUS_ABFT
-{
-	UINT Signature;								/* 0x54464261 (aBFT) */
-	UINT Length;
-	UCHAR Revision;
-	UCHAR Checksum;
-	UCHAR OEMID[6];
-	UCHAR OEMTableID[8];
-	UCHAR Reserved1[12];
-	USHORT Major;
-	UCHAR Minor;
-	UCHAR Reserved2;
-	UCHAR ClientMac[6];
-} __attribute__ ( ( __packed__ ) ) BUS_ABFT, *PBUS_ABFT;
-#ifdef _MSC_VER
-#  pragma pack()
-#endif
 
 typedef struct _BUS_TARGETLIST
 {
@@ -200,9 +177,7 @@ Bus_CleanupTargetList (
  * Add a child node to the bus
  *
  * @v BusDeviceObject The bus to add the node to
- * @v ClientMac       The AoE client's MAC address
- * @v Major           The AoE shelf
- * @v Minor           The AoE slot
+ * @v Disk            The disk to add
  * @v Boot            Is this a boot device?
  *
  * Returns TRUE for success, FALSE for failure
@@ -210,9 +185,7 @@ Bus_CleanupTargetList (
 BOOLEAN STDCALL
 Bus_AddChild (
 	IN PDEVICE_OBJECT BusDeviceObject,
-	IN PUCHAR ClientMac,
-	IN ULONG Major,
-	IN ULONG Minor,
+	IN DISK_DISK Disk,
 	IN BOOLEAN Boot
  )
 {
@@ -260,6 +233,7 @@ Bus_AddChild (
 	DeviceExtension->State = NotStarted;
 	DeviceExtension->OldState = NotStarted;
 
+	RtlCopyMemory ( &DeviceExtension->Disk, &Disk, sizeof ( DISK_DISK ) );
 	DeviceExtension->Disk.Parent = BusDeviceObject;
 	DeviceExtension->Disk.Next = NULL;
 	KeInitializeEvent ( &DeviceExtension->Disk.SearchEvent, SynchronizationEvent,
@@ -270,28 +244,6 @@ Bus_AddChild (
 	DeviceExtension->Disk.DiskNumber =
 		InterlockedIncrement ( &Bus_Globals_NextDisk ) - 1;
 	/*
-	 * Handle the AoE and MEMDISK cases
-	 */
-	if ( ClientMac )
-		{
-			Protocol_Start (  );
-			RtlCopyMemory ( DeviceExtension->Disk.AoE.ClientMac, ClientMac, 6 );
-			RtlFillMemory ( DeviceExtension->Disk.AoE.ServerMac, 6, 0xff );
-			DeviceExtension->Disk.AoE.Major = Major;
-			DeviceExtension->Disk.AoE.Minor = Minor;
-			DeviceExtension->Disk.AoE.MaxSectorsPerPacket = 1;
-			DeviceExtension->Disk.AoE.Timeout = 200000;	/* 20 ms. */
-		}
-	else
-		{
-			DeviceExtension->Disk.RAMDisk.DiskBuf =
-				Probe_Globals_BootMemdisk.diskbuf;
-			DeviceExtension->Disk.LBADiskSize =
-				DeviceExtension->Disk.RAMDisk.DiskSize =
-				Probe_Globals_BootMemdisk.disksize;
-			DeviceExtension->IsMemdisk = TRUE;
-		}
-	/*
 	 * Some device parameters
 	 */
 	DeviceObject->Flags |= DO_DIRECT_IO;	/* FIXME? */
@@ -299,16 +251,7 @@ Bus_AddChild (
 	/*
 	 * Determine the disk's geometry differently for AoE/MEMDISK
 	 */
-	if ( ClientMac )
-		{
-			AoE_SearchDrive ( DeviceExtension );
-		}
-	else
-		{
-			DeviceExtension->Disk.Cylinders = Probe_Globals_BootMemdisk.cylinders;
-			DeviceExtension->Disk.Heads = Probe_Globals_BootMemdisk.heads;
-			DeviceExtension->Disk.Sectors = Probe_Globals_BootMemdisk.disksize;
-		}
+	DeviceExtension->Disk.Initialize ( DeviceExtension );
 
 	DeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
 	/*
@@ -473,6 +416,7 @@ IRPHandler_Declaration ( Bus_DispatchDeviceControl )
 	PMOUNT_TARGETS Targets;
 	PMOUNT_DISKS Disks;
 	KIRQL Irql;
+	DISK_DISK Disk;
 
 	switch ( Stack->Parameters.DeviceIoControl.IoControlCode )
 		{
@@ -589,9 +533,15 @@ IRPHandler_Declaration ( Bus_DispatchDeviceControl )
 							"Major:%d Minor:%d\n", Buffer[0], Buffer[1], Buffer[2],
 							Buffer[3], Buffer[4], Buffer[5], *( PUSHORT ) ( &Buffer[6] ),
 							( UCHAR ) Buffer[8] );
-				if ( !Bus_AddChild
-						 ( DeviceObject, Buffer, *( PUSHORT ) ( &Buffer[6] ),
-							 ( UCHAR ) Buffer[8], FALSE ) )
+				Disk.Initialize = AoE_SearchDrive;
+				RtlCopyMemory ( Disk.AoE.ClientMac, Buffer, 6 );
+				RtlFillMemory ( Disk.AoE.ServerMac, 6, 0xff );
+				Disk.AoE.Major = *( PUSHORT ) ( &Buffer[6] );
+				Disk.AoE.Minor = ( UCHAR ) Buffer[8];
+				Disk.AoE.MaxSectorsPerPacket = 1;
+				Disk.AoE.Timeout = 200000;	/* 20 ms. */
+				Disk.IsRamdisk = FALSE;
+				if ( !Bus_AddChild ( DeviceObject, Disk, FALSE ) )
 					{
 						DBG ( "Bus_AddChild() failed\n" );
 					}
@@ -684,6 +634,7 @@ IRPHandler_Declaration ( Bus_Dispatch )
 				Irp->IoStatus.Status = Status;
 				IoCompleteRequest ( Irp, IO_NO_INCREMENT );
 		}
+	return Status;
 }
 
 static NTSTATUS STDCALL

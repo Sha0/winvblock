@@ -1,7 +1,7 @@
 [Project]
 FileName=WinAoE.dev
 Name=WinAoE
-UnitCount=19
+UnitCount=23
 PchHead=-1
 PchSource=-1
 Ver=3
@@ -70,37 +70,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit7]
-FileName=src\disk.c
-CompileCpp=1
-Folder=WinAoE
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
 [Unit8]
-FileName=src\disk.h
-CompileCpp=1
-Folder=WinAoE
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit9]
-FileName=src\driver.c
-CompileCpp=1
-Folder=WinAoE
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit10]
 FileName=src\driver.h
 CompileCpp=1
 Folder=WinAoE
@@ -110,7 +80,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit11]
+[Unit9]
 FileName=src\loader.c
 CompileCpp=1
 Folder=WinAoE
@@ -120,7 +90,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit12]
+[Unit10]
 FileName=src\mdi.h
 CompileCpp=1
 Folder=WinAoE
@@ -130,7 +100,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit13]
+[Unit11]
 FileName=src\mount.c
 CompileCpp=1
 Folder=WinAoE
@@ -140,7 +110,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit14]
+[Unit12]
 FileName=src\mount.h
 CompileCpp=1
 Folder=WinAoE
@@ -150,7 +120,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit15]
+[Unit13]
 FileName=src\portable.h
 CompileCpp=1
 Folder=WinAoE
@@ -160,7 +130,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit16]
+[Unit14]
 FileName=src\protocol.c
 CompileCpp=1
 Folder=WinAoE
@@ -170,7 +140,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit17]
+[Unit15]
 FileName=src\protocol.h
 CompileCpp=1
 Folder=WinAoE
@@ -180,8 +150,18 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit18]
+[Unit16]
 FileName=src\registry.c
+CompileCpp=1
+Folder=WinAoE
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit17]
+FileName=src\registry.h
 CompileCpp=1
 Folder=WinAoE
 Compile=1
@@ -263,8 +243,68 @@ SupportXPThemes=0
 CompilerSet=1
 compilerType=1
 
+[Unit7]
+FileName=src\driver.c
+CompileCpp=1
+Folder=WinAoE
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit20]
+FileName=src\aoedisk.h
+CompileCpp=1
+Folder=WinAoE
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit21]
+FileName=src\aoedisk.c
+CompileCpp=1
+Folder=WinAoE
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit18]
+FileName=src\disk.h
+CompileCpp=1
+Folder=
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
 [Unit19]
-FileName=src\registry.h
+FileName=src\ramdisk.h
+CompileCpp=1
+Folder=
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit23]
+FileName=src\probe.h
+CompileCpp=1
+Folder=WinAoE
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit22]
+FileName=src\probe.c
 CompileCpp=1
 Folder=WinAoE
 Compile=1

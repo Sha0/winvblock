@@ -31,13 +31,15 @@
 #  include <ntddk.h>
 #  include "mdi.h"
 
-extern MDI_PATCHAREA Probe_Globals_BootMemdisk;
+extern VOID STDCALL Probe_AoE (
+	PDEVICE_OBJECT BusDeviceObject
+ );
 
 extern VOID STDCALL Probe_MemDisk (
 	PDEVICE_OBJECT BusDeviceObject
  );
 
-extern VOID STDCALL Probe_AoE (
+extern VOID STDCALL Probe_Grub4Dos (
 	PDEVICE_OBJECT BusDeviceObject
  );
 

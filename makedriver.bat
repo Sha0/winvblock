@@ -77,7 +77,7 @@ del sources
 rem del build%obj%.log
 rem del build%obj%.wrn 2>nul
 rem del build%obj%.err 2>nul
-rd /s /q obj%obj%
+rem rd /s /q obj%obj%
 cd ..
 
 :end

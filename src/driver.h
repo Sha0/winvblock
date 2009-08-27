@@ -75,13 +75,12 @@ typedef IRPHandler_Declaration (
 	 ( *DRIVER_IRPHANDLER )
  );
 
-#  include "bus.h"
 #  include "disk.h"
+#  include "bus.h"
 
 struct _DRIVER_DEVICEEXTENSION
 {
 	BOOLEAN IsBus;
-	BOOLEAN IsMemdisk;
 	PDEVICE_OBJECT Self;
 	PDRIVER_OBJECT DriverObject;
 	STATE State;

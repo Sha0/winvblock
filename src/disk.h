@@ -41,6 +41,12 @@ typedef struct _DISK_DISK
 	BOOLEAN BootDrive;
 	BOOLEAN Unmount;
 	ULONG DiskNumber;
+	BOOLEAN IsRamdisk;
+	BOOLEAN STDCALL (
+	*Initialize
+	 ) (
+	IN PDRIVER_DEVICEEXTENSION DeviceExtension
+	 );
 	union
 	{
 		AOEDISK_AOEDISK AoE;

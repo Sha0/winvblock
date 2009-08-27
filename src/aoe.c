@@ -150,6 +150,7 @@ static PAOE_TAG AoE_Globals_ProbeTag = NULL;
 static PAOE_DISKSEARCH AoE_Globals_DiskSearchList = NULL;
 static LONG AoE_Globals_OutstandingTags = 0;
 static HANDLE AoE_Globals_ThreadHandle;
+static BOOLEAN AoE_Globals_Started = FALSE;
 
 /**
  * Start AoE operations
@@ -167,6 +168,16 @@ AoE_Start (
 
 	DBG ( "Entry\n" );
 
+	if ( AoE_Globals_Started )
+		return STATUS_SUCCESS;
+	/*
+	 * Start up the protocol
+	 */
+	if ( !NT_SUCCESS ( Status = Protocol_Start (  ) ) )
+		{
+			DBG ( "Protocol startup failure!\n" );
+			return Status;
+		}
 	/*
 	 * Allocate and zero-fill the global probe tag 
 	 */
@@ -243,6 +254,7 @@ AoE_Start (
 			KeSetEvent ( &AoE_Globals_ThreadSignalEvent, 0, FALSE );
 		}
 
+	AoE_Globals_Started = TRUE;
 	return Status;
 }
 
@@ -336,6 +348,7 @@ AoE_Stop (
 	 * Release the global spin-lock 
 	 */
 	KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
+	AoE_Globals_Started = FALSE;
 }
 
 /**
@@ -362,6 +375,11 @@ AoE_SearchDrive (
 	LARGE_INTEGER MaxSectorsPerPacketSendTime;
 	ULONG MTU;
 
+	if ( !NT_SUCCESS ( AoE_Start (  ) ) )
+		{
+			DBG ( "AoE startup failure!\n" );
+			return FALSE;
+		}
 	/*
 	 * Allocate our disk search 
 	 */
@@ -742,8 +760,6 @@ AoE_Request (
 		PreviousTag = NULL;
 	KIRQL Irql;
 	ULONG i;
-	PHYSICAL_ADDRESS PhysicalAddress;
-	static PUCHAR PhysicalMemory = NULL;
 
 	if ( AoE_Globals_Stop )
 		{
@@ -771,32 +787,16 @@ AoE_Request (
 	/*
 	 * Handle the MEMDISK case
 	 */
-	if ( DeviceExtension->IsMemdisk )
+	if ( DeviceExtension->Disk.IsRamdisk )
 		{
-			if ( !PhysicalMemory )
-				{
-					PhysicalAddress.QuadPart = DeviceExtension->Disk.RAMDisk.DiskBuf;
-					/*
-					 * Possible precision loss from LONGLONG to SIZE_T here
-					 */
-					PhysicalMemory =
-						MmMapIoSpace ( PhysicalAddress,
-													 DeviceExtension->Disk.LBADiskSize * SECTORSIZE,
-													 MmNonCached );
-					if ( !PhysicalMemory )
-						{
-							DBG ( "Could not map low memory\n" );
-							Irp->IoStatus.Information = 0;
-							Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-							IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-							return STATUS_INSUFFICIENT_RESOURCES;
-						}
-				}
 			if ( Mode == AoE_RequestMode_Write )
-				RtlCopyMemory ( &PhysicalMemory[StartSector * SECTORSIZE], Buffer,
+				RtlCopyMemory ( &DeviceExtension->Disk.RAMDisk.
+												PhysicalMemory[StartSector * SECTORSIZE], Buffer,
 												SectorCount * SECTORSIZE );
 			else
-				RtlCopyMemory ( Buffer, &PhysicalMemory[StartSector * SECTORSIZE],
+				RtlCopyMemory ( Buffer,
+												&DeviceExtension->Disk.RAMDisk.
+												PhysicalMemory[StartSector * SECTORSIZE],
 												SectorCount * SECTORSIZE );
 			Irp->IoStatus.Information = SectorCount * SECTORSIZE;
 			Irp->IoStatus.Status = STATUS_SUCCESS;

@@ -32,10 +32,10 @@
 #include "driver.h"
 #include "debug.h"
 #include "registry.h"
+#include "disk.h"
 #include "bus.h"
-#include "aoedisk.h"
-#include "aoe.h"
 #include "protocol.h"
+#include "aoe.h"
 #include "debug.h"
 #include "probe.h"
 
@@ -79,11 +79,6 @@ DriverEntry (
 		return Error ( "Registry_Check", Status );
 	if ( !NT_SUCCESS ( Status = Bus_Start (  ) ) )
 		return Error ( "Bus_Start", Status );
-	if ( !NT_SUCCESS ( Status = AoE_Start (  ) ) )
-		{
-			Bus_Stop (  );
-			return Error ( "AoE_Start", Status );
-		}
 
 		/**
      * TODO: Remove this fun test
@@ -135,8 +130,9 @@ DriverEntry (
 			AoE_Stop (  );
 			return Error ( "Bus_AddDevice", Status );
 		}
-	Probe_MemDisk ( Bus_Globals_Self );
 	Probe_AoE ( Bus_Globals_Self );
+	Probe_MemDisk ( Bus_Globals_Self );
+	Probe_Grub4Dos ( Bus_Globals_Self );
 	return Status;
 }
 

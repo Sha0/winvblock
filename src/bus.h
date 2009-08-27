@@ -82,9 +82,7 @@ extern NTSTATUS STDCALL Bus_GetDeviceCapabilities (
 
 extern BOOLEAN STDCALL Bus_AddChild (
 	IN PDEVICE_OBJECT BusDeviceObject,
-	IN PUCHAR ClientMac,
-	IN ULONG Major,
-	IN ULONG Minor,
+	IN DISK_DISK Disk,
 	IN BOOLEAN Boot
  );
 
