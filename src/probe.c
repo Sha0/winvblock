@@ -180,8 +180,8 @@ Probe_AoE (
 				{
 					if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->
-																						Bus.PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
+																						PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
@@ -249,26 +249,14 @@ Probe_MemDisk (
 	MmUnmapIoSpace ( PhysicalMemory, 0x100000 );
 	if ( FoundMemdisk )
 		{
-			PhysicalAddress.QuadPart = Disk.RAMDisk.DiskBuf;
-			Disk.RAMDisk.PhysicalMemory =
-				MmMapIoSpace ( PhysicalAddress, Disk.LBADiskSize * SECTORSIZE,
-											 MmNonCached );
-			if ( !Disk.RAMDisk.PhysicalMemory )
-				{
-					DBG ( "Could not map memory for MEMDISK!\n" );
-					return;
-				}
 			if ( !Bus_AddChild ( BusDeviceObject, Disk, TRUE ) )
 				{
 					DBG ( "Bus_AddChild() failed for MEMDISK\n" );
-					MmUnmapIoSpace ( Disk.RAMDisk.PhysicalMemory,
-													 Disk.LBADiskSize * SECTORSIZE );
 				}
 			else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 				{
-					IoInvalidateDeviceRelations ( BusDeviceExtension->
-																				Bus.PhysicalDeviceObject,
-																				BusRelations );
+					IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
+																				PhysicalDeviceObject, BusRelations );
 				}
 		}
 	else
@@ -364,29 +352,14 @@ no_grub4dos:
 	MmUnmapIoSpace ( PhysicalMemory, 0x100000 );
 	if ( FoundGrub4DosMapping )
 		{
-			PhysicalAddress.QuadPart = Disk.RAMDisk.DiskBuf;
-			/*
-			 * Possible precision loss
-			 */
-			Disk.RAMDisk.PhysicalMemory =
-				MmMapIoSpace ( PhysicalAddress, Disk.LBADiskSize * SECTORSIZE,
-											 MmNonCached );
-			if ( !Disk.RAMDisk.PhysicalMemory )
-				{
-					DBG ( "Could not map memory for GRUB4DOS disk!\n" );
-					return;
-				}
 			if ( !Bus_AddChild ( BusDeviceObject, Disk, TRUE ) )
 				{
 					DBG ( "Bus_AddChild() failed for GRUB4DOS\n" );
-					MmUnmapIoSpace ( Disk.RAMDisk.PhysicalMemory,
-													 Disk.LBADiskSize * SECTORSIZE );
 				}
 			else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 				{
-					IoInvalidateDeviceRelations ( BusDeviceExtension->
-																				Bus.PhysicalDeviceObject,
-																				BusRelations );
+					IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
+																				PhysicalDeviceObject, BusRelations );
 				}
 		}
 	else

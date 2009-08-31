@@ -31,7 +31,6 @@ typedef struct _RAMDISK_RAMDISK
 {
 	UINT32 DiskBuf;
 	UINT32 DiskSize;
-	PUCHAR PhysicalMemory;
 } RAMDISK_RAMDISK,
 *PRAMDISK_RAMDISK;
 

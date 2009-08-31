@@ -199,8 +199,8 @@ AoE_Start (
 	 */
 	if ( ( AoE_Globals_ProbeTag->PacketData =
 				 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-																					AoE_Globals_ProbeTag->PacketSize ) )
-			 == NULL )
+																					AoE_Globals_ProbeTag->
+																					PacketSize ) ) == NULL )
 		{
 			DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
 			ExFreePool ( AoE_Globals_ProbeTag );
@@ -760,6 +760,8 @@ AoE_Request (
 		PreviousTag = NULL;
 	KIRQL Irql;
 	ULONG i;
+	PHYSICAL_ADDRESS PhysicalAddress;
+	PUCHAR PhysicalMemory;
 
 	if ( AoE_Globals_Stop )
 		{
@@ -785,19 +787,31 @@ AoE_Request (
 		}
 
 	/*
-	 * Handle the MEMDISK case
+	 * Handle the Ram disk case
 	 */
 	if ( DeviceExtension->Disk.IsRamdisk )
 		{
+			PhysicalAddress.QuadPart =
+				DeviceExtension->Disk.RAMDisk.DiskBuf + ( StartSector * SECTORSIZE );
+			/*
+			 * Possible precision loss
+			 */
+			PhysicalMemory =
+				MmMapIoSpace ( PhysicalAddress, SectorCount * SECTORSIZE,
+											 MmNonCached );
+			if ( !PhysicalMemory )
+				{
+					DBG ( "Could not map memory for RAM disk!\n" );
+					Irp->IoStatus.Information = 0;
+					Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+					IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+					return STATUS_INSUFFICIENT_RESOURCES;
+				}
 			if ( Mode == AoE_RequestMode_Write )
-				RtlCopyMemory ( &DeviceExtension->Disk.
-												RAMDisk.PhysicalMemory[StartSector * SECTORSIZE],
-												Buffer, SectorCount * SECTORSIZE );
+				RtlCopyMemory ( PhysicalMemory, Buffer, SectorCount * SECTORSIZE );
 			else
-				RtlCopyMemory ( Buffer,
-												&DeviceExtension->Disk.
-												RAMDisk.PhysicalMemory[StartSector * SECTORSIZE],
-												SectorCount * SECTORSIZE );
+				RtlCopyMemory ( Buffer, PhysicalMemory, SectorCount * SECTORSIZE );
+			MmUnmapIoSpace ( PhysicalMemory, SectorCount * SECTORSIZE );
 			Irp->IoStatus.Information = SectorCount * SECTORSIZE;
 			Irp->IoStatus.Status = STATUS_SUCCESS;
 			IoCompleteRequest ( Irp, IO_NO_INCREMENT );
@@ -1159,8 +1173,8 @@ AoE_Reply (
 								}
 							else if ( Tag->DeviceExtension->Disk.AoE.MTU <
 												( sizeof ( AOE_PACKET ) +
-													( ( Tag->DeviceExtension->Disk.AoE.
-															MaxSectorsPerPacket + 1 ) * SECTORSIZE ) ) )
+													( ( Tag->DeviceExtension->Disk.
+															AoE.MaxSectorsPerPacket + 1 ) * SECTORSIZE ) ) )
 								{
 									DBG ( "Got MaxSectorsPerPacket %d at size of %d. "
 												"MTU of %d reached\n",
