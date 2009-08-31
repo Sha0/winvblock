@@ -1,22 +1,22 @@
 /**
+ * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
- * Portions copyright (C) 2009 Shao Miller <shao.miller@yrdsb.edu.on.ca>.
- * For contact information, see http://winaoe.org/
+ * For WinAoE contact information, see http://winaoe.org/
  *
- * This file is part of WinAoE.
+ * This file is part of WinVBlock, derived from WinAoE.
  *
- * WinAoE is free software: you can redistribute it and/or modify
+ * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * WinAoE is distributed in the hope that it will be useful,
+ * WinVBlock is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
+ * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -243,8 +243,8 @@ Debug_DecodeIrp (
 		{
 			case IRP_MJ_SYSTEM_CONTROL:
 				sprintf ( DebugMessage, "%s %s", DebugMessage,
-									Debug_SystemControlMinorFunctionString ( Stack->
-																													 MinorFunction ) );
+									Debug_SystemControlMinorFunctionString
+									( Stack->MinorFunction ) );
 				break;
 			case IRP_MJ_PNP:
 				sprintf ( DebugMessage, "%s %s", DebugMessage,
@@ -253,29 +253,26 @@ Debug_DecodeIrp (
 					{
 						case IRP_MN_QUERY_ID:
 							sprintf ( DebugMessage, "%s %s", DebugMessage,
-												Debug_QueryIdString ( Stack->Parameters.QueryId.
-																							IdType ) );
+												Debug_QueryIdString ( Stack->Parameters.
+																							QueryId.IdType ) );
 							break;
 						case IRP_MN_QUERY_DEVICE_TEXT:
 							sprintf ( DebugMessage, "%s %s", DebugMessage,
-												Debug_DeviceTextTypeString ( Stack->
-																										 Parameters.QueryDeviceText.
-																										 DeviceTextType ) );
+												Debug_DeviceTextTypeString ( Stack->Parameters.
+																										 QueryDeviceText.DeviceTextType ) );
 							break;
 						case IRP_MN_QUERY_DEVICE_RELATIONS:
 							sprintf ( DebugMessage, "%s %s", DebugMessage,
-												Debug_QueryDeviceRelationsString ( Stack->Parameters.
-																													 QueryDeviceRelations.
-																													 Type ) );
+												Debug_QueryDeviceRelationsString ( Stack->
+																													 Parameters.QueryDeviceRelations.Type ) );
 							break;
 					}
 				break;
 			case IRP_MJ_DEVICE_CONTROL:
 				sprintf ( DebugMessage, "%s (0x%08x) %s", DebugMessage,
 									( int )Stack->Parameters.DeviceIoControl.IoControlCode,
-									Debug_DeviceIoControlString ( Stack->
-																								Parameters.DeviceIoControl.
-																								IoControlCode ) );
+									Debug_DeviceIoControlString ( Stack->Parameters.
+																								DeviceIoControl.IoControlCode ) );
 				if ( !DeviceExtension->IsBus
 						 && Stack->Parameters.DeviceIoControl.IoControlCode ==
 						 IOCTL_STORAGE_QUERY_PROPERTY )

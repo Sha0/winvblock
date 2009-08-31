@@ -1,22 +1,22 @@
 /**
+ * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
- * Portions copyright (C) 2009 Shao Miller <shao.miller@yrdsb.edu.on.ca>.
- * For contact information, see http://winaoe.org/
+ * For WinAoE contact information, see http://winaoe.org/
  *
- * This file is part of WinAoE.
+ * This file is part of WinVBlock, derived from WinAoE.
  *
- * WinAoE is free software: you can redistribute it and/or modify
+ * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * WinAoE is distributed in the hope that it will be useful,
+ * WinVBlock is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
+ * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -279,12 +279,12 @@ Registry_Setup (
 							for ( i = 0;
 										i <
 										( KeyValueInformation->DataLength -
-											sizeof ( L"AoE" ) / sizeof ( WCHAR ) ); i++ )
+											sizeof ( L"WinVBlock" ) / sizeof ( WCHAR ) ); i++ )
 								{
 									if ( RtlCompareMemory
-											 ( L"AoE",
+											 ( L"WinVBlock",
 												 &( ( ( PWCHAR ) KeyValueInformation->Data )[i] ),
-												 sizeof ( L"AoE" ) ) == sizeof ( L"AoE" ) )
+												 sizeof ( L"WinVBlock" ) ) == sizeof ( L"WinVBlock" ) )
 										{
 											Found = TRUE;
 											break;
@@ -309,7 +309,7 @@ Registry_Setup (
 								{
 									Updated = TRUE;
 									NewValueLength =
-										KeyValueInformation->DataLength + sizeof ( L"AoE" );
+										KeyValueInformation->DataLength + sizeof ( L"WinVBlock" );
 									if ( ( NewValue =
 												 ( PWCHAR ) ExAllocatePool ( NonPagedPool,
 																										 NewValueLength ) ) ==
@@ -318,9 +318,11 @@ Registry_Setup (
 											DBG ( "ExAllocatePool NewValue 2 failed\n" );
 											goto e2_2;
 										}
-									RtlCopyMemory ( NewValue, L"AoE", sizeof ( L"AoE" ) );
+									RtlCopyMemory ( NewValue, L"WinVBlock",
+																	sizeof ( L"WinVBlock" ) );
 									RtlCopyMemory ( &NewValue
-																	[( sizeof ( L"AoE" ) / sizeof ( WCHAR ) )],
+																	[( sizeof ( L"WinVBlock" ) /
+																		 sizeof ( WCHAR ) )],
 																	KeyValueInformation->Data,
 																	KeyValueInformation->DataLength );
 								}
@@ -329,7 +331,7 @@ Registry_Setup (
 					else
 						{
 							Updated = TRUE;
-							NewValueLength = sizeof ( L"AoE" ) + sizeof ( WCHAR );
+							NewValueLength = sizeof ( L"WinVBlock" ) + sizeof ( WCHAR );
 							if ( ( NewValue =
 										 ( PWCHAR ) ExAllocatePool ( NonPagedPool,
 																								 NewValueLength ) ) == NULL )
@@ -338,7 +340,8 @@ Registry_Setup (
 									goto e2_1;
 								}
 							RtlZeroMemory ( NewValue, NewValueLength );
-							RtlCopyMemory ( NewValue, L"AoE", sizeof ( L"AoE" ) );
+							RtlCopyMemory ( NewValue, L"WinVBlock",
+															sizeof ( L"WinVBlock" ) );
 						}
 					if ( !NT_SUCCESS
 							 ( ZwSetValueKey
@@ -424,8 +427,9 @@ Registry_Setup (
 																										 sizeof
 																										 ( DriverServiceNamePath )
 																										 +
-																										 KeyValueInformation->DataLength
-																										 - sizeof ( WCHAR ) ) ) ==
+																										 KeyValueInformation->
+																										 DataLength -
+																										 sizeof ( WCHAR ) ) ) ==
 											 NULL )
 										{
 											DBG ( "ExAllocatePool DriverServiceNameString "

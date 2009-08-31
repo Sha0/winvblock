@@ -11,6 +11,6 @@ cmd /c makedriver f 32
 cmd /c makedriver f 64
 del bin\loader32.exe
 del bin\loader64.exe
-del bin\aoe32.pdb
-del bin\aoe64.pdb
+del bin\wvblk32.pdb
+del bin\wvblk64.pdb
 copy src\pxe.%pxestyle%\aoe.0 bin

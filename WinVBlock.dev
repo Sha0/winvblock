@@ -1,7 +1,7 @@
 [Project]
-FileName=WinAoE.dev
-Name=WinAoE
-UnitCount=23
+FileName=WinVBlock.dev
+Name=WinVBlock
+UnitCount=24
 PchHead=-1
 PchSource=-1
 Ver=3
@@ -13,7 +13,7 @@ Folders=
 [Unit1]
 FileName=src\aoe.c
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -23,7 +23,7 @@ BuildCmd=
 [Unit2]
 FileName=src\aoe.h
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -33,7 +33,7 @@ BuildCmd=
 [Unit3]
 FileName=src\bus.c
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -43,7 +43,7 @@ BuildCmd=
 [Unit4]
 FileName=src\bus.h
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -53,7 +53,7 @@ BuildCmd=
 [Unit5]
 FileName=src\debug.c
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -63,7 +63,7 @@ BuildCmd=
 [Unit6]
 FileName=src\debug.h
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -73,7 +73,7 @@ BuildCmd=
 [Unit8]
 FileName=src\driver.h
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -83,7 +83,7 @@ BuildCmd=
 [Unit9]
 FileName=src\loader.c
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -93,7 +93,7 @@ BuildCmd=
 [Unit10]
 FileName=src\mdi.h
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -103,7 +103,7 @@ BuildCmd=
 [Unit11]
 FileName=src\mount.c
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -113,7 +113,7 @@ BuildCmd=
 [Unit12]
 FileName=src\mount.h
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -123,7 +123,7 @@ BuildCmd=
 [Unit13]
 FileName=src\portable.h
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -133,7 +133,7 @@ BuildCmd=
 [Unit14]
 FileName=src\protocol.c
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -143,7 +143,7 @@ BuildCmd=
 [Unit15]
 FileName=src\protocol.h
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -153,7 +153,7 @@ BuildCmd=
 [Unit16]
 FileName=src\registry.c
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -163,7 +163,7 @@ BuildCmd=
 [Unit17]
 FileName=src\registry.h
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -206,7 +206,7 @@ Icon=
 ExeOutput=Output\MingW
 ObjectOutput=Objects\MingW
 OverrideOutput=0
-OverrideOutputName=
+OverrideOutputName=WinVBlock.exe
 HostApplication=
 CommandLine=
 UseCustomMakefile=0
@@ -246,7 +246,7 @@ compilerType=1
 [Unit7]
 FileName=src\driver.c
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -256,7 +256,7 @@ BuildCmd=
 [Unit20]
 FileName=src\aoedisk.h
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -266,7 +266,7 @@ BuildCmd=
 [Unit21]
 FileName=src\aoedisk.c
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -296,7 +296,7 @@ BuildCmd=
 [Unit23]
 FileName=src\probe.h
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -306,9 +306,18 @@ BuildCmd=
 [Unit22]
 FileName=src\probe.c
 CompileCpp=1
-Folder=WinAoE
+Folder=WinVBlock
 Compile=1
 Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit24]
+FileName=src\winvblock.rc
+Folder=WinVBlock
+Compile=1
+Link=0
 Priority=1000
 OverrideBuildCmd=0
 BuildCmd=

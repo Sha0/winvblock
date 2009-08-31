@@ -23,8 +23,8 @@ if "%2" == "32" set arg2=w2k
 if "%2" == "64" set arg2=wnet amd64
 if "%2" == "32" set arch=i386
 if "%2" == "64" set arch=amd64
-if "%2" == "32" set name=aoe32
-if "%2" == "64" set name=aoe64
+if "%2" == "32" set name=wvblk32
+if "%2" == "64" set name=wvblk64
 if "%2" == "32" set obj=%obj%_w2k_x86
 if "%2" == "64" set obj=%obj%_wnet_amd64
 goto run
@@ -34,8 +34,8 @@ if "%1" == "32" set arg2=w2k
 if "%1" == "64" set arg2=wnet amd64
 if "%1" == "32" set arch=i386
 if "%1" == "64" set arch=amd64
-if "%1" == "32" set name=aoe32
-if "%1" == "64" set name=aoe64
+if "%1" == "32" set name=wvblk32
+if "%1" == "64" set name=wvblk64
 if "%1" == "32" set obj=w2k_x86
 if "%1" == "64" set obj=wnet_amd64
 if "%2" == "f" goto next_2_ok

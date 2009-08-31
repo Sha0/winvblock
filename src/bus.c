@@ -1,22 +1,22 @@
 /**
+ * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
- * Portions copyright (C) 2009 Shao Miller <shao.miller@yrdsb.edu.on.ca>.
- * For contact information, see http://winaoe.org/
+ * For WinAoE contact information, see http://winaoe.org/
  *
- * This file is part of WinAoE.
+ * This file is part of WinVBlock, derived from WinAoE.
  *
- * WinAoE is free software: you can redistribute it and/or modify
+ * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * WinAoE is distributed in the hope that it will be useful,
+ * WinVBlock is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
+ * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -459,14 +459,16 @@ IRPHandler_Declaration ( Bus_DispatchDeviceControl )
 						TargetWalker = TargetWalker->Next;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Targets,
-												( Stack->Parameters.
-													DeviceIoControl.OutputBufferLength <
+												( Stack->Parameters.DeviceIoControl.
+													OutputBufferLength <
 													( sizeof ( MOUNT_TARGETS ) +
 														( Count *
-															sizeof ( MOUNT_TARGET ) ) ) ? Stack->
-													Parameters.DeviceIoControl.OutputBufferLength
-													: ( sizeof ( MOUNT_TARGETS ) +
-															( Count * sizeof ( MOUNT_TARGET ) ) ) ) );
+															sizeof ( MOUNT_TARGET ) ) ) ? Stack->Parameters.
+													DeviceIoControl.
+													OutputBufferLength : ( sizeof ( MOUNT_TARGETS ) +
+																								 ( Count *
+																									 sizeof
+																									 ( MOUNT_TARGET ) ) ) ) );
 				ExFreePool ( Targets );
 
 				KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
@@ -515,14 +517,16 @@ IRPHandler_Declaration ( Bus_DispatchDeviceControl )
 						DiskWalker = DiskWalker->Disk.Next;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Disks,
-												( Stack->Parameters.
-													DeviceIoControl.OutputBufferLength <
+												( Stack->Parameters.DeviceIoControl.
+													OutputBufferLength <
 													( sizeof ( MOUNT_DISKS ) +
 														( Count *
-															sizeof ( MOUNT_DISK ) ) ) ? Stack->
-													Parameters.DeviceIoControl.OutputBufferLength
-													: ( sizeof ( MOUNT_DISKS ) +
-															( Count * sizeof ( MOUNT_DISK ) ) ) ) );
+															sizeof ( MOUNT_DISK ) ) ) ? Stack->Parameters.
+													DeviceIoControl.
+													OutputBufferLength : ( sizeof ( MOUNT_DISKS ) +
+																								 ( Count *
+																									 sizeof
+																									 ( MOUNT_DISK ) ) ) ) );
 				ExFreePool ( Disks );
 
 				Status = STATUS_SUCCESS;
@@ -548,8 +552,8 @@ IRPHandler_Declaration ( Bus_DispatchDeviceControl )
 				else
 					{
 						if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
-							IoInvalidateDeviceRelations ( DeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( DeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 					}
 				Irp->IoStatus.Information = 0;
@@ -580,8 +584,8 @@ IRPHandler_Declaration ( Bus_DispatchDeviceControl )
 						DiskWalker->Disk.Unmount = TRUE;
 						DiskWalker->Disk.Next = NULL;
 						if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
-							IoInvalidateDeviceRelations ( DeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( DeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 					}
 				DeviceExtension->Bus.Children--;

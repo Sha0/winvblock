@@ -1,22 +1,22 @@
 /**
+ * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
- * Portions copyright (C) 2009 Shao Miller <shao.miller@yrdsb.edu.on.ca>.
- * For contact information, see http://winaoe.org/
+ * For WinAoE contact information, see http://winaoe.org/
  *
- * This file is part of WinAoE.
+ * This file is part of WinVBlock, derived from WinAoE.
  *
- * WinAoE is free software: you can redistribute it and/or modify
+ * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * WinAoE is distributed in the hope that it will be useful,
+ * WinVBlock is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with WinAoE.  If not, see <http://www.gnu.org/licenses/>.
+ * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /**
@@ -199,8 +199,8 @@ AoE_Start (
 	 */
 	if ( ( AoE_Globals_ProbeTag->PacketData =
 				 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-																					AoE_Globals_ProbeTag->
-																					PacketSize ) ) == NULL )
+																					AoE_Globals_ProbeTag->PacketSize ) )
+			 == NULL )
 		{
 			DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
 			ExFreePool ( AoE_Globals_ProbeTag );
@@ -790,13 +790,13 @@ AoE_Request (
 	if ( DeviceExtension->Disk.IsRamdisk )
 		{
 			if ( Mode == AoE_RequestMode_Write )
-				RtlCopyMemory ( &DeviceExtension->Disk.RAMDisk.
-												PhysicalMemory[StartSector * SECTORSIZE], Buffer,
-												SectorCount * SECTORSIZE );
+				RtlCopyMemory ( &DeviceExtension->Disk.
+												RAMDisk.PhysicalMemory[StartSector * SECTORSIZE],
+												Buffer, SectorCount * SECTORSIZE );
 			else
 				RtlCopyMemory ( Buffer,
-												&DeviceExtension->Disk.RAMDisk.
-												PhysicalMemory[StartSector * SECTORSIZE],
+												&DeviceExtension->Disk.
+												RAMDisk.PhysicalMemory[StartSector * SECTORSIZE],
 												SectorCount * SECTORSIZE );
 			Irp->IoStatus.Information = SectorCount * SECTORSIZE;
 			Irp->IoStatus.Status = STATUS_SUCCESS;
@@ -1159,8 +1159,8 @@ AoE_Reply (
 								}
 							else if ( Tag->DeviceExtension->Disk.AoE.MTU <
 												( sizeof ( AOE_PACKET ) +
-													( ( Tag->DeviceExtension->Disk.
-															AoE.MaxSectorsPerPacket + 1 ) * SECTORSIZE ) ) )
+													( ( Tag->DeviceExtension->Disk.AoE.
+															MaxSectorsPerPacket + 1 ) * SECTORSIZE ) ) )
 								{
 									DBG ( "Got MaxSectorsPerPacket %d at size of %d. "
 												"MTU of %d reached\n",
