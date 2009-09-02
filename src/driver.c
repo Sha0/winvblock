@@ -50,6 +50,7 @@ static VOID STDCALL Driver_Unload (
  );
 
 static PVOID Driver_Globals_StateHandle;
+static BOOLEAN Driver_Globals_Started = FALSE;
 
 /*
  * Note the exception to the function naming convention.
@@ -74,6 +75,8 @@ DriverEntry (
      */
 
 	DBG ( "Entry\n" );
+  if ( Driver_Globals_Started )
+    return STATUS_SUCCESS;
 	Debug_Initialize (  );
 	if ( !NT_SUCCESS ( Status = Registry_Check (  ) ) )
 		return Error ( "Registry_Check", Status );
@@ -133,6 +136,7 @@ DriverEntry (
 	Probe_AoE ( Bus_Globals_Self );
 	Probe_MemDisk ( Bus_Globals_Self );
 	Probe_Grub4Dos ( Bus_Globals_Self );
+	Driver_Globals_Started = TRUE;
 	return Status;
 }
 
@@ -204,6 +208,7 @@ Driver_Unload (
 	Protocol_Stop (  );
 	AoE_Stop (  );
 	Bus_Stop (  );
+	Driver_Globals_Started = FALSE;
 	DBG ( "Done\n" );
 }
 
