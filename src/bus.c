@@ -98,6 +98,7 @@ Bus_Stop (
 	KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
 	RtlInitUnicodeString ( &DosDeviceName, L"\\DosDevices\\AoE" );
 	IoDeleteSymbolicLink ( &DosDeviceName );
+	Bus_Globals_Self = NULL;
 }
 
 VOID STDCALL
