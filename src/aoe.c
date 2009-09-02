@@ -273,7 +273,11 @@ AoE_Stop (
 	KIRQL Irql;
 
 	DBG ( "Entry\n" );
-
+	/*
+	 * If we're not already started, there's nothing to do
+	 */
+	if ( !AoE_Globals_Started )
+		return;
 	/*
 	 * If we're not already shutting down, signal the event 
 	 */
