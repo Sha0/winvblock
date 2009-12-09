@@ -34,6 +34,13 @@
 #include "bus.h"
 #include "aoe.h"
 
+typedef struct _PROBE_INT_VECTOR
+{
+	USHORT Offset;
+	USHORT Segment;
+} PROBE_INT_VECTOR,
+*PPROBE_INT_VECTOR;
+
 #ifdef _MSC_VER
 #  pragma pack(1)
 #endif
@@ -55,16 +62,21 @@ typedef struct _PROBE_ABFT
 #  pragma pack()
 #endif
 
+#ifdef _MSC_VER
+#  pragma pack(1)
+#endif
 typedef struct _PROBE_SAFEMBRHOOK
 {
 	UCHAR Jump[3];
 	UCHAR Signature[8];
 	UCHAR VendorID[8];
-	UINT16 PrevHookOff;
-	UINT16 PrevHookSeg;
-	UINT64 Flags;
-} PROBE_SAFEMBRHOOK,
-*PPROBE_SAFEMBRHOOK;
+	PROBE_INT_VECTOR PrevHook;
+	UINT Flags;
+	UINT mBFT;										/* MEMDISK only */
+} __attribute__ ( ( __packed__ ) ) PROBE_SAFEMBRHOOK, *PPROBE_SAFEMBRHOOK;
+#ifdef _MSC_VER
+#  pragma pack()
+#endif
 
 /* From GRUB4DOS 0.4.4's stage2/shared.h */
 typedef struct _PROBE_GRUB4DOSDRIVEMAPSLOT
@@ -192,6 +204,100 @@ Probe_AoE (
 		}
 }
 
+static PPROBE_SAFEMBRHOOK STDCALL
+Probe_GetSafeHook (
+	IN PUCHAR PhysicalMemory,
+	IN PPROBE_INT_VECTOR InterruptVector
+ )
+{
+	UINT32 Int13Hook;
+	PPROBE_SAFEMBRHOOK SafeMbrHookPtr;
+	UCHAR Signature[9] = { 0 };
+	UCHAR VendorID[9] = { 0 };
+
+	Int13Hook =
+		( ( ( UINT32 ) InterruptVector->Segment ) << 4 ) +
+		( ( UINT32 ) InterruptVector->Offset );
+	SafeMbrHookPtr = ( PPROBE_SAFEMBRHOOK ) ( PhysicalMemory + Int13Hook );
+	RtlCopyMemory ( Signature, SafeMbrHookPtr->Signature, 8 );
+	RtlCopyMemory ( VendorID, SafeMbrHookPtr->VendorID, 8 );
+	DBG ( "INT 0x13 Segment: 0x%04x\n", InterruptVector->Segment );
+	DBG ( "INT 0x13 Offset: 0x%04x\n", InterruptVector->Offset );
+	DBG ( "INT 0x13 Hook: 0x%08x\n", Int13Hook );
+	DBG ( "INT 0x13 Safe Hook Signature: %s\n", Signature );
+	if ( !( RtlCompareMemory ( Signature, "$INT13SF", 8 ) == 8 ) )
+		{
+			DBG ( "Invalid INT 0x13 Safe Hook Signature; End of chain\n" );
+			return NULL;
+		}
+	return SafeMbrHookPtr;
+}
+
+BOOLEAN STDCALL
+Probe_MemDisk_mBFT (
+	PDEVICE_OBJECT BusDeviceObject,
+	PUCHAR PhysicalMemory,
+	UINT Offset
+ )
+{
+	PMDI_MBFT mBFT = ( PMDI_MBFT ) ( PhysicalMemory + Offset );
+	UINT i;
+	UCHAR Checksum = 0;
+	PPROBE_SAFEMBRHOOK AssociatedHook;
+	DISK_DISK Disk;
+	PDRIVER_DEVICEEXTENSION BusDeviceExtension =
+		( PDRIVER_DEVICEEXTENSION ) BusDeviceObject->DeviceExtension;
+
+	if ( Offset >= 0x100000 )
+		{
+			DBG ( "mBFT physical pointer too high!\n" );
+			return FALSE;
+		}
+	if ( !( RtlCompareMemory ( mBFT->Signature, "mBFT", 4 ) == 4 ) )
+		return FALSE;
+	if ( Offset + mBFT->Length >= 0x100000 )
+		{
+			DBG ( "mBFT length out-of-bounds\n" );
+			return FALSE;
+		}
+	for ( i = 0; i < mBFT->Length; i++ )
+		Checksum += ( ( UCHAR * ) mBFT )[i];
+	if ( Checksum )
+		{
+			DBG ( "Invalid mBFT checksum\n" );
+			return FALSE;
+		}
+	DBG ( "Found mBFT: 0x%08x\n", mBFT );
+	if ( mBFT->SafeHook >= 0x100000 )
+		{
+			DBG ( "mBFT safe hook physical pointer too high!\n" );
+			return FALSE;
+		}
+	AssociatedHook = ( PPROBE_SAFEMBRHOOK ) ( PhysicalMemory + mBFT->SafeHook );
+	if ( AssociatedHook->Flags )
+		{
+			DBG ( "This MEMDISK already processed\n" );
+			return TRUE;
+		}
+	DBG ( "MEMDISK DiskBuf: 0x%08x\n", mBFT->MDI.diskbuf );
+	DBG ( "MEMDISK DiskSize: %d sectors\n", mBFT->MDI.disksize );
+	Disk.Initialize = Probe_NoInitialize;
+	Disk.RAMDisk.DiskBuf = mBFT->MDI.diskbuf;
+	Disk.LBADiskSize = Disk.RAMDisk.DiskSize = mBFT->MDI.disksize;
+	Disk.IsRamdisk = TRUE;
+	if ( !Bus_AddChild ( BusDeviceObject, Disk, TRUE ) )
+		{
+			DBG ( "Bus_AddChild() failed for MEMDISK\n" );
+		}
+	else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
+		{
+			IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
+																		PhysicalDeviceObject, BusRelations );
+		}
+	AssociatedHook->Flags = 1;
+	return TRUE;
+}
+
 VOID STDCALL
 Probe_MemDisk (
 	PDEVICE_OBJECT BusDeviceObject
@@ -199,20 +305,13 @@ Probe_MemDisk (
 {
 	PHYSICAL_ADDRESS PhysicalAddress;
 	PUCHAR PhysicalMemory;
-	UINT16 Int13Seg,
-	 Int13Off;
-	UINT32 Int13Hook;
-	PMDI_PATCHAREA MemdiskPtr;
+	PPROBE_INT_VECTOR InterruptVector;
+	PPROBE_SAFEMBRHOOK SafeMbrHookPtr;
 	UINT Offset;
 	BOOLEAN FoundMemdisk = FALSE;
-	PDRIVER_DEVICEEXTENSION BusDeviceExtension =
-		( PDRIVER_DEVICEEXTENSION ) BusDeviceObject->DeviceExtension;
-	DISK_DISK Disk;
 
 	/*
-	 * Find a MEMDISK.  This discovery strategy is extremely poor at the
-	 * moment.  The eventual goal is to discover MEMDISK RAM disks using
-	 * an ACPI strcture.  Slight modifications to MEMDISK will help with this
+	 * Find a MEMDISK.  We check the "safe hook" chain, then scan for mBFTs
 	 */
 	PhysicalAddress.QuadPart = 0LL;
 	PhysicalMemory = MmMapIoSpace ( PhysicalAddress, 0x100000, MmNonCached );
@@ -221,45 +320,39 @@ Probe_MemDisk (
 			DBG ( "Could not map low memory\n" );
 			return;
 		}
-	Int13Seg = *( ( PUINT16 ) & PhysicalMemory[0x13 * 4 + 2] );
-	Int13Off = *( ( PUINT16 ) & PhysicalMemory[0x13 * 4] );
-	Int13Hook = ( ( ( UINT32 ) Int13Seg ) << 4 ) + ( ( UINT32 ) Int13Off );
-	DBG ( "INT 0x13 Segment: 0x%04x\n", Int13Seg );
-	DBG ( "INT 0x13 Offset: 0x%04x\n", Int13Off );
-	DBG ( "INT 0x13 Hook: 0x%08x\n", Int13Hook );
-	for ( Offset = 0; Offset < 0x100000 - sizeof ( MDI_PATCHAREA ); Offset += 2 )
+	InterruptVector =
+		( PPROBE_INT_VECTOR ) ( PhysicalMemory +
+														0x13 * sizeof ( PROBE_INT_VECTOR ) );
+	/*
+	 * Walk the "safe hook" chain of INT 13h hooks as far as possible
+	 */
+	while ( SafeMbrHookPtr =
+					Probe_GetSafeHook ( PhysicalMemory, InterruptVector ) )
 		{
-			MemdiskPtr = ( PMDI_PATCHAREA ) & PhysicalMemory[Offset];
-			if ( MemdiskPtr->mdi_bytes != 0x1e )
-				continue;
-			if ( ( MemdiskPtr->mdi_version_major != 3 )
-					 || ( MemdiskPtr->mdi_version_minor < 0x50 )
-					 || ( MemdiskPtr->mdi_version_minor > 0x53 ) )
-				continue;
-			DBG ( "Found MEMDISK sig: 0x%08x\n", Offset );
-			DBG ( "MEMDISK DiskBuf: 0x%08x\n", MemdiskPtr->diskbuf );
-			DBG ( "MEMDISK DiskSize: %d sectors\n", MemdiskPtr->disksize );
-			Disk.Initialize = Probe_NoInitialize;
-			Disk.RAMDisk.DiskBuf = MemdiskPtr->diskbuf;
-			Disk.LBADiskSize = Disk.RAMDisk.DiskSize = MemdiskPtr->disksize;
-			Disk.IsRamdisk = TRUE;
-			FoundMemdisk = TRUE;
-			break;
+			if ( !
+					 ( RtlCompareMemory ( SafeMbrHookPtr->VendorID, "MEMDISK ", 8 ) ==
+						 8 ) )
+				{
+					DBG ( "Non-MEMDISK INT 0x13 Safe Hook\n" );
+				}
+			else
+				{
+					FoundMemdisk |=
+						Probe_MemDisk_mBFT ( BusDeviceObject, PhysicalMemory,
+																 SafeMbrHookPtr->mBFT );
+				}
+			InterruptVector = &SafeMbrHookPtr->PrevHook;
+		}
+	/*
+	 * Now search for "floating" mBFTs
+	 */
+	for ( Offset = 0; Offset < 0xFFFF0; Offset += 0x10 )
+		{
+			FoundMemdisk |=
+				Probe_MemDisk_mBFT ( BusDeviceObject, PhysicalMemory, Offset );
 		}
 	MmUnmapIoSpace ( PhysicalMemory, 0x100000 );
-	if ( FoundMemdisk )
-		{
-			if ( !Bus_AddChild ( BusDeviceObject, Disk, TRUE ) )
-				{
-					DBG ( "Bus_AddChild() failed for MEMDISK\n" );
-				}
-			else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
-				{
-					IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																				PhysicalDeviceObject, BusRelations );
-				}
-		}
-	else
+	if ( !FoundMemdisk )
 		{
 			DBG ( "No MEMDISKs found\n" );
 		}
@@ -272,14 +365,11 @@ Probe_Grub4Dos (
 {
 	PHYSICAL_ADDRESS PhysicalAddress;
 	PUCHAR PhysicalMemory;
-	UINT16 Int13Seg,
-	 Int13Off;
+	PPROBE_INT_VECTOR InterruptVector;
 	UINT32 Int13Hook;
 	PPROBE_SAFEMBRHOOK SafeMbrHookPtr;
-	UCHAR Signature[9] = { 0, 0, 0, 0, 0, 0, 0, 0 }
-	, VendorID[9] =
-	{
-	0, 0, 0, 0, 0, 0, 0, 0};
+	UCHAR Signature[9] = { 0 };
+	UCHAR VendorID[9] = { 0 };
 	PPROBE_GRUB4DOSDRIVEMAPSLOT Grub4DosDriveMapSlotPtr;
 	UINT Offset;
 	BOOLEAN FoundGrub4DosMapping = FALSE;
@@ -298,30 +388,34 @@ Probe_Grub4Dos (
 			DBG ( "Could not map low memory\n" );
 			return;
 		}
-	Int13Seg = *( ( PUINT16 ) & PhysicalMemory[0x13 * 4 + 2] );
-	Int13Off = *( ( PUINT16 ) & PhysicalMemory[0x13 * 4] );
-	Int13Hook = ( ( ( UINT32 ) Int13Seg ) << 4 ) + ( ( UINT32 ) Int13Off );
-	SafeMbrHookPtr = ( PPROBE_SAFEMBRHOOK ) & PhysicalMemory[Int13Hook];
+	InterruptVector =
+		( PPROBE_INT_VECTOR ) ( PhysicalMemory +
+														0x13 * sizeof ( PROBE_INT_VECTOR ) );
+	Int13Hook =
+		( ( ( UINT32 ) InterruptVector->Segment ) << 4 ) +
+		( ( UINT32 ) InterruptVector->Offset );
+	SafeMbrHookPtr = ( PPROBE_SAFEMBRHOOK ) ( PhysicalMemory + Int13Hook );
 	RtlCopyMemory ( Signature, SafeMbrHookPtr->Signature, 8 );
-	DBG ( "INT 0x13 Segment: 0x%04x\n", Int13Seg );
-	DBG ( "INT 0x13 Offset: 0x%04x\n", Int13Off );
+	DBG ( "INT 0x13 Segment: 0x%04x\n", InterruptVector->Segment );
+	DBG ( "INT 0x13 Offset: 0x%04x\n", InterruptVector->Offset );
 	DBG ( "INT 0x13 Hook: 0x%08x\n", Int13Hook );
 	DBG ( "INT 0x13 Safety Hook Signature: %s\n", Signature );
-	if ( !RtlCompareMemory ( Signature, "$INT13SF", 8 ) )
+	if ( !( RtlCompareMemory ( Signature, "$INT13SF", 8 ) == 8 ) )
 		{
 			DBG ( "Invalid INT 0x13 Safety Hook Signature\n" );
 			goto no_grub4dos;
 		}
 	RtlCopyMemory ( VendorID, SafeMbrHookPtr->VendorID, 8 );
 	DBG ( "INT 0x13 Safety Hook Vendor ID: %s\n", VendorID );
-	if ( !RtlCompareMemory ( VendorID, "GRUB4DOS", 8 ) )
+	if ( !( RtlCompareMemory ( VendorID, "GRUB4DOS", 8 ) == 8 ) )
 		{
 			DBG ( "Non-GRUB4DOS INT 0x13 Safety Hook\n" );
 			goto no_grub4dos;
 		}
 	Grub4DosDriveMapSlotPtr =
-		( PPROBE_GRUB4DOSDRIVEMAPSLOT ) &
-		PhysicalMemory[( ( ( UINT32 ) Int13Seg ) << 4 ) + 0x20];
+		( PPROBE_GRUB4DOSDRIVEMAPSLOT ) ( PhysicalMemory +
+																			( ( ( UINT32 ) InterruptVector->Segment )
+																				<< 4 ) + 0x20 );
 	DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
 				Grub4DosDriveMapSlotPtr->SourceDrive );
 	DBG ( "GRUB4DOS DestDrive: 0x%02x\n", Grub4DosDriveMapSlotPtr->DestDrive );
@@ -339,9 +433,10 @@ Probe_Grub4Dos (
 	/*
 	 * Possible precision loss
 	 */
-	Disk.RAMDisk.DiskBuf = Grub4DosDriveMapSlotPtr->SectorStart * SECTORSIZE;
+	Disk.RAMDisk.DiskBuf =
+		( UINT32 ) ( Grub4DosDriveMapSlotPtr->SectorStart * SECTORSIZE );
 	Disk.LBADiskSize = Disk.RAMDisk.DiskSize =
-		Grub4DosDriveMapSlotPtr->SectorCount;
+		( UINT32 ) Grub4DosDriveMapSlotPtr->SectorCount;
 	Disk.Heads = Grub4DosDriveMapSlotPtr->MaxHead + 1;
 	Disk.Sectors = Grub4DosDriveMapSlotPtr->DestMaxSector;
 	Disk.Cylinders = Disk.LBADiskSize / ( Disk.Heads * Disk.Sectors );

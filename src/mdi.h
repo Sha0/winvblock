@@ -21,6 +21,9 @@
  *
  */
 
+#  ifdef _MSC_VER
+#    pragma pack(1)
+#  endif
 typedef struct _MDI_PATCHAREA
 {
 	UINT16 mdi_bytes;
@@ -48,9 +51,30 @@ typedef struct _MDI_PATCHAREA
 	UINT16 heads;
 	UINT32 sectors;
 	/*
-	 * WinAoE does not need anything more 
+	 * WinVBlock does not need anything more 
 	 */
-} MDI_PATCHAREA,
-*PMDI_PATCHAREA;
+} __attribute__ ( ( __packed__ ) ) MDI_PATCHAREA, *PMDI_PATCHAREA;
+#  ifdef _MSC_VER
+#    pragma pack()
+#  endif
+
+#  ifdef _MSC_VER
+#    pragma pack(1)
+#  endif
+typedef struct _MDI_MBFT
+{
+	UCHAR Signature[4];						/* ("mBFT") */
+	UINT Length;
+	UCHAR Revision;
+	UCHAR Checksum;
+	UCHAR OEMID[6];
+	UCHAR OEMTableID[8];
+	UCHAR Reserved1[12];
+	UINT SafeHook;
+	MDI_PATCHAREA MDI;
+} __attribute__ ( ( __packed__ ) ) MDI_MBFT, *PMDI_MBFT;
+#  ifdef _MSC_VER
+#    pragma pack()
+#  endif
 
 #endif													/* _MDI_H */
