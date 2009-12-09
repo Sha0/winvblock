@@ -89,7 +89,7 @@ typedef struct _PROBE_GRUB4DOSDRIVEMAPSLOT
 	UINT8 DestMaxCylinder;
 	UCHAR DestMaxHead;
 	UCHAR DestMaxSector:6;
-	UCHAR ResitrctionY:1;
+	UCHAR RestrictionY:1;
 	UCHAR InSituOption:1;
 	UINT64 SectorStart;
 	UINT64 SectorCount;
@@ -192,8 +192,8 @@ Probe_AoE (
 				{
 					if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
@@ -291,8 +291,8 @@ Probe_MemDisk_mBFT (
 		}
 	else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 		{
-			IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																		PhysicalDeviceObject, BusRelations );
+			IoInvalidateDeviceRelations ( BusDeviceExtension->
+																		Bus.PhysicalDeviceObject, BusRelations );
 		}
 	AssociatedHook->Flags = 1;
 	return TRUE;
@@ -368,10 +368,8 @@ Probe_Grub4Dos (
 	PPROBE_INT_VECTOR InterruptVector;
 	UINT32 Int13Hook;
 	PPROBE_SAFEMBRHOOK SafeMbrHookPtr;
-	UCHAR Signature[9] = { 0 };
-	UCHAR VendorID[9] = { 0 };
 	PPROBE_GRUB4DOSDRIVEMAPSLOT Grub4DosDriveMapSlotPtr;
-	UINT Offset;
+	UINT i = 8;
 	BOOLEAN FoundGrub4DosMapping = FALSE;
 	PDRIVER_DEVICEEXTENSION BusDeviceExtension =
 		( PDRIVER_DEVICEEXTENSION ) BusDeviceObject->DeviceExtension;
@@ -391,73 +389,77 @@ Probe_Grub4Dos (
 	InterruptVector =
 		( PPROBE_INT_VECTOR ) ( PhysicalMemory +
 														0x13 * sizeof ( PROBE_INT_VECTOR ) );
-	Int13Hook =
-		( ( ( UINT32 ) InterruptVector->Segment ) << 4 ) +
-		( ( UINT32 ) InterruptVector->Offset );
-	SafeMbrHookPtr = ( PPROBE_SAFEMBRHOOK ) ( PhysicalMemory + Int13Hook );
-	RtlCopyMemory ( Signature, SafeMbrHookPtr->Signature, 8 );
-	DBG ( "INT 0x13 Segment: 0x%04x\n", InterruptVector->Segment );
-	DBG ( "INT 0x13 Offset: 0x%04x\n", InterruptVector->Offset );
-	DBG ( "INT 0x13 Hook: 0x%08x\n", Int13Hook );
-	DBG ( "INT 0x13 Safety Hook Signature: %s\n", Signature );
-	if ( !( RtlCompareMemory ( Signature, "$INT13SF", 8 ) == 8 ) )
-		{
-			DBG ( "Invalid INT 0x13 Safety Hook Signature\n" );
-			goto no_grub4dos;
-		}
-	RtlCopyMemory ( VendorID, SafeMbrHookPtr->VendorID, 8 );
-	DBG ( "INT 0x13 Safety Hook Vendor ID: %s\n", VendorID );
-	if ( !( RtlCompareMemory ( VendorID, "GRUB4DOS", 8 ) == 8 ) )
-		{
-			DBG ( "Non-GRUB4DOS INT 0x13 Safety Hook\n" );
-			goto no_grub4dos;
-		}
-	Grub4DosDriveMapSlotPtr =
-		( PPROBE_GRUB4DOSDRIVEMAPSLOT ) ( PhysicalMemory +
-																			( ( ( UINT32 ) InterruptVector->Segment )
-																				<< 4 ) + 0x20 );
-	DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
-				Grub4DosDriveMapSlotPtr->SourceDrive );
-	DBG ( "GRUB4DOS DestDrive: 0x%02x\n", Grub4DosDriveMapSlotPtr->DestDrive );
-	DBG ( "GRUB4DOS MaxHead: %d\n", Grub4DosDriveMapSlotPtr->MaxHead );
-	DBG ( "GRUB4DOS MaxSector: %d\n", Grub4DosDriveMapSlotPtr->MaxSector );
-	DBG ( "GRUB4DOS DestMaxCylinder: %d\n",
-				Grub4DosDriveMapSlotPtr->DestMaxCylinder );
-	DBG ( "GRUB4DOS DestMaxHead: %d\n", Grub4DosDriveMapSlotPtr->DestMaxHead );
-	DBG ( "GRUB4DOS DestMaxSector: %d\n",
-				Grub4DosDriveMapSlotPtr->DestMaxSector );
-	DBG ( "GRUB4DOS SectorStart: 0x%08x\n",
-				Grub4DosDriveMapSlotPtr->SectorStart );
-	DBG ( "GRUB4DOS SectorCount: %d\n", Grub4DosDriveMapSlotPtr->SectorCount );
-	Disk.Initialize = Probe_NoInitialize;
 	/*
-	 * Possible precision loss
+	 * Walk the "safe hook" chain of INT 13h hooks as far as possible
 	 */
-	Disk.RAMDisk.DiskBuf =
-		( UINT32 ) ( Grub4DosDriveMapSlotPtr->SectorStart * SECTORSIZE );
-	Disk.LBADiskSize = Disk.RAMDisk.DiskSize =
-		( UINT32 ) Grub4DosDriveMapSlotPtr->SectorCount;
-	Disk.Heads = Grub4DosDriveMapSlotPtr->MaxHead + 1;
-	Disk.Sectors = Grub4DosDriveMapSlotPtr->DestMaxSector;
-	Disk.Cylinders = Disk.LBADiskSize / ( Disk.Heads * Disk.Sectors );
-	Disk.IsRamdisk = TRUE;
-	FoundGrub4DosMapping = TRUE;
-
-no_grub4dos:
-	MmUnmapIoSpace ( PhysicalMemory, 0x100000 );
-	if ( FoundGrub4DosMapping )
+	while ( SafeMbrHookPtr =
+					Probe_GetSafeHook ( PhysicalMemory, InterruptVector ) )
 		{
-			if ( !Bus_AddChild ( BusDeviceObject, Disk, TRUE ) )
+			if ( !
+					 ( RtlCompareMemory ( SafeMbrHookPtr->VendorID, "GRUB4DOS", 8 ) ==
+						 8 ) )
 				{
-					DBG ( "Bus_AddChild() failed for GRUB4DOS\n" );
+					DBG ( "Non-GRUB4DOS INT 0x13 Safe Hook\n" );
+					InterruptVector = &SafeMbrHookPtr->PrevHook;
+					continue;
 				}
-			else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
+			Grub4DosDriveMapSlotPtr =
+				( PPROBE_GRUB4DOSDRIVEMAPSLOT ) ( PhysicalMemory +
+																					( ( ( UINT32 ) InterruptVector->
+																							Segment ) << 4 ) + 0x20 );
+			while ( i-- )
 				{
-					IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																				PhysicalDeviceObject, BusRelations );
+					DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
+								Grub4DosDriveMapSlotPtr[i].SourceDrive );
+					DBG ( "GRUB4DOS DestDrive: 0x%02x\n",
+								Grub4DosDriveMapSlotPtr[i].DestDrive );
+					DBG ( "GRUB4DOS MaxHead: %d\n", Grub4DosDriveMapSlotPtr[i].MaxHead );
+					DBG ( "GRUB4DOS MaxSector: %d\n",
+								Grub4DosDriveMapSlotPtr[i].MaxSector );
+					DBG ( "GRUB4DOS DestMaxCylinder: %d\n",
+								Grub4DosDriveMapSlotPtr[i].DestMaxCylinder );
+					DBG ( "GRUB4DOS DestMaxHead: %d\n",
+								Grub4DosDriveMapSlotPtr[i].DestMaxHead );
+					DBG ( "GRUB4DOS DestMaxSector: %d\n",
+								Grub4DosDriveMapSlotPtr[i].DestMaxSector );
+					DBG ( "GRUB4DOS SectorStart: 0x%08x\n",
+								Grub4DosDriveMapSlotPtr[i].SectorStart );
+					DBG ( "GRUB4DOS SectorCount: %d\n",
+								Grub4DosDriveMapSlotPtr[i].SectorCount );
+					if ( !( Grub4DosDriveMapSlotPtr[i].DestDrive == 0xff ) )
+						{
+							DBG ( "Skipping non-RAM disk GRUB4DOS mapping\n" );
+							continue;
+						}
+					Disk.Initialize = Probe_NoInitialize;
+					/*
+					 * Possible precision loss
+					 */
+					Disk.RAMDisk.DiskBuf =
+						( UINT32 ) ( Grub4DosDriveMapSlotPtr[i].SectorStart * SECTORSIZE );
+					Disk.LBADiskSize = Disk.RAMDisk.DiskSize =
+						( UINT32 ) Grub4DosDriveMapSlotPtr[i].SectorCount;
+					Disk.Heads = Grub4DosDriveMapSlotPtr[i].MaxHead + 1;
+					Disk.Sectors = Grub4DosDriveMapSlotPtr[i].DestMaxSector;
+					Disk.Cylinders = Disk.LBADiskSize / ( Disk.Heads * Disk.Sectors );
+					Disk.IsRamdisk = TRUE;
+					FoundGrub4DosMapping = TRUE;
+					if ( !Bus_AddChild ( BusDeviceObject, Disk, TRUE ) )
+						{
+							DBG ( "Bus_AddChild() failed for GRUB4DOS\n" );
+						}
+					else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
+						{
+							IoInvalidateDeviceRelations ( BusDeviceExtension->
+																						Bus.PhysicalDeviceObject,
+																						BusRelations );
+						}
 				}
+			InterruptVector = &SafeMbrHookPtr->PrevHook;
 		}
-	else
+
+	MmUnmapIoSpace ( PhysicalMemory, 0x100000 );
+	if ( !FoundGrub4DosMapping )
 		{
 			DBG ( "No GRUB4DOS drive mappings found\n" );
 		}
