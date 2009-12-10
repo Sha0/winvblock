@@ -31,6 +31,13 @@
 #  include "aoedisk.h"
 #  include "ramdisk.h"
 
+enum DISK_DISKTYPE
+{
+	FloppyDisk,
+	HardDisk,
+	OpticalDisc
+};
+
 typedef struct _DISK_DISK
 {
 	PDEVICE_OBJECT Parent;
@@ -42,6 +49,7 @@ typedef struct _DISK_DISK
 	BOOLEAN Unmount;
 	ULONG DiskNumber;
 	BOOLEAN IsRamdisk;
+	UINT DiskType;
 	BOOLEAN STDCALL (
 	*Initialize
 	 ) (

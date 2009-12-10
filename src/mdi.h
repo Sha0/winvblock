@@ -45,11 +45,19 @@ typedef struct _MDI_PATCHAREA
 	/*
 	 * End of the official MemDisk_Info 
 	 */
+	UCHAR driveshiftlimit;
+	UCHAR _pad2;
+	UINT16 _pad3;
 	UINT16 memint1588;
 
 	UINT16 cylinders;
 	UINT16 heads;
 	UINT32 sectors;
+
+	UINT32 mem1mb;
+	UINT32 mem16mb;
+
+	UCHAR driveno;
 	/*
 	 * WinVBlock does not need anything more 
 	 */

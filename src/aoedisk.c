@@ -34,6 +34,7 @@
 #include <ntddscsi.h>
 #include <ntddstor.h>
 #include <ntdddisk.h>
+#include <ntddcdrm.h>
 #include <initguid.h>
 #include "driver.h"
 #include "aoe.h"
@@ -211,12 +212,27 @@ IRPHandler_Declaration ( Disk_DispatchPnP )
 							Status = STATUS_SUCCESS;
 							break;
 						case BusQueryHardwareIDs:
-							StringLength =
-								swprintf ( String, L"WinVBlock\\AoEe%d.%d",
-													 DeviceExtension->Disk.AoE.Major,
-													 DeviceExtension->Disk.AoE.Minor ) + 1;
-							StringLength +=
-								swprintf ( &String[StringLength], L"GenDisk" ) + 4;
+							if ( DeviceExtension->Disk.IsRamdisk )
+								{
+									StringLength =
+										swprintf ( String, L"WinVBlock\\RAMDisk%08x",
+															 DeviceExtension->Disk.RAMDisk.DiskBuf ) + 1;
+									StringLength +=
+										swprintf ( &String[StringLength],
+															 DeviceExtension->Disk.DiskType ==
+															 OpticalDisc ? L"GenCdRom" :
+															 DeviceExtension->Disk.DiskType ==
+															 FloppyDisk ? L"GenSFloppy" : L"GenDisk" ) + 4;
+								}
+							else
+								{
+									StringLength =
+										swprintf ( String, L"WinVBlock\\AoEe%d.%d",
+															 DeviceExtension->Disk.AoE.Major,
+															 DeviceExtension->Disk.AoE.Minor ) + 1;
+									StringLength +=
+										swprintf ( &String[StringLength], L"GenDisk" ) + 4;
+								}
 							if ( ( Irp->IoStatus.Information =
 										 ( ULONG_PTR ) ExAllocatePool ( PagedPool,
 																										StringLength *
@@ -231,7 +247,19 @@ IRPHandler_Declaration ( Disk_DispatchPnP )
 							Status = STATUS_SUCCESS;
 							break;
 						case BusQueryCompatibleIDs:
-							StringLength = swprintf ( String, L"GenDisk" ) + 4;
+							if ( DeviceExtension->Disk.IsRamdisk )
+								{
+									StringLength =
+										swprintf ( String,
+															 DeviceExtension->Disk.DiskType ==
+															 OpticalDisc ? L"GenCdRom" :
+															 DeviceExtension->Disk.DiskType ==
+															 FloppyDisk ? L"GenSFloppy" : L"GenDisk" ) + 4;
+								}
+							else
+								{
+									StringLength = swprintf ( String, L"GenDisk" ) + 4;
+								}
 							if ( ( Irp->IoStatus.Information =
 										 ( ULONG_PTR ) ExAllocatePool ( PagedPool,
 																										StringLength *
@@ -688,6 +716,31 @@ IRPHandler_Declaration ( Disk_DispatchSCSI )
 									break;
 								case SCSIOP_MEDIUM_REMOVAL:
 									Irp->IoStatus.Information = 0;
+									Srb->SrbStatus = SRB_STATUS_SUCCESS;
+									Status = STATUS_SUCCESS;
+									break;
+								case SCSIOP_READ_TOC:
+									/*
+									 * With thanks to Olof's ImDisk source 
+									 */
+									{
+										PCDROM_TOC TableOfContents =
+											( PCDROM_TOC ) Srb->DataBuffer;
+
+										if ( Srb->DataTransferLength < sizeof ( CDROM_TOC ) )
+											{
+												Irp->IoStatus.Information = 0;
+												Srb->SrbStatus = SRB_STATUS_DATA_OVERRUN;
+												Status = STATUS_BUFFER_TOO_SMALL;
+												break;
+											}
+										RtlZeroMemory ( TableOfContents, sizeof ( CDROM_TOC ) );
+
+										TableOfContents->FirstTrack = 1;
+										TableOfContents->LastTrack = 1;
+										TableOfContents->TrackData[0].Control = 4;
+									}
+									Irp->IoStatus.Information = sizeof ( CDROM_TOC );
 									Srb->SrbStatus = SRB_STATUS_SUCCESS;
 									Status = STATUS_SUCCESS;
 									break;
