@@ -99,8 +99,8 @@ winvblock__def_struct ( grub4dos_drive_mapping )
 	winvblock__uint8 DestMaxSector:6;
 	winvblock__uint8 RestrictionY:1;
 	winvblock__uint8 InSituOption:1;
-	UINT64 SectorStart;
-	UINT64 SectorCount;
+	winvblock__uint64 SectorStart;
+	winvblock__uint64 SectorCount;
 };
 
 static BOOLEAN STDCALL
@@ -198,8 +198,8 @@ Probe_AoE (
 				{
 					if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
@@ -311,8 +311,8 @@ Probe_MemDisk_mBFT (
 		}
 	else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 		{
-			IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																		PhysicalDeviceObject, BusRelations );
+			IoInvalidateDeviceRelations ( BusDeviceExtension->
+																		Bus.PhysicalDeviceObject, BusRelations );
 		}
 	AssociatedHook->Flags = 1;
 	return TRUE;
@@ -423,9 +423,8 @@ Probe_Grub4Dos (
 				}
 			Grub4DosDriveMapSlotPtr =
 				( grub4dos_drive_mapping_ptr ) ( PhysicalMemory +
-																				 ( ( ( UINT32 )
-																						 InterruptVector->Segment ) << 4 )
-																				 + 0x20 );
+																				 ( ( ( UINT32 ) InterruptVector->
+																						 Segment ) << 4 ) + 0x20 );
 			while ( i-- )
 				{
 					DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
@@ -462,8 +461,8 @@ Probe_Grub4Dos (
 					else
 						{
 							Disk.DiskType =
-								Grub4DosDriveMapSlotPtr[i].
-								SourceDrive & 0x80 ? HardDisk : FloppyDisk;
+								Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ? HardDisk :
+								FloppyDisk;
 							Disk.SectorSize = 512;
 						}
 					DBG ( "RAM Drive is type: %d\n", Disk.DiskType );
@@ -482,8 +481,8 @@ Probe_Grub4Dos (
 						}
 					else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
