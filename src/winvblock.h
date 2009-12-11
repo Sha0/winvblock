@@ -39,5 +39,7 @@ typedef UCHAR winvblock__uint8,
 *winvblock__uint8_ptr;
 typedef UINT64 winvblock__uint64,
 *winvblock__uint64_ptr;
+typedef UINT32 winvblock__uint32,
+*winvblock__uint32_ptr;
 
 #endif													/* _winvblock_h */

@@ -29,8 +29,8 @@
 
 typedef struct _RAMDISK_RAMDISK
 {
-	UINT32 DiskBuf;
-	UINT32 DiskSize;
+	winvblock__uint32 DiskBuf;
+	winvblock__uint32 DiskSize;
 } RAMDISK_RAMDISK,
 *PRAMDISK_RAMDISK;
 

@@ -29,13 +29,13 @@ typedef struct _MDI_PATCHAREA
 	UINT16 mdi_bytes;
 	winvblock__uint8 mdi_version_minor;
 	winvblock__uint8 mdi_version_major;
-	UINT32 diskbuf;
-	UINT32 disksize;
+	winvblock__uint32 diskbuf;
+	winvblock__uint32 disksize;
 	UINT16 cmdline_off,
 	 cmdline_seg;
 
-	UINT32 oldint13;
-	UINT32 oldint15;
+	winvblock__uint32 oldint13;
+	winvblock__uint32 oldint15;
 
 	UINT16 olddosmem;
 	winvblock__uint8 bootloaderid;
@@ -52,10 +52,10 @@ typedef struct _MDI_PATCHAREA
 
 	UINT16 cylinders;
 	UINT16 heads;
-	UINT32 sectors;
+	winvblock__uint32 sectors;
 
-	UINT32 mem1mb;
-	UINT32 mem16mb;
+	winvblock__uint32 mem1mb;
+	winvblock__uint32 mem16mb;
 
 	winvblock__uint8 driveno;
 	/*

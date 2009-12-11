@@ -198,8 +198,8 @@ Probe_AoE (
 				{
 					if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->
-																						Bus.PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
+																						PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
@@ -216,14 +216,14 @@ Probe_GetSafeHook (
 	IN int_vector_ptr InterruptVector
  )
 {
-	UINT32 Int13Hook;
+	winvblock__uint32 Int13Hook;
 	safe_mbr_hook_ptr SafeMbrHookPtr;
 	winvblock__uint8 Signature[9] = { 0 };
 	winvblock__uint8 VendorID[9] = { 0 };
 
 	Int13Hook =
-		( ( ( UINT32 ) InterruptVector->Segment ) << 4 ) +
-		( ( UINT32 ) InterruptVector->Offset );
+		( ( ( winvblock__uint32 ) InterruptVector->Segment ) << 4 ) +
+		( ( winvblock__uint32 ) InterruptVector->Offset );
 	SafeMbrHookPtr = ( safe_mbr_hook_ptr ) ( PhysicalMemory + Int13Hook );
 	RtlCopyMemory ( Signature, SafeMbrHookPtr->Signature, 8 );
 	RtlCopyMemory ( VendorID, SafeMbrHookPtr->VendorID, 8 );
@@ -311,8 +311,8 @@ Probe_MemDisk_mBFT (
 		}
 	else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 		{
-			IoInvalidateDeviceRelations ( BusDeviceExtension->
-																		Bus.PhysicalDeviceObject, BusRelations );
+			IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
+																		PhysicalDeviceObject, BusRelations );
 		}
 	AssociatedHook->Flags = 1;
 	return TRUE;
@@ -385,7 +385,7 @@ Probe_Grub4Dos (
 	PHYSICAL_ADDRESS PhysicalAddress;
 	winvblock__uint8_ptr PhysicalMemory;
 	int_vector_ptr InterruptVector;
-	UINT32 Int13Hook;
+	winvblock__uint32 Int13Hook;
 	safe_mbr_hook_ptr SafeMbrHookPtr;
 	grub4dos_drive_mapping_ptr Grub4DosDriveMapSlotPtr;
 	UINT i = 8;
@@ -423,8 +423,9 @@ Probe_Grub4Dos (
 				}
 			Grub4DosDriveMapSlotPtr =
 				( grub4dos_drive_mapping_ptr ) ( PhysicalMemory +
-																				 ( ( ( UINT32 ) InterruptVector->
-																						 Segment ) << 4 ) + 0x20 );
+																				 ( ( ( winvblock__uint32 )
+																						 InterruptVector->Segment ) << 4 )
+																				 + 0x20 );
 			while ( i-- )
 				{
 					DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
@@ -461,15 +462,16 @@ Probe_Grub4Dos (
 					else
 						{
 							Disk.DiskType =
-								Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ? HardDisk :
-								FloppyDisk;
+								Grub4DosDriveMapSlotPtr[i].
+								SourceDrive & 0x80 ? HardDisk : FloppyDisk;
 							Disk.SectorSize = 512;
 						}
 					DBG ( "RAM Drive is type: %d\n", Disk.DiskType );
 					Disk.RAMDisk.DiskBuf =
-						( UINT32 ) ( Grub4DosDriveMapSlotPtr[i].SectorStart * 512 );
+						( winvblock__uint32 ) ( Grub4DosDriveMapSlotPtr[i].SectorStart *
+																		512 );
 					Disk.LBADiskSize = Disk.RAMDisk.DiskSize =
-						( UINT32 ) Grub4DosDriveMapSlotPtr[i].SectorCount;
+						( winvblock__uint32 ) Grub4DosDriveMapSlotPtr[i].SectorCount;
 					Disk.Heads = Grub4DosDriveMapSlotPtr[i].MaxHead + 1;
 					Disk.Sectors = Grub4DosDriveMapSlotPtr[i].DestMaxSector;
 					Disk.Cylinders = Disk.LBADiskSize / ( Disk.Heads * Disk.Sectors );
@@ -481,8 +483,8 @@ Probe_Grub4Dos (
 						}
 					else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->
-																						Bus.PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
+																						PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
