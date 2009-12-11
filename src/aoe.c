@@ -67,7 +67,7 @@ typedef struct _AOE_PACKET
 	winvblock__uint16 Major;
 	winvblock__uint8 Minor;
 	winvblock__uint8 Command;
-	UINT Tag;
+	winvblock__uint32 Tag;
 
 	winvblock__uint8 WriteAFlag:1;
 	winvblock__uint8 AsyncAFlag:1;
@@ -201,8 +201,8 @@ AoE_Start (
 	 */
 	if ( ( AoE_Globals_ProbeTag->PacketData =
 				 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-																					AoE_Globals_ProbeTag->PacketSize ) )
-			 == NULL )
+																					AoE_Globals_ProbeTag->
+																					PacketSize ) ) == NULL )
 		{
 			DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
 			ExFreePool ( AoE_Globals_ProbeTag );
@@ -701,8 +701,8 @@ AoE_SearchDrive (
 						 */
 						Tag->PacketData->Cmd = 0x24;	/* READ SECTOR */
 						Tag->PacketData->Count =
-							( winvblock__uint8 ) ( ++DeviceExtension->Disk.
-																		 AoE.MaxSectorsPerPacket );
+							( winvblock__uint8 ) ( ++DeviceExtension->Disk.AoE.
+																		 MaxSectorsPerPacket );
 						KeQuerySystemTime ( &MaxSectorsPerPacketSendTime );
 						DeviceExtension->Disk.SearchState = GettingMaxSectorsPerPacket;
 						/*
@@ -1037,7 +1037,7 @@ AoE_Reply (
 	IN winvblock__uint8_ptr SourceMac,
 	IN winvblock__uint8_ptr DestinationMac,
 	IN winvblock__uint8_ptr Data,
-	IN UINT DataSize
+	IN winvblock__uint32 DataSize
  )
 {
 	PAOE_PACKET Reply = ( PAOE_PACKET ) Data;
@@ -1192,8 +1192,8 @@ AoE_Reply (
 								}
 							else if ( Tag->DeviceExtension->Disk.AoE.MTU <
 												( sizeof ( AOE_PACKET ) +
-													( ( Tag->DeviceExtension->Disk.AoE.
-															MaxSectorsPerPacket +
+													( ( Tag->DeviceExtension->Disk.
+															AoE.MaxSectorsPerPacket +
 															1 ) * Tag->DeviceExtension->Disk.SectorSize ) ) )
 								{
 									DBG ( "Got MaxSectorsPerPacket %d at size of %d. "
@@ -1331,9 +1331,8 @@ AoE_Thread (
 					AoE_Globals_ProbeTag->PacketData->Tag = AoE_Globals_ProbeTag->Id;
 					Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
 													"\xff\xff\xff\xff\xff\xff",
-													( winvblock__uint8_ptr )
-													AoE_Globals_ProbeTag->PacketData,
-													AoE_Globals_ProbeTag->PacketSize, NULL );
+													( winvblock__uint8_ptr ) AoE_Globals_ProbeTag->
+													PacketData, AoE_Globals_ProbeTag->PacketSize, NULL );
 					KeQuerySystemTime ( &AoE_Globals_ProbeTag->SendTime );
 				}
 

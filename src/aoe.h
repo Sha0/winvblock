@@ -53,7 +53,7 @@ extern NTSTATUS STDCALL AoE_Reply (
 	IN winvblock__uint8_ptr SourceMac,
 	IN winvblock__uint8_ptr DestinationMac,
 	IN winvblock__uint8_ptr Data,
-	IN UINT DataSize
+	IN winvblock__uint32 DataSize
  );
 extern VOID STDCALL AoE_ResetProbe (
 	void

@@ -43,7 +43,7 @@
 extern NTSTATUS STDCALL xDbgPrint (
 	IN PCHAR File,
 	IN PCHAR Function,
-	IN UINT Line
+	IN winvblock__uint32 Line
  );
 extern VOID STDCALL Debug_Initialize (
 	void

@@ -27,8 +27,10 @@
  * Registry specifics
  */
 
-#include "portable.h"
 #include <ntddk.h>
+
+#include "winvblock.h"
+#include "portable.h"
 #include "debug.h"
 #include "registry.h"
 
@@ -757,9 +759,8 @@ Registry_Setup (
 																										 sizeof
 																										 ( DriverServiceNamePath )
 																										 +
-																										 KeyValueInformation->
-																										 DataLength -
-																										 sizeof ( WCHAR ) ) ) ==
+																										 KeyValueInformation->DataLength
+																										 - sizeof ( WCHAR ) ) ) ==
 											 NULL )
 										{
 											DBG ( "ExAllocatePool DriverServiceNameString "

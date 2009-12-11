@@ -47,8 +47,8 @@ winvblock__def_struct ( int_vector )
 #endif
 winvblock__def_struct ( abft )
 {
-	UINT Signature;								/* 0x54464261 (aBFT) */
-	UINT Length;
+	winvblock__uint32 Signature;	/* 0x54464261 (aBFT) */
+	winvblock__uint32 Length;
 	winvblock__uint8 Revision;
 	winvblock__uint8 Checksum;
 	winvblock__uint8 OEMID[6];
@@ -74,8 +74,8 @@ winvblock__def_struct ( safe_mbr_hook )
 	winvblock__uint8 Signature[8];
 	winvblock__uint8 VendorID[8];
 	int_vector PrevHook;
-	UINT Flags;
-	UINT mBFT;										/* MEMDISK only */
+	winvblock__uint32 Flags;
+	winvblock__uint32 mBFT;				/* MEMDISK only */
 }
 
 __attribute__ ( ( __packed__ ) );
@@ -118,7 +118,7 @@ Probe_AoE (
 {
 	PHYSICAL_ADDRESS PhysicalAddress;
 	winvblock__uint8_ptr PhysicalMemory;
-	UINT Offset,
+	winvblock__uint32 Offset,
 	 Checksum,
 	 i;
 	BOOLEAN FoundAbft = FALSE;
@@ -198,8 +198,8 @@ Probe_AoE (
 				{
 					if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->
-																						Bus.PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
+																						PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
@@ -243,11 +243,11 @@ BOOLEAN STDCALL
 Probe_MemDisk_mBFT (
 	PDEVICE_OBJECT BusDeviceObject,
 	winvblock__uint8_ptr PhysicalMemory,
-	UINT Offset
+	winvblock__uint32 Offset
  )
 {
 	PMDI_MBFT mBFT = ( PMDI_MBFT ) ( PhysicalMemory + Offset );
-	UINT i;
+	winvblock__uint32 i;
 	winvblock__uint8 Checksum = 0;
 	safe_mbr_hook_ptr AssociatedHook;
 	DISK_DISK Disk;
@@ -311,8 +311,8 @@ Probe_MemDisk_mBFT (
 		}
 	else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 		{
-			IoInvalidateDeviceRelations ( BusDeviceExtension->
-																		Bus.PhysicalDeviceObject, BusRelations );
+			IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
+																		PhysicalDeviceObject, BusRelations );
 		}
 	AssociatedHook->Flags = 1;
 	return TRUE;
@@ -327,7 +327,7 @@ Probe_MemDisk (
 	winvblock__uint8_ptr PhysicalMemory;
 	int_vector_ptr InterruptVector;
 	safe_mbr_hook_ptr SafeMbrHookPtr;
-	UINT Offset;
+	winvblock__uint32 Offset;
 	BOOLEAN FoundMemdisk = FALSE;
 
 	/*
@@ -388,7 +388,7 @@ Probe_Grub4Dos (
 	winvblock__uint32 Int13Hook;
 	safe_mbr_hook_ptr SafeMbrHookPtr;
 	grub4dos_drive_mapping_ptr Grub4DosDriveMapSlotPtr;
-	UINT i = 8;
+	winvblock__uint32 i = 8;
 	BOOLEAN FoundGrub4DosMapping = FALSE;
 	PDRIVER_DEVICEEXTENSION BusDeviceExtension =
 		( PDRIVER_DEVICEEXTENSION ) BusDeviceObject->DeviceExtension;
@@ -424,8 +424,8 @@ Probe_Grub4Dos (
 			Grub4DosDriveMapSlotPtr =
 				( grub4dos_drive_mapping_ptr ) ( PhysicalMemory +
 																				 ( ( ( winvblock__uint32 )
-																						 InterruptVector->
-																						 Segment ) << 4 ) + 0x20 );
+																						 InterruptVector->Segment ) << 4 )
+																				 + 0x20 );
 			while ( i-- )
 				{
 					DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
@@ -462,8 +462,8 @@ Probe_Grub4Dos (
 					else
 						{
 							Disk.DiskType =
-								Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ? HardDisk :
-								FloppyDisk;
+								Grub4DosDriveMapSlotPtr[i].
+								SourceDrive & 0x80 ? HardDisk : FloppyDisk;
 							Disk.SectorSize = 512;
 						}
 					DBG ( "RAM Drive is type: %d\n", Disk.DiskType );
@@ -483,8 +483,8 @@ Probe_Grub4Dos (
 						}
 					else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->
-																						Bus.PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
+																						PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}

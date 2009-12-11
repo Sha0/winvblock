@@ -43,7 +43,7 @@ DisplayError (
  )
 {
 	CHAR ErrorString[1024];
-	UINT ErrorCode = GetLastError (  );
+	winvblock__uint32 ErrorCode = GetLastError (  );
 
 	printf ( "Error: %s\n", String );
 	printf ( "GetLastError: 0x%08x (%d)\n", ErrorCode, ( int )ErrorCode );

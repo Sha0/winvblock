@@ -49,7 +49,7 @@ typedef struct _DISK_DISK
 	BOOLEAN Unmount;
 	ULONG DiskNumber;
 	BOOLEAN IsRamdisk;
-	UINT DiskType;
+	winvblock__uint32 DiskType;
 	BOOLEAN STDCALL (
 	*Initialize
 	 ) (
@@ -64,7 +64,7 @@ typedef struct _DISK_DISK
 	LONGLONG Cylinders;
 	ULONG Heads;
 	ULONG Sectors;
-	UINT SectorSize;
+	winvblock__uint32 SectorSize;
 	ULONG SpecialFileCount;
 } DISK_DISK,
 *PDISK_DISK;

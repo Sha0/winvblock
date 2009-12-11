@@ -72,13 +72,13 @@ typedef struct _MDI_PATCHAREA
 typedef struct _MDI_MBFT
 {
 	winvblock__uint8 Signature[4];	/* ("mBFT") */
-	UINT Length;
+	winvblock__uint32 Length;
 	winvblock__uint8 Revision;
 	winvblock__uint8 Checksum;
 	winvblock__uint8 OEMID[6];
 	winvblock__uint8 OEMTableID[8];
 	winvblock__uint8 Reserved1[12];
-	UINT SafeHook;
+	winvblock__uint32 SafeHook;
 	MDI_PATCHAREA MDI;
 } __attribute__ ( ( __packed__ ) ) MDI_MBFT, *PMDI_MBFT;
 #  ifdef _MSC_VER
