@@ -84,7 +84,7 @@ __attribute__ ( ( __packed__ ) );
 #endif
 
 /* From GRUB4DOS 0.4.4's stage2/shared.h */
-typedef struct _PROBE_GRUB4DOSDRIVEMAPSLOT
+winvblock__def_struct ( grub4dos_drive_mapping )
 {
 	UCHAR SourceDrive;
 	UCHAR DestDrive;
@@ -101,8 +101,7 @@ typedef struct _PROBE_GRUB4DOSDRIVEMAPSLOT
 	UCHAR InSituOption:1;
 	UINT64 SectorStart;
 	UINT64 SectorCount;
-} PROBE_GRUB4DOSDRIVEMAPSLOT,
-*PPROBE_GRUB4DOSDRIVEMAPSLOT;
+};
 
 static BOOLEAN STDCALL
 Probe_NoInitialize (
@@ -199,8 +198,8 @@ Probe_AoE (
 				{
 					if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
@@ -312,8 +311,8 @@ Probe_MemDisk_mBFT (
 		}
 	else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 		{
-			IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																		PhysicalDeviceObject, BusRelations );
+			IoInvalidateDeviceRelations ( BusDeviceExtension->
+																		Bus.PhysicalDeviceObject, BusRelations );
 		}
 	AssociatedHook->Flags = 1;
 	return TRUE;
@@ -388,7 +387,7 @@ Probe_Grub4Dos (
 	int_vector_ptr InterruptVector;
 	UINT32 Int13Hook;
 	safe_mbr_hook_ptr SafeMbrHookPtr;
-	PPROBE_GRUB4DOSDRIVEMAPSLOT Grub4DosDriveMapSlotPtr;
+	grub4dos_drive_mapping_ptr Grub4DosDriveMapSlotPtr;
 	UINT i = 8;
 	BOOLEAN FoundGrub4DosMapping = FALSE;
 	PDRIVER_DEVICEEXTENSION BusDeviceExtension =
@@ -423,10 +422,9 @@ Probe_Grub4Dos (
 					continue;
 				}
 			Grub4DosDriveMapSlotPtr =
-				( PPROBE_GRUB4DOSDRIVEMAPSLOT ) ( PhysicalMemory +
-																					( ( ( UINT32 )
-																							InterruptVector->Segment ) << 4 )
-																					+ 0x20 );
+				( grub4dos_drive_mapping_ptr ) ( PhysicalMemory +
+																				 ( ( ( UINT32 ) InterruptVector->
+																						 Segment ) << 4 ) + 0x20 );
 			while ( i-- )
 				{
 					DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
@@ -463,8 +461,8 @@ Probe_Grub4Dos (
 					else
 						{
 							Disk.DiskType =
-								Grub4DosDriveMapSlotPtr[i].
-								SourceDrive & 0x80 ? HardDisk : FloppyDisk;
+								Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ? HardDisk :
+								FloppyDisk;
 							Disk.SectorSize = 512;
 						}
 					DBG ( "RAM Drive is type: %d\n", Disk.DiskType );
@@ -483,8 +481,8 @@ Probe_Grub4Dos (
 						}
 					else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
