@@ -45,7 +45,7 @@ winvblock__def_struct ( int_vector )
 #ifdef _MSC_VER
 #  pragma pack(1)
 #endif
-typedef struct _PROBE_ABFT
+winvblock__def_struct ( abft )
 {
 	UINT Signature;								/* 0x54464261 (aBFT) */
 	UINT Length;
@@ -58,7 +58,9 @@ typedef struct _PROBE_ABFT
 	UCHAR Minor;
 	UCHAR Reserved2;
 	UCHAR ClientMac[6];
-} __attribute__ ( ( __packed__ ) ) PROBE_ABFT, *PPROBE_ABFT;
+}
+
+__attribute__ ( ( __packed__ ) );
 #ifdef _MSC_VER
 #  pragma pack()
 #endif
@@ -121,7 +123,7 @@ Probe_AoE (
 	BOOLEAN FoundAbft = FALSE;
 	PDRIVER_DEVICEEXTENSION BusDeviceExtension =
 		( PDRIVER_DEVICEEXTENSION ) BusDeviceObject->DeviceExtension;
-	PROBE_ABFT AoEBootRecord;
+	abft AoEBootRecord;
 	DISK_DISK Disk;
 
 	/*
@@ -137,28 +139,27 @@ Probe_AoE (
 		{
 			for ( Offset = 0; Offset < 0xa0000; Offset += 0x10 )
 				{
-					if ( ( ( PPROBE_ABFT ) & PhysicalMemory[Offset] )->Signature ==
+					if ( ( ( abft_ptr ) & PhysicalMemory[Offset] )->Signature ==
 							 0x54464261 )
 						{
 							Checksum = 0;
 							for ( i = 0;
-										i < ( ( PPROBE_ABFT ) & PhysicalMemory[Offset] )->Length;
+										i < ( ( abft_ptr ) & PhysicalMemory[Offset] )->Length;
 										i++ )
 								Checksum += PhysicalMemory[Offset + i];
 							if ( Checksum & 0xff )
 								continue;
-							if ( ( ( PPROBE_ABFT ) & PhysicalMemory[Offset] )->Revision !=
-									 1 )
+							if ( ( ( abft_ptr ) & PhysicalMemory[Offset] )->Revision != 1 )
 								{
 									DBG ( "Found aBFT with mismatched revision v%d at "
 												"segment 0x%4x. want v1.\n",
-												( ( PPROBE_ABFT ) & PhysicalMemory[Offset] )->Revision,
+												( ( abft_ptr ) & PhysicalMemory[Offset] )->Revision,
 												( Offset / 0x10 ) );
 									continue;
 								}
 							DBG ( "Found aBFT at segment: 0x%04x\n", ( Offset / 0x10 ) );
 							RtlCopyMemory ( &AoEBootRecord, &PhysicalMemory[Offset],
-															sizeof ( PROBE_ABFT ) );
+															sizeof ( abft ) );
 							FoundAbft = TRUE;
 							break;
 						}
