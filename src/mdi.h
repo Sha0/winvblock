@@ -27,8 +27,8 @@
 typedef struct _MDI_PATCHAREA
 {
 	UINT16 mdi_bytes;
-	UINT8 mdi_version_minor;
-	UINT8 mdi_version_major;
+	winvblock__uint8 mdi_version_minor;
+	winvblock__uint8 mdi_version_major;
 	UINT32 diskbuf;
 	UINT32 disksize;
 	UINT16 cmdline_off,
@@ -38,15 +38,15 @@ typedef struct _MDI_PATCHAREA
 	UINT32 oldint15;
 
 	UINT16 olddosmem;
-	UINT8 bootloaderid;
-	UINT8 _pad1;
+	winvblock__uint8 bootloaderid;
+	winvblock__uint8 _pad1;
 
 	UINT16 dpt_ptr;
 	/*
 	 * End of the official MemDisk_Info 
 	 */
-	UCHAR driveshiftlimit;
-	UCHAR _pad2;
+	winvblock__uint8 driveshiftlimit;
+	winvblock__uint8 _pad2;
 	UINT16 _pad3;
 	UINT16 memint1588;
 
@@ -57,7 +57,7 @@ typedef struct _MDI_PATCHAREA
 	UINT32 mem1mb;
 	UINT32 mem16mb;
 
-	UCHAR driveno;
+	winvblock__uint8 driveno;
 	/*
 	 * WinVBlock does not need anything more 
 	 */
@@ -71,13 +71,13 @@ typedef struct _MDI_PATCHAREA
 #  endif
 typedef struct _MDI_MBFT
 {
-	UCHAR Signature[4];						/* ("mBFT") */
+	winvblock__uint8 Signature[4];	/* ("mBFT") */
 	UINT Length;
-	UCHAR Revision;
-	UCHAR Checksum;
-	UCHAR OEMID[6];
-	UCHAR OEMTableID[8];
-	UCHAR Reserved1[12];
+	winvblock__uint8 Revision;
+	winvblock__uint8 Checksum;
+	winvblock__uint8 OEMID[6];
+	winvblock__uint8 OEMTableID[8];
+	winvblock__uint8 Reserved1[12];
 	UINT SafeHook;
 	MDI_PATCHAREA MDI;
 } __attribute__ ( ( __packed__ ) ) MDI_MBFT, *PMDI_MBFT;

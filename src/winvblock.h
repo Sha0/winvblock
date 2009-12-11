@@ -34,4 +34,8 @@ struct _##x;\
 typedef struct _##x x, *x##_ptr;\
 struct _##x
 
+/* Common type definitions */
+typedef UCHAR winvblock__uint8,
+*winvblock__uint8_ptr;
+
 #endif													/* _winvblock_h */

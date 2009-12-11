@@ -26,8 +26,10 @@
  *
  */
 
-#include "portable.h"
 #include <ntddk.h>
+
+#include "winvblock.h"
+#include "portable.h"
 #include "aoe.h"
 #include "driver.h"
 #include "protocol.h"
@@ -57,44 +59,44 @@ typedef enum
 /** AoE packet */
 typedef struct _AOE_PACKET
 {
-	UCHAR ReservedFlag:2;
-	UCHAR ErrorFlag:1;
-	UCHAR ResponseFlag:1;
-	UCHAR Ver:4;
-	UCHAR Error;
+	winvblock__uint8 ReservedFlag:2;
+	winvblock__uint8 ErrorFlag:1;
+	winvblock__uint8 ResponseFlag:1;
+	winvblock__uint8 Ver:4;
+	winvblock__uint8 Error;
 	USHORT Major;
-	UCHAR Minor;
-	UCHAR Command;
+	winvblock__uint8 Minor;
+	winvblock__uint8 Command;
 	UINT Tag;
 
-	UCHAR WriteAFlag:1;
-	UCHAR AsyncAFlag:1;
-	UCHAR Reserved1AFlag:2;
-	UCHAR DeviceHeadAFlag:1;
-	UCHAR Reserved2AFlag:1;
-	UCHAR ExtendedAFlag:1;
-	UCHAR Reserved3AFlag:1;
+	winvblock__uint8 WriteAFlag:1;
+	winvblock__uint8 AsyncAFlag:1;
+	winvblock__uint8 Reserved1AFlag:2;
+	winvblock__uint8 DeviceHeadAFlag:1;
+	winvblock__uint8 Reserved2AFlag:1;
+	winvblock__uint8 ExtendedAFlag:1;
+	winvblock__uint8 Reserved3AFlag:1;
 	union
 	{
-		UCHAR Err;
-		UCHAR Feature;
+		winvblock__uint8 Err;
+		winvblock__uint8 Feature;
 	};
-	UCHAR Count;
+	winvblock__uint8 Count;
 	union
 	{
-		UCHAR Cmd;
-		UCHAR Status;
+		winvblock__uint8 Cmd;
+		winvblock__uint8 Status;
 	};
 
-	UCHAR Lba0;
-	UCHAR Lba1;
-	UCHAR Lba2;
-	UCHAR Lba3;
-	UCHAR Lba4;
-	UCHAR Lba5;
+	winvblock__uint8 Lba0;
+	winvblock__uint8 Lba1;
+	winvblock__uint8 Lba2;
+	winvblock__uint8 Lba3;
+	winvblock__uint8 Lba4;
+	winvblock__uint8 Lba5;
 	USHORT Reserved;
 
-	UCHAR Data[];
+	winvblock__uint8 Data[];
 } __attribute__ ( ( __packed__ ) ) AOE_PACKET, *PAOE_PACKET;
 
 #ifdef _MSC_VER
@@ -106,7 +108,7 @@ typedef struct _AOE_REQUEST
 {
 	AOE_REQUESTMODE Mode;
 	ULONG SectorCount;
-	PUCHAR Buffer;
+	winvblock__uint8_ptr Buffer;
 	PIRP Irp;
 	ULONG TagCount;
 	ULONG TotalTags;
@@ -199,8 +201,8 @@ AoE_Start (
 	 */
 	if ( ( AoE_Globals_ProbeTag->PacketData =
 				 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-																					AoE_Globals_ProbeTag->PacketSize ) )
-			 == NULL )
+																					AoE_Globals_ProbeTag->
+																					PacketSize ) ) == NULL )
 		{
 			DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
 			ExFreePool ( AoE_Globals_ProbeTag );
@@ -215,7 +217,7 @@ AoE_Start (
 	 */
 	AoE_Globals_ProbeTag->PacketData->Ver = AOEPROTOCOLVER;
 	AoE_Globals_ProbeTag->PacketData->Major = htons ( ( USHORT ) - 1 );
-	AoE_Globals_ProbeTag->PacketData->Minor = ( UCHAR ) - 1;
+	AoE_Globals_ProbeTag->PacketData->Minor = ( winvblock__uint8 ) - 1;
 	AoE_Globals_ProbeTag->PacketData->Cmd = 0xec;	/* IDENTIFY DEVICE */
 	AoE_Globals_ProbeTag->PacketData->Count = 1;
 
@@ -667,7 +669,8 @@ AoE_SearchDrive (
 			Tag->PacketData->Ver = AOEPROTOCOLVER;
 			Tag->PacketData->Major =
 				htons ( ( USHORT ) DeviceExtension->Disk.AoE.Major );
-			Tag->PacketData->Minor = ( UCHAR ) DeviceExtension->Disk.AoE.Minor;
+			Tag->PacketData->Minor =
+				( winvblock__uint8 ) DeviceExtension->Disk.AoE.Minor;
 			Tag->PacketData->ExtendedAFlag = TRUE;
 
 			/*
@@ -697,7 +700,8 @@ AoE_SearchDrive (
 						 */
 						Tag->PacketData->Cmd = 0x24;	/* READ SECTOR */
 						Tag->PacketData->Count =
-							( UCHAR ) ( ++DeviceExtension->Disk.AoE.MaxSectorsPerPacket );
+							( winvblock__uint8 ) ( ++DeviceExtension->Disk.AoE.
+																		 MaxSectorsPerPacket );
 						KeQuerySystemTime ( &MaxSectorsPerPacketSendTime );
 						DeviceExtension->Disk.SearchState = GettingMaxSectorsPerPacket;
 						/*
@@ -754,7 +758,7 @@ AoE_Request (
 	IN AOE_REQUESTMODE Mode,
 	IN LONGLONG StartSector,
 	IN ULONG SectorCount,
-	IN PUCHAR Buffer,
+	IN winvblock__uint8_ptr Buffer,
 	IN PIRP Irp
  )
 {
@@ -765,7 +769,7 @@ AoE_Request (
 	KIRQL Irql;
 	ULONG i;
 	PHYSICAL_ADDRESS PhysicalAddress;
-	PUCHAR PhysicalMemory;
+	winvblock__uint8_ptr PhysicalMemory;
 
 	if ( AoE_Globals_Stop )
 		{
@@ -933,7 +937,8 @@ AoE_Request (
 			Tag->PacketData->Ver = AOEPROTOCOLVER;
 			Tag->PacketData->Major =
 				htons ( ( USHORT ) DeviceExtension->Disk.AoE.Major );
-			Tag->PacketData->Minor = ( UCHAR ) DeviceExtension->Disk.AoE.Minor;
+			Tag->PacketData->Minor =
+				( winvblock__uint8 ) DeviceExtension->Disk.AoE.Minor;
 			Tag->PacketData->Tag = 0;
 			Tag->PacketData->Command = 0;
 			Tag->PacketData->ExtendedAFlag = TRUE;
@@ -946,17 +951,19 @@ AoE_Request (
 					Tag->PacketData->Cmd = 0x34;	/* WRITE SECTOR */
 					Tag->PacketData->WriteAFlag = 1;
 				}
-			Tag->PacketData->Count = ( UCHAR ) Tag->SectorCount;
-			Tag->PacketData->Lba0 = ( UCHAR ) ( ( ( StartSector + i ) >> 0 ) & 255 );
-			Tag->PacketData->Lba1 = ( UCHAR ) ( ( ( StartSector + i ) >> 8 ) & 255 );
+			Tag->PacketData->Count = ( winvblock__uint8 ) Tag->SectorCount;
+			Tag->PacketData->Lba0 =
+				( winvblock__uint8 ) ( ( ( StartSector + i ) >> 0 ) & 255 );
+			Tag->PacketData->Lba1 =
+				( winvblock__uint8 ) ( ( ( StartSector + i ) >> 8 ) & 255 );
 			Tag->PacketData->Lba2 =
-				( UCHAR ) ( ( ( StartSector + i ) >> 16 ) & 255 );
+				( winvblock__uint8 ) ( ( ( StartSector + i ) >> 16 ) & 255 );
 			Tag->PacketData->Lba3 =
-				( UCHAR ) ( ( ( StartSector + i ) >> 24 ) & 255 );
+				( winvblock__uint8 ) ( ( ( StartSector + i ) >> 24 ) & 255 );
 			Tag->PacketData->Lba4 =
-				( UCHAR ) ( ( ( StartSector + i ) >> 32 ) & 255 );
+				( winvblock__uint8 ) ( ( ( StartSector + i ) >> 32 ) & 255 );
 			Tag->PacketData->Lba5 =
-				( UCHAR ) ( ( ( StartSector + i ) >> 40 ) & 255 );
+				( winvblock__uint8 ) ( ( ( StartSector + i ) >> 40 ) & 255 );
 
 			/*
 			 * For a write request, copy from the buffer into the AoE packet 
@@ -1026,9 +1033,9 @@ AoE_Request (
  */
 NTSTATUS STDCALL
 AoE_Reply (
-	IN PUCHAR SourceMac,
-	IN PUCHAR DestinationMac,
-	IN PUCHAR Data,
+	IN winvblock__uint8_ptr SourceMac,
+	IN winvblock__uint8_ptr DestinationMac,
+	IN winvblock__uint8_ptr Data,
 	IN UINT DataSize
  )
 {
@@ -1153,7 +1160,7 @@ AoE_Reply (
 							/*
 							 * FIXME: use real values from partition table 
 							 */
-						  Tag->DeviceExtension->Disk.SectorSize = 512;
+							Tag->DeviceExtension->Disk.SectorSize = 512;
 							Tag->DeviceExtension->Disk.Heads = 255;
 							Tag->DeviceExtension->Disk.Sectors = 63;
 							Tag->DeviceExtension->Disk.Cylinders =
@@ -1184,8 +1191,8 @@ AoE_Reply (
 								}
 							else if ( Tag->DeviceExtension->Disk.AoE.MTU <
 												( sizeof ( AOE_PACKET ) +
-													( ( Tag->DeviceExtension->Disk.AoE.
-															MaxSectorsPerPacket +
+													( ( Tag->DeviceExtension->Disk.
+															AoE.MaxSectorsPerPacket +
 															1 ) * Tag->DeviceExtension->Disk.SectorSize ) ) )
 								{
 									DBG ( "Got MaxSectorsPerPacket %d at size of %d. "
@@ -1323,8 +1330,8 @@ AoE_Thread (
 					AoE_Globals_ProbeTag->PacketData->Tag = AoE_Globals_ProbeTag->Id;
 					Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
 													"\xff\xff\xff\xff\xff\xff",
-													( PUCHAR ) AoE_Globals_ProbeTag->PacketData,
-													AoE_Globals_ProbeTag->PacketSize, NULL );
+													( winvblock__uint8_ptr ) AoE_Globals_ProbeTag->
+													PacketData, AoE_Globals_ProbeTag->PacketSize, NULL );
 					KeQuerySystemTime ( &AoE_Globals_ProbeTag->SendTime );
 				}
 
@@ -1354,7 +1361,8 @@ AoE_Thread (
 									if ( Protocol_Send
 											 ( Tag->DeviceExtension->Disk.AoE.ClientMac,
 												 Tag->DeviceExtension->Disk.AoE.ServerMac,
-												 ( PUCHAR ) Tag->PacketData, Tag->PacketSize, Tag ) )
+												 ( winvblock__uint8_ptr ) Tag->PacketData,
+												 Tag->PacketSize, Tag ) )
 										{
 											KeQuerySystemTime ( &Tag->FirstSendTime );
 											KeQuerySystemTime ( &Tag->SendTime );
@@ -1380,7 +1388,8 @@ AoE_Thread (
 									if ( Protocol_Send
 											 ( Tag->DeviceExtension->Disk.AoE.ClientMac,
 												 Tag->DeviceExtension->Disk.AoE.ServerMac,
-												 ( PUCHAR ) Tag->PacketData, Tag->PacketSize, Tag ) )
+												 ( winvblock__uint8_ptr ) Tag->PacketData,
+												 Tag->PacketSize, Tag ) )
 										{
 											KeQuerySystemTime ( &Tag->SendTime );
 											Tag->DeviceExtension->Disk.AoE.Timeout +=

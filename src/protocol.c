@@ -26,10 +26,12 @@
  *
  */
 
-#include "portable.h"
 #include <ntddk.h>
 #include <ndis.h>
 #include <ntddndis.h>
+
+#include "winvblock.h"
+#include "portable.h"
 #include "protocol.h"
 #include "driver.h"
 #include "aoe.h"
@@ -111,10 +113,10 @@ static PCHAR STDCALL Protocol_NetEventString (
 #endif
 typedef struct _PROTOCOL_HEADER
 {
-	UCHAR DestinationMac[6];
-	UCHAR SourceMac[6];
+	winvblock__uint8 DestinationMac[6];
+	winvblock__uint8 SourceMac[6];
 	USHORT Protocol;
-	UCHAR Data[];
+	winvblock__uint8 Data[];
 } __attribute__ ( ( __packed__ ) ) PROTOCOL_HEADER, *PPROTOCOL_HEADER;
 #ifdef _MSC_VER
 #  pragma pack()
@@ -123,7 +125,7 @@ typedef struct _PROTOCOL_HEADER
 typedef struct _PROTOCOL_BINDINGCONTEXT
 {
 	BOOLEAN Active;
-	UCHAR Mac[6];
+	winvblock__uint8 Mac[6];
 	UINT MTU;
 	NDIS_STATUS Status;
 	NDIS_HANDLE PacketPoolHandle;
@@ -210,7 +212,7 @@ Protocol_Stop (
 
 BOOLEAN STDCALL
 Protocol_SearchNIC (
-	IN PUCHAR Mac
+	IN winvblock__uint8_ptr Mac
  )
 {
 	PPROTOCOL_BINDINGCONTEXT Context = Protocol_Globals_BindingContextList;
@@ -228,7 +230,7 @@ Protocol_SearchNIC (
 
 ULONG STDCALL
 Protocol_GetMTU (
-	IN PUCHAR Mac
+	IN winvblock__uint8_ptr Mac
  )
 {
 	PPROTOCOL_BINDINGCONTEXT Context = Protocol_Globals_BindingContextList;
@@ -246,9 +248,9 @@ Protocol_GetMTU (
 
 BOOLEAN STDCALL
 Protocol_Send (
-	IN PUCHAR SourceMac,
-	IN PUCHAR DestinationMac,
-	IN PUCHAR Data,
+	IN winvblock__uint8_ptr SourceMac,
+	IN winvblock__uint8_ptr DestinationMac,
+	IN winvblock__uint8_ptr Data,
 	IN ULONG DataSize,
 	IN PVOID PacketContext
  )
@@ -366,7 +368,7 @@ Protocol_SendComplete (
  )
 {
 	PNDIS_BUFFER Buffer;
-	PUCHAR DataBuffer;
+	winvblock__uint8_ptr DataBuffer;
 #ifndef DEBUGALLPROTOCOLCALLS
 	if ( !NT_SUCCESS ( Status ) && Status != NDIS_STATUS_NO_CABLE )
 #endif
@@ -396,7 +398,7 @@ Protocol_TransferDataComplete (
 {
 	PNDIS_BUFFER Buffer;
 	PPROTOCOL_HEADER Header = NULL;
-	PUCHAR Data = NULL;
+	winvblock__uint8_ptr Data = NULL;
 	UINT HeaderSize,
 	 DataSize;
 #ifndef DEBUGALLPROTOCOLCALLS
@@ -480,7 +482,7 @@ Protocol_Receive (
 	PNDIS_PACKET Packet;
 	PNDIS_BUFFER Buffer;
 	PPROTOCOL_HEADER Header;
-	PUCHAR HeaderCopy,
+	winvblock__uint8_ptr HeaderCopy,
 	 Data;
 	UINT BytesTransferred;
 #ifdef DEBUGALLPROTOCOLCALLS
@@ -504,15 +506,17 @@ Protocol_Receive (
 		}
 
 	if ( ( HeaderCopy =
-				 ( PUCHAR ) ExAllocatePool ( NonPagedPool,
-																		 HeaderBufferSize ) ) == NULL )
+				 ( winvblock__uint8_ptr ) ExAllocatePool ( NonPagedPool,
+																									 HeaderBufferSize ) ) ==
+			 NULL )
 		{
 			DBG ( "ExAllocatePool HeaderCopy\n" );
 			return NDIS_STATUS_NOT_ACCEPTED;
 		}
 	RtlCopyMemory ( HeaderCopy, HeaderBuffer, HeaderBufferSize );
 	if ( ( Data =
-				 ( PUCHAR ) ExAllocatePool ( NonPagedPool, PacketSize ) ) == NULL )
+				 ( winvblock__uint8_ptr ) ExAllocatePool ( NonPagedPool,
+																									 PacketSize ) ) == NULL )
 		{
 			DBG ( "ExAllocatePool HeaderData\n" );
 			ExFreePool ( HeaderCopy );
@@ -614,7 +618,7 @@ Protocol_BindAdapter (
 	NDIS_STRING AdapterInstanceName;
 	NDIS_REQUEST Request;
 	ULONG InformationBuffer = NDIS_PACKET_TYPE_DIRECTED;
-	UCHAR Mac[6];
+	winvblock__uint8 Mac[6];
 	KIRQL Irql;
 #if defined(DEBUGMOSTPROTOCOLCALLS) || defined(DEBUGALLPROTOCOLCALLS)
 	DBG ( "Entry\n" );

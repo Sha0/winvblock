@@ -45,8 +45,8 @@
 
 typedef struct _MOUNT_TARGET
 {
-	UCHAR ClientMac[6];
-	UCHAR ServerMac[6];
+	winvblock__uint8 ClientMac[6];
+	winvblock__uint8 ServerMac[6];
 	ULONG Major;
 	ULONG Minor;
 	LONGLONG LBASize;
@@ -64,8 +64,8 @@ typedef struct _MOUNT_TARGETS
 typedef struct _MOUNT_DISK
 {
 	ULONG Disk;
-	UCHAR ClientMac[6];
-	UCHAR ServerMac[6];
+	winvblock__uint8 ClientMac[6];
+	winvblock__uint8 ServerMac[6];
 	ULONG Major;
 	ULONG Minor;
 	LONGLONG LBASize;

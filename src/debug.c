@@ -26,7 +26,6 @@
  *
  */
 
-#include "portable.h"
 #include <ntddk.h>
 #include <srb.h>
 #include <scsi.h>
@@ -34,6 +33,9 @@
 #include <ntddstor.h>
 #include <ntdddisk.h>
 #include <ndis.h>
+
+#include "winvblock.h"
+#include "portable.h"
 #include "driver.h"
 #include "mount.h"
 #include "debug.h"
@@ -68,16 +70,16 @@ static VOID STDCALL Debug_DecodeIrp (
 	IN PCHAR DebugMessage
  );
 static PCHAR STDCALL Debug_MajorFunctionString (
-	IN UCHAR MajorFunction
+	IN winvblock__uint8 MajorFunction
  );
 static PCHAR STDCALL Debug_PnPMinorFunctionString (
-	IN UCHAR MinorFunction
+	IN winvblock__uint8 MinorFunction
  );
 static PCHAR STDCALL Debug_SystemControlMinorFunctionString (
-	IN UCHAR MinorFunction
+	IN winvblock__uint8 MinorFunction
  );
 static PCHAR STDCALL Debug_PowerMinorFunctionString (
-	IN UCHAR MinorFunction
+	IN winvblock__uint8 MinorFunction
  );
 static PCHAR STDCALL Debug_QueryDeviceRelationsString (
 	IN DEVICE_RELATION_TYPE Type
@@ -86,7 +88,7 @@ static PCHAR STDCALL Debug_QueryIdString (
 	IN BUS_QUERY_ID_TYPE IdType
  );
 static PCHAR STDCALL Debug_SrbFunctionString (
-	IN UCHAR Function
+	IN winvblock__uint8 Function
  );
 static PCHAR STDCALL Debug_DeviceIoControlString (
 	IN ULONG IoControlCode
@@ -95,7 +97,7 @@ static PCHAR STDCALL Debug_DeviceTextTypeString (
 	IN DEVICE_TEXT_TYPE DeviceTextType
  );
 static PCHAR STDCALL Debug_SCSIOPString (
-	IN UCHAR OperationCode
+	IN winvblock__uint8 OperationCode
  );
 
 NTSTATUS STDCALL
@@ -243,8 +245,8 @@ Debug_DecodeIrp (
 		{
 			case IRP_MJ_SYSTEM_CONTROL:
 				sprintf ( DebugMessage, "%s %s", DebugMessage,
-									Debug_SystemControlMinorFunctionString
-									( Stack->MinorFunction ) );
+									Debug_SystemControlMinorFunctionString ( Stack->
+																													 MinorFunction ) );
 				break;
 			case IRP_MJ_PNP:
 				sprintf ( DebugMessage, "%s %s", DebugMessage,
@@ -253,26 +255,29 @@ Debug_DecodeIrp (
 					{
 						case IRP_MN_QUERY_ID:
 							sprintf ( DebugMessage, "%s %s", DebugMessage,
-												Debug_QueryIdString ( Stack->Parameters.
-																							QueryId.IdType ) );
+												Debug_QueryIdString ( Stack->Parameters.QueryId.
+																							IdType ) );
 							break;
 						case IRP_MN_QUERY_DEVICE_TEXT:
 							sprintf ( DebugMessage, "%s %s", DebugMessage,
-												Debug_DeviceTextTypeString ( Stack->Parameters.
-																										 QueryDeviceText.DeviceTextType ) );
+												Debug_DeviceTextTypeString ( Stack->
+																										 Parameters.QueryDeviceText.
+																										 DeviceTextType ) );
 							break;
 						case IRP_MN_QUERY_DEVICE_RELATIONS:
 							sprintf ( DebugMessage, "%s %s", DebugMessage,
-												Debug_QueryDeviceRelationsString ( Stack->
-																													 Parameters.QueryDeviceRelations.Type ) );
+												Debug_QueryDeviceRelationsString ( Stack->Parameters.
+																													 QueryDeviceRelations.
+																													 Type ) );
 							break;
 					}
 				break;
 			case IRP_MJ_DEVICE_CONTROL:
 				sprintf ( DebugMessage, "%s (0x%08x) %s", DebugMessage,
 									( int )Stack->Parameters.DeviceIoControl.IoControlCode,
-									Debug_DeviceIoControlString ( Stack->Parameters.
-																								DeviceIoControl.IoControlCode ) );
+									Debug_DeviceIoControlString ( Stack->
+																								Parameters.DeviceIoControl.
+																								IoControlCode ) );
 				if ( !DeviceExtension->IsBus
 						 && Stack->Parameters.DeviceIoControl.IoControlCode ==
 						 IOCTL_STORAGE_QUERY_PROPERTY )
@@ -348,7 +353,7 @@ Debug_DecodeIrp (
 
 static PCHAR STDCALL
 Debug_MajorFunctionString (
-	IN UCHAR MajorFunction
+	IN winvblock__uint8 MajorFunction
  )
 {
 	switch ( MajorFunction )
@@ -421,7 +426,7 @@ Debug_MajorFunctionString (
 
 static PCHAR STDCALL
 Debug_PnPMinorFunctionString (
-	IN UCHAR MinorFunction
+	IN winvblock__uint8 MinorFunction
  )
 {
 	switch ( MinorFunction )
@@ -483,7 +488,7 @@ Debug_PnPMinorFunctionString (
 
 static PCHAR STDCALL
 Debug_SystemControlMinorFunctionString (
-	IN UCHAR MinorFunction
+	IN winvblock__uint8 MinorFunction
  )
 {
 	switch ( MinorFunction )
@@ -517,7 +522,7 @@ Debug_SystemControlMinorFunctionString (
 
 static PCHAR STDCALL
 Debug_PowerMinorFunctionString (
-	IN UCHAR MinorFunction
+	IN winvblock__uint8 MinorFunction
  )
 {
 	switch ( MinorFunction )
@@ -579,7 +584,7 @@ Debug_QueryIdString (
 
 static PCHAR STDCALL
 Debug_SrbFunctionString (
-	IN UCHAR Function
+	IN winvblock__uint8 Function
  )
 {
 	switch ( Function )
@@ -794,7 +799,7 @@ Debug_DeviceTextTypeString (
 
 static PCHAR STDCALL
 Debug_SCSIOPString (
-	IN UCHAR OperationCode
+	IN winvblock__uint8 OperationCode
  )
 {
 	switch ( OperationCode )

@@ -26,9 +26,11 @@
  *
  */
 
-#include "portable.h"
 #include <stdio.h>
 #include <ntddk.h>
+
+#include "winvblock.h"
+#include "portable.h"
 #include "driver.h"
 #include "debug.h"
 #include "registry.h"
@@ -75,8 +77,8 @@ DriverEntry (
      */
 
 	DBG ( "Entry\n" );
-  if ( Driver_Globals_Started )
-    return STATUS_SUCCESS;
+	if ( Driver_Globals_Started )
+		return STATUS_SUCCESS;
 	Debug_Initialize (  );
 	if ( !NT_SUCCESS ( Status = Registry_Check (  ) ) )
 		return Error ( "Registry_Check", Status );

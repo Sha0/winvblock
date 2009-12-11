@@ -57,11 +57,11 @@ main (
 {
 	COMMAND Command;
 	HANDLE DeviceHandle;
-	UCHAR InBuffer[1024];
-	UCHAR String[256];
+	winvblock__uint8 InBuffer[1024];
+	winvblock__uint8 String[256];
 	PMOUNT_TARGETS Targets;
 	PMOUNT_DISKS Disks;
-	UCHAR Mac[6];
+	winvblock__uint8 Mac[6];
 	DWORD BytesReturned;
 	ULONG Major,
 	 Minor,
@@ -221,7 +221,8 @@ main (
 								 Mac[4], Mac[5] );
 				memcpy ( &InBuffer[0], Mac, 6 );
 				*( PUSHORT ) ( &InBuffer[6] ) = ( USHORT ) Major;
-				*( PUCHAR ) ( &InBuffer[8] ) = ( UCHAR ) Minor;
+				*( winvblock__uint8_ptr ) ( &InBuffer[8] ) =
+					( winvblock__uint8 ) Minor;
 				if ( !DeviceIoControl
 						 ( DeviceHandle, IOCTL_AOE_MOUNT, InBuffer, sizeof ( InBuffer ),
 							 NULL, 0, &BytesReturned, ( LPOVERLAPPED ) NULL ) )

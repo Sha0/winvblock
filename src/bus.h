@@ -64,10 +64,10 @@ extern IRPHandler_Declaration (
  );
 
 extern VOID STDCALL Bus_AddTarget (
-	IN PUCHAR ClientMac,
-	IN PUCHAR ServerMac,
+	IN winvblock__uint8_ptr ClientMac,
+	IN winvblock__uint8_ptr ServerMac,
 	USHORT Major,
-	UCHAR Minor,
+	winvblock__uint8 Minor,
 	LONGLONG LBASize
  );
 

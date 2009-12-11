@@ -46,13 +46,13 @@ extern NTSTATUS STDCALL AoE_Request (
 	IN AOE_REQUESTMODE Mode,
 	IN LONGLONG StartSector,
 	IN ULONG SectorCount,
-	IN PUCHAR Buffer,
+	IN winvblock__uint8_ptr Buffer,
 	IN PIRP Irp
  );
 extern NTSTATUS STDCALL AoE_Reply (
-	IN PUCHAR SourceMac,
-	IN PUCHAR DestinationMac,
-	IN PUCHAR Data,
+	IN winvblock__uint8_ptr SourceMac,
+	IN winvblock__uint8_ptr DestinationMac,
+	IN winvblock__uint8_ptr Data,
 	IN UINT DataSize
  );
 extern VOID STDCALL AoE_ResetProbe (

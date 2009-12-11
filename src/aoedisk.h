@@ -31,8 +31,8 @@
 typedef struct _AOEDISK_AOEDISK
 {
 	ULONG MTU;
-	UCHAR ClientMac[6];
-	UCHAR ServerMac[6];
+	winvblock__uint8 ClientMac[6];
+	winvblock__uint8 ServerMac[6];
 	ULONG Major;
 	ULONG Minor;
 	ULONG MaxSectorsPerPacket;

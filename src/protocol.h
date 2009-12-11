@@ -31,15 +31,15 @@
 #  include "portable.h"
 
 extern BOOLEAN STDCALL Protocol_SearchNIC (
-	IN PUCHAR Mac
+	IN winvblock__uint8_ptr Mac
  );
 extern ULONG STDCALL Protocol_GetMTU (
-	IN PUCHAR Mac
+	IN winvblock__uint8_ptr Mac
  );
 extern BOOLEAN STDCALL Protocol_Send (
-	IN PUCHAR SourceMac,
-	IN PUCHAR DestinationMac,
-	IN PUCHAR Data,
+	IN winvblock__uint8_ptr SourceMac,
+	IN winvblock__uint8_ptr DestinationMac,
+	IN winvblock__uint8_ptr Data,
 	IN ULONG DataSize,
 	IN PVOID PacketContext
  );
