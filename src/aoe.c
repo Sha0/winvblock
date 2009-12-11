@@ -64,7 +64,7 @@ typedef struct _AOE_PACKET
 	winvblock__uint8 ResponseFlag:1;
 	winvblock__uint8 Ver:4;
 	winvblock__uint8 Error;
-	USHORT Major;
+	winvblock__uint16 Major;
 	winvblock__uint8 Minor;
 	winvblock__uint8 Command;
 	UINT Tag;
@@ -94,7 +94,7 @@ typedef struct _AOE_PACKET
 	winvblock__uint8 Lba3;
 	winvblock__uint8 Lba4;
 	winvblock__uint8 Lba5;
-	USHORT Reserved;
+	winvblock__uint16 Reserved;
 
 	winvblock__uint8 Data[];
 } __attribute__ ( ( __packed__ ) ) AOE_PACKET, *PAOE_PACKET;
@@ -201,8 +201,8 @@ AoE_Start (
 	 */
 	if ( ( AoE_Globals_ProbeTag->PacketData =
 				 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-																					AoE_Globals_ProbeTag->
-																					PacketSize ) ) == NULL )
+																					AoE_Globals_ProbeTag->PacketSize ) )
+			 == NULL )
 		{
 			DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
 			ExFreePool ( AoE_Globals_ProbeTag );
@@ -216,7 +216,8 @@ AoE_Start (
 	 * Initialize the probe tag's AoE packet 
 	 */
 	AoE_Globals_ProbeTag->PacketData->Ver = AOEPROTOCOLVER;
-	AoE_Globals_ProbeTag->PacketData->Major = htons ( ( USHORT ) - 1 );
+	AoE_Globals_ProbeTag->PacketData->Major =
+		htons ( ( winvblock__uint16 ) - 1 );
 	AoE_Globals_ProbeTag->PacketData->Minor = ( winvblock__uint8 ) - 1;
 	AoE_Globals_ProbeTag->PacketData->Cmd = 0xec;	/* IDENTIFY DEVICE */
 	AoE_Globals_ProbeTag->PacketData->Count = 1;
@@ -668,7 +669,7 @@ AoE_SearchDrive (
 			RtlZeroMemory ( Tag->PacketData, Tag->PacketSize );
 			Tag->PacketData->Ver = AOEPROTOCOLVER;
 			Tag->PacketData->Major =
-				htons ( ( USHORT ) DeviceExtension->Disk.AoE.Major );
+				htons ( ( winvblock__uint16 ) DeviceExtension->Disk.AoE.Major );
 			Tag->PacketData->Minor =
 				( winvblock__uint8 ) DeviceExtension->Disk.AoE.Minor;
 			Tag->PacketData->ExtendedAFlag = TRUE;
@@ -700,8 +701,8 @@ AoE_SearchDrive (
 						 */
 						Tag->PacketData->Cmd = 0x24;	/* READ SECTOR */
 						Tag->PacketData->Count =
-							( winvblock__uint8 ) ( ++DeviceExtension->Disk.AoE.
-																		 MaxSectorsPerPacket );
+							( winvblock__uint8 ) ( ++DeviceExtension->Disk.
+																		 AoE.MaxSectorsPerPacket );
 						KeQuerySystemTime ( &MaxSectorsPerPacketSendTime );
 						DeviceExtension->Disk.SearchState = GettingMaxSectorsPerPacket;
 						/*
@@ -936,7 +937,7 @@ AoE_Request (
 			RtlZeroMemory ( Tag->PacketData, Tag->PacketSize );
 			Tag->PacketData->Ver = AOEPROTOCOLVER;
 			Tag->PacketData->Major =
-				htons ( ( USHORT ) DeviceExtension->Disk.AoE.Major );
+				htons ( ( winvblock__uint16 ) DeviceExtension->Disk.AoE.Major );
 			Tag->PacketData->Minor =
 				( winvblock__uint8 ) DeviceExtension->Disk.AoE.Minor;
 			Tag->PacketData->Tag = 0;
@@ -1191,8 +1192,8 @@ AoE_Reply (
 								}
 							else if ( Tag->DeviceExtension->Disk.AoE.MTU <
 												( sizeof ( AOE_PACKET ) +
-													( ( Tag->DeviceExtension->Disk.
-															AoE.MaxSectorsPerPacket +
+													( ( Tag->DeviceExtension->Disk.AoE.
+															MaxSectorsPerPacket +
 															1 ) * Tag->DeviceExtension->Disk.SectorSize ) ) )
 								{
 									DBG ( "Got MaxSectorsPerPacket %d at size of %d. "
@@ -1330,8 +1331,9 @@ AoE_Thread (
 					AoE_Globals_ProbeTag->PacketData->Tag = AoE_Globals_ProbeTag->Id;
 					Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
 													"\xff\xff\xff\xff\xff\xff",
-													( winvblock__uint8_ptr ) AoE_Globals_ProbeTag->
-													PacketData, AoE_Globals_ProbeTag->PacketSize, NULL );
+													( winvblock__uint8_ptr )
+													AoE_Globals_ProbeTag->PacketData,
+													AoE_Globals_ProbeTag->PacketSize, NULL );
 					KeQuerySystemTime ( &AoE_Globals_ProbeTag->SendTime );
 				}
 

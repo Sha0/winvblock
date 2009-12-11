@@ -115,7 +115,7 @@ typedef struct _PROTOCOL_HEADER
 {
 	winvblock__uint8 DestinationMac[6];
 	winvblock__uint8 SourceMac[6];
-	USHORT Protocol;
+	winvblock__uint16 Protocol;
 	winvblock__uint8 Data[];
 } __attribute__ ( ( __packed__ ) ) PROTOCOL_HEADER, *PPROTOCOL_HEADER;
 #ifdef _MSC_VER

@@ -66,7 +66,7 @@ extern IRPHandler_Declaration (
 extern VOID STDCALL Bus_AddTarget (
 	IN winvblock__uint8_ptr ClientMac,
 	IN winvblock__uint8_ptr ServerMac,
-	USHORT Major,
+	winvblock__uint16 Major,
 	winvblock__uint8 Minor,
 	LONGLONG LBASize
  );

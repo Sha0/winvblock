@@ -220,7 +220,7 @@ main (
 								 ( int )Major, ( int )Minor, Mac[0], Mac[1], Mac[2], Mac[3],
 								 Mac[4], Mac[5] );
 				memcpy ( &InBuffer[0], Mac, 6 );
-				*( PUSHORT ) ( &InBuffer[6] ) = ( USHORT ) Major;
+				*( Pwinvblock__uint16 ) ( &InBuffer[6] ) = ( winvblock__uint16 ) Major;
 				*( winvblock__uint8_ptr ) ( &InBuffer[8] ) =
 					( winvblock__uint8 ) Minor;
 				if ( !DeviceIoControl

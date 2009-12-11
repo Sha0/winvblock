@@ -41,5 +41,7 @@ typedef UINT64 winvblock__uint64,
 *winvblock__uint64_ptr;
 typedef UINT32 winvblock__uint32,
 *winvblock__uint32_ptr;
+typedef UINT16 winvblock__uint16,
+*winvblock__uint16_ptr;
 
 #endif													/* _winvblock_h */

@@ -31,8 +31,8 @@
 #  include "portable.h"
 #  include "driver.h"
 
-#  define htons(x) (USHORT)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
-#  define ntohs(x) (USHORT)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
+#  define htons(x) (winvblock__uint16)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
+#  define ntohs(x) (winvblock__uint16)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
 
 typedef enum
 { AoE_RequestMode_Read, AoE_RequestMode_Write } AOE_REQUESTMODE,

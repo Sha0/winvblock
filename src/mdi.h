@@ -26,32 +26,32 @@
 #  endif
 typedef struct _MDI_PATCHAREA
 {
-	UINT16 mdi_bytes;
+	winvblock__uint16 mdi_bytes;
 	winvblock__uint8 mdi_version_minor;
 	winvblock__uint8 mdi_version_major;
 	winvblock__uint32 diskbuf;
 	winvblock__uint32 disksize;
-	UINT16 cmdline_off,
+	winvblock__uint16 cmdline_off,
 	 cmdline_seg;
 
 	winvblock__uint32 oldint13;
 	winvblock__uint32 oldint15;
 
-	UINT16 olddosmem;
+	winvblock__uint16 olddosmem;
 	winvblock__uint8 bootloaderid;
 	winvblock__uint8 _pad1;
 
-	UINT16 dpt_ptr;
+	winvblock__uint16 dpt_ptr;
 	/*
 	 * End of the official MemDisk_Info 
 	 */
 	winvblock__uint8 driveshiftlimit;
 	winvblock__uint8 _pad2;
-	UINT16 _pad3;
-	UINT16 memint1588;
+	winvblock__uint16 _pad3;
+	winvblock__uint16 memint1588;
 
-	UINT16 cylinders;
-	UINT16 heads;
+	winvblock__uint16 cylinders;
+	winvblock__uint16 heads;
 	winvblock__uint32 sectors;
 
 	winvblock__uint32 mem1mb;
