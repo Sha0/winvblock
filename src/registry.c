@@ -382,13 +382,13 @@ err_keyopen:
 	return status;
 }
 
-static BOOLEAN STDCALL
+static winvblock__bool STDCALL
 Registry_Setup (
 	OUT PNTSTATUS status_out
  )
 {
 	NTSTATUS status;
-	BOOLEAN Updated = FALSE;
+	winvblock__bool Updated = FALSE;
 	WCHAR InterfacesPath[] = L"\\Ndi\\Interfaces\\";
 	WCHAR LinkagePath[] = L"\\Linkage\\";
 	WCHAR NdiPath[] = L"\\Ndi\\";
@@ -419,7 +419,7 @@ Registry_Setup (
 	 DriverServiceName;
 	PKEY_BASIC_INFORMATION KeyInformation;
 	PKEY_VALUE_PARTIAL_INFORMATION KeyValueInformation;
-	BOOLEAN Update,
+	winvblock__bool Update,
 	 Found;
 
 	DBG ( "Entry\n" );
@@ -759,8 +759,9 @@ Registry_Setup (
 																										 sizeof
 																										 ( DriverServiceNamePath )
 																										 +
-																										 KeyValueInformation->DataLength
-																										 - sizeof ( WCHAR ) ) ) ==
+																										 KeyValueInformation->
+																										 DataLength -
+																										 sizeof ( WCHAR ) ) ) ==
 											 NULL )
 										{
 											DBG ( "ExAllocatePool DriverServiceNameString "

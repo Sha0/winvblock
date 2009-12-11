@@ -45,12 +45,12 @@ typedef struct _DISK_DISK
 	KEVENT SearchEvent;
 	SEARCHSTATE SearchState;
 	KSPIN_LOCK SpinLock;
-	BOOLEAN BootDrive;
-	BOOLEAN Unmount;
+	winvblock__bool BootDrive;
+	winvblock__bool Unmount;
 	ULONG DiskNumber;
-	BOOLEAN IsRamdisk;
+	winvblock__bool IsRamdisk;
 	winvblock__uint32 DiskType;
-	BOOLEAN STDCALL (
+	winvblock__bool STDCALL (
 	*Initialize
 	 ) (
 	IN PDRIVER_DEVICEEXTENSION DeviceExtension

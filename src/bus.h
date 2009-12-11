@@ -80,10 +80,10 @@ extern NTSTATUS STDCALL Bus_GetDeviceCapabilities (
 	IN PDEVICE_CAPABILITIES DeviceCapabilities
  );
 
-extern BOOLEAN STDCALL Bus_AddChild (
+extern winvblock__bool STDCALL Bus_AddChild (
 	IN PDEVICE_OBJECT BusDeviceObject,
 	IN DISK_DISK Disk,
-	IN BOOLEAN Boot
+	IN winvblock__bool Boot
  );
 
 extern PDEVICE_OBJECT Bus_Globals_Self;

@@ -79,7 +79,7 @@ typedef IRPHandler_Declaration (
 
 struct _DRIVER_DEVICEEXTENSION
 {
-	BOOLEAN IsBus;
+	winvblock__bool IsBus;
 	PDEVICE_OBJECT Self;
 	PDRIVER_OBJECT DriverObject;
 	STATE State;

@@ -52,7 +52,7 @@ static VOID STDCALL Driver_Unload (
  );
 
 static PVOID Driver_Globals_StateHandle;
-static BOOLEAN Driver_Globals_Started = FALSE;
+static winvblock__bool Driver_Globals_Started = FALSE;
 
 /*
  * Note the exception to the function naming convention.

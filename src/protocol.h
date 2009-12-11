@@ -30,13 +30,13 @@
 
 #  include "portable.h"
 
-extern BOOLEAN STDCALL Protocol_SearchNIC (
+extern winvblock__bool STDCALL Protocol_SearchNIC (
 	IN winvblock__uint8_ptr Mac
  );
 extern ULONG STDCALL Protocol_GetMTU (
 	IN winvblock__uint8_ptr Mac
  );
-extern BOOLEAN STDCALL Protocol_Send (
+extern winvblock__bool STDCALL Protocol_Send (
 	IN winvblock__uint8_ptr SourceMac,
 	IN winvblock__uint8_ptr DestinationMac,
 	IN winvblock__uint8_ptr Data,

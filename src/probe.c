@@ -103,7 +103,7 @@ winvblock__def_struct ( grub4dos_drive_mapping )
 	winvblock__uint64 SectorCount;
 };
 
-static BOOLEAN STDCALL
+static winvblock__bool STDCALL
 Probe_NoInitialize (
 	IN PDRIVER_DEVICEEXTENSION DeviceExtension
  )
@@ -121,7 +121,7 @@ Probe_AoE (
 	winvblock__uint32 Offset,
 	 Checksum,
 	 i;
-	BOOLEAN FoundAbft = FALSE;
+	winvblock__bool FoundAbft = FALSE;
 	PDRIVER_DEVICEEXTENSION BusDeviceExtension =
 		( PDRIVER_DEVICEEXTENSION ) BusDeviceObject->DeviceExtension;
 	abft AoEBootRecord;
@@ -198,8 +198,8 @@ Probe_AoE (
 				{
 					if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
@@ -239,7 +239,7 @@ Probe_GetSafeHook (
 	return SafeMbrHookPtr;
 }
 
-BOOLEAN STDCALL
+winvblock__bool STDCALL
 Probe_MemDisk_mBFT (
 	PDEVICE_OBJECT BusDeviceObject,
 	winvblock__uint8_ptr PhysicalMemory,
@@ -311,8 +311,8 @@ Probe_MemDisk_mBFT (
 		}
 	else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 		{
-			IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																		PhysicalDeviceObject, BusRelations );
+			IoInvalidateDeviceRelations ( BusDeviceExtension->
+																		Bus.PhysicalDeviceObject, BusRelations );
 		}
 	AssociatedHook->Flags = 1;
 	return TRUE;
@@ -328,7 +328,7 @@ Probe_MemDisk (
 	int_vector_ptr InterruptVector;
 	safe_mbr_hook_ptr SafeMbrHookPtr;
 	winvblock__uint32 Offset;
-	BOOLEAN FoundMemdisk = FALSE;
+	winvblock__bool FoundMemdisk = FALSE;
 
 	/*
 	 * Find a MEMDISK.  We check the "safe hook" chain, then scan for mBFTs
@@ -389,7 +389,7 @@ Probe_Grub4Dos (
 	safe_mbr_hook_ptr SafeMbrHookPtr;
 	grub4dos_drive_mapping_ptr Grub4DosDriveMapSlotPtr;
 	winvblock__uint32 i = 8;
-	BOOLEAN FoundGrub4DosMapping = FALSE;
+	winvblock__bool FoundGrub4DosMapping = FALSE;
 	PDRIVER_DEVICEEXTENSION BusDeviceExtension =
 		( PDRIVER_DEVICEEXTENSION ) BusDeviceObject->DeviceExtension;
 	DISK_DISK Disk;
@@ -424,8 +424,8 @@ Probe_Grub4Dos (
 			Grub4DosDriveMapSlotPtr =
 				( grub4dos_drive_mapping_ptr ) ( PhysicalMemory +
 																				 ( ( ( winvblock__uint32 )
-																						 InterruptVector->Segment ) << 4 )
-																				 + 0x20 );
+																						 InterruptVector->
+																						 Segment ) << 4 ) + 0x20 );
 			while ( i-- )
 				{
 					DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
@@ -462,8 +462,8 @@ Probe_Grub4Dos (
 					else
 						{
 							Disk.DiskType =
-								Grub4DosDriveMapSlotPtr[i].
-								SourceDrive & 0x80 ? HardDisk : FloppyDisk;
+								Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ? HardDisk :
+								FloppyDisk;
 							Disk.SectorSize = 512;
 						}
 					DBG ( "RAM Drive is type: %d\n", Disk.DiskType );
@@ -483,8 +483,8 @@ Probe_Grub4Dos (
 						}
 					else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}

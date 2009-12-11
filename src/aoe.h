@@ -38,7 +38,7 @@ typedef enum
 { AoE_RequestMode_Read, AoE_RequestMode_Write } AOE_REQUESTMODE,
 *PAOE_REQUESTMODE;
 
-extern BOOLEAN STDCALL AoE_SearchDrive (
+extern winvblock__bool STDCALL AoE_SearchDrive (
 	IN PDRIVER_DEVICEEXTENSION DeviceExtension
  );
 extern NTSTATUS STDCALL AoE_Request (
