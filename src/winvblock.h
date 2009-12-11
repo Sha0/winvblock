@@ -34,14 +34,15 @@ struct _##x;\
 typedef struct _##x x, *x##_ptr;\
 struct _##x
 
+/* A common way to define a type */
+#  define winvblock__def_type( old, new ) \
+\
+typedef old new, *new##_ptr
+
 /* Common type definitions */
-typedef UCHAR winvblock__uint8,
-*winvblock__uint8_ptr;
-typedef UINT64 winvblock__uint64,
-*winvblock__uint64_ptr;
-typedef UINT32 winvblock__uint32,
-*winvblock__uint32_ptr;
-typedef UINT16 winvblock__uint16,
-*winvblock__uint16_ptr;
+winvblock__def_type ( UCHAR, winvblock__uint8 );
+winvblock__def_type ( UINT64, winvblock__uint64 );
+winvblock__def_type ( UINT32, winvblock__uint32 );
+winvblock__def_type ( UINT16, winvblock__uint16 );
 
 #endif													/* _winvblock_h */
