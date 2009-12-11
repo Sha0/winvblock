@@ -68,7 +68,7 @@ __attribute__ ( ( __packed__ ) );
 #ifdef _MSC_VER
 #  pragma pack(1)
 #endif
-typedef struct _PROBE_SAFEMBRHOOK
+winvblock__def_struct ( safe_mbr_hook )
 {
 	UCHAR Jump[3];
 	UCHAR Signature[8];
@@ -76,7 +76,9 @@ typedef struct _PROBE_SAFEMBRHOOK
 	int_vector PrevHook;
 	UINT Flags;
 	UINT mBFT;										/* MEMDISK only */
-} __attribute__ ( ( __packed__ ) ) PROBE_SAFEMBRHOOK, *PPROBE_SAFEMBRHOOK;
+}
+
+__attribute__ ( ( __packed__ ) );
 #ifdef _MSC_VER
 #  pragma pack()
 #endif
@@ -209,21 +211,21 @@ Probe_AoE (
 		}
 }
 
-static PPROBE_SAFEMBRHOOK STDCALL
+static safe_mbr_hook_ptr STDCALL
 Probe_GetSafeHook (
 	IN PUCHAR PhysicalMemory,
 	IN int_vector_ptr InterruptVector
  )
 {
 	UINT32 Int13Hook;
-	PPROBE_SAFEMBRHOOK SafeMbrHookPtr;
+	safe_mbr_hook_ptr SafeMbrHookPtr;
 	UCHAR Signature[9] = { 0 };
 	UCHAR VendorID[9] = { 0 };
 
 	Int13Hook =
 		( ( ( UINT32 ) InterruptVector->Segment ) << 4 ) +
 		( ( UINT32 ) InterruptVector->Offset );
-	SafeMbrHookPtr = ( PPROBE_SAFEMBRHOOK ) ( PhysicalMemory + Int13Hook );
+	SafeMbrHookPtr = ( safe_mbr_hook_ptr ) ( PhysicalMemory + Int13Hook );
 	RtlCopyMemory ( Signature, SafeMbrHookPtr->Signature, 8 );
 	RtlCopyMemory ( VendorID, SafeMbrHookPtr->VendorID, 8 );
 	DBG ( "INT 0x13 Segment: 0x%04x\n", InterruptVector->Segment );
@@ -248,7 +250,7 @@ Probe_MemDisk_mBFT (
 	PMDI_MBFT mBFT = ( PMDI_MBFT ) ( PhysicalMemory + Offset );
 	UINT i;
 	UCHAR Checksum = 0;
-	PPROBE_SAFEMBRHOOK AssociatedHook;
+	safe_mbr_hook_ptr AssociatedHook;
 	DISK_DISK Disk;
 	PDRIVER_DEVICEEXTENSION BusDeviceExtension =
 		( PDRIVER_DEVICEEXTENSION ) BusDeviceObject->DeviceExtension;
@@ -278,7 +280,7 @@ Probe_MemDisk_mBFT (
 			DBG ( "mBFT safe hook physical pointer too high!\n" );
 			return FALSE;
 		}
-	AssociatedHook = ( PPROBE_SAFEMBRHOOK ) ( PhysicalMemory + mBFT->SafeHook );
+	AssociatedHook = ( safe_mbr_hook_ptr ) ( PhysicalMemory + mBFT->SafeHook );
 	if ( AssociatedHook->Flags )
 		{
 			DBG ( "This MEMDISK already processed\n" );
@@ -325,7 +327,7 @@ Probe_MemDisk (
 	PHYSICAL_ADDRESS PhysicalAddress;
 	PUCHAR PhysicalMemory;
 	int_vector_ptr InterruptVector;
-	PPROBE_SAFEMBRHOOK SafeMbrHookPtr;
+	safe_mbr_hook_ptr SafeMbrHookPtr;
 	UINT Offset;
 	BOOLEAN FoundMemdisk = FALSE;
 
@@ -385,7 +387,7 @@ Probe_Grub4Dos (
 	PUCHAR PhysicalMemory;
 	int_vector_ptr InterruptVector;
 	UINT32 Int13Hook;
-	PPROBE_SAFEMBRHOOK SafeMbrHookPtr;
+	safe_mbr_hook_ptr SafeMbrHookPtr;
 	PPROBE_GRUB4DOSDRIVEMAPSLOT Grub4DosDriveMapSlotPtr;
 	UINT i = 8;
 	BOOLEAN FoundGrub4DosMapping = FALSE;
