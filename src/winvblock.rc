@@ -1,6 +1,6 @@
 1 VERSIONINFO
-FILEVERSION 0,0,0,6
-PRODUCTVERSION 0,0,0,6
+FILEVERSION 0,0,0,7
+PRODUCTVERSION 0,0,0,7
 FILEOS 0x40004
 FILETYPE 0x3
 {
@@ -10,12 +10,12 @@ BLOCK "StringFileInfo"
 	{
 		VALUE "CompanyName", "Shao Miller"
 		VALUE "FileDescription", "WinVBlock Virtual SCSI Driver"
-		VALUE "FileVersion", "0.0.0.6 (Dec-10-2009)"
+		VALUE "FileVersion", "0.0.0.7 (Dec-10-2009)"
 		VALUE "InternalName", "WinVBlock Virtual SCSI Driver"
 		VALUE "LegalCopyright", "© 2008 V., © 2009 Shao Miller, All rights reserved, Licensed under GPL."
 		VALUE "OriginalFilename", "winvblock.sys"
 		VALUE "ProductName", "WinVBlock Virtual SCSI Driver"
-		VALUE "ProductVersion", "0.0.0.6"
+		VALUE "ProductVersion", "0.0.0.7"
 	}
 }
 
