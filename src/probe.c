@@ -26,20 +26,21 @@
  *
  */
 
-#include "portable.h"
 #include <ntddk.h>
+
+#include "winvblock.h"
+#include "portable.h"
 #include "driver.h"
 #include "debug.h"
 #include "mdi.h"
 #include "bus.h"
 #include "aoe.h"
 
-typedef struct _PROBE_INT_VECTOR
+winvblock__def_struct ( int_vector )
 {
 	USHORT Offset;
 	USHORT Segment;
-} PROBE_INT_VECTOR,
-*PPROBE_INT_VECTOR;
+};
 
 #ifdef _MSC_VER
 #  pragma pack(1)
@@ -70,7 +71,7 @@ typedef struct _PROBE_SAFEMBRHOOK
 	UCHAR Jump[3];
 	UCHAR Signature[8];
 	UCHAR VendorID[8];
-	PROBE_INT_VECTOR PrevHook;
+	int_vector PrevHook;
 	UINT Flags;
 	UINT mBFT;										/* MEMDISK only */
 } __attribute__ ( ( __packed__ ) ) PROBE_SAFEMBRHOOK, *PPROBE_SAFEMBRHOOK;
@@ -210,7 +211,7 @@ Probe_AoE (
 static PPROBE_SAFEMBRHOOK STDCALL
 Probe_GetSafeHook (
 	IN PUCHAR PhysicalMemory,
-	IN PPROBE_INT_VECTOR InterruptVector
+	IN int_vector_ptr InterruptVector
  )
 {
 	UINT32 Int13Hook;
@@ -322,7 +323,7 @@ Probe_MemDisk (
 {
 	PHYSICAL_ADDRESS PhysicalAddress;
 	PUCHAR PhysicalMemory;
-	PPROBE_INT_VECTOR InterruptVector;
+	int_vector_ptr InterruptVector;
 	PPROBE_SAFEMBRHOOK SafeMbrHookPtr;
 	UINT Offset;
 	BOOLEAN FoundMemdisk = FALSE;
@@ -338,8 +339,7 @@ Probe_MemDisk (
 			return;
 		}
 	InterruptVector =
-		( PPROBE_INT_VECTOR ) ( PhysicalMemory +
-														0x13 * sizeof ( PROBE_INT_VECTOR ) );
+		( int_vector_ptr ) ( PhysicalMemory + 0x13 * sizeof ( int_vector ) );
 	/*
 	 * Walk the "safe hook" chain of INT 13h hooks as far as possible
 	 */
@@ -382,7 +382,7 @@ Probe_Grub4Dos (
 {
 	PHYSICAL_ADDRESS PhysicalAddress;
 	PUCHAR PhysicalMemory;
-	PPROBE_INT_VECTOR InterruptVector;
+	int_vector_ptr InterruptVector;
 	UINT32 Int13Hook;
 	PPROBE_SAFEMBRHOOK SafeMbrHookPtr;
 	PPROBE_GRUB4DOSDRIVEMAPSLOT Grub4DosDriveMapSlotPtr;
@@ -404,8 +404,7 @@ Probe_Grub4Dos (
 			return;
 		}
 	InterruptVector =
-		( PPROBE_INT_VECTOR ) ( PhysicalMemory +
-														0x13 * sizeof ( PROBE_INT_VECTOR ) );
+		( int_vector_ptr ) ( PhysicalMemory + 0x13 * sizeof ( int_vector ) );
 	/*
 	 * Walk the "safe hook" chain of INT 13h hooks as far as possible
 	 */
