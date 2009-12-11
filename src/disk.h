@@ -64,6 +64,7 @@ typedef struct _DISK_DISK
 	LONGLONG Cylinders;
 	ULONG Heads;
 	ULONG Sectors;
+	UINT SectorSize;
 	ULONG SpecialFileCount;
 } DISK_DISK,
 *PDISK_DISK;

@@ -199,8 +199,8 @@ AoE_Start (
 	 */
 	if ( ( AoE_Globals_ProbeTag->PacketData =
 				 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-																					AoE_Globals_ProbeTag->
-																					PacketSize ) ) == NULL )
+																					AoE_Globals_ProbeTag->PacketSize ) )
+			 == NULL )
 		{
 			DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
 			ExFreePool ( AoE_Globals_ProbeTag );
@@ -796,12 +796,14 @@ AoE_Request (
 	if ( DeviceExtension->Disk.IsRamdisk )
 		{
 			PhysicalAddress.QuadPart =
-				DeviceExtension->Disk.RAMDisk.DiskBuf + ( StartSector * SECTORSIZE );
+				DeviceExtension->Disk.RAMDisk.DiskBuf +
+				( StartSector * DeviceExtension->Disk.SectorSize );
 			/*
 			 * Possible precision loss
 			 */
 			PhysicalMemory =
-				MmMapIoSpace ( PhysicalAddress, SectorCount * SECTORSIZE,
+				MmMapIoSpace ( PhysicalAddress,
+											 SectorCount * DeviceExtension->Disk.SectorSize,
 											 MmNonCached );
 			if ( !PhysicalMemory )
 				{
@@ -812,11 +814,15 @@ AoE_Request (
 					return STATUS_INSUFFICIENT_RESOURCES;
 				}
 			if ( Mode == AoE_RequestMode_Write )
-				RtlCopyMemory ( PhysicalMemory, Buffer, SectorCount * SECTORSIZE );
+				RtlCopyMemory ( PhysicalMemory, Buffer,
+												SectorCount * DeviceExtension->Disk.SectorSize );
 			else
-				RtlCopyMemory ( Buffer, PhysicalMemory, SectorCount * SECTORSIZE );
-			MmUnmapIoSpace ( PhysicalMemory, SectorCount * SECTORSIZE );
-			Irp->IoStatus.Information = SectorCount * SECTORSIZE;
+				RtlCopyMemory ( Buffer, PhysicalMemory,
+												SectorCount * DeviceExtension->Disk.SectorSize );
+			MmUnmapIoSpace ( PhysicalMemory,
+											 SectorCount * DeviceExtension->Disk.SectorSize );
+			Irp->IoStatus.Information =
+				SectorCount * DeviceExtension->Disk.SectorSize;
 			Irp->IoStatus.Status = STATUS_SUCCESS;
 			IoCompleteRequest ( Irp, IO_NO_INCREMENT );
 			return STATUS_SUCCESS;
@@ -887,7 +893,7 @@ AoE_Request (
 			Tag->DeviceExtension = DeviceExtension;
 			Request->TagCount++;
 			Tag->Id = 0;
-			Tag->BufferOffset = i * SECTORSIZE;
+			Tag->BufferOffset = i * DeviceExtension->Disk.SectorSize;
 			Tag->SectorCount =
 				( ( SectorCount - i ) <
 					DeviceExtension->Disk.AoE.MaxSectorsPerPacket ? SectorCount -
@@ -898,7 +904,7 @@ AoE_Request (
 			 */
 			Tag->PacketSize = sizeof ( AOE_PACKET );
 			if ( Mode == AoE_RequestMode_Write )
-				Tag->PacketSize += Tag->SectorCount * SECTORSIZE;
+				Tag->PacketSize += Tag->SectorCount * DeviceExtension->Disk.SectorSize;
 			if ( ( Tag->PacketData =
 						 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
 																							Tag->PacketSize ) ) == NULL )
@@ -957,7 +963,7 @@ AoE_Request (
 			 */
 			if ( Mode == AoE_RequestMode_Write )
 				RtlCopyMemory ( Tag->PacketData->Data, &Buffer[Tag->BufferOffset],
-												Tag->SectorCount * SECTORSIZE );
+												Tag->SectorCount * DeviceExtension->Disk.SectorSize );
 
 			/*
 			 * Add this tag to the request's tag list 
@@ -1147,6 +1153,7 @@ AoE_Reply (
 							/*
 							 * FIXME: use real values from partition table 
 							 */
+						  Tag->DeviceExtension->Disk.SectorSize = 512;
 							Tag->DeviceExtension->Disk.Heads = 255;
 							Tag->DeviceExtension->Disk.Sectors = 63;
 							Tag->DeviceExtension->Disk.Cylinders =
@@ -1166,7 +1173,7 @@ AoE_Reply (
 							DataSize -= sizeof ( AOE_PACKET );
 							if ( DataSize <
 									 ( Tag->DeviceExtension->Disk.AoE.MaxSectorsPerPacket *
-										 SECTORSIZE ) )
+										 Tag->DeviceExtension->Disk.SectorSize ) )
 								{
 									DBG ( "Packet size too low while getting "
 												"MaxSectorsPerPacket (tried %d, got size of %d)\n",
@@ -1177,8 +1184,9 @@ AoE_Reply (
 								}
 							else if ( Tag->DeviceExtension->Disk.AoE.MTU <
 												( sizeof ( AOE_PACKET ) +
-													( ( Tag->DeviceExtension->Disk.
-															AoE.MaxSectorsPerPacket + 1 ) * SECTORSIZE ) ) )
+													( ( Tag->DeviceExtension->Disk.AoE.
+															MaxSectorsPerPacket +
+															1 ) * Tag->DeviceExtension->Disk.SectorSize ) ) )
 								{
 									DBG ( "Got MaxSectorsPerPacket %d at size of %d. "
 												"MTU of %d reached\n",
@@ -1209,7 +1217,9 @@ AoE_Reply (
 				 */
 				if ( Tag->Request->Mode == AoE_RequestMode_Read )
 					RtlCopyMemory ( &Tag->Request->Buffer[Tag->BufferOffset],
-													Reply->Data, Tag->SectorCount * SECTORSIZE );
+													Reply->Data,
+													Tag->SectorCount *
+													Tag->DeviceExtension->Disk.SectorSize );
 				/*
 				 * If this is the last reply expected for the read request,
 				 * complete the IRP and free the request
@@ -1217,7 +1227,8 @@ AoE_Reply (
 				if ( InterlockedDecrement ( &Tag->Request->TagCount ) == 0 )
 					{
 						Tag->Request->Irp->IoStatus.Information =
-							Tag->Request->SectorCount * SECTORSIZE;
+							Tag->Request->SectorCount *
+							Tag->DeviceExtension->Disk.SectorSize;
 						Tag->Request->Irp->IoStatus.Status = STATUS_SUCCESS;
 						Driver_CompletePendingIrp ( Tag->Request->Irp );
 						ExFreePool ( Tag->Request );

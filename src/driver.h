@@ -40,7 +40,6 @@
 
 #  define AOEPROTOCOLID 0x88a2
 #  define AOEPROTOCOLVER 1
-#  define SECTORSIZE 512
 #  define POOLSIZE 2048
 
 typedef enum
