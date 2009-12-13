@@ -39,6 +39,11 @@ struct _##x
 \
 typedef old new, *new##_ptr
 
+/* Set up type definitions for an enumated type */
+#  define winvblock__def_enum( x ) \
+\
+typedef enum _##x x, *x##_ptr
+
 /* Common type definitions */
 winvblock__def_type ( UCHAR, winvblock__uint8 );
 winvblock__def_type ( UINT64, winvblock__uint64 );
