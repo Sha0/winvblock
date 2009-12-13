@@ -28,15 +28,14 @@
  *
  */
 
-typedef struct _BUS_BUS
+winvblock__def_struct ( bus__bus )
 {
 	PDEVICE_OBJECT LowerDeviceObject;
 	PDEVICE_OBJECT PhysicalDeviceObject;
 	ULONG Children;
 	driver__dev_ext_ptr ChildList;
 	KSPIN_LOCK SpinLock;
-} BUS_BUS,
-*PBUS_BUS;
+};
 
 extern NTSTATUS STDCALL Bus_Start (
 	void

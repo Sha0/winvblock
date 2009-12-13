@@ -68,7 +68,7 @@ enum _driver__search_state
 winvblock__def_enum ( driver__search_state );
 
 /*
- * Forward declarations for BUS_BUS and DISK_DISK types
+ * Forward declarations for bus__bus and DISK_DISK types
  */
 winvblock__def_struct ( driver__dev_ext );
 
@@ -99,7 +99,7 @@ struct _driver__dev_ext
 	DRIVER_IRPHANDLER Dispatch;
 	union
 	{
-		struct _BUS_BUS Bus;
+		bus__bus Bus;
 		struct _DISK_DISK Disk;
 	};
 };
