@@ -42,13 +42,21 @@
 #  define AOEPROTOCOLVER 1
 #  define POOLSIZE 2048
 
+enum _driver__state
+{
+	NotStarted,
+	Started,
+	StopPending,
+	Stopped,
+	RemovePending,
+	SurpriseRemovePending,
+	Deleted
+};
+winvblock__def_enum ( driver__state );
+
 typedef enum
-{ NotStarted, Started, StopPending, Stopped, RemovePending,
-	SurpriseRemovePending, Deleted
-} STATE,
-*PSTATE;
-typedef enum
-{ SearchNIC, GetSize, GettingSize, GetGeometry, GettingGeometry,
+{ SearchNIC,
+	GetSize, GettingSize, GetGeometry, GettingGeometry,
 	GetMaxSectorsPerPacket, GettingMaxSectorsPerPacket,
 	Done
 } SEARCHSTATE,
@@ -82,8 +90,8 @@ struct _DRIVER_DEVICEEXTENSION
 	winvblock__bool IsBus;
 	PDEVICE_OBJECT Self;
 	PDRIVER_OBJECT DriverObject;
-	STATE State;
-	STATE OldState;
+	driver__state State;
+	driver__state OldState;
 	DRIVER_IRPHANDLER Dispatch;
 	union
 	{
