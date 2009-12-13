@@ -43,7 +43,7 @@ typedef struct _DISK_DISK
 	PDEVICE_OBJECT Parent;
 	PDRIVER_DEVICEEXTENSION Next;
 	KEVENT SearchEvent;
-	SEARCHSTATE SearchState;
+	driver__search_state SearchState;
 	KSPIN_LOCK SpinLock;
 	winvblock__bool BootDrive;
 	winvblock__bool Unmount;

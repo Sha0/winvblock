@@ -54,13 +54,18 @@ enum _driver__state
 };
 winvblock__def_enum ( driver__state );
 
-typedef enum
-{ SearchNIC,
-	GetSize, GettingSize, GetGeometry, GettingGeometry,
-	GetMaxSectorsPerPacket, GettingMaxSectorsPerPacket,
+enum _driver__search_state
+{
+  SearchNIC,
+	GetSize,
+  GettingSize,
+  GetGeometry,
+  GettingGeometry,
+	GetMaxSectorsPerPacket,
+  GettingMaxSectorsPerPacket,
 	Done
-} SEARCHSTATE,
-*PSEARCHSTATE;
+};
+winvblock__def_enum ( driver__search_state );
 
 /*
  * Forward declarations for BUS_BUS and DISK_DISK types
