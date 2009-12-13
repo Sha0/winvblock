@@ -119,7 +119,7 @@ typedef struct _AOE_REQUEST
 typedef struct _AOE_TAG
 {
 	AOE_TAGTYPE Type;
-	PDRIVER_DEVICEEXTENSION DeviceExtension;
+	driver__dev_ext_ptr DeviceExtension;
 	PAOE_REQUEST Request;
 	ULONG Id;
 	PAOE_PACKET PacketData;
@@ -136,7 +136,7 @@ typedef struct _AOE_TAG
 /** A disk search */
 typedef struct _AOE_DISKSEARCH
 {
-	PDRIVER_DEVICEEXTENSION DeviceExtension;
+	driver__dev_ext_ptr DeviceExtension;
 	PAOE_TAG Tag;
 	struct _AOE_DISKSEARCH *Next;
 } AOE_DISKSEARCH,
@@ -201,8 +201,8 @@ AoE_Start (
 	 */
 	if ( ( AoE_Globals_ProbeTag->PacketData =
 				 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-																					AoE_Globals_ProbeTag->PacketSize ) )
-			 == NULL )
+																					AoE_Globals_ProbeTag->
+																					PacketSize ) ) == NULL )
 		{
 			DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
 			ExFreePool ( AoE_Globals_ProbeTag );
@@ -367,7 +367,7 @@ AoE_Stop (
  */
 winvblock__bool STDCALL
 AoE_SearchDrive (
-	IN PDRIVER_DEVICEEXTENSION DeviceExtension
+	IN driver__dev_ext_ptr DeviceExtension
  )
 {
 	PAOE_DISKSEARCH DiskSearch,
@@ -701,8 +701,8 @@ AoE_SearchDrive (
 						 */
 						Tag->PacketData->Cmd = 0x24;	/* READ SECTOR */
 						Tag->PacketData->Count =
-							( winvblock__uint8 ) ( ++DeviceExtension->Disk.
-																		 AoE.MaxSectorsPerPacket );
+							( winvblock__uint8 ) ( ++DeviceExtension->Disk.AoE.
+																		 MaxSectorsPerPacket );
 						KeQuerySystemTime ( &MaxSectorsPerPacketSendTime );
 						DeviceExtension->Disk.SearchState = GettingMaxSectorsPerPacket;
 						/*
@@ -755,7 +755,7 @@ AoE_SearchDrive (
  */
 NTSTATUS STDCALL
 AoE_Request (
-	IN PDRIVER_DEVICEEXTENSION DeviceExtension,
+	IN driver__dev_ext_ptr DeviceExtension,
 	IN AOE_REQUESTMODE Mode,
 	IN LONGLONG StartSector,
 	IN ULONG SectorCount,
@@ -1192,8 +1192,8 @@ AoE_Reply (
 								}
 							else if ( Tag->DeviceExtension->Disk.AoE.MTU <
 												( sizeof ( AOE_PACKET ) +
-													( ( Tag->DeviceExtension->Disk.AoE.
-															MaxSectorsPerPacket +
+													( ( Tag->DeviceExtension->Disk.
+															AoE.MaxSectorsPerPacket +
 															1 ) * Tag->DeviceExtension->Disk.SectorSize ) ) )
 								{
 									DBG ( "Got MaxSectorsPerPacket %d at size of %d. "
@@ -1331,9 +1331,8 @@ AoE_Thread (
 					AoE_Globals_ProbeTag->PacketData->Tag = AoE_Globals_ProbeTag->Id;
 					Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
 													"\xff\xff\xff\xff\xff\xff",
-													( winvblock__uint8_ptr )
-													AoE_Globals_ProbeTag->PacketData,
-													AoE_Globals_ProbeTag->PacketSize, NULL );
+													( winvblock__uint8_ptr ) AoE_Globals_ProbeTag->
+													PacketData, AoE_Globals_ProbeTag->PacketSize, NULL );
 					KeQuerySystemTime ( &AoE_Globals_ProbeTag->SendTime );
 				}
 

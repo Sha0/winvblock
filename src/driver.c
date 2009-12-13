@@ -161,13 +161,13 @@ Driver_Dispatch (
 {
 	NTSTATUS Status;
 	PIO_STACK_LOCATION Stack;
-	PDRIVER_DEVICEEXTENSION DeviceExtension;
+	driver__dev_ext_ptr DeviceExtension;
 
 #ifdef DEBUGIRPS
 	Debug_IrpStart ( DeviceObject, Irp );
 #endif
 	Stack = IoGetCurrentIrpStackLocation ( Irp );
-	DeviceExtension = ( PDRIVER_DEVICEEXTENSION ) DeviceObject->DeviceExtension;
+	DeviceExtension = ( driver__dev_ext_ptr ) DeviceObject->DeviceExtension;
 	if ( DeviceExtension->State == Deleted )
 		{
 			if ( Stack->MajorFunction == IRP_MJ_POWER )

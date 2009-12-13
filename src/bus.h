@@ -33,7 +33,7 @@ typedef struct _BUS_BUS
 	PDEVICE_OBJECT LowerDeviceObject;
 	PDEVICE_OBJECT PhysicalDeviceObject;
 	ULONG Children;
-	PDRIVER_DEVICEEXTENSION ChildList;
+	driver__dev_ext_ptr ChildList;
 	KSPIN_LOCK SpinLock;
 } BUS_BUS,
 *PBUS_BUS;

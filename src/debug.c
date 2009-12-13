@@ -230,8 +230,8 @@ Debug_DecodeIrp (
 	IN PCHAR DebugMessage
  )
 {
-	PDRIVER_DEVICEEXTENSION DeviceExtension =
-		( PDRIVER_DEVICEEXTENSION ) DeviceObject->DeviceExtension;
+	driver__dev_ext_ptr DeviceExtension =
+		( driver__dev_ext_ptr ) DeviceObject->DeviceExtension;
 	PIO_STACK_LOCATION Stack = IoGetCurrentIrpStackLocation ( Irp );
 	PSCSI_REQUEST_BLOCK Srb;
 	PCDB Cdb;
@@ -245,8 +245,8 @@ Debug_DecodeIrp (
 		{
 			case IRP_MJ_SYSTEM_CONTROL:
 				sprintf ( DebugMessage, "%s %s", DebugMessage,
-									Debug_SystemControlMinorFunctionString
-									( Stack->MinorFunction ) );
+									Debug_SystemControlMinorFunctionString ( Stack->
+																													 MinorFunction ) );
 				break;
 			case IRP_MJ_PNP:
 				sprintf ( DebugMessage, "%s %s", DebugMessage,
@@ -255,26 +255,29 @@ Debug_DecodeIrp (
 					{
 						case IRP_MN_QUERY_ID:
 							sprintf ( DebugMessage, "%s %s", DebugMessage,
-												Debug_QueryIdString ( Stack->Parameters.
-																							QueryId.IdType ) );
+												Debug_QueryIdString ( Stack->Parameters.QueryId.
+																							IdType ) );
 							break;
 						case IRP_MN_QUERY_DEVICE_TEXT:
 							sprintf ( DebugMessage, "%s %s", DebugMessage,
-												Debug_DeviceTextTypeString ( Stack->Parameters.
-																										 QueryDeviceText.DeviceTextType ) );
+												Debug_DeviceTextTypeString ( Stack->
+																										 Parameters.QueryDeviceText.
+																										 DeviceTextType ) );
 							break;
 						case IRP_MN_QUERY_DEVICE_RELATIONS:
 							sprintf ( DebugMessage, "%s %s", DebugMessage,
-												Debug_QueryDeviceRelationsString ( Stack->
-																													 Parameters.QueryDeviceRelations.Type ) );
+												Debug_QueryDeviceRelationsString ( Stack->Parameters.
+																													 QueryDeviceRelations.
+																													 Type ) );
 							break;
 					}
 				break;
 			case IRP_MJ_DEVICE_CONTROL:
 				sprintf ( DebugMessage, "%s (0x%08x) %s", DebugMessage,
 									( int )Stack->Parameters.DeviceIoControl.IoControlCode,
-									Debug_DeviceIoControlString ( Stack->Parameters.
-																								DeviceIoControl.IoControlCode ) );
+									Debug_DeviceIoControlString ( Stack->
+																								Parameters.DeviceIoControl.
+																								IoControlCode ) );
 				if ( !DeviceExtension->IsBus
 						 && Stack->Parameters.DeviceIoControl.IoControlCode ==
 						 IOCTL_STORAGE_QUERY_PROPERTY )

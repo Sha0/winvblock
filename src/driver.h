@@ -56,13 +56,13 @@ winvblock__def_enum ( driver__state );
 
 enum _driver__search_state
 {
-  SearchNIC,
+	SearchNIC,
 	GetSize,
-  GettingSize,
-  GetGeometry,
-  GettingGeometry,
+	GettingSize,
+	GetGeometry,
+	GettingGeometry,
 	GetMaxSectorsPerPacket,
-  GettingMaxSectorsPerPacket,
+	GettingMaxSectorsPerPacket,
 	Done
 };
 winvblock__def_enum ( driver__search_state );
@@ -70,15 +70,14 @@ winvblock__def_enum ( driver__search_state );
 /*
  * Forward declarations for BUS_BUS and DISK_DISK types
  */
-typedef struct _DRIVER_DEVICEEXTENSION DRIVER_DEVICEEXTENSION,
-*PDRIVER_DEVICEEXTENSION;
+winvblock__def_struct ( driver__dev_ext );
 
 #  define IRPHandler_Declaration(x) NTSTATUS STDCALL\
                                   x (\
                                   	IN PDEVICE_OBJECT DeviceObject,\
                                   	IN PIRP Irp,\
                                   	IN PIO_STACK_LOCATION Stack,\
-                                  	IN PDRIVER_DEVICEEXTENSION DeviceExtension\
+                                  	IN driver__dev_ext_ptr DeviceExtension\
                                    )
 /*
  * Function-type for an IRP handler. 'indent' mangles this, so it looks weird
@@ -90,7 +89,7 @@ typedef IRPHandler_Declaration (
 #  include "disk.h"
 #  include "bus.h"
 
-struct _DRIVER_DEVICEEXTENSION
+struct _driver__dev_ext
 {
 	winvblock__bool IsBus;
 	PDEVICE_OBJECT Self;

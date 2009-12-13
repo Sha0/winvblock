@@ -41,7 +41,7 @@ enum DISK_DISKTYPE
 typedef struct _DISK_DISK
 {
 	PDEVICE_OBJECT Parent;
-	PDRIVER_DEVICEEXTENSION Next;
+	driver__dev_ext_ptr Next;
 	KEVENT SearchEvent;
 	driver__search_state SearchState;
 	KSPIN_LOCK SpinLock;
@@ -53,7 +53,7 @@ typedef struct _DISK_DISK
 	winvblock__bool STDCALL (
 	*Initialize
 	 ) (
-	IN PDRIVER_DEVICEEXTENSION DeviceExtension
+	IN driver__dev_ext_ptr DeviceExtension
 	 );
 	union
 	{
