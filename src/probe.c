@@ -198,8 +198,8 @@ find_aoe_disks (
 				{
 					if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
@@ -211,7 +211,7 @@ find_aoe_disks (
 }
 
 static safe_mbr_hook_ptr STDCALL
-Probe_GetSafeHook (
+get_safe_hook (
 	IN winvblock__uint8_ptr PhysicalMemory,
 	IN int_vector_ptr InterruptVector
  )
@@ -240,7 +240,7 @@ Probe_GetSafeHook (
 }
 
 winvblock__bool STDCALL
-Probe_MemDisk_mBFT (
+check_mbft (
 	winvblock__uint8_ptr PhysicalMemory,
 	winvblock__uint32 Offset
  )
@@ -310,8 +310,8 @@ Probe_MemDisk_mBFT (
 		}
 	else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 		{
-			IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																		PhysicalDeviceObject, BusRelations );
+			IoInvalidateDeviceRelations ( BusDeviceExtension->
+																		Bus.PhysicalDeviceObject, BusRelations );
 		}
 	AssociatedHook->Flags = 1;
 	return TRUE;
@@ -344,8 +344,7 @@ find_memdisks (
 	/*
 	 * Walk the "safe hook" chain of INT 13h hooks as far as possible
 	 */
-	while ( SafeMbrHookPtr =
-					Probe_GetSafeHook ( PhysicalMemory, InterruptVector ) )
+	while ( SafeMbrHookPtr = get_safe_hook ( PhysicalMemory, InterruptVector ) )
 		{
 			if ( !
 					 ( RtlCompareMemory ( SafeMbrHookPtr->VendorID, "MEMDISK ", 8 ) ==
@@ -355,8 +354,7 @@ find_memdisks (
 				}
 			else
 				{
-					FoundMemdisk |=
-						Probe_MemDisk_mBFT ( PhysicalMemory, SafeMbrHookPtr->mBFT );
+					FoundMemdisk |= check_mbft ( PhysicalMemory, SafeMbrHookPtr->mBFT );
 				}
 			InterruptVector = &SafeMbrHookPtr->PrevHook;
 		}
@@ -365,7 +363,7 @@ find_memdisks (
 	 */
 	for ( Offset = 0; Offset < 0xFFFF0; Offset += 0x10 )
 		{
-			FoundMemdisk |= Probe_MemDisk_mBFT ( PhysicalMemory, Offset );
+			FoundMemdisk |= check_mbft ( PhysicalMemory, Offset );
 		}
 	MmUnmapIoSpace ( PhysicalMemory, 0x100000 );
 	if ( !FoundMemdisk )
@@ -407,8 +405,7 @@ find_grub4dos_disks (
 	/*
 	 * Walk the "safe hook" chain of INT 13h hooks as far as possible
 	 */
-	while ( SafeMbrHookPtr =
-					Probe_GetSafeHook ( PhysicalMemory, InterruptVector ) )
+	while ( SafeMbrHookPtr = get_safe_hook ( PhysicalMemory, InterruptVector ) )
 		{
 			if ( !
 					 ( RtlCompareMemory ( SafeMbrHookPtr->VendorID, "GRUB4DOS", 8 ) ==
@@ -421,8 +418,8 @@ find_grub4dos_disks (
 			Grub4DosDriveMapSlotPtr =
 				( grub4dos_drive_mapping_ptr ) ( PhysicalMemory +
 																				 ( ( ( winvblock__uint32 )
-																						 InterruptVector->Segment ) << 4 )
-																				 + 0x20 );
+																						 InterruptVector->
+																						 Segment ) << 4 ) + 0x20 );
 			while ( i-- )
 				{
 					DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
@@ -459,8 +456,8 @@ find_grub4dos_disks (
 					else
 						{
 							Disk.DiskType =
-								Grub4DosDriveMapSlotPtr[i].
-								SourceDrive & 0x80 ? HardDisk : FloppyDisk;
+								Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ? HardDisk :
+								FloppyDisk;
 							Disk.SectorSize = 512;
 						}
 					DBG ( "RAM Drive is type: %d\n", Disk.DiskType );
@@ -480,8 +477,8 @@ find_grub4dos_disks (
 						}
 					else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
