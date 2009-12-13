@@ -28,19 +28,8 @@
  *
  */
 
-#  include <ntddk.h>
-#  include "mdi.h"
-
-extern VOID STDCALL Probe_AoE (
-	PDEVICE_OBJECT BusDeviceObject
- );
-
-extern VOID STDCALL Probe_MemDisk (
-	PDEVICE_OBJECT BusDeviceObject
- );
-
-extern VOID STDCALL Probe_Grub4Dos (
-	PDEVICE_OBJECT BusDeviceObject
+extern void probe__disks (
+	void
  );
 
 #endif													/* _PROBE_H */

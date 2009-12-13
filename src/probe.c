@@ -111,9 +111,9 @@ no_init (
 	return TRUE;
 }
 
-VOID STDCALL
-Probe_AoE (
-	PDEVICE_OBJECT BusDeviceObject
+void
+find_aoe_disks (
+	void
  )
 {
 	PHYSICAL_ADDRESS PhysicalAddress;
@@ -123,7 +123,7 @@ Probe_AoE (
 	 i;
 	winvblock__bool FoundAbft = FALSE;
 	driver__dev_ext_ptr BusDeviceExtension =
-		( driver__dev_ext_ptr ) BusDeviceObject->DeviceExtension;
+		( driver__dev_ext_ptr ) bus__fdo->DeviceExtension;
 	abft AoEBootRecord;
 	DISK_DISK Disk;
 
@@ -192,14 +192,14 @@ Probe_AoE (
 			Disk.AoE.Timeout = 200000;	/* 20 ms. */
 			Disk.IsRamdisk = FALSE;
 
-			if ( !Bus_AddChild ( BusDeviceObject, Disk, TRUE ) )
+			if ( !Bus_AddChild ( bus__fdo, Disk, TRUE ) )
 				DBG ( "Bus_AddChild() failed for aBFT AoE disk\n" );
 			else
 				{
 					if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->
-																						Bus.PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
+																						PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
@@ -241,7 +241,6 @@ Probe_GetSafeHook (
 
 winvblock__bool STDCALL
 Probe_MemDisk_mBFT (
-	PDEVICE_OBJECT BusDeviceObject,
 	winvblock__uint8_ptr PhysicalMemory,
 	winvblock__uint32 Offset
  )
@@ -252,7 +251,7 @@ Probe_MemDisk_mBFT (
 	safe_mbr_hook_ptr AssociatedHook;
 	DISK_DISK Disk;
 	driver__dev_ext_ptr BusDeviceExtension =
-		( driver__dev_ext_ptr ) BusDeviceObject->DeviceExtension;
+		( driver__dev_ext_ptr ) bus__fdo->DeviceExtension;
 
 	if ( Offset >= 0x100000 )
 		{
@@ -305,22 +304,22 @@ Probe_MemDisk_mBFT (
 		}
 	DBG ( "RAM Drive is type: %d\n", Disk.DiskType );
 	Disk.IsRamdisk = TRUE;
-	if ( !Bus_AddChild ( BusDeviceObject, Disk, TRUE ) )
+	if ( !Bus_AddChild ( bus__fdo, Disk, TRUE ) )
 		{
 			DBG ( "Bus_AddChild() failed for MEMDISK\n" );
 		}
 	else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 		{
-			IoInvalidateDeviceRelations ( BusDeviceExtension->
-																		Bus.PhysicalDeviceObject, BusRelations );
+			IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
+																		PhysicalDeviceObject, BusRelations );
 		}
 	AssociatedHook->Flags = 1;
 	return TRUE;
 }
 
-VOID STDCALL
-Probe_MemDisk (
-	PDEVICE_OBJECT BusDeviceObject
+void
+find_memdisks (
+	void
  )
 {
 	PHYSICAL_ADDRESS PhysicalAddress;
@@ -357,8 +356,7 @@ Probe_MemDisk (
 			else
 				{
 					FoundMemdisk |=
-						Probe_MemDisk_mBFT ( BusDeviceObject, PhysicalMemory,
-																 SafeMbrHookPtr->mBFT );
+						Probe_MemDisk_mBFT ( PhysicalMemory, SafeMbrHookPtr->mBFT );
 				}
 			InterruptVector = &SafeMbrHookPtr->PrevHook;
 		}
@@ -367,8 +365,7 @@ Probe_MemDisk (
 	 */
 	for ( Offset = 0; Offset < 0xFFFF0; Offset += 0x10 )
 		{
-			FoundMemdisk |=
-				Probe_MemDisk_mBFT ( BusDeviceObject, PhysicalMemory, Offset );
+			FoundMemdisk |= Probe_MemDisk_mBFT ( PhysicalMemory, Offset );
 		}
 	MmUnmapIoSpace ( PhysicalMemory, 0x100000 );
 	if ( !FoundMemdisk )
@@ -377,9 +374,9 @@ Probe_MemDisk (
 		}
 }
 
-VOID STDCALL
-Probe_Grub4Dos (
-	PDEVICE_OBJECT BusDeviceObject
+void
+find_grub4dos_disks (
+	void
  )
 {
 	PHYSICAL_ADDRESS PhysicalAddress;
@@ -391,7 +388,7 @@ Probe_Grub4Dos (
 	winvblock__uint32 i = 8;
 	winvblock__bool FoundGrub4DosMapping = FALSE;
 	driver__dev_ext_ptr BusDeviceExtension =
-		( driver__dev_ext_ptr ) BusDeviceObject->DeviceExtension;
+		( driver__dev_ext_ptr ) bus__fdo->DeviceExtension;
 	DISK_DISK Disk;
 
 	/*
@@ -424,8 +421,8 @@ Probe_Grub4Dos (
 			Grub4DosDriveMapSlotPtr =
 				( grub4dos_drive_mapping_ptr ) ( PhysicalMemory +
 																				 ( ( ( winvblock__uint32 )
-																						 InterruptVector->
-																						 Segment ) << 4 ) + 0x20 );
+																						 InterruptVector->Segment ) << 4 )
+																				 + 0x20 );
 			while ( i-- )
 				{
 					DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
@@ -462,8 +459,8 @@ Probe_Grub4Dos (
 					else
 						{
 							Disk.DiskType =
-								Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ? HardDisk :
-								FloppyDisk;
+								Grub4DosDriveMapSlotPtr[i].
+								SourceDrive & 0x80 ? HardDisk : FloppyDisk;
 							Disk.SectorSize = 512;
 						}
 					DBG ( "RAM Drive is type: %d\n", Disk.DiskType );
@@ -477,14 +474,14 @@ Probe_Grub4Dos (
 					Disk.Cylinders = Disk.LBADiskSize / ( Disk.Heads * Disk.Sectors );
 					Disk.IsRamdisk = TRUE;
 					FoundGrub4DosMapping = TRUE;
-					if ( !Bus_AddChild ( BusDeviceObject, Disk, TRUE ) )
+					if ( !Bus_AddChild ( bus__fdo, Disk, TRUE ) )
 						{
 							DBG ( "Bus_AddChild() failed for GRUB4DOS\n" );
 						}
 					else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->
-																						Bus.PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
+																						PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
@@ -496,4 +493,14 @@ Probe_Grub4Dos (
 		{
 			DBG ( "No GRUB4DOS drive mappings found\n" );
 		}
+}
+
+extern void
+probe__disks (
+	void
+ )
+{
+	find_aoe_disks (  );
+	find_memdisks (  );
+	find_grub4dos_disks (  );
 }

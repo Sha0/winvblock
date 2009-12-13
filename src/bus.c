@@ -66,7 +66,7 @@ typedef struct _BUS_TARGETLIST
 static PBUS_TARGETLIST Bus_Globals_TargetList = NULL;
 static KSPIN_LOCK Bus_Globals_TargetListSpinLock;
 static ULONG Bus_Globals_NextDisk = 0;
-PDEVICE_OBJECT Bus_Globals_Self = NULL;
+PDEVICE_OBJECT bus__fdo = NULL;
 
 NTSTATUS STDCALL
 Bus_Start (
@@ -100,7 +100,7 @@ Bus_Stop (
 	KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
 	RtlInitUnicodeString ( &DosDeviceName, L"\\DosDevices\\AoE" );
 	IoDeleteSymbolicLink ( &DosDeviceName );
-	Bus_Globals_Self = NULL;
+	bus__fdo = NULL;
 }
 
 VOID STDCALL
@@ -209,8 +209,8 @@ Bus_AddChild (
 		Disk.DiskType == OpticalDisc ? FILE_DEVICE_CD_ROM : FILE_DEVICE_DISK;
 	ULONG DiskType2 =
 		Disk.DiskType ==
-		OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.DiskType
-		== FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
+		OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.
+		DiskType == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
 
 	DBG ( "Entry\n" );
 	/*
@@ -468,14 +468,16 @@ IRPHandler_Declaration ( Bus_DispatchDeviceControl )
 						TargetWalker = TargetWalker->Next;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Targets,
-												( Stack->Parameters.
-													DeviceIoControl.OutputBufferLength <
+												( Stack->Parameters.DeviceIoControl.
+													OutputBufferLength <
 													( sizeof ( MOUNT_TARGETS ) +
 														( Count *
-															sizeof ( MOUNT_TARGET ) ) ) ? Stack->
-													Parameters.DeviceIoControl.OutputBufferLength
-													: ( sizeof ( MOUNT_TARGETS ) +
-															( Count * sizeof ( MOUNT_TARGET ) ) ) ) );
+															sizeof ( MOUNT_TARGET ) ) ) ? Stack->Parameters.
+													DeviceIoControl.
+													OutputBufferLength : ( sizeof ( MOUNT_TARGETS ) +
+																								 ( Count *
+																									 sizeof
+																									 ( MOUNT_TARGET ) ) ) ) );
 				ExFreePool ( Targets );
 
 				KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
@@ -524,14 +526,16 @@ IRPHandler_Declaration ( Bus_DispatchDeviceControl )
 						DiskWalker = DiskWalker->Disk.Next;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Disks,
-												( Stack->Parameters.
-													DeviceIoControl.OutputBufferLength <
+												( Stack->Parameters.DeviceIoControl.
+													OutputBufferLength <
 													( sizeof ( MOUNT_DISKS ) +
 														( Count *
-															sizeof ( MOUNT_DISK ) ) ) ? Stack->
-													Parameters.DeviceIoControl.OutputBufferLength
-													: ( sizeof ( MOUNT_DISKS ) +
-															( Count * sizeof ( MOUNT_DISK ) ) ) ) );
+															sizeof ( MOUNT_DISK ) ) ) ? Stack->Parameters.
+													DeviceIoControl.
+													OutputBufferLength : ( sizeof ( MOUNT_DISKS ) +
+																								 ( Count *
+																									 sizeof
+																									 ( MOUNT_DISK ) ) ) ) );
 				ExFreePool ( Disks );
 
 				Status = STATUS_SUCCESS;
@@ -558,8 +562,8 @@ IRPHandler_Declaration ( Bus_DispatchDeviceControl )
 				else
 					{
 						if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
-							IoInvalidateDeviceRelations ( DeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( DeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 					}
 				Irp->IoStatus.Information = 0;
@@ -590,8 +594,8 @@ IRPHandler_Declaration ( Bus_DispatchDeviceControl )
 						DiskWalker->Disk.Unmount = TRUE;
 						DiskWalker->Disk.Next = NULL;
 						if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
-							IoInvalidateDeviceRelations ( DeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( DeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 					}
 				DeviceExtension->Bus.Children--;
@@ -717,10 +721,9 @@ Bus_AddDevice (
 	UNICODE_STRING DeviceName,
 	 DosDeviceName;
 	driver__dev_ext_ptr DeviceExtension;
-	PDEVICE_OBJECT DeviceObject;
 
 	DBG ( "Entry\n" );
-	if ( Bus_Globals_Self )
+	if ( bus__fdo )
 		return STATUS_SUCCESS;
 	RtlInitUnicodeString ( &DeviceName, L"\\Device\\AoE" );
 	RtlInitUnicodeString ( &DosDeviceName, L"\\DosDevices\\AoE" );
@@ -728,49 +731,49 @@ Bus_AddDevice (
 			 ( Status =
 				 IoCreateDevice ( DriverObject, sizeof ( driver__dev_ext ),
 													&DeviceName, FILE_DEVICE_CONTROLLER,
-													FILE_DEVICE_SECURE_OPEN, FALSE, &DeviceObject ) ) )
+													FILE_DEVICE_SECURE_OPEN, FALSE, &bus__fdo ) ) )
 		{
 			return Error ( "Bus_AddDevice IoCreateDevice", Status );
 		}
 	if ( !NT_SUCCESS
 			 ( Status = IoCreateSymbolicLink ( &DosDeviceName, &DeviceName ) ) )
 		{
-			IoDeleteDevice ( DeviceObject );
+			IoDeleteDevice ( bus__fdo );
 			return Error ( "Bus_AddDevice IoCreateSymbolicLink", Status );
 		}
 
-	DeviceExtension = ( driver__dev_ext_ptr ) DeviceObject->DeviceExtension;
+	DeviceExtension = ( driver__dev_ext_ptr ) bus__fdo->DeviceExtension;
 	RtlZeroMemory ( DeviceExtension, sizeof ( driver__dev_ext ) );
 	DeviceExtension->IsBus = TRUE;
 	DeviceExtension->Dispatch = Bus_Dispatch;
 	DeviceExtension->DriverObject = DriverObject;
-	DeviceExtension->Self = DeviceObject;
+	DeviceExtension->Self = bus__fdo;
 	DeviceExtension->State = NotStarted;
 	DeviceExtension->OldState = NotStarted;
 	DeviceExtension->Bus.PhysicalDeviceObject = PhysicalDeviceObject;
 	DeviceExtension->Bus.Children = 0;
 	DeviceExtension->Bus.ChildList = NULL;
 	KeInitializeSpinLock ( &DeviceExtension->Bus.SpinLock );
-	DeviceObject->Flags |= DO_DIRECT_IO;	/* FIXME? */
-	DeviceObject->Flags |= DO_POWER_INRUSH;	/* FIXME? */
+	bus__fdo->Flags |= DO_DIRECT_IO;	/* FIXME? */
+	bus__fdo->Flags |= DO_POWER_INRUSH;	/* FIXME? */
 	/*
 	 * Add the bus to the device tree
 	 */
 	if ( PhysicalDeviceObject != NULL )
 		{
 			if ( ( DeviceExtension->Bus.LowerDeviceObject =
-						 IoAttachDeviceToDeviceStack ( DeviceObject,
+						 IoAttachDeviceToDeviceStack ( bus__fdo,
 																					 PhysicalDeviceObject ) ) == NULL )
 				{
-					IoDeleteDevice ( DeviceObject );
+					IoDeleteDevice ( bus__fdo );
+					bus__fdo = NULL;
 					return Error ( "AddDevice IoAttachDeviceToDeviceStack",
 												 STATUS_NO_SUCH_DEVICE );
 				}
 		}
-	DeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
+	bus__fdo->Flags &= ~DO_DEVICE_INITIALIZING;
 #ifdef RIS
 	DeviceExtension->State = Started;
 #endif
-	Bus_Globals_Self = DeviceObject;
 	return STATUS_SUCCESS;
 }

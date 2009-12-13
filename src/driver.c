@@ -135,9 +135,7 @@ DriverEntry (
 			AoE_Stop (  );
 			return Error ( "Bus_AddDevice", Status );
 		}
-	Probe_AoE ( Bus_Globals_Self );
-	Probe_MemDisk ( Bus_Globals_Self );
-	Probe_Grub4Dos ( Bus_Globals_Self );
+	probe__disks (  );
 	Driver_Globals_Started = TRUE;
 	return Status;
 }

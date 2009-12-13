@@ -85,6 +85,6 @@ extern winvblock__bool STDCALL Bus_AddChild (
 	IN winvblock__bool Boot
  );
 
-extern PDEVICE_OBJECT Bus_Globals_Self;
+extern PDEVICE_OBJECT bus__fdo;
 
 #endif													/* _BUS_H */
