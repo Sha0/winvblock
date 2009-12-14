@@ -33,6 +33,7 @@
 #include "winvblock.h"
 #include "portable.h"
 #include "irp.h"
+#include "disk.h"
 #include "protocol.h"
 #include "driver.h"
 #include "aoe.h"

@@ -28,6 +28,9 @@
  *
  */
 
+/* An unfortunate forward declaration.  Definition resolved in driver.h */
+struct _driver__dev_ext;
+
 #  include "aoedisk.h"
 #  include "ramdisk.h"
 
@@ -38,12 +41,25 @@ enum DISK_DISKTYPE
 	OpticalDisc
 };
 
-typedef struct _DISK_DISK
+enum _disk__search_state
+{
+	SearchNIC,
+	GetSize,
+	GettingSize,
+	GetGeometry,
+	GettingGeometry,
+	GetMaxSectorsPerPacket,
+	GettingMaxSectorsPerPacket,
+	Done
+};
+winvblock__def_enum ( disk__search_state );
+
+winvblock__def_struct ( disk__type )
 {
 	PDEVICE_OBJECT Parent;
-	driver__dev_ext_ptr Next;
+	struct _driver__dev_ext *Next;
 	KEVENT SearchEvent;
-	driver__search_state SearchState;
+	disk__search_state SearchState;
 	KSPIN_LOCK SpinLock;
 	winvblock__bool BootDrive;
 	winvblock__bool Unmount;
@@ -53,7 +69,7 @@ typedef struct _DISK_DISK
 	winvblock__bool STDCALL (
 	*Initialize
 	 ) (
-	IN driver__dev_ext_ptr DeviceExtension
+	IN struct _driver__dev_ext * DeviceExtension
 	 );
 	union
 	{
@@ -66,7 +82,6 @@ typedef struct _DISK_DISK
 	ULONG Sectors;
 	winvblock__uint32 SectorSize;
 	ULONG SpecialFileCount;
-} DISK_DISK,
-*PDISK_DISK;
+};
 
 #endif													/* _DISK_H */

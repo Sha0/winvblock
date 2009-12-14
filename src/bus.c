@@ -31,6 +31,7 @@
 #include "winvblock.h"
 #include "portable.h"
 #include "irp.h"
+#include "disk.h"
 #include "driver.h"
 #include "aoe.h"
 #include "mount.h"
@@ -48,7 +49,7 @@ static irp__handler_decl (
  );
 winvblock__bool STDCALL Bus_AddChild (
 	IN PDEVICE_OBJECT BusDeviceObject,
-	IN DISK_DISK Disk,
+	IN disk__type Disk,
 	IN winvblock__bool Boot
  );
 static NTSTATUS STDCALL Bus_IoCompletionRoutine (
@@ -189,7 +190,7 @@ Bus_CleanupTargetList (
 winvblock__bool STDCALL
 Bus_AddChild (
 	IN PDEVICE_OBJECT BusDeviceObject,
-	IN DISK_DISK Disk,
+	IN disk__type Disk,
 	IN winvblock__bool Boot
  )
 {
@@ -210,8 +211,8 @@ Bus_AddChild (
 		Disk.DiskType == OpticalDisc ? FILE_DEVICE_CD_ROM : FILE_DEVICE_DISK;
 	ULONG DiskType2 =
 		Disk.DiskType ==
-		OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.DiskType
-		== FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
+		OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.
+		DiskType == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
 
 	DBG ( "Entry\n" );
 	/*
@@ -243,7 +244,7 @@ Bus_AddChild (
 	DeviceExtension->State = NotStarted;
 	DeviceExtension->OldState = NotStarted;
 
-	RtlCopyMemory ( &DeviceExtension->Disk, &Disk, sizeof ( DISK_DISK ) );
+	RtlCopyMemory ( &DeviceExtension->Disk, &Disk, sizeof ( disk__type ) );
 	DeviceExtension->Disk.Parent = BusDeviceObject;
 	DeviceExtension->Disk.Next = NULL;
 	KeInitializeEvent ( &DeviceExtension->Disk.SearchEvent, SynchronizationEvent,
@@ -426,7 +427,7 @@ irp__handler_decl ( Bus_DispatchDeviceControl )
 	PMOUNT_TARGETS Targets;
 	PMOUNT_DISKS Disks;
 	KIRQL Irql;
-	DISK_DISK Disk;
+	disk__type Disk;
 
 	switch ( Stack->Parameters.DeviceIoControl.IoControlCode )
 		{
@@ -469,14 +470,16 @@ irp__handler_decl ( Bus_DispatchDeviceControl )
 						TargetWalker = TargetWalker->Next;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Targets,
-												( Stack->Parameters.
-													DeviceIoControl.OutputBufferLength <
+												( Stack->Parameters.DeviceIoControl.
+													OutputBufferLength <
 													( sizeof ( MOUNT_TARGETS ) +
 														( Count *
-															sizeof ( MOUNT_TARGET ) ) ) ? Stack->
-													Parameters.DeviceIoControl.OutputBufferLength
-													: ( sizeof ( MOUNT_TARGETS ) +
-															( Count * sizeof ( MOUNT_TARGET ) ) ) ) );
+															sizeof ( MOUNT_TARGET ) ) ) ? Stack->Parameters.
+													DeviceIoControl.
+													OutputBufferLength : ( sizeof ( MOUNT_TARGETS ) +
+																								 ( Count *
+																									 sizeof
+																									 ( MOUNT_TARGET ) ) ) ) );
 				ExFreePool ( Targets );
 
 				KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
@@ -525,14 +528,16 @@ irp__handler_decl ( Bus_DispatchDeviceControl )
 						DiskWalker = DiskWalker->Disk.Next;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Disks,
-												( Stack->Parameters.
-													DeviceIoControl.OutputBufferLength <
+												( Stack->Parameters.DeviceIoControl.
+													OutputBufferLength <
 													( sizeof ( MOUNT_DISKS ) +
 														( Count *
-															sizeof ( MOUNT_DISK ) ) ) ? Stack->
-													Parameters.DeviceIoControl.OutputBufferLength
-													: ( sizeof ( MOUNT_DISKS ) +
-															( Count * sizeof ( MOUNT_DISK ) ) ) ) );
+															sizeof ( MOUNT_DISK ) ) ) ? Stack->Parameters.
+													DeviceIoControl.
+													OutputBufferLength : ( sizeof ( MOUNT_DISKS ) +
+																								 ( Count *
+																									 sizeof
+																									 ( MOUNT_DISK ) ) ) ) );
 				ExFreePool ( Disks );
 
 				Status = STATUS_SUCCESS;
@@ -559,8 +564,8 @@ irp__handler_decl ( Bus_DispatchDeviceControl )
 				else
 					{
 						if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
-							IoInvalidateDeviceRelations ( DeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( DeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 					}
 				Irp->IoStatus.Information = 0;
@@ -591,8 +596,8 @@ irp__handler_decl ( Bus_DispatchDeviceControl )
 						DiskWalker->Disk.Unmount = TRUE;
 						DiskWalker->Disk.Next = NULL;
 						if ( DeviceExtension->Bus.PhysicalDeviceObject != NULL )
-							IoInvalidateDeviceRelations ( DeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( DeviceExtension->
+																						Bus.PhysicalDeviceObject,
 																						BusRelations );
 					}
 				DeviceExtension->Bus.Children--;
