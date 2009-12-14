@@ -167,7 +167,7 @@ Protocol_Start (
 	RtlInitUnicodeString ( &ProtocolName, L"WinVBlock" );
 	NdisZeroMemory ( &ProtocolCharacteristics,
 									 sizeof ( NDIS_PROTOCOL_CHARACTERISTICS ) );
-	ProtocolCharacteristics.MajorNdisVersion = 5;
+	ProtocolCharacteristics.MajorNdisVersion = 4;
 	ProtocolCharacteristics.MinorNdisVersion = 0;
 	ProtocolCharacteristics.Name = ProtocolName;
 	ProtocolCharacteristics.OpenAdapterCompleteHandler =
@@ -189,7 +189,10 @@ Protocol_Start (
 	NdisRegisterProtocol ( ( PNDIS_STATUS ) & Status, &Protocol_Globals_Handle,
 												 &ProtocolCharacteristics,
 												 sizeof ( NDIS_PROTOCOL_CHARACTERISTICS ) );
-	Protocol_Globals_Started = TRUE;
+	if ( !NT_SUCCESS ( Status ) )
+		DBG ( "Protocol startup failure!\n" );
+	else
+		Protocol_Globals_Started = TRUE;
 	return Status;
 }
 

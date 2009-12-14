@@ -241,8 +241,8 @@ Bus_AddChild (
 		Disk.DiskType == OpticalDisc ? FILE_DEVICE_CD_ROM : FILE_DEVICE_DISK;
 	ULONG DiskType2 =
 		Disk.DiskType ==
-		OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.
-		DiskType == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
+		OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.DiskType
+		== FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
 
 	DBG ( "Entry\n" );
 	/*
@@ -485,6 +485,7 @@ irp__handler_decl ( Bus_DispatchDeviceControl )
 		{
 			case IOCTL_AOE_SCAN:
 				DBG ( "Got IOCTL_AOE_SCAN...\n" );
+				AoE_Start (  );
 				KeAcquireSpinLock ( &Bus_Globals_TargetListSpinLock, &Irql );
 
 				Count = 0;
@@ -522,16 +523,14 @@ irp__handler_decl ( Bus_DispatchDeviceControl )
 						TargetWalker = TargetWalker->Next;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Targets,
-												( Stack->Parameters.DeviceIoControl.
-													OutputBufferLength <
+												( Stack->Parameters.
+													DeviceIoControl.OutputBufferLength <
 													( sizeof ( MOUNT_TARGETS ) +
 														( Count *
-															sizeof ( MOUNT_TARGET ) ) ) ? Stack->Parameters.
-													DeviceIoControl.
-													OutputBufferLength : ( sizeof ( MOUNT_TARGETS ) +
-																								 ( Count *
-																									 sizeof
-																									 ( MOUNT_TARGET ) ) ) ) );
+															sizeof ( MOUNT_TARGET ) ) ) ? Stack->
+													Parameters.DeviceIoControl.OutputBufferLength
+													: ( sizeof ( MOUNT_TARGETS ) +
+															( Count * sizeof ( MOUNT_TARGET ) ) ) ) );
 				ExFreePool ( Targets );
 
 				KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
@@ -580,16 +579,14 @@ irp__handler_decl ( Bus_DispatchDeviceControl )
 						DiskWalker = DiskWalker->next_sibling_ptr;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Disks,
-												( Stack->Parameters.DeviceIoControl.
-													OutputBufferLength <
+												( Stack->Parameters.
+													DeviceIoControl.OutputBufferLength <
 													( sizeof ( MOUNT_DISKS ) +
 														( Count *
-															sizeof ( MOUNT_DISK ) ) ) ? Stack->Parameters.
-													DeviceIoControl.
-													OutputBufferLength : ( sizeof ( MOUNT_DISKS ) +
-																								 ( Count *
-																									 sizeof
-																									 ( MOUNT_DISK ) ) ) ) );
+															sizeof ( MOUNT_DISK ) ) ) ? Stack->
+													Parameters.DeviceIoControl.OutputBufferLength
+													: ( sizeof ( MOUNT_DISKS ) +
+															( Count * sizeof ( MOUNT_DISK ) ) ) ) );
 				ExFreePool ( Disks );
 
 				Status = STATUS_SUCCESS;
