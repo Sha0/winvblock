@@ -28,12 +28,15 @@
  *
  */
 
-winvblock__def_struct ( bus__bus )
+/* An unfortunate forward declaration.  Definition resolved in driver.h */
+struct _driver__dev_ext;
+
+winvblock__def_struct ( bus__type )
 {
 	PDEVICE_OBJECT LowerDeviceObject;
 	PDEVICE_OBJECT PhysicalDeviceObject;
 	ULONG Children;
-	driver__dev_ext_ptr ChildList;
+	struct _driver__dev_ext *ChildList;
 	KSPIN_LOCK SpinLock;
 };
 

@@ -54,10 +54,7 @@ enum _driver__state
 };
 winvblock__def_enum ( driver__state );
 
-winvblock__def_struct ( driver__dev_ext );
-#  include "bus.h"
-
-struct _driver__dev_ext
+winvblock__def_struct ( driver__dev_ext )
 {
 	winvblock__bool IsBus;
 	PDEVICE_OBJECT Self;
@@ -67,7 +64,7 @@ struct _driver__dev_ext
 	irp__handler dispatch;
 	union
 	{
-		bus__bus Bus;
+		struct _bus__type Bus;
 		struct _disk__type Disk;
 	};
 };

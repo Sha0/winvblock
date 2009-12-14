@@ -33,6 +33,7 @@
 #include "portable.h"
 #include "irp.h"
 #include "disk.h"
+#include "bus.h"
 #include "driver.h"
 #include "debug.h"
 #include "registry.h"

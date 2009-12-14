@@ -34,6 +34,7 @@
 #include "portable.h"
 #include "irp.h"
 #include "disk.h"
+#include "bus.h"
 #include "protocol.h"
 #include "driver.h"
 #include "aoe.h"
