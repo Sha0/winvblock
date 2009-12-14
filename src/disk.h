@@ -28,9 +28,6 @@
  *
  */
 
-/* An unfortunate forward declaration.  Definition resolved in driver.h */
-struct _driver__dev_ext;
-
 #  include "aoedisk.h"
 #  include "ramdisk.h"
 
@@ -57,7 +54,8 @@ winvblock__def_enum ( disk__search_state );
 winvblock__def_struct ( disk__type )
 {
 	PDEVICE_OBJECT Parent;
-	struct _driver__dev_ext *Next;
+	disk__type_ptr next_sibling_ptr;
+	driver__dev_ext_ptr dev_ext_ptr;
 	KEVENT SearchEvent;
 	disk__search_state SearchState;
 	KSPIN_LOCK SpinLock;

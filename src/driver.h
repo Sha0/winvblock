@@ -54,19 +54,16 @@ enum _driver__state
 };
 winvblock__def_enum ( driver__state );
 
+/* Driver-common device extension detail */
 winvblock__def_struct ( driver__dev_ext )
 {
-	winvblock__bool IsBus;
+	driver__dev_ext_ptr driver_dev_ext;
+	winvblock__bool IsBus;				/* For debugging */
 	PDEVICE_OBJECT Self;
 	PDRIVER_OBJECT DriverObject;
 	driver__state State;
 	driver__state OldState;
 	irp__handler dispatch;
-	union
-	{
-		struct _bus__type Bus;
-		struct _disk__type Disk;
-	};
 };
 
 extern VOID STDCALL Driver_CompletePendingIrp (

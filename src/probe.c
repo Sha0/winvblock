@@ -31,9 +31,9 @@
 #include "winvblock.h"
 #include "portable.h"
 #include "irp.h"
+#include "driver.h"
 #include "disk.h"
 #include "bus.h"
-#include "driver.h"
 #include "debug.h"
 #include "mdi.h"
 #include "bus.h"
@@ -125,11 +125,14 @@ find_aoe_disks (
 	 Checksum,
 	 i;
 	winvblock__bool FoundAbft = FALSE;
-	driver__dev_ext_ptr BusDeviceExtension =
-		( driver__dev_ext_ptr ) bus__fdo->DeviceExtension;
 	abft AoEBootRecord;
 	disk__type Disk;
+	bus__type_ptr bus_ptr;
 
+	/*
+	 * Establish a pointer into the bus device's extension space
+	 */
+	bus_ptr = get_bus_ptr ( ( driver__dev_ext_ptr ) bus__fdo->DeviceExtension );
 	/*
 	 * Find aBFT
 	 */
@@ -199,10 +202,9 @@ find_aoe_disks (
 				DBG ( "Bus_AddChild() failed for aBFT AoE disk\n" );
 			else
 				{
-					if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
+					if ( bus_ptr->PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
@@ -253,8 +255,12 @@ check_mbft (
 	winvblock__uint8 Checksum = 0;
 	safe_mbr_hook_ptr AssociatedHook;
 	disk__type Disk;
-	driver__dev_ext_ptr BusDeviceExtension =
-		( driver__dev_ext_ptr ) bus__fdo->DeviceExtension;
+	bus__type_ptr bus_ptr;
+
+	/*
+	 * Establish a pointer into the bus device's extension space
+	 */
+	bus_ptr = get_bus_ptr ( ( driver__dev_ext_ptr ) bus__fdo->DeviceExtension );
 
 	if ( Offset >= 0x100000 )
 		{
@@ -311,10 +317,10 @@ check_mbft (
 		{
 			DBG ( "Bus_AddChild() failed for MEMDISK\n" );
 		}
-	else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
+	else if ( bus_ptr->PhysicalDeviceObject != NULL )
 		{
-			IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																		PhysicalDeviceObject, BusRelations );
+			IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
+																		BusRelations );
 		}
 	AssociatedHook->Flags = 1;
 	return TRUE;
@@ -388,9 +394,13 @@ find_grub4dos_disks (
 	grub4dos_drive_mapping_ptr Grub4DosDriveMapSlotPtr;
 	winvblock__uint32 i = 8;
 	winvblock__bool FoundGrub4DosMapping = FALSE;
-	driver__dev_ext_ptr BusDeviceExtension =
-		( driver__dev_ext_ptr ) bus__fdo->DeviceExtension;
 	disk__type Disk;
+	bus__type_ptr bus_ptr;
+
+	/*
+	 * Establish a pointer into the bus device's extension space
+	 */
+	bus_ptr = get_bus_ptr ( ( driver__dev_ext_ptr ) bus__fdo->DeviceExtension );
 
 	/*
 	 * Find a GRUB4DOS memory-mapped disk.  Start by looking at the
@@ -421,8 +431,8 @@ find_grub4dos_disks (
 			Grub4DosDriveMapSlotPtr =
 				( grub4dos_drive_mapping_ptr ) ( PhysicalMemory +
 																				 ( ( ( winvblock__uint32 )
-																						 InterruptVector->Segment ) << 4 )
-																				 + 0x20 );
+																						 InterruptVector->
+																						 Segment ) << 4 ) + 0x20 );
 			while ( i-- )
 				{
 					DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
@@ -459,8 +469,8 @@ find_grub4dos_disks (
 					else
 						{
 							Disk.DiskType =
-								Grub4DosDriveMapSlotPtr[i].
-								SourceDrive & 0x80 ? HardDisk : FloppyDisk;
+								Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ? HardDisk :
+								FloppyDisk;
 							Disk.SectorSize = 512;
 						}
 					DBG ( "RAM Drive is type: %d\n", Disk.DiskType );
@@ -478,10 +488,9 @@ find_grub4dos_disks (
 						{
 							DBG ( "Bus_AddChild() failed for GRUB4DOS\n" );
 						}
-					else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
+					else if ( bus_ptr->PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
-																						PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}

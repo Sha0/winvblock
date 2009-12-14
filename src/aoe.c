@@ -31,10 +31,10 @@
 #include "winvblock.h"
 #include "portable.h"
 #include "irp.h"
+#include "driver.h"
 #include "disk.h"
 #include "bus.h"
 #include "aoe.h"
-#include "driver.h"
 #include "protocol.h"
 #include "debug.h"
 #include "bus.h"
@@ -204,8 +204,8 @@ AoE_Start (
 	 */
 	if ( ( AoE_Globals_ProbeTag->PacketData =
 				 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-																					AoE_Globals_ProbeTag->PacketSize ) )
-			 == NULL )
+																					AoE_Globals_ProbeTag->
+																					PacketSize ) ) == NULL )
 		{
 			DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
 			ExFreePool ( AoE_Globals_ProbeTag );
@@ -313,7 +313,9 @@ AoE_Stop (
 	DiskSearch = AoE_Globals_DiskSearchList;
 	while ( DiskSearch != NULL )
 		{
-			KeSetEvent ( &DiskSearch->DeviceExtension->Disk.SearchEvent, 0, FALSE );
+			KeSetEvent ( &
+									 ( get_disk_ptr ( DiskSearch->DeviceExtension )->
+										 SearchEvent ), 0, FALSE );
 			PreviousDiskSearch = DiskSearch;
 			DiskSearch = DiskSearch->Next;
 			ExFreePool ( PreviousDiskSearch );
@@ -384,7 +386,12 @@ AoE_SearchDrive (
 	 InnerIrql;
 	LARGE_INTEGER MaxSectorsPerPacketSendTime;
 	ULONG MTU;
+	disk__type_ptr disk_ptr;
 
+	/*
+	 * Establish a pointer into the disk device's extension space
+	 */
+	disk_ptr = get_disk_ptr ( DeviceExtension );
 	if ( !NT_SUCCESS ( AoE_Start (  ) ) )
 		{
 			DBG ( "AoE startup failure!\n" );
@@ -407,9 +414,8 @@ AoE_SearchDrive (
 	 */
 	DiskSearch->DeviceExtension = DeviceExtension;
 	DiskSearch->Next = NULL;
-	DeviceExtension->Disk.SearchState = SearchNIC;
-
-	KeResetEvent ( &DeviceExtension->Disk.SearchEvent );
+	disk_ptr->SearchState = SearchNIC;
+	KeResetEvent ( &disk_ptr->SearchEvent );
 
 	/*
 	 * Wait until we have the global spin-lock 
@@ -451,8 +457,8 @@ AoE_SearchDrive (
 			 * 500.000 * 100ns = 50.000.000 ns = 50ms 
 			 */
 			Timeout.QuadPart = -500000LL;
-			KeWaitForSingleObject ( &DeviceExtension->Disk.SearchEvent, Executive,
-															KernelMode, FALSE, &Timeout );
+			KeWaitForSingleObject ( &disk_ptr->SearchEvent, Executive, KernelMode,
+															FALSE, &Timeout );
 			if ( AoE_Globals_Stop )
 				{
 					DBG ( "AoE is shutting down; bye!\n" );
@@ -462,13 +468,13 @@ AoE_SearchDrive (
 			/*
 			 * Wait until we have the device extension's spin-lock 
 			 */
-			KeAcquireSpinLock ( &DeviceExtension->Disk.SpinLock, &Irql );
+			KeAcquireSpinLock ( &disk_ptr->SpinLock, &Irql );
 
-			if ( DeviceExtension->Disk.SearchState == SearchNIC )
+			if ( disk_ptr->SearchState == SearchNIC )
 				{
-					if ( !Protocol_SearchNIC ( DeviceExtension->Disk.AoE.ClientMac ) )
+					if ( !Protocol_SearchNIC ( disk_ptr->AoE.ClientMac ) )
 						{
-							KeReleaseSpinLock ( &DeviceExtension->Disk.SpinLock, Irql );
+							KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
 							continue;
 						}
 					else
@@ -476,29 +482,28 @@ AoE_SearchDrive (
 							/*
 							 * We found the adapter to use, get MTU next 
 							 */
-							DeviceExtension->Disk.AoE.MTU =
-								Protocol_GetMTU ( DeviceExtension->Disk.AoE.ClientMac );
-							DeviceExtension->Disk.SearchState = GetSize;
+							disk_ptr->AoE.MTU = Protocol_GetMTU ( disk_ptr->AoE.ClientMac );
+							disk_ptr->SearchState = GetSize;
 						}
 				}
 
-			if ( DeviceExtension->Disk.SearchState == GettingSize )
+			if ( disk_ptr->SearchState == GettingSize )
 				{
 					/*
 					 * Still getting the disk's size 
 					 */
-					KeReleaseSpinLock ( &DeviceExtension->Disk.SpinLock, Irql );
+					KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
 					continue;
 				}
-			if ( DeviceExtension->Disk.SearchState == GettingGeometry )
+			if ( disk_ptr->SearchState == GettingGeometry )
 				{
 					/*
 					 * Still getting the disk's geometry 
 					 */
-					KeReleaseSpinLock ( &DeviceExtension->Disk.SpinLock, Irql );
+					KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
 					continue;
 				}
-			if ( DeviceExtension->Disk.SearchState == GettingMaxSectorsPerPacket )
+			if ( disk_ptr->SearchState == GettingMaxSectorsPerPacket )
 				{
 					KeQuerySystemTime ( &CurrentTime );
 					/*
@@ -511,22 +516,21 @@ AoE_SearchDrive (
 							 MaxSectorsPerPacketSendTime.QuadPart + 2500000LL )
 						{
 							DBG ( "No reply after 250ms for MaxSectorsPerPacket %d, "
-										"giving up\n",
-										DeviceExtension->Disk.AoE.MaxSectorsPerPacket );
-							DeviceExtension->Disk.AoE.MaxSectorsPerPacket--;
-							DeviceExtension->Disk.SearchState = Done;
+										"giving up\n", disk_ptr->AoE.MaxSectorsPerPacket );
+							disk_ptr->AoE.MaxSectorsPerPacket--;
+							disk_ptr->SearchState = Done;
 						}
 					else
 						{
 							/*
 							 * Still getting the maximum sectors per packet count 
 							 */
-							KeReleaseSpinLock ( &DeviceExtension->Disk.SpinLock, Irql );
+							KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
 							continue;
 						}
 				}
 
-			if ( DeviceExtension->Disk.SearchState == Done )
+			if ( disk_ptr->SearchState == Done )
 				{
 					/*
 					 * We've finished the disk search; perform clean-up 
@@ -620,14 +624,13 @@ AoE_SearchDrive (
 					 * Release global and device extension spin-locks 
 					 */
 					KeReleaseSpinLock ( &AoE_Globals_SpinLock, InnerIrql );
-					KeReleaseSpinLock ( &DeviceExtension->Disk.SpinLock, Irql );
+					KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
 
 					DBG ( "Disk size: %I64uM cylinders: %I64u heads: %u "
 								"sectors: %u sectors per packet: %u\n",
-								DeviceExtension->Disk.LBADiskSize / 2048,
-								DeviceExtension->Disk.Cylinders, DeviceExtension->Disk.Heads,
-								DeviceExtension->Disk.Sectors,
-								DeviceExtension->Disk.AoE.MaxSectorsPerPacket );
+								disk_ptr->LBADiskSize / 2048, disk_ptr->Cylinders,
+								disk_ptr->Heads, disk_ptr->Sectors,
+								disk_ptr->AoE.MaxSectorsPerPacket );
 					return TRUE;
 				}
 
@@ -642,7 +645,7 @@ AoE_SearchDrive (
 																					 sizeof ( AOE_TAG ) ) ) == NULL )
 				{
 					DBG ( "Couldn't allocate Tag\n" );
-					KeReleaseSpinLock ( &DeviceExtension->Disk.SpinLock, Irql );
+					KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
 					/*
 					 * Maybe next time around 
 					 */
@@ -663,7 +666,7 @@ AoE_SearchDrive (
 					DBG ( "Couldn't allocate Tag->PacketData\n" );
 					ExFreePool ( Tag );
 					Tag = NULL;
-					KeReleaseSpinLock ( &DeviceExtension->Disk.SpinLock, Irql );
+					KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
 					/*
 					 * Maybe next time around 
 					 */
@@ -672,15 +675,14 @@ AoE_SearchDrive (
 			RtlZeroMemory ( Tag->PacketData, Tag->PacketSize );
 			Tag->PacketData->Ver = AOEPROTOCOLVER;
 			Tag->PacketData->Major =
-				htons ( ( winvblock__uint16 ) DeviceExtension->Disk.AoE.Major );
-			Tag->PacketData->Minor =
-				( winvblock__uint8 ) DeviceExtension->Disk.AoE.Minor;
+				htons ( ( winvblock__uint16 ) disk_ptr->AoE.Major );
+			Tag->PacketData->Minor = ( winvblock__uint8 ) disk_ptr->AoE.Minor;
 			Tag->PacketData->ExtendedAFlag = TRUE;
 
 			/*
 			 * Initialize the packet appropriately based on our current phase 
 			 */
-			switch ( DeviceExtension->Disk.SearchState )
+			switch ( disk_ptr->SearchState )
 				{
 					case GetSize:
 						/*
@@ -688,7 +690,7 @@ AoE_SearchDrive (
 						 */
 						Tag->PacketData->Cmd = 0xec;	/* IDENTIFY DEVICE */
 						Tag->PacketData->Count = 1;
-						DeviceExtension->Disk.SearchState = GettingSize;
+						disk_ptr->SearchState = GettingSize;
 						break;
 					case GetGeometry:
 						/*
@@ -696,7 +698,7 @@ AoE_SearchDrive (
 						 */
 						Tag->PacketData->Cmd = 0x24;	/* READ SECTOR */
 						Tag->PacketData->Count = 1;
-						DeviceExtension->Disk.SearchState = GettingGeometry;
+						disk_ptr->SearchState = GettingGeometry;
 						break;
 					case GetMaxSectorsPerPacket:
 						/*
@@ -704,14 +706,13 @@ AoE_SearchDrive (
 						 */
 						Tag->PacketData->Cmd = 0x24;	/* READ SECTOR */
 						Tag->PacketData->Count =
-							( winvblock__uint8 ) ( ++DeviceExtension->Disk.
-																		 AoE.MaxSectorsPerPacket );
+							( winvblock__uint8 ) ( ++disk_ptr->AoE.MaxSectorsPerPacket );
 						KeQuerySystemTime ( &MaxSectorsPerPacketSendTime );
-						DeviceExtension->Disk.SearchState = GettingMaxSectorsPerPacket;
+						disk_ptr->SearchState = GettingMaxSectorsPerPacket;
 						/*
 						 * TODO: Make the below value into a #defined constant 
 						 */
-						DeviceExtension->Disk.AoE.Timeout = 200000;
+						disk_ptr->AoE.Timeout = 200000;
 						break;
 					default:
 						DBG ( "Undefined SearchState!!\n" );
@@ -720,7 +721,7 @@ AoE_SearchDrive (
 						/*
 						 * TODO: Do we need to nullify Tag here? 
 						 */
-						KeReleaseSpinLock ( &DeviceExtension->Disk.SpinLock, Irql );
+						KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
 						continue;
 						break;
 				}
@@ -742,7 +743,7 @@ AoE_SearchDrive (
 				}
 			AoE_Globals_TagListLast = Tag;
 			KeReleaseSpinLock ( &AoE_Globals_SpinLock, InnerIrql );
-			KeReleaseSpinLock ( &DeviceExtension->Disk.SpinLock, Irql );
+			KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
 		}
 }
 
@@ -774,7 +775,12 @@ AoE_Request (
 	ULONG i;
 	PHYSICAL_ADDRESS PhysicalAddress;
 	winvblock__uint8_ptr PhysicalMemory;
+	disk__type_ptr disk_ptr;
 
+	/*
+	 * Establish a pointer into the disk device's extension space
+	 */
+	disk_ptr = get_disk_ptr ( DeviceExtension );
 	if ( AoE_Globals_Stop )
 		{
 			/*
@@ -801,17 +807,15 @@ AoE_Request (
 	/*
 	 * Handle the Ram disk case
 	 */
-	if ( DeviceExtension->Disk.IsRamdisk )
+	if ( disk_ptr->IsRamdisk )
 		{
 			PhysicalAddress.QuadPart =
-				DeviceExtension->Disk.RAMDisk.DiskBuf +
-				( StartSector * DeviceExtension->Disk.SectorSize );
+				disk_ptr->RAMDisk.DiskBuf + ( StartSector * disk_ptr->SectorSize );
 			/*
 			 * Possible precision loss
 			 */
 			PhysicalMemory =
-				MmMapIoSpace ( PhysicalAddress,
-											 SectorCount * DeviceExtension->Disk.SectorSize,
+				MmMapIoSpace ( PhysicalAddress, SectorCount * disk_ptr->SectorSize,
 											 MmNonCached );
 			if ( !PhysicalMemory )
 				{
@@ -823,14 +827,12 @@ AoE_Request (
 				}
 			if ( Mode == AoE_RequestMode_Write )
 				RtlCopyMemory ( PhysicalMemory, Buffer,
-												SectorCount * DeviceExtension->Disk.SectorSize );
+												SectorCount * disk_ptr->SectorSize );
 			else
 				RtlCopyMemory ( Buffer, PhysicalMemory,
-												SectorCount * DeviceExtension->Disk.SectorSize );
-			MmUnmapIoSpace ( PhysicalMemory,
-											 SectorCount * DeviceExtension->Disk.SectorSize );
-			Irp->IoStatus.Information =
-				SectorCount * DeviceExtension->Disk.SectorSize;
+												SectorCount * disk_ptr->SectorSize );
+			MmUnmapIoSpace ( PhysicalMemory, SectorCount * disk_ptr->SectorSize );
+			Irp->IoStatus.Information = SectorCount * disk_ptr->SectorSize;
 			Irp->IoStatus.Status = STATUS_SUCCESS;
 			IoCompleteRequest ( Irp, IO_NO_INCREMENT );
 			return STATUS_SUCCESS;
@@ -863,8 +865,7 @@ AoE_Request (
 	/*
 	 * Split the requested sectors into packets in tags
 	 */
-	for ( i = 0; i < SectorCount;
-				i += DeviceExtension->Disk.AoE.MaxSectorsPerPacket )
+	for ( i = 0; i < SectorCount; i += disk_ptr->AoE.MaxSectorsPerPacket )
 		{
 			/*
 			 * Allocate each tag 
@@ -901,18 +902,18 @@ AoE_Request (
 			Tag->DeviceExtension = DeviceExtension;
 			Request->TagCount++;
 			Tag->Id = 0;
-			Tag->BufferOffset = i * DeviceExtension->Disk.SectorSize;
+			Tag->BufferOffset = i * disk_ptr->SectorSize;
 			Tag->SectorCount =
 				( ( SectorCount - i ) <
-					DeviceExtension->Disk.AoE.MaxSectorsPerPacket ? SectorCount -
-					i : DeviceExtension->Disk.AoE.MaxSectorsPerPacket );
+					disk_ptr->AoE.MaxSectorsPerPacket ? SectorCount -
+					i : disk_ptr->AoE.MaxSectorsPerPacket );
 
 			/*
 			 * Allocate and initialize each tag's AoE packet 
 			 */
 			Tag->PacketSize = sizeof ( AOE_PACKET );
 			if ( Mode == AoE_RequestMode_Write )
-				Tag->PacketSize += Tag->SectorCount * DeviceExtension->Disk.SectorSize;
+				Tag->PacketSize += Tag->SectorCount * disk_ptr->SectorSize;
 			if ( ( Tag->PacketData =
 						 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
 																							Tag->PacketSize ) ) == NULL )
@@ -940,9 +941,8 @@ AoE_Request (
 			RtlZeroMemory ( Tag->PacketData, Tag->PacketSize );
 			Tag->PacketData->Ver = AOEPROTOCOLVER;
 			Tag->PacketData->Major =
-				htons ( ( winvblock__uint16 ) DeviceExtension->Disk.AoE.Major );
-			Tag->PacketData->Minor =
-				( winvblock__uint8 ) DeviceExtension->Disk.AoE.Minor;
+				htons ( ( winvblock__uint16 ) disk_ptr->AoE.Major );
+			Tag->PacketData->Minor = ( winvblock__uint8 ) disk_ptr->AoE.Minor;
 			Tag->PacketData->Tag = 0;
 			Tag->PacketData->Command = 0;
 			Tag->PacketData->ExtendedAFlag = TRUE;
@@ -974,7 +974,7 @@ AoE_Request (
 			 */
 			if ( Mode == AoE_RequestMode_Write )
 				RtlCopyMemory ( Tag->PacketData->Data, &Buffer[Tag->BufferOffset],
-												Tag->SectorCount * DeviceExtension->Disk.SectorSize );
+												Tag->SectorCount * disk_ptr->SectorSize );
 
 			/*
 			 * Add this tag to the request's tag list 
@@ -1049,6 +1049,7 @@ AoE_Reply (
 	KIRQL Irql;
 	winvblock__bool Found = FALSE;
 	LARGE_INTEGER CurrentTime;
+	disk__type_ptr disk_ptr;
 
 	/*
 	 * Discard non-responses 
@@ -1118,109 +1119,105 @@ AoE_Reply (
 	KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
 
 	/*
+	 * Establish a pointer into the disk device's extension space
+	 */
+	disk_ptr = get_disk_ptr ( Tag->DeviceExtension );
+
+	/*
 	 * If our tag was a discovery request, note the server 
 	 */
 	if ( RtlCompareMemory
-			 ( Tag->DeviceExtension->Disk.AoE.ServerMac, "\xff\xff\xff\xff\xff\xff",
-				 6 ) == 6 )
+			 ( disk_ptr->AoE.ServerMac, "\xff\xff\xff\xff\xff\xff", 6 ) == 6 )
 		{
-			RtlCopyMemory ( Tag->DeviceExtension->Disk.AoE.ServerMac, SourceMac, 6 );
+			RtlCopyMemory ( disk_ptr->AoE.ServerMac, SourceMac, 6 );
 			DBG ( "Major: %d minor: %d found on server "
-						"%02x:%02x:%02x:%02x:%02x:%02x\n",
-						Tag->DeviceExtension->Disk.AoE.Major,
-						Tag->DeviceExtension->Disk.AoE.Minor, SourceMac[0], SourceMac[1],
-						SourceMac[2], SourceMac[3], SourceMac[4], SourceMac[5] );
+						"%02x:%02x:%02x:%02x:%02x:%02x\n", disk_ptr->AoE.Major,
+						disk_ptr->AoE.Minor, SourceMac[0], SourceMac[1], SourceMac[2],
+						SourceMac[3], SourceMac[4], SourceMac[5] );
 		}
 
 	KeQuerySystemTime ( &CurrentTime );
-	Tag->DeviceExtension->Disk.AoE.Timeout -=
-		( ULONG ) ( ( Tag->DeviceExtension->Disk.AoE.Timeout -
+	disk_ptr->AoE.Timeout -=
+		( ULONG ) ( ( disk_ptr->AoE.Timeout -
 									( CurrentTime.QuadPart -
 										Tag->FirstSendTime.QuadPart ) ) / 1024 );
 	/*
 	 * TODO: Replace the values below with #defined constants 
 	 */
-	if ( Tag->DeviceExtension->Disk.AoE.Timeout > 100000000 )
-		Tag->DeviceExtension->Disk.AoE.Timeout = 100000000;
+	if ( disk_ptr->AoE.Timeout > 100000000 )
+		disk_ptr->AoE.Timeout = 100000000;
 
 	switch ( Tag->Type )
 		{
 			case AoE_SearchDriveType:
-				KeAcquireSpinLock ( &Tag->DeviceExtension->Disk.SpinLock, &Irql );
-				switch ( Tag->DeviceExtension->Disk.SearchState )
+				KeAcquireSpinLock ( &disk_ptr->SpinLock, &Irql );
+				switch ( disk_ptr->SearchState )
 					{
 						case GettingSize:
 							/*
 							 * The reply tells us the disk size 
 							 */
-							RtlCopyMemory ( &Tag->DeviceExtension->Disk.LBADiskSize,
-															&Reply->Data[200], sizeof ( LONGLONG ) );
+							RtlCopyMemory ( &disk_ptr->LBADiskSize, &Reply->Data[200],
+															sizeof ( LONGLONG ) );
 							/*
 							 * Next we are concerned with the disk geometry 
 							 */
-							Tag->DeviceExtension->Disk.SearchState = GetGeometry;
+							disk_ptr->SearchState = GetGeometry;
 							break;
 						case GettingGeometry:
 							/*
 							 * FIXME: use real values from partition table 
 							 */
-							Tag->DeviceExtension->Disk.SectorSize = 512;
-							Tag->DeviceExtension->Disk.Heads = 255;
-							Tag->DeviceExtension->Disk.Sectors = 63;
-							Tag->DeviceExtension->Disk.Cylinders =
-								Tag->DeviceExtension->Disk.LBADiskSize /
-								( Tag->DeviceExtension->Disk.Heads *
-									Tag->DeviceExtension->Disk.Sectors );
-							Tag->DeviceExtension->Disk.LBADiskSize =
-								Tag->DeviceExtension->Disk.Cylinders *
-								Tag->DeviceExtension->Disk.Heads *
-								Tag->DeviceExtension->Disk.Sectors;
+							disk_ptr->SectorSize = 512;
+							disk_ptr->Heads = 255;
+							disk_ptr->Sectors = 63;
+							disk_ptr->Cylinders =
+								disk_ptr->LBADiskSize / ( disk_ptr->Heads *
+																					disk_ptr->Sectors );
+							disk_ptr->LBADiskSize =
+								disk_ptr->Cylinders * disk_ptr->Heads * disk_ptr->Sectors;
 							/*
 							 * Next we are concerned with the maximum sectors per packet 
 							 */
-							Tag->DeviceExtension->Disk.SearchState = GetMaxSectorsPerPacket;
+							disk_ptr->SearchState = GetMaxSectorsPerPacket;
 							break;
 						case GettingMaxSectorsPerPacket:
 							DataSize -= sizeof ( AOE_PACKET );
 							if ( DataSize <
-									 ( Tag->DeviceExtension->Disk.AoE.MaxSectorsPerPacket *
-										 Tag->DeviceExtension->Disk.SectorSize ) )
+									 ( disk_ptr->AoE.MaxSectorsPerPacket *
+										 disk_ptr->SectorSize ) )
 								{
 									DBG ( "Packet size too low while getting "
 												"MaxSectorsPerPacket (tried %d, got size of %d)\n",
-												Tag->DeviceExtension->Disk.AoE.MaxSectorsPerPacket,
-												DataSize );
-									Tag->DeviceExtension->Disk.AoE.MaxSectorsPerPacket--;
-									Tag->DeviceExtension->Disk.SearchState = Done;
+												disk_ptr->AoE.MaxSectorsPerPacket, DataSize );
+									disk_ptr->AoE.MaxSectorsPerPacket--;
+									disk_ptr->SearchState = Done;
 								}
-							else if ( Tag->DeviceExtension->Disk.AoE.MTU <
+							else if ( disk_ptr->AoE.MTU <
 												( sizeof ( AOE_PACKET ) +
-													( ( Tag->DeviceExtension->Disk.AoE.
-															MaxSectorsPerPacket +
-															1 ) * Tag->DeviceExtension->Disk.SectorSize ) ) )
+													( ( disk_ptr->AoE.MaxSectorsPerPacket +
+															1 ) * disk_ptr->SectorSize ) ) )
 								{
 									DBG ( "Got MaxSectorsPerPacket %d at size of %d. "
 												"MTU of %d reached\n",
-												Tag->DeviceExtension->Disk.AoE.MaxSectorsPerPacket,
-												DataSize, Tag->DeviceExtension->Disk.AoE.MTU );
-									Tag->DeviceExtension->Disk.SearchState = Done;
+												disk_ptr->AoE.MaxSectorsPerPacket, DataSize,
+												disk_ptr->AoE.MTU );
+									disk_ptr->SearchState = Done;
 								}
 							else
 								{
 									DBG ( "Got MaxSectorsPerPacket %d at size of %d, "
-												"trying next...\n",
-												Tag->DeviceExtension->Disk.AoE.MaxSectorsPerPacket,
+												"trying next...\n", disk_ptr->AoE.MaxSectorsPerPacket,
 												DataSize );
-									Tag->DeviceExtension->Disk.SearchState =
-										GetMaxSectorsPerPacket;
+									disk_ptr->SearchState = GetMaxSectorsPerPacket;
 								}
 							break;
 						default:
 							DBG ( "Undefined SearchState!\n" );
 							break;
 					}
-				KeReleaseSpinLock ( &Tag->DeviceExtension->Disk.SpinLock, Irql );
-				KeSetEvent ( &Tag->DeviceExtension->Disk.SearchEvent, 0, FALSE );
+				KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
+				KeSetEvent ( &disk_ptr->SearchEvent, 0, FALSE );
 				break;
 			case AoE_RequestType:
 				/*
@@ -1229,8 +1226,7 @@ AoE_Reply (
 				if ( Tag->Request->Mode == AoE_RequestMode_Read )
 					RtlCopyMemory ( &Tag->Request->Buffer[Tag->BufferOffset],
 													Reply->Data,
-													Tag->SectorCount *
-													Tag->DeviceExtension->Disk.SectorSize );
+													Tag->SectorCount * disk_ptr->SectorSize );
 				/*
 				 * If this is the last reply expected for the read request,
 				 * complete the IRP and free the request
@@ -1238,8 +1234,7 @@ AoE_Reply (
 				if ( InterlockedDecrement ( &Tag->Request->TagCount ) == 0 )
 					{
 						Tag->Request->Irp->IoStatus.Information =
-							Tag->Request->SectorCount *
-							Tag->DeviceExtension->Disk.SectorSize;
+							Tag->Request->SectorCount * disk_ptr->SectorSize;
 						Tag->Request->Irp->IoStatus.Status = STATUS_SUCCESS;
 						Driver_CompletePendingIrp ( Tag->Request->Irp );
 						ExFreePool ( Tag->Request );
@@ -1281,6 +1276,7 @@ AoE_Thread (
 	ULONG ResendFails = 0;
 	ULONG Fails = 0;
 	ULONG RequestTimeout = 0;
+	disk__type_ptr disk_ptr;
 
 	DBG ( "Entry\n" );
 	ReportTime.QuadPart = 0LL;
@@ -1334,9 +1330,8 @@ AoE_Thread (
 					AoE_Globals_ProbeTag->PacketData->Tag = AoE_Globals_ProbeTag->Id;
 					Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
 													"\xff\xff\xff\xff\xff\xff",
-													( winvblock__uint8_ptr )
-													AoE_Globals_ProbeTag->PacketData,
-													AoE_Globals_ProbeTag->PacketSize, NULL );
+													( winvblock__uint8_ptr ) AoE_Globals_ProbeTag->
+													PacketData, AoE_Globals_ProbeTag->PacketSize, NULL );
 					KeQuerySystemTime ( &AoE_Globals_ProbeTag->SendTime );
 				}
 
@@ -1349,7 +1344,12 @@ AoE_Thread (
 			Tag = AoE_Globals_TagList;
 			while ( Tag != NULL )
 				{
-					RequestTimeout = Tag->DeviceExtension->Disk.AoE.Timeout;
+					/*
+					 * Establish a pointer into the disk device's extension space
+					 */
+					disk_ptr = get_disk_ptr ( Tag->DeviceExtension );
+
+					RequestTimeout = disk_ptr->AoE.Timeout;
 					if ( Tag->Id == 0 )
 						{
 							if ( AoE_Globals_OutstandingTags <= 64 )
@@ -1364,8 +1364,7 @@ AoE_Thread (
 										NextTagId++;
 									Tag->PacketData->Tag = Tag->Id;
 									if ( Protocol_Send
-											 ( Tag->DeviceExtension->Disk.AoE.ClientMac,
-												 Tag->DeviceExtension->Disk.AoE.ServerMac,
+											 ( disk_ptr->AoE.ClientMac, disk_ptr->AoE.ServerMac,
 												 ( winvblock__uint8_ptr ) Tag->PacketData,
 												 Tag->PacketSize, Tag ) )
 										{
@@ -1387,20 +1386,17 @@ AoE_Thread (
 							KeQuerySystemTime ( &CurrentTime );
 							if ( CurrentTime.QuadPart >
 									 ( Tag->SendTime.QuadPart +
-										 ( LONGLONG ) ( Tag->DeviceExtension->Disk.AoE.Timeout *
-																		2 ) ) )
+										 ( LONGLONG ) ( disk_ptr->AoE.Timeout * 2 ) ) )
 								{
 									if ( Protocol_Send
-											 ( Tag->DeviceExtension->Disk.AoE.ClientMac,
-												 Tag->DeviceExtension->Disk.AoE.ServerMac,
+											 ( disk_ptr->AoE.ClientMac, disk_ptr->AoE.ServerMac,
 												 ( winvblock__uint8_ptr ) Tag->PacketData,
 												 Tag->PacketSize, Tag ) )
 										{
 											KeQuerySystemTime ( &Tag->SendTime );
-											Tag->DeviceExtension->Disk.AoE.Timeout +=
-												Tag->DeviceExtension->Disk.AoE.Timeout / 1000;
-											if ( Tag->DeviceExtension->Disk.AoE.Timeout > 100000000 )
-												Tag->DeviceExtension->Disk.AoE.Timeout = 100000000;
+											disk_ptr->AoE.Timeout += disk_ptr->AoE.Timeout / 1000;
+											if ( disk_ptr->AoE.Timeout > 100000000 )
+												disk_ptr->AoE.Timeout = 100000000;
 											Resends++;
 										}
 									else
