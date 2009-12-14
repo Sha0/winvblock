@@ -30,6 +30,7 @@
 
 #include "winvblock.h"
 #include "portable.h"
+#include "irp.h"
 #include "aoe.h"
 #include "driver.h"
 #include "protocol.h"
@@ -201,8 +202,8 @@ AoE_Start (
 	 */
 	if ( ( AoE_Globals_ProbeTag->PacketData =
 				 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-																					AoE_Globals_ProbeTag->
-																					PacketSize ) ) == NULL )
+																					AoE_Globals_ProbeTag->PacketSize ) )
+			 == NULL )
 		{
 			DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
 			ExFreePool ( AoE_Globals_ProbeTag );
@@ -701,8 +702,8 @@ AoE_SearchDrive (
 						 */
 						Tag->PacketData->Cmd = 0x24;	/* READ SECTOR */
 						Tag->PacketData->Count =
-							( winvblock__uint8 ) ( ++DeviceExtension->Disk.AoE.
-																		 MaxSectorsPerPacket );
+							( winvblock__uint8 ) ( ++DeviceExtension->Disk.
+																		 AoE.MaxSectorsPerPacket );
 						KeQuerySystemTime ( &MaxSectorsPerPacketSendTime );
 						DeviceExtension->Disk.SearchState = GettingMaxSectorsPerPacket;
 						/*
@@ -1192,8 +1193,8 @@ AoE_Reply (
 								}
 							else if ( Tag->DeviceExtension->Disk.AoE.MTU <
 												( sizeof ( AOE_PACKET ) +
-													( ( Tag->DeviceExtension->Disk.
-															AoE.MaxSectorsPerPacket +
+													( ( Tag->DeviceExtension->Disk.AoE.
+															MaxSectorsPerPacket +
 															1 ) * Tag->DeviceExtension->Disk.SectorSize ) ) )
 								{
 									DBG ( "Got MaxSectorsPerPacket %d at size of %d. "
@@ -1331,8 +1332,9 @@ AoE_Thread (
 					AoE_Globals_ProbeTag->PacketData->Tag = AoE_Globals_ProbeTag->Id;
 					Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
 													"\xff\xff\xff\xff\xff\xff",
-													( winvblock__uint8_ptr ) AoE_Globals_ProbeTag->
-													PacketData, AoE_Globals_ProbeTag->PacketSize, NULL );
+													( winvblock__uint8_ptr )
+													AoE_Globals_ProbeTag->PacketData,
+													AoE_Globals_ProbeTag->PacketSize, NULL );
 					KeQuerySystemTime ( &AoE_Globals_ProbeTag->SendTime );
 				}
 

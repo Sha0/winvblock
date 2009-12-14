@@ -72,20 +72,6 @@ winvblock__def_enum ( driver__search_state );
  */
 winvblock__def_struct ( driver__dev_ext );
 
-#  define IRPHandler_Declaration(x) NTSTATUS STDCALL\
-                                  x (\
-                                  	IN PDEVICE_OBJECT DeviceObject,\
-                                  	IN PIRP Irp,\
-                                  	IN PIO_STACK_LOCATION Stack,\
-                                  	IN driver__dev_ext_ptr DeviceExtension\
-                                   )
-/*
- * Function-type for an IRP handler. 'indent' mangles this, so it looks weird
- */
-typedef IRPHandler_Declaration (
-	 ( *DRIVER_IRPHANDLER )
- );
-
 #  include "disk.h"
 #  include "bus.h"
 
@@ -96,7 +82,7 @@ struct _driver__dev_ext
 	PDRIVER_OBJECT DriverObject;
 	driver__state State;
 	driver__state OldState;
-	DRIVER_IRPHANDLER Dispatch;
+	irp__handler dispatch;
 	union
 	{
 		bus__bus Bus;

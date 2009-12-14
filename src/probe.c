@@ -30,6 +30,7 @@
 
 #include "winvblock.h"
 #include "portable.h"
+#include "irp.h"
 #include "driver.h"
 #include "debug.h"
 #include "mdi.h"
@@ -198,8 +199,8 @@ find_aoe_disks (
 				{
 					if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->
-																						Bus.PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
+																						PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}
@@ -310,8 +311,8 @@ check_mbft (
 		}
 	else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 		{
-			IoInvalidateDeviceRelations ( BusDeviceExtension->
-																		Bus.PhysicalDeviceObject, BusRelations );
+			IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
+																		PhysicalDeviceObject, BusRelations );
 		}
 	AssociatedHook->Flags = 1;
 	return TRUE;
@@ -418,8 +419,8 @@ find_grub4dos_disks (
 			Grub4DosDriveMapSlotPtr =
 				( grub4dos_drive_mapping_ptr ) ( PhysicalMemory +
 																				 ( ( ( winvblock__uint32 )
-																						 InterruptVector->
-																						 Segment ) << 4 ) + 0x20 );
+																						 InterruptVector->Segment ) << 4 )
+																				 + 0x20 );
 			while ( i-- )
 				{
 					DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
@@ -456,8 +457,8 @@ find_grub4dos_disks (
 					else
 						{
 							Disk.DiskType =
-								Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ? HardDisk :
-								FloppyDisk;
+								Grub4DosDriveMapSlotPtr[i].
+								SourceDrive & 0x80 ? HardDisk : FloppyDisk;
 							Disk.SectorSize = 512;
 						}
 					DBG ( "RAM Drive is type: %d\n", Disk.DiskType );
@@ -477,8 +478,8 @@ find_grub4dos_disks (
 						}
 					else if ( BusDeviceExtension->Bus.PhysicalDeviceObject != NULL )
 						{
-							IoInvalidateDeviceRelations ( BusDeviceExtension->
-																						Bus.PhysicalDeviceObject,
+							IoInvalidateDeviceRelations ( BusDeviceExtension->Bus.
+																						PhysicalDeviceObject,
 																						BusRelations );
 						}
 				}

@@ -50,15 +50,15 @@ extern NTSTATUS STDCALL Bus_AddDevice (
 	IN PDEVICE_OBJECT PhysicalDeviceObject
  );
 
-extern IRPHandler_Declaration (
+extern irp__handler_decl (
 	Bus_DispatchPnP
  );
 
-extern IRPHandler_Declaration (
+extern irp__handler_decl (
 	Bus_DispatchDeviceControl
  );
 
-extern IRPHandler_Declaration (
+extern irp__handler_decl (
 	Bus_DispatchSystemControl
  );
 

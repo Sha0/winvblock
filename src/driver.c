@@ -31,6 +31,7 @@
 
 #include "winvblock.h"
 #include "portable.h"
+#include "irp.h"
 #include "driver.h"
 #include "debug.h"
 #include "registry.h"
@@ -188,7 +189,7 @@ Driver_Dispatch (
 				break;
 			default:
 				Status =
-					DeviceExtension->Dispatch ( DeviceObject, Irp, Stack,
+					DeviceExtension->dispatch ( DeviceObject, Irp, Stack,
 																			DeviceExtension );
 		}
 #ifdef DEBUGIRPS
