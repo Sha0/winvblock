@@ -162,7 +162,7 @@ static winvblock__bool AoE_Globals_Started = FALSE;
  *
  * @ret Status		Return status code
  */
-NTSTATUS STDCALL
+NTSTATUS
 AoE_Start (
   void
  )
@@ -204,8 +204,8 @@ AoE_Start (
    */
   if ( ( AoE_Globals_ProbeTag->PacketData =
 	 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-					  AoE_Globals_ProbeTag->PacketSize ) )
-       == NULL )
+					  AoE_Globals_ProbeTag->
+					  PacketSize ) ) == NULL )
     {
       DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
       ExFreePool ( AoE_Globals_ProbeTag );
@@ -267,7 +267,7 @@ AoE_Start (
 /**
  * Stop AoE operations
  */
-VOID STDCALL
+VOID
 AoE_Stop (
   void
  )
@@ -314,9 +314,8 @@ AoE_Stop (
   while ( DiskSearch != NULL )
     {
       KeSetEvent ( &
-		   ( get_disk_ptr
-		     ( DiskSearch->DeviceExtension )->SearchEvent ), 0,
-		   FALSE );
+		   ( get_disk_ptr ( DiskSearch->DeviceExtension )->
+		     SearchEvent ), 0, FALSE );
       PreviousDiskSearch = DiskSearch;
       DiskSearch = DiskSearch->Next;
       ExFreePool ( PreviousDiskSearch );
@@ -758,7 +757,7 @@ AoE_SearchDrive (
  * @v Buffer          Buffer to read / write sectors to / from
  * @v Irp             Interrupt request packet for this request
  */
-NTSTATUS STDCALL
+NTSTATUS
 AoE_Request (
   IN driver__dev_ext_ptr DeviceExtension,
   IN AOE_REQUESTMODE Mode,
@@ -1252,7 +1251,7 @@ AoE_Reply (
   return STATUS_SUCCESS;
 }
 
-VOID STDCALL
+VOID
 AoE_ResetProbe (
   void
  )
@@ -1331,9 +1330,8 @@ AoE_Thread (
 	  AoE_Globals_ProbeTag->PacketData->Tag = AoE_Globals_ProbeTag->Id;
 	  Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
 			  "\xff\xff\xff\xff\xff\xff",
-			  ( winvblock__uint8_ptr )
-			  AoE_Globals_ProbeTag->PacketData,
-			  AoE_Globals_ProbeTag->PacketSize, NULL );
+			  ( winvblock__uint8_ptr ) AoE_Globals_ProbeTag->
+			  PacketData, AoE_Globals_ProbeTag->PacketSize, NULL );
 	  KeQuerySystemTime ( &AoE_Globals_ProbeTag->SendTime );
 	}
 

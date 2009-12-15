@@ -43,10 +43,10 @@ extern winvblock__bool STDCALL Protocol_Send (
   IN ULONG DataSize,
   IN PVOID PacketContext
  );
-extern NTSTATUS STDCALL Protocol_Start (
+extern NTSTATUS Protocol_Start (
   void
  );
-extern VOID STDCALL Protocol_Stop (
+extern VOID Protocol_Stop (
   void
  );
 

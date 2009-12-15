@@ -148,7 +148,7 @@ static PPROTOCOL_BINDINGCONTEXT Protocol_Globals_BindingContextList = NULL;
 static NDIS_HANDLE Protocol_Globals_Handle = NULL;
 static winvblock__bool Protocol_Globals_Started = FALSE;
 
-NTSTATUS STDCALL
+NTSTATUS
 Protocol_Start (
   void
  )

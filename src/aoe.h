@@ -31,8 +31,10 @@
 #  include "portable.h"
 #  include "driver.h"
 
-#  define htons(x) (winvblock__uint16)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
-#  define ntohs(x) (winvblock__uint16)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
+#  define htons(x) (winvblock__uint16)((((x) << 8) & 0xff00) | \
+                                       (((x) >> 8) & 0xff))
+#  define ntohs(x) (winvblock__uint16)((((x) << 8) & 0xff00) | \
+                                       (((x) >> 8) & 0xff))
 
 typedef enum
 { AoE_RequestMode_Read, AoE_RequestMode_Write } AOE_REQUESTMODE,
@@ -55,13 +57,13 @@ extern NTSTATUS STDCALL AoE_Reply (
   IN winvblock__uint8_ptr Data,
   IN winvblock__uint32 DataSize
  );
-extern VOID STDCALL AoE_ResetProbe (
+extern VOID AoE_ResetProbe (
   void
  );
-extern NTSTATUS STDCALL AoE_Start (
+extern NTSTATUS AoE_Start (
   void
  );
-extern VOID STDCALL AoE_Stop (
+extern VOID AoE_Stop (
   void
  );
 

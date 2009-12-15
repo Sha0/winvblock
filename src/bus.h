@@ -37,11 +37,11 @@ winvblock__def_struct ( bus__type )
   KSPIN_LOCK SpinLock;
 };
 
-extern NTSTATUS STDCALL Bus_Start (
+extern NTSTATUS Bus_Start (
   void
  );
 
-extern VOID STDCALL Bus_Stop (
+extern VOID Bus_Stop (
   void
  );
 
@@ -70,7 +70,7 @@ extern VOID STDCALL Bus_AddTarget (
   LONGLONG LBASize
  );
 
-extern VOID STDCALL Bus_CleanupTargetList (
+extern VOID Bus_CleanupTargetList (
   void
  );
 
