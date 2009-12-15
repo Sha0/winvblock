@@ -51,4 +51,4 @@ winvblock__def_type ( UINT32, winvblock__uint32 );
 winvblock__def_type ( UINT16, winvblock__uint16 );
 winvblock__def_type ( BOOLEAN, winvblock__bool );
 
-#endif													/* _winvblock_h */
+#endif				/* _winvblock_h */

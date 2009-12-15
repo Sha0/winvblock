@@ -39,119 +39,119 @@
 
 static void
 DisplayError (
-	char *String
+  char *String
  )
 {
-	CHAR ErrorString[1024];
-	winvblock__uint32 ErrorCode = GetLastError (  );
+  CHAR ErrorString[1024];
+  winvblock__uint32 ErrorCode = GetLastError (  );
 
-	printf ( "Error: %s\n", String );
-	printf ( "GetLastError: 0x%08x (%d)\n", ErrorCode, ( int )ErrorCode );
-	if ( FormatMessage
-			 ( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
-				 ErrorCode, MAKELANGID ( LANG_NEUTRAL, SUBLANG_DEFAULT ),
-				 ( LPTSTR ) ErrorString, sizeof ( ErrorString ), NULL ) )
-		printf ( "%s", ErrorString );
+  printf ( "Error: %s\n", String );
+  printf ( "GetLastError: 0x%08x (%d)\n", ErrorCode, ( int )ErrorCode );
+  if ( FormatMessage
+       ( FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+	 ErrorCode, MAKELANGID ( LANG_NEUTRAL, SUBLANG_DEFAULT ),
+	 ( LPTSTR ) ErrorString, sizeof ( ErrorString ), NULL ) )
+    printf ( "%s", ErrorString );
 }
 
 int
 main (
-	int argc,
-	char **argv,
-	char **envp
+  int argc,
+  char **argv,
+  char **envp
  )
 {
-	HDEVINFO DeviceInfoSet = 0;
-	SP_DEVINFO_DATA DeviceInfoData;
-	GUID ClassGUID;
-	TCHAR ClassName[MAX_CLASS_NAME_LEN];
-	HINSTANCE Library;
-	PROC UpdateDriverForPlugAndPlayDevicesA;
-	BOOL RebootRequired = FALSE;
-	TCHAR FullFilePath[1024];
+  HDEVINFO DeviceInfoSet = 0;
+  SP_DEVINFO_DATA DeviceInfoData;
+  GUID ClassGUID;
+  TCHAR ClassName[MAX_CLASS_NAME_LEN];
+  HINSTANCE Library;
+  PROC UpdateDriverForPlugAndPlayDevicesA;
+  BOOL RebootRequired = FALSE;
+  TCHAR FullFilePath[1024];
 
-	if ( !GetFullPathName
-			 ( "winvblk.inf", sizeof ( FullFilePath ), FullFilePath, NULL ) )
-		goto GetFullPathNameError;
-	if ( ( Library = LoadLibrary ( "newdev.dll" ) ) == NULL )
-		goto LoadLibraryError;
-	if ( ( UpdateDriverForPlugAndPlayDevicesA =
-				 GetProcAddress ( Library,
-													"UpdateDriverForPlugAndPlayDevicesA" ) ) == NULL )
-		goto GetProcAddressError;
+  if ( !GetFullPathName
+       ( "winvblk.inf", sizeof ( FullFilePath ), FullFilePath, NULL ) )
+    goto GetFullPathNameError;
+  if ( ( Library = LoadLibrary ( "newdev.dll" ) ) == NULL )
+    goto LoadLibraryError;
+  if ( ( UpdateDriverForPlugAndPlayDevicesA =
+	 GetProcAddress ( Library,
+			  "UpdateDriverForPlugAndPlayDevicesA" ) ) == NULL )
+    goto GetProcAddressError;
 
-	if ( !SetupDiGetINFClass
-			 ( FullFilePath, &ClassGUID, ClassName, sizeof ( ClassName ), 0 ) )
-		goto GetINFClassError;
-	if ( ( DeviceInfoSet =
-				 SetupDiCreateDeviceInfoList ( &ClassGUID,
-																			 0 ) ) == INVALID_HANDLE_VALUE )
-		goto CreateDeviceInfoListError;
-	DeviceInfoData.cbSize = sizeof ( SP_DEVINFO_DATA );
-	if ( !SetupDiCreateDeviceInfo
-			 ( DeviceInfoSet, ClassName, &ClassGUID, NULL, 0, DICD_GENERATE_ID,
-				 &DeviceInfoData ) )
-		goto CreateDeviceInfoError;
-	if ( !SetupDiSetDeviceRegistryProperty
-			 ( DeviceInfoSet, &DeviceInfoData, SPDRP_HARDWAREID,
-				 ( LPBYTE ) "WinVBlock\0\0\0",
-				 ( lstrlen ( "WinVBlock\0\0\0" ) + 1 + 1 ) * sizeof ( TCHAR ) ) )
-		goto SetDeviceRegistryPropertyError;
-	if ( !SetupDiCallClassInstaller
-			 ( DIF_REGISTERDEVICE, DeviceInfoSet, &DeviceInfoData ) )
-		goto CallClassInstallerREGISTERDEVICEError;
+  if ( !SetupDiGetINFClass
+       ( FullFilePath, &ClassGUID, ClassName, sizeof ( ClassName ), 0 ) )
+    goto GetINFClassError;
+  if ( ( DeviceInfoSet =
+	 SetupDiCreateDeviceInfoList ( &ClassGUID,
+				       0 ) ) == INVALID_HANDLE_VALUE )
+    goto CreateDeviceInfoListError;
+  DeviceInfoData.cbSize = sizeof ( SP_DEVINFO_DATA );
+  if ( !SetupDiCreateDeviceInfo
+       ( DeviceInfoSet, ClassName, &ClassGUID, NULL, 0, DICD_GENERATE_ID,
+	 &DeviceInfoData ) )
+    goto CreateDeviceInfoError;
+  if ( !SetupDiSetDeviceRegistryProperty
+       ( DeviceInfoSet, &DeviceInfoData, SPDRP_HARDWAREID,
+	 ( LPBYTE ) "WinVBlock\0\0\0",
+	 ( lstrlen ( "WinVBlock\0\0\0" ) + 1 + 1 ) * sizeof ( TCHAR ) ) )
+    goto SetDeviceRegistryPropertyError;
+  if ( !SetupDiCallClassInstaller
+       ( DIF_REGISTERDEVICE, DeviceInfoSet, &DeviceInfoData ) )
+    goto CallClassInstallerREGISTERDEVICEError;
 
-	if ( !UpdateDriverForPlugAndPlayDevices
-			 ( 0, "WinVBlock\0\0\0", FullFilePath, INSTALLFLAG_FORCE,
-				 &RebootRequired ) )
-		{
-			DWORD err = GetLastError (  );
-			DisplayError ( "UpdateDriverForPlugAndPlayDevices" );
-			if ( !SetupDiCallClassInstaller
-					 ( DIF_REMOVE, DeviceInfoSet, &DeviceInfoData ) )
-				DisplayError ( "CallClassInstaller(REMOVE)" );
-			SetLastError ( err );
-		}
-	if ( RebootRequired )
-		printf ( "Need reboot\n" );
+  if ( !UpdateDriverForPlugAndPlayDevices
+       ( 0, "WinVBlock\0\0\0", FullFilePath, INSTALLFLAG_FORCE,
+	 &RebootRequired ) )
+    {
+      DWORD err = GetLastError (  );
+      DisplayError ( "UpdateDriverForPlugAndPlayDevices" );
+      if ( !SetupDiCallClassInstaller
+	   ( DIF_REMOVE, DeviceInfoSet, &DeviceInfoData ) )
+	DisplayError ( "CallClassInstaller(REMOVE)" );
+      SetLastError ( err );
+    }
+  if ( RebootRequired )
+    printf ( "Need reboot\n" );
 
-	printf ( "Press enter to remove\n" );
-	getchar (  );
-	if ( !SetupDiCallClassInstaller
-			 ( DIF_REMOVE, DeviceInfoSet, &DeviceInfoData ) )
-		DisplayError ( "CallClassInstaller(REMOVE)" );
-	return 0;
+  printf ( "Press enter to remove\n" );
+  getchar (  );
+  if ( !SetupDiCallClassInstaller
+       ( DIF_REMOVE, DeviceInfoSet, &DeviceInfoData ) )
+    DisplayError ( "CallClassInstaller(REMOVE)" );
+  return 0;
 
 GetFullPathNameError:
-	DisplayError ( "GetFullPathName" );
-	goto end;
+  DisplayError ( "GetFullPathName" );
+  goto end;
 LoadLibraryError:
-	DisplayError ( "LoadLibrary" );
-	goto end;
+  DisplayError ( "LoadLibrary" );
+  goto end;
 GetProcAddressError:
-	DisplayError ( "GetProcAddress" );
-	goto end;
+  DisplayError ( "GetProcAddress" );
+  goto end;
 GetINFClassError:
-	DisplayError ( "GetINFClass" );
-	goto end;
+  DisplayError ( "GetINFClass" );
+  goto end;
 CreateDeviceInfoListError:
-	DisplayError ( "CreateDeviceInfoList" );
-	goto end;
+  DisplayError ( "CreateDeviceInfoList" );
+  goto end;
 
 CreateDeviceInfoError:
-	DisplayError ( "CreateDeviceInfo" );
-	goto cleanup_DeviceInfo;
+  DisplayError ( "CreateDeviceInfo" );
+  goto cleanup_DeviceInfo;
 SetDeviceRegistryPropertyError:
-	DisplayError ( "SetDeviceRegistryProperty" );
-	goto cleanup_DeviceInfo;
+  DisplayError ( "SetDeviceRegistryProperty" );
+  goto cleanup_DeviceInfo;
 CallClassInstallerREGISTERDEVICEError:
-	DisplayError ( "CallClassInstaller(REGISTERDEVICE)" );
-	goto cleanup_DeviceInfo;
+  DisplayError ( "CallClassInstaller(REGISTERDEVICE)" );
+  goto cleanup_DeviceInfo;
 
 cleanup_DeviceInfo:
-	SetupDiDestroyDeviceInfoList ( DeviceInfoSet );
+  SetupDiDestroyDeviceInfoList ( DeviceInfoSet );
 end:
-	printf ( "Press enter to exit\n" );
-	getchar (  );
-	return 0;
+  printf ( "Press enter to exit\n" );
+  getchar (  );
+  return 0;
 }

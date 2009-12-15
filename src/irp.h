@@ -45,13 +45,13 @@ x ( \
  * 'indent' mangles this, so it looks weird
  */
 typedef irp__handler_decl (
-	 ( *irp__handler )
+   ( *irp__handler )
  );
 
 winvblock__def_struct ( irp__handling )
 {
-	winvblock__uint8 function;
-	irp__handler handler;
+  winvblock__uint8 function;
+  irp__handler handler;
 };
 
-#endif													/* _irp_h */
+#endif				/* _irp_h */

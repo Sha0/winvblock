@@ -33,53 +33,53 @@
 
 enum DISK_DISKTYPE
 {
-	FloppyDisk,
-	HardDisk,
-	OpticalDisc
+  FloppyDisk,
+  HardDisk,
+  OpticalDisc
 };
 
 enum _disk__search_state
 {
-	SearchNIC,
-	GetSize,
-	GettingSize,
-	GetGeometry,
-	GettingGeometry,
-	GetMaxSectorsPerPacket,
-	GettingMaxSectorsPerPacket,
-	Done
+  SearchNIC,
+  GetSize,
+  GettingSize,
+  GetGeometry,
+  GettingGeometry,
+  GetMaxSectorsPerPacket,
+  GettingMaxSectorsPerPacket,
+  Done
 };
 winvblock__def_enum ( disk__search_state );
 
 winvblock__def_struct ( disk__type )
 {
-	PDEVICE_OBJECT Parent;
-	disk__type_ptr next_sibling_ptr;
-	driver__dev_ext_ptr dev_ext_ptr;
-	KEVENT SearchEvent;
-	disk__search_state SearchState;
-	KSPIN_LOCK SpinLock;
-	winvblock__bool BootDrive;
-	winvblock__bool Unmount;
-	ULONG DiskNumber;
-	winvblock__bool IsRamdisk;
-	winvblock__uint32 DiskType;
-	winvblock__bool STDCALL (
-	*Initialize
-	 ) (
-	IN struct _driver__dev_ext * DeviceExtension
-	 );
-	union
-	{
-		AOEDISK_AOEDISK AoE;
-		RAMDISK_RAMDISK RAMDisk;
-	};
-	LONGLONG LBADiskSize;
-	LONGLONG Cylinders;
-	ULONG Heads;
-	ULONG Sectors;
-	winvblock__uint32 SectorSize;
-	ULONG SpecialFileCount;
+  PDEVICE_OBJECT Parent;
+  disk__type_ptr next_sibling_ptr;
+  driver__dev_ext_ptr dev_ext_ptr;
+  KEVENT SearchEvent;
+  disk__search_state SearchState;
+  KSPIN_LOCK SpinLock;
+  winvblock__bool BootDrive;
+  winvblock__bool Unmount;
+  ULONG DiskNumber;
+  winvblock__bool IsRamdisk;
+  winvblock__uint32 DiskType;
+  winvblock__bool STDCALL (
+  *Initialize
+   ) (
+  IN struct _driver__dev_ext * DeviceExtension
+   );
+  union
+  {
+    AOEDISK_AOEDISK AoE;
+    RAMDISK_RAMDISK RAMDisk;
+  };
+  LONGLONG LBADiskSize;
+  LONGLONG Cylinders;
+  ULONG Heads;
+  ULONG Sectors;
+  winvblock__uint32 SectorSize;
+  ULONG SpecialFileCount;
 };
 
-#endif													/* _DISK_H */
+#endif				/* _DISK_H */

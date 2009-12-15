@@ -41,20 +41,20 @@
                                   0
 
 extern NTSTATUS STDCALL xDbgPrint (
-	IN PCHAR File,
-	IN PCHAR Function,
-	IN winvblock__uint32 Line
+  IN PCHAR File,
+  IN PCHAR Function,
+  IN winvblock__uint32 Line
  );
 extern VOID STDCALL Debug_Initialize (
-	void
+  void
  );
 extern VOID STDCALL Debug_IrpStart (
-	IN PDEVICE_OBJECT DeviceObject,
-	IN PIRP Irp
+  IN PDEVICE_OBJECT DeviceObject,
+  IN PIRP Irp
  );
 extern VOID STDCALL Debug_IrpEnd (
-	IN PIRP Irp,
-	IN NTSTATUS Status
+  IN PIRP Irp,
+  IN NTSTATUS Status
  );
 
-#endif													/* _DEBUG_H */
+#endif				/* _DEBUG_H */

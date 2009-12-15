@@ -56,4 +56,4 @@ typedef unsigned int UINT,
 #    endif
 #  endif
 
-#endif													/* _PORTABLE_H */
+#endif				/* _PORTABLE_H */

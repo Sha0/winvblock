@@ -31,23 +31,23 @@
 #  include "portable.h"
 
 extern winvblock__bool STDCALL Protocol_SearchNIC (
-	IN winvblock__uint8_ptr Mac
+  IN winvblock__uint8_ptr Mac
  );
 extern ULONG STDCALL Protocol_GetMTU (
-	IN winvblock__uint8_ptr Mac
+  IN winvblock__uint8_ptr Mac
  );
 extern winvblock__bool STDCALL Protocol_Send (
-	IN winvblock__uint8_ptr SourceMac,
-	IN winvblock__uint8_ptr DestinationMac,
-	IN winvblock__uint8_ptr Data,
-	IN ULONG DataSize,
-	IN PVOID PacketContext
+  IN winvblock__uint8_ptr SourceMac,
+  IN winvblock__uint8_ptr DestinationMac,
+  IN winvblock__uint8_ptr Data,
+  IN ULONG DataSize,
+  IN PVOID PacketContext
  );
 extern NTSTATUS STDCALL Protocol_Start (
-	void
+  void
  );
 extern VOID STDCALL Protocol_Stop (
-	void
+  void
  );
 
-#endif													/* _PROTOCOL_H */
+#endif				/* _PROTOCOL_H */

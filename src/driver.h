@@ -44,49 +44,49 @@
 
 enum _driver__state
 {
-	NotStarted,
-	Started,
-	StopPending,
-	Stopped,
-	RemovePending,
-	SurpriseRemovePending,
-	Deleted
+  NotStarted,
+  Started,
+  StopPending,
+  Stopped,
+  RemovePending,
+  SurpriseRemovePending,
+  Deleted
 };
 winvblock__def_enum ( driver__state );
 
 /* Driver-common device extension detail */
 winvblock__def_struct ( driver__dev_ext )
 {
-	driver__dev_ext_ptr driver_dev_ext;
-	winvblock__bool IsBus;				/* For debugging */
-	PDEVICE_OBJECT Self;
-	PDRIVER_OBJECT DriverObject;
-	driver__state State;
-	driver__state OldState;
-	irp__handler dispatch;
+  driver__dev_ext_ptr driver_dev_ext;
+  winvblock__bool IsBus;	/* For debugging */
+  PDEVICE_OBJECT Self;
+  PDRIVER_OBJECT DriverObject;
+  driver__state State;
+  driver__state OldState;
+  irp__handler dispatch;
 };
 
 extern VOID STDCALL Driver_CompletePendingIrp (
-	IN PIRP Irp
+  IN PIRP Irp
  );
 /*
  * Note the exception to the function naming convention
  */
 extern NTSTATUS STDCALL Error (
-	IN PCHAR Message,
-	IN NTSTATUS Status
+  IN PCHAR Message,
+  IN NTSTATUS Status
  );
 /*
  * Note the exception to the function naming convention
  */
 extern NTSTATUS STDCALL DriverEntry (
-	IN PDRIVER_OBJECT DriverObject,
-	IN PUNICODE_STRING RegistryPath
+  IN PDRIVER_OBJECT DriverObject,
+  IN PUNICODE_STRING RegistryPath
  );
 
 extern NTSTATUS STDCALL Driver_Dispatch (
-	IN PDEVICE_OBJECT DeviceObject,
-	IN PIRP Irp
+  IN PDEVICE_OBJECT DeviceObject,
+  IN PIRP Irp
  );
 
-#endif													/* _DRIVER_H */
+#endif				/* _DRIVER_H */

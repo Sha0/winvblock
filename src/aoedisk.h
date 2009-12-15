@@ -30,34 +30,34 @@
 
 typedef struct _AOEDISK_AOEDISK
 {
-	ULONG MTU;
-	winvblock__uint8 ClientMac[6];
-	winvblock__uint8 ServerMac[6];
-	ULONG Major;
-	ULONG Minor;
-	ULONG MaxSectorsPerPacket;
-	ULONG Timeout;
+  ULONG MTU;
+  winvblock__uint8 ClientMac[6];
+  winvblock__uint8 ServerMac[6];
+  ULONG Major;
+  ULONG Minor;
+  ULONG MaxSectorsPerPacket;
+  ULONG Timeout;
 } AOEDISK_AOEDISK,
 *PAOEDISK_AOEDISK;
 
 extern irp__handler_decl (
-	Disk_Dispatch
+  Disk_Dispatch
  );
 
 extern irp__handler_decl (
-	Disk_DispatchPnP
+  Disk_DispatchPnP
  );
 
 extern irp__handler_decl (
-	Disk_DispatchSCSI
+  Disk_DispatchSCSI
  );
 
 extern irp__handler_decl (
-	Disk_DispatchDeviceControl
+  Disk_DispatchDeviceControl
  );
 
 extern irp__handler_decl (
-	Disk_DispatchSystemControl
+  Disk_DispatchSystemControl
  );
 
-#endif													/* _AOEDISK_H */
+#endif				/* _AOEDISK_H */

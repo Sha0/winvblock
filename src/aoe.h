@@ -39,30 +39,30 @@ typedef enum
 *PAOE_REQUESTMODE;
 
 extern winvblock__bool STDCALL AoE_SearchDrive (
-	IN driver__dev_ext_ptr DeviceExtension
+  IN driver__dev_ext_ptr DeviceExtension
  );
 extern NTSTATUS STDCALL AoE_Request (
-	IN driver__dev_ext_ptr DeviceExtension,
-	IN AOE_REQUESTMODE Mode,
-	IN LONGLONG StartSector,
-	IN ULONG SectorCount,
-	IN winvblock__uint8_ptr Buffer,
-	IN PIRP Irp
+  IN driver__dev_ext_ptr DeviceExtension,
+  IN AOE_REQUESTMODE Mode,
+  IN LONGLONG StartSector,
+  IN ULONG SectorCount,
+  IN winvblock__uint8_ptr Buffer,
+  IN PIRP Irp
  );
 extern NTSTATUS STDCALL AoE_Reply (
-	IN winvblock__uint8_ptr SourceMac,
-	IN winvblock__uint8_ptr DestinationMac,
-	IN winvblock__uint8_ptr Data,
-	IN winvblock__uint32 DataSize
+  IN winvblock__uint8_ptr SourceMac,
+  IN winvblock__uint8_ptr DestinationMac,
+  IN winvblock__uint8_ptr Data,
+  IN winvblock__uint32 DataSize
  );
 extern VOID STDCALL AoE_ResetProbe (
-	void
+  void
  );
 extern NTSTATUS STDCALL AoE_Start (
-	void
+  void
  );
 extern VOID STDCALL AoE_Stop (
-	void
+  void
  );
 
-#endif													/* _AOE_H */
+#endif				/* _AOE_H */

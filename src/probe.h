@@ -29,7 +29,7 @@
  */
 
 extern void probe__disks (
-	void
+  void
  );
 
-#endif													/* _PROBE_H */
+#endif				/* _PROBE_H */

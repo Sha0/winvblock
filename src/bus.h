@@ -30,71 +30,71 @@
 
 winvblock__def_struct ( bus__type )
 {
-	PDEVICE_OBJECT LowerDeviceObject;
-	PDEVICE_OBJECT PhysicalDeviceObject;
-	ULONG Children;
-	winvblock__uint8_ptr first_child_ptr;
-	KSPIN_LOCK SpinLock;
+  PDEVICE_OBJECT LowerDeviceObject;
+  PDEVICE_OBJECT PhysicalDeviceObject;
+  ULONG Children;
+  winvblock__uint8_ptr first_child_ptr;
+  KSPIN_LOCK SpinLock;
 };
 
 extern NTSTATUS STDCALL Bus_Start (
-	void
+  void
  );
 
 extern VOID STDCALL Bus_Stop (
-	void
+  void
  );
 
 extern NTSTATUS STDCALL Bus_AddDevice (
-	IN PDRIVER_OBJECT DriverObject,
-	IN PDEVICE_OBJECT PhysicalDeviceObject
+  IN PDRIVER_OBJECT DriverObject,
+  IN PDEVICE_OBJECT PhysicalDeviceObject
  );
 
 extern irp__handler_decl (
-	Bus_DispatchPnP
+  Bus_DispatchPnP
  );
 
 extern irp__handler_decl (
-	Bus_DispatchDeviceControl
+  Bus_DispatchDeviceControl
  );
 
 extern irp__handler_decl (
-	Bus_DispatchSystemControl
+  Bus_DispatchSystemControl
  );
 
 extern VOID STDCALL Bus_AddTarget (
-	IN winvblock__uint8_ptr ClientMac,
-	IN winvblock__uint8_ptr ServerMac,
-	winvblock__uint16 Major,
-	winvblock__uint8 Minor,
-	LONGLONG LBASize
+  IN winvblock__uint8_ptr ClientMac,
+  IN winvblock__uint8_ptr ServerMac,
+  winvblock__uint16 Major,
+  winvblock__uint8 Minor,
+  LONGLONG LBASize
  );
 
 extern VOID STDCALL Bus_CleanupTargetList (
-	void
+  void
  );
 
 extern NTSTATUS STDCALL Bus_GetDeviceCapabilities (
-	IN PDEVICE_OBJECT DeviceObject,
-	IN PDEVICE_CAPABILITIES DeviceCapabilities
+  IN PDEVICE_OBJECT DeviceObject,
+  IN PDEVICE_CAPABILITIES DeviceCapabilities
  );
 
 /* An unfortunate forward declaration.  Definition resolved in disk.h */
 struct _disk__type;
 
 extern winvblock__bool STDCALL Bus_AddChild (
-	IN PDEVICE_OBJECT BusDeviceObject,
-	IN struct _disk__type Disk,
-	IN winvblock__bool Boot
+  IN PDEVICE_OBJECT BusDeviceObject,
+  IN struct _disk__type Disk,
+  IN winvblock__bool Boot
  );
 
 extern bus__type_ptr STDCALL get_bus_ptr (
-	driver__dev_ext_ptr dev_ext_ptr
+  driver__dev_ext_ptr dev_ext_ptr
  );
 extern disk__type_ptr STDCALL get_disk_ptr (
-	driver__dev_ext_ptr dev_ext_ptr
+  driver__dev_ext_ptr dev_ext_ptr
  );
 
 extern PDEVICE_OBJECT bus__fdo;
 
-#endif													/* _BUS_H */
+#endif				/* _BUS_H */

@@ -29,7 +29,7 @@
  */
 
 extern NTSTATUS STDCALL Registry_Check (
-	void
+  void
  );
 
-#endif													/* _REGISTRY_H */
+#endif				/* _REGISTRY_H */
