@@ -159,15 +159,21 @@ Driver_Dispatch (
   IN PIRP Irp
  )
 {
-  NTSTATUS Status;
+  NTSTATUS status;
   PIO_STACK_LOCATION Stack;
   driver__dev_ext_ptr DeviceExtension;
+  size_t irp_handler_index;
+  winvblock__bool completion = FALSE;
 
 #ifdef DEBUGIRPS
   Debug_IrpStart ( DeviceObject, Irp );
 #endif
   Stack = IoGetCurrentIrpStackLocation ( Irp );
   DeviceExtension = ( driver__dev_ext_ptr ) DeviceObject->DeviceExtension;
+
+  /*
+   * We handle IRP_MJ_POWER as an exception 
+   */
   if ( DeviceExtension->State == Deleted )
     {
       if ( Stack->MajorFunction == IRP_MJ_POWER )
@@ -180,24 +186,67 @@ Driver_Dispatch (
 #endif
       return STATUS_NO_SUCH_DEVICE;
     }
+
+  /*
+   * Mini IRP handling strategy
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~
+   */
+
+  /*
+   * Determine the device's IRP handler stack size 
+   */
+  irp_handler_index = DeviceExtension->irp_handler_stack_size;
+
+  /*
+   * For each entry in the stack, in top-down order 
+   */
+  while ( irp_handler_index-- )
+    {
+      irp__handling handling;
+      winvblock__bool handles_major,
+       handles_minor;
+
+      /*
+       * Get the handling entry 
+       */
+      handling = DeviceExtension->irp_handler_stack_ptr[irp_handler_index];
+
+      handles_major = ( Stack->MajorFunction == handling.irp_major_func )
+	|| handling.any_major;
+      handles_minor = ( Stack->MinorFunction == handling.irp_minor_func )
+	|| handling.any_minor;
+      if ( handles_major && handles_minor )
+	status =
+	  handling.handler ( DeviceObject, Irp, Stack, DeviceExtension,
+			     &completion );
+      /*
+       * Do not process the IRP any further down the stack 
+       */
+      if ( completion )
+	break;
+    }
+
+  /*
+   * Old IRP handling strategy 
+   */
   switch ( Stack->MajorFunction )
     {
       case IRP_MJ_CREATE:
       case IRP_MJ_CLOSE:
-	Status = STATUS_SUCCESS;
-	Irp->IoStatus.Status = Status;
+	status = STATUS_SUCCESS;
+	Irp->IoStatus.Status = status;
 	IoCompleteRequest ( Irp, IO_NO_INCREMENT );
 	break;
       default:
-	Status =
+	status =
 	  DeviceExtension->dispatch ( DeviceObject, Irp, Stack,
-				      DeviceExtension );
+				      DeviceExtension, &completion );
     }
 #ifdef DEBUGIRPS
-  if ( Status != STATUS_PENDING )
-    Debug_IrpEnd ( Irp, Status );
+  if ( status != STATUS_PENDING )
+    Debug_IrpEnd ( Irp, status );
 #endif
-  return Status;
+  return status;
 }
 
 static VOID STDCALL

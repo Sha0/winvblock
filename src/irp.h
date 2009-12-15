@@ -38,7 +38,8 @@ x ( \
   IN PDEVICE_OBJECT DeviceObject, \
   IN PIRP Irp, \
   IN PIO_STACK_LOCATION Stack, \
-  IN struct _driver__dev_ext *DeviceExtension \
+  IN struct _driver__dev_ext *DeviceExtension, \
+  OUT winvblock__bool_ptr completion_ptr \
  )
 /*
  * Function pointer for an IRP handler.
@@ -50,7 +51,10 @@ typedef irp__handler_decl (
 
 winvblock__def_struct ( irp__handling )
 {
-  winvblock__uint8 function;
+  winvblock__uint8 irp_major_func;
+  winvblock__uint8 irp_minor_func;
+  winvblock__bool any_major;
+  winvblock__bool any_minor;
   irp__handler handler;
 };
 

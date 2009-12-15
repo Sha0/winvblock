@@ -241,8 +241,8 @@ Bus_AddChild (
     Disk.DiskType == OpticalDisc ? FILE_DEVICE_CD_ROM : FILE_DEVICE_DISK;
   ULONG DiskType2 =
     Disk.DiskType ==
-    OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.DiskType
-    == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
+    OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.
+    DiskType == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
 
   DBG ( "Entry\n" );
   /*
@@ -524,14 +524,16 @@ irp__handler_decl ( Bus_DispatchDeviceControl )
 	    TargetWalker = TargetWalker->Next;
 	  }
 	RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Targets,
-			( Stack->Parameters.
-			  DeviceIoControl.OutputBufferLength <
+			( Stack->Parameters.DeviceIoControl.
+			  OutputBufferLength <
 			  ( sizeof ( MOUNT_TARGETS ) +
 			    ( Count *
-			      sizeof ( MOUNT_TARGET ) ) ) ? Stack->
-			  Parameters.DeviceIoControl.OutputBufferLength
-			  : ( sizeof ( MOUNT_TARGETS ) +
-			      ( Count * sizeof ( MOUNT_TARGET ) ) ) ) );
+			      sizeof ( MOUNT_TARGET ) ) ) ? Stack->Parameters.
+			  DeviceIoControl.
+			  OutputBufferLength : ( sizeof ( MOUNT_TARGETS ) +
+						 ( Count *
+						   sizeof
+						   ( MOUNT_TARGET ) ) ) ) );
 	ExFreePool ( Targets );
 
 	KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
@@ -580,14 +582,16 @@ irp__handler_decl ( Bus_DispatchDeviceControl )
 	    DiskWalker = DiskWalker->next_sibling_ptr;
 	  }
 	RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Disks,
-			( Stack->Parameters.
-			  DeviceIoControl.OutputBufferLength <
+			( Stack->Parameters.DeviceIoControl.
+			  OutputBufferLength <
 			  ( sizeof ( MOUNT_DISKS ) +
 			    ( Count *
-			      sizeof ( MOUNT_DISK ) ) ) ? Stack->
-			  Parameters.DeviceIoControl.OutputBufferLength
-			  : ( sizeof ( MOUNT_DISKS ) +
-			      ( Count * sizeof ( MOUNT_DISK ) ) ) ) );
+			      sizeof ( MOUNT_DISK ) ) ) ? Stack->Parameters.
+			  DeviceIoControl.
+			  OutputBufferLength : ( sizeof ( MOUNT_DISKS ) +
+						 ( Count *
+						   sizeof
+						   ( MOUNT_DISK ) ) ) ) );
 	ExFreePool ( Disks );
 
 	Status = STATUS_SUCCESS;
@@ -692,17 +696,19 @@ irp__handler_decl ( Bus_Dispatch )
 	Status = PoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
 	break;
       case IRP_MJ_PNP:
-	Status = Bus_DispatchPnP ( DeviceObject, Irp, Stack, DeviceExtension );
+	Status =
+	  Bus_DispatchPnP ( DeviceObject, Irp, Stack, DeviceExtension,
+			    completion_ptr );
 	break;
       case IRP_MJ_SYSTEM_CONTROL:
 	Status =
 	  Bus_DispatchSystemControl ( DeviceObject, Irp, Stack,
-				      DeviceExtension );
+				      DeviceExtension, completion_ptr );
 	break;
       case IRP_MJ_DEVICE_CONTROL:
 	Status =
 	  Bus_DispatchDeviceControl ( DeviceObject, Irp, Stack,
-				      DeviceExtension );
+				      DeviceExtension, completion_ptr );
 	break;
       default:
 	Status = STATUS_NOT_SUPPORTED;
