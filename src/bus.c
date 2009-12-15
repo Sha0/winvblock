@@ -241,8 +241,8 @@ Bus_AddChild (
 		Disk.DiskType == OpticalDisc ? FILE_DEVICE_CD_ROM : FILE_DEVICE_DISK;
 	ULONG DiskType2 =
 		Disk.DiskType ==
-		OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.DiskType
-		== FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
+		OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.
+		DiskType == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
 
 	DBG ( "Entry\n" );
 	/*
@@ -413,6 +413,7 @@ irp__handler_decl ( Bus_DispatchPnP )
 				Walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
 				while ( Walker != NULL )
 					{
+						ObReferenceObject ( Walker->dev_ext_ptr->Self );
 						DeviceRelations->Objects[Count] = Walker->dev_ext_ptr->Self;
 						Count++;
 						Walker = Walker->next_sibling_ptr;
@@ -523,14 +524,16 @@ irp__handler_decl ( Bus_DispatchDeviceControl )
 						TargetWalker = TargetWalker->Next;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Targets,
-												( Stack->Parameters.
-													DeviceIoControl.OutputBufferLength <
+												( Stack->Parameters.DeviceIoControl.
+													OutputBufferLength <
 													( sizeof ( MOUNT_TARGETS ) +
 														( Count *
-															sizeof ( MOUNT_TARGET ) ) ) ? Stack->
-													Parameters.DeviceIoControl.OutputBufferLength
-													: ( sizeof ( MOUNT_TARGETS ) +
-															( Count * sizeof ( MOUNT_TARGET ) ) ) ) );
+															sizeof ( MOUNT_TARGET ) ) ) ? Stack->Parameters.
+													DeviceIoControl.
+													OutputBufferLength : ( sizeof ( MOUNT_TARGETS ) +
+																								 ( Count *
+																									 sizeof
+																									 ( MOUNT_TARGET ) ) ) ) );
 				ExFreePool ( Targets );
 
 				KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
@@ -579,14 +582,16 @@ irp__handler_decl ( Bus_DispatchDeviceControl )
 						DiskWalker = DiskWalker->next_sibling_ptr;
 					}
 				RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Disks,
-												( Stack->Parameters.
-													DeviceIoControl.OutputBufferLength <
+												( Stack->Parameters.DeviceIoControl.
+													OutputBufferLength <
 													( sizeof ( MOUNT_DISKS ) +
 														( Count *
-															sizeof ( MOUNT_DISK ) ) ) ? Stack->
-													Parameters.DeviceIoControl.OutputBufferLength
-													: ( sizeof ( MOUNT_DISKS ) +
-															( Count * sizeof ( MOUNT_DISK ) ) ) ) );
+															sizeof ( MOUNT_DISK ) ) ) ? Stack->Parameters.
+													DeviceIoControl.
+													OutputBufferLength : ( sizeof ( MOUNT_DISKS ) +
+																								 ( Count *
+																									 sizeof
+																									 ( MOUNT_DISK ) ) ) ) );
 				ExFreePool ( Disks );
 
 				Status = STATUS_SUCCESS;
@@ -624,7 +629,7 @@ irp__handler_decl ( Bus_DispatchDeviceControl )
 				DBG ( "Got IOCTL_AOE_UMOUNT for disk: %d\n", *( PULONG ) Buffer );
 				DiskWalker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
 				DiskWalkerPrevious = DiskWalker;
-				while ( ( DiskWalker != NULL ) && ( !DiskWalker->BootDrive )
+				while ( ( DiskWalker != NULL )
 								&& ( DiskWalker->DiskNumber != *( PULONG ) Buffer ) )
 					{
 						DiskWalkerPrevious = DiskWalker;
@@ -632,6 +637,13 @@ irp__handler_decl ( Bus_DispatchDeviceControl )
 					}
 				if ( DiskWalker != NULL )
 					{
+						if ( DiskWalker->BootDrive )
+							{
+								DBG ( "Cannot unmount a boot drive.\n" );
+								Irp->IoStatus.Information = 0;
+								Status = STATUS_INVALID_DEVICE_REQUEST;
+								break;
+							}
 						DBG ( "Deleting disk %d\n", DiskWalker->DiskNumber );
 						if ( DiskWalker == ( disk__type_ptr ) bus_ptr->first_child_ptr )
 							{
