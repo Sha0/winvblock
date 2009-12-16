@@ -33,10 +33,11 @@
 #include "irp.h"
 #include "driver.h"
 #include "disk.h"
+#include "mount.h"
 #include "bus.h"
 #include "bus_pnp.h"
+#include "bus_dev_ctl.h"
 #include "aoe.h"
-#include "mount.h"
 #include "debug.h"
 #include "mdi.h"
 #include "protocol.h"
@@ -55,15 +56,8 @@ winvblock__bool STDCALL Bus_AddChild (
   IN winvblock__bool Boot
  );
 
-typedef struct _BUS_TARGETLIST
-{
-  MOUNT_TARGET Target;
-  struct _BUS_TARGETLIST *Next;
-} BUS_TARGETLIST,
-*PBUS_TARGETLIST;
-
-static PBUS_TARGETLIST Bus_Globals_TargetList = NULL;
-static KSPIN_LOCK Bus_Globals_TargetListSpinLock;
+bus__target_list_ptr Bus_Globals_TargetList = NULL;
+KSPIN_LOCK Bus_Globals_TargetListSpinLock;
 static ULONG Bus_Globals_NextDisk = 0;
 PDEVICE_OBJECT bus__fdo = NULL;
 
@@ -83,7 +77,7 @@ Bus_Stop (
  )
 {
   UNICODE_STRING DosDeviceName;
-  PBUS_TARGETLIST Walker,
+  bus__target_list_ptr Walker,
    Next;
   KIRQL Irql;
 
@@ -92,7 +86,7 @@ Bus_Stop (
   Walker = Bus_Globals_TargetList;
   while ( Walker != NULL )
     {
-      Next = Walker->Next;
+      Next = Walker->next;
       ExFreePool ( Walker );
       Walker = Next;
     }
@@ -111,7 +105,7 @@ Bus_AddTarget (
   LONGLONG LBASize
  )
 {
-  PBUS_TARGETLIST Walker,
+  bus__target_list_ptr Walker,
    Last;
   KIRQL Irql;
 
@@ -137,19 +131,20 @@ Bus_AddTarget (
 	  return;
 	}
       Last = Walker;
-      Walker = Walker->Next;
+      Walker = Walker->next;
     }
 
   if ( ( Walker =
-	 ( PBUS_TARGETLIST ) ExAllocatePool ( NonPagedPool,
-					      sizeof ( BUS_TARGETLIST ) ) ) ==
+	 ( bus__target_list_ptr ) ExAllocatePool ( NonPagedPool,
+						   sizeof
+						   ( bus__target_list ) ) ) ==
        NULL )
     {
       DBG ( "ExAllocatePool Target\n" );
       KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
       return;
     }
-  Walker->Next = NULL;
+  Walker->next = NULL;
   RtlCopyMemory ( Walker->Target.ClientMac, ClientMac, 6 );
   RtlCopyMemory ( Walker->Target.ServerMac, ServerMac, 6 );
   Walker->Target.Major = Major;
@@ -163,7 +158,7 @@ Bus_AddTarget (
     }
   else
     {
-      Last->Next = Walker;
+      Last->next = Walker;
     }
   KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
 }
@@ -238,8 +233,8 @@ Bus_AddChild (
     Disk.DiskType == OpticalDisc ? FILE_DEVICE_CD_ROM : FILE_DEVICE_DISK;
   ULONG DiskType2 =
     Disk.DiskType ==
-    OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.
-    DiskType == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
+    OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.DiskType
+    == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
 
   DBG ( "Entry\n" );
   /*
@@ -334,6 +329,8 @@ irp__handling handling_table[] = {
    * Note that the fall-through case must come FIRST!
    * Why? It sets completion to true, so others won't be called
    */
+  {IRP_MJ_DEVICE_CONTROL, 0, FALSE, TRUE, bus_dev_ctl__dispatch}
+  ,
   {IRP_MJ_PNP, 0, FALSE, TRUE, bus_pnp__simple}
   ,
   {IRP_MJ_PNP, IRP_MN_START_DEVICE, FALSE, FALSE, bus_pnp__start_dev}
@@ -345,218 +342,6 @@ irp__handling handling_table[] = {
 };
 
 size_t handling_table_size = sizeof ( handling_table );
-
-irp__handler_decl ( Bus_DispatchDeviceControl )
-{
-  NTSTATUS Status;
-  winvblock__uint8_ptr Buffer;
-  ULONG Count;
-  PBUS_TARGETLIST TargetWalker;
-  bus__type_ptr bus_ptr;
-  disk__type_ptr DiskWalker,
-   DiskWalkerPrevious;
-  PMOUNT_TARGETS Targets;
-  PMOUNT_DISKS Disks;
-  KIRQL Irql;
-  disk__type Disk;
-
-  /*
-   * Establish a pointer into the bus device's extension space
-   */
-  bus_ptr = get_bus_ptr ( DeviceExtension );
-
-  switch ( Stack->Parameters.DeviceIoControl.IoControlCode )
-    {
-      case IOCTL_AOE_SCAN:
-	DBG ( "Got IOCTL_AOE_SCAN...\n" );
-	AoE_Start (  );
-	KeAcquireSpinLock ( &Bus_Globals_TargetListSpinLock, &Irql );
-
-	Count = 0;
-	TargetWalker = Bus_Globals_TargetList;
-	while ( TargetWalker != NULL )
-	  {
-	    Count++;
-	    TargetWalker = TargetWalker->Next;
-	  }
-
-	if ( ( Targets =
-	       ( PMOUNT_TARGETS ) ExAllocatePool ( NonPagedPool,
-						   sizeof ( MOUNT_TARGETS ) +
-						   ( Count *
-						     sizeof
-						     ( MOUNT_TARGET ) ) ) ) ==
-	     NULL )
-	  {
-	    DBG ( "ExAllocatePool Targets\n" );
-	    Irp->IoStatus.Information = 0;
-	    Status = STATUS_INSUFFICIENT_RESOURCES;
-	    break;
-	  }
-	Irp->IoStatus.Information =
-	  sizeof ( MOUNT_TARGETS ) + ( Count * sizeof ( MOUNT_TARGET ) );
-	Targets->Count = Count;
-
-	Count = 0;
-	TargetWalker = Bus_Globals_TargetList;
-	while ( TargetWalker != NULL )
-	  {
-	    RtlCopyMemory ( &Targets->Target[Count], &TargetWalker->Target,
-			    sizeof ( MOUNT_TARGET ) );
-	    Count++;
-	    TargetWalker = TargetWalker->Next;
-	  }
-	RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Targets,
-			( Stack->Parameters.DeviceIoControl.
-			  OutputBufferLength <
-			  ( sizeof ( MOUNT_TARGETS ) +
-			    ( Count *
-			      sizeof ( MOUNT_TARGET ) ) ) ? Stack->Parameters.
-			  DeviceIoControl.
-			  OutputBufferLength : ( sizeof ( MOUNT_TARGETS ) +
-						 ( Count *
-						   sizeof
-						   ( MOUNT_TARGET ) ) ) ) );
-	ExFreePool ( Targets );
-
-	KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
-	Status = STATUS_SUCCESS;
-	break;
-      case IOCTL_AOE_SHOW:
-	DBG ( "Got IOCTL_AOE_SHOW...\n" );
-
-	Count = 0;
-	DiskWalker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
-	while ( DiskWalker != NULL )
-	  {
-	    Count++;
-	    DiskWalker = DiskWalker->next_sibling_ptr;
-	  }
-
-	if ( ( Disks =
-	       ( PMOUNT_DISKS ) ExAllocatePool ( NonPagedPool,
-						 sizeof ( MOUNT_DISKS ) +
-						 ( Count *
-						   sizeof ( MOUNT_DISK ) ) ) )
-	     == NULL )
-	  {
-	    DBG ( "ExAllocatePool Disks\n" );
-	    Irp->IoStatus.Information = 0;
-	    Status = STATUS_INSUFFICIENT_RESOURCES;
-	    break;
-	  }
-	Irp->IoStatus.Information =
-	  sizeof ( MOUNT_DISKS ) + ( Count * sizeof ( MOUNT_DISK ) );
-	Disks->Count = Count;
-
-	Count = 0;
-	DiskWalker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
-	while ( DiskWalker != NULL )
-	  {
-	    Disks->Disk[Count].Disk = DiskWalker->DiskNumber;
-	    RtlCopyMemory ( &Disks->Disk[Count].ClientMac,
-			    &DiskWalker->AoE.ClientMac, 6 );
-	    RtlCopyMemory ( &Disks->Disk[Count].ServerMac,
-			    &DiskWalker->AoE.ServerMac, 6 );
-	    Disks->Disk[Count].Major = DiskWalker->AoE.Major;
-	    Disks->Disk[Count].Minor = DiskWalker->AoE.Minor;
-	    Disks->Disk[Count].LBASize = DiskWalker->LBADiskSize;
-	    Count++;
-	    DiskWalker = DiskWalker->next_sibling_ptr;
-	  }
-	RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Disks,
-			( Stack->Parameters.DeviceIoControl.
-			  OutputBufferLength <
-			  ( sizeof ( MOUNT_DISKS ) +
-			    ( Count *
-			      sizeof ( MOUNT_DISK ) ) ) ? Stack->Parameters.
-			  DeviceIoControl.
-			  OutputBufferLength : ( sizeof ( MOUNT_DISKS ) +
-						 ( Count *
-						   sizeof
-						   ( MOUNT_DISK ) ) ) ) );
-	ExFreePool ( Disks );
-
-	Status = STATUS_SUCCESS;
-	break;
-      case IOCTL_AOE_MOUNT:
-	Buffer = Irp->AssociatedIrp.SystemBuffer;
-	DBG ( "Got IOCTL_AOE_MOUNT for client: %02x:%02x:%02x:%02x:%02x:%02x "
-	      "Major:%d Minor:%d\n", Buffer[0], Buffer[1], Buffer[2],
-	      Buffer[3], Buffer[4], Buffer[5],
-	      *( winvblock__uint16_ptr ) ( &Buffer[6] ),
-	      ( winvblock__uint8 ) Buffer[8] );
-	Disk.Initialize = AoE_SearchDrive;
-	RtlCopyMemory ( Disk.AoE.ClientMac, Buffer, 6 );
-	RtlFillMemory ( Disk.AoE.ServerMac, 6, 0xff );
-	Disk.AoE.Major = *( winvblock__uint16_ptr ) ( &Buffer[6] );
-	Disk.AoE.Minor = ( winvblock__uint8 ) Buffer[8];
-	Disk.AoE.MaxSectorsPerPacket = 1;
-	Disk.AoE.Timeout = 200000;	/* 20 ms. */
-	Disk.IsRamdisk = FALSE;
-	if ( !Bus_AddChild ( DeviceObject, Disk, FALSE ) )
-	  {
-	    DBG ( "Bus_AddChild() failed\n" );
-	  }
-	else
-	  {
-	    if ( bus_ptr->PhysicalDeviceObject != NULL )
-	      IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
-					    BusRelations );
-	  }
-	Irp->IoStatus.Information = 0;
-	Status = STATUS_SUCCESS;
-	break;
-      case IOCTL_AOE_UMOUNT:
-	Buffer = Irp->AssociatedIrp.SystemBuffer;
-	DBG ( "Got IOCTL_AOE_UMOUNT for disk: %d\n", *( PULONG ) Buffer );
-	DiskWalker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
-	DiskWalkerPrevious = DiskWalker;
-	while ( ( DiskWalker != NULL )
-		&& ( DiskWalker->DiskNumber != *( PULONG ) Buffer ) )
-	  {
-	    DiskWalkerPrevious = DiskWalker;
-	    DiskWalker = DiskWalker->next_sibling_ptr;
-	  }
-	if ( DiskWalker != NULL )
-	  {
-	    if ( DiskWalker->BootDrive )
-	      {
-		DBG ( "Cannot unmount a boot drive.\n" );
-		Irp->IoStatus.Information = 0;
-		Status = STATUS_INVALID_DEVICE_REQUEST;
-		break;
-	      }
-	    DBG ( "Deleting disk %d\n", DiskWalker->DiskNumber );
-	    if ( DiskWalker == ( disk__type_ptr ) bus_ptr->first_child_ptr )
-	      {
-		bus_ptr->first_child_ptr =
-		  ( winvblock__uint8_ptr ) DiskWalker->next_sibling_ptr;
-	      }
-	    else
-	      {
-		DiskWalkerPrevious->next_sibling_ptr =
-		  DiskWalker->next_sibling_ptr;
-	      }
-	    DiskWalker->Unmount = TRUE;
-	    DiskWalker->next_sibling_ptr = NULL;
-	    if ( bus_ptr->PhysicalDeviceObject != NULL )
-	      IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
-					    BusRelations );
-	  }
-	bus_ptr->Children--;
-	Irp->IoStatus.Information = 0;
-	Status = STATUS_SUCCESS;
-	break;
-      default:
-	Irp->IoStatus.Information = 0;
-	Status = STATUS_INVALID_DEVICE_REQUEST;
-    }
-
-  Irp->IoStatus.Status = Status;
-  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-  return Status;
-}
 
 irp__handler_decl ( Bus_DispatchSystemControl )
 {
@@ -581,11 +366,6 @@ irp__handler_decl ( Bus_Dispatch )
       case IRP_MJ_SYSTEM_CONTROL:
 	Status =
 	  Bus_DispatchSystemControl ( DeviceObject, Irp, Stack,
-				      DeviceExtension, completion_ptr );
-	break;
-      case IRP_MJ_DEVICE_CONTROL:
-	Status =
-	  Bus_DispatchDeviceControl ( DeviceObject, Irp, Stack,
 				      DeviceExtension, completion_ptr );
 	break;
       default:
@@ -694,9 +474,9 @@ Bus_AddDevice (
     sizeof ( bus__type );
   RtlCopyMemory ( bus_dev_ext_ptr->irp_handler_stack_ptr,
 		  driver__handling_table, driver__handling_table_size );
-  RtlCopyMemory ( ( winvblock__uint8 * ) bus_dev_ext_ptr->irp_handler_stack_ptr
-		  + driver__handling_table_size, handling_table,
-		  handling_table_size );
+  RtlCopyMemory ( ( winvblock__uint8 * ) bus_dev_ext_ptr->
+		  irp_handler_stack_ptr + driver__handling_table_size,
+		  handling_table, handling_table_size );
   bus_dev_ext_ptr->irp_handler_stack_size =
     ( driver__handling_table_size +
       handling_table_size ) / sizeof ( irp__handling );

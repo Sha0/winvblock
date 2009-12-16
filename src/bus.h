@@ -37,6 +37,15 @@ winvblock__def_struct ( bus__type )
   KSPIN_LOCK SpinLock;
 };
 
+winvblock__def_struct ( bus__target_list )
+{
+  MOUNT_TARGET Target;
+  bus__target_list_ptr next;
+};
+
+extern bus__target_list_ptr Bus_Globals_TargetList;
+extern KSPIN_LOCK Bus_Globals_TargetListSpinLock;
+
 extern NTSTATUS Bus_Start (
   void
  );

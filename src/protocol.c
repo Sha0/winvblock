@@ -35,6 +35,7 @@
 #include "irp.h"
 #include "driver.h"
 #include "disk.h"
+#include "mount.h"
 #include "bus.h"
 #include "protocol.h"
 #include "aoe.h"

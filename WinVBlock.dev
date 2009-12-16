@@ -1,7 +1,7 @@
 [Project]
 FileName=WinVBlock.dev
 Name=WinVBlock
-UnitCount=28
+UnitCount=30
 PchHead=-1
 PchSource=-1
 Ver=3
@@ -354,6 +354,26 @@ BuildCmd=
 
 [Unit28]
 FileName=src\bus_pnp.h
+CompileCpp=1
+Folder=WinVBlock
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit29]
+FileName=src\bus_dev_ctl.c
+CompileCpp=1
+Folder=WinVBlock
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit30]
+FileName=src\bus_dev_ctl.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1

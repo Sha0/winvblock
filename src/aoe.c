@@ -33,6 +33,7 @@
 #include "irp.h"
 #include "driver.h"
 #include "disk.h"
+#include "mount.h"
 #include "bus.h"
 #include "aoe.h"
 #include "protocol.h"
@@ -204,8 +205,8 @@ AoE_Start (
    */
   if ( ( AoE_Globals_ProbeTag->PacketData =
 	 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-					  AoE_Globals_ProbeTag->
-					  PacketSize ) ) == NULL )
+					  AoE_Globals_ProbeTag->PacketSize ) )
+       == NULL )
     {
       DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
       ExFreePool ( AoE_Globals_ProbeTag );
@@ -314,8 +315,9 @@ AoE_Stop (
   while ( DiskSearch != NULL )
     {
       KeSetEvent ( &
-		   ( get_disk_ptr ( DiskSearch->DeviceExtension )->
-		     SearchEvent ), 0, FALSE );
+		   ( get_disk_ptr
+		     ( DiskSearch->DeviceExtension )->SearchEvent ), 0,
+		   FALSE );
       PreviousDiskSearch = DiskSearch;
       DiskSearch = DiskSearch->Next;
       ExFreePool ( PreviousDiskSearch );
@@ -1330,8 +1332,9 @@ AoE_Thread (
 	  AoE_Globals_ProbeTag->PacketData->Tag = AoE_Globals_ProbeTag->Id;
 	  Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
 			  "\xff\xff\xff\xff\xff\xff",
-			  ( winvblock__uint8_ptr ) AoE_Globals_ProbeTag->
-			  PacketData, AoE_Globals_ProbeTag->PacketSize, NULL );
+			  ( winvblock__uint8_ptr )
+			  AoE_Globals_ProbeTag->PacketData,
+			  AoE_Globals_ProbeTag->PacketSize, NULL );
 	  KeQuerySystemTime ( &AoE_Globals_ProbeTag->SendTime );
 	}
 

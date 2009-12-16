@@ -41,6 +41,7 @@
 #include "irp.h"
 #include "driver.h"
 #include "disk.h"
+#include "mount.h"
 #include "bus.h"
 #include "aoe.h"
 #include "debug.h"
@@ -228,8 +229,8 @@ irp__handler_decl ( Disk_DispatchPnP )
 		  StringLength +=
 		    swprintf ( &String[StringLength],
 			       disk_ptr->DiskType ==
-			       OpticalDisc ? L"GenCdRom" : disk_ptr->
-			       DiskType ==
+			       OpticalDisc ? L"GenCdRom" : disk_ptr->DiskType
+			       ==
 			       FloppyDisk ? L"GenSFloppy" : L"GenDisk" ) + 4;
 		}
 	      else
@@ -259,8 +260,8 @@ irp__handler_decl ( Disk_DispatchPnP )
 		  StringLength =
 		    swprintf ( String,
 			       disk_ptr->DiskType ==
-			       OpticalDisc ? L"GenCdRom" : disk_ptr->
-			       DiskType ==
+			       OpticalDisc ? L"GenCdRom" : disk_ptr->DiskType
+			       ==
 			       FloppyDisk ? L"GenSFloppy" : L"GenDisk" ) + 4;
 		}
 	      else
@@ -390,9 +391,8 @@ irp__handler_decl ( Disk_DispatchPnP )
 	if ( !NT_SUCCESS
 	     ( Status =
 	       Bus_GetDeviceCapabilities ( get_bus_ptr
-					   ( disk_ptr->Parent->
-					     DeviceExtension )->
-					   LowerDeviceObject,
+					   ( disk_ptr->
+					     Parent->DeviceExtension )->LowerDeviceObject,
 					   &ParentDeviceCapabilities ) ) )
 	  break;
 	RtlCopyMemory ( DeviceCapabilities->DeviceState,
@@ -546,11 +546,11 @@ irp__handler_decl ( Disk_DispatchSCSI )
 		       || Cdb->AsByte[0] == SCSIOP_WRITE16 )
 		    {
 		      REVERSE_BYTES_QUAD ( &StartSector,
-					   &( ( ( PDISK_CDB16 ) Cdb )->
-					      LogicalBlock[0] ) );
+					   &( ( ( PDISK_CDB16 )
+						Cdb )->LogicalBlock[0] ) );
 		      REVERSE_BYTES ( &SectorCount,
-				      &( ( ( PDISK_CDB16 ) Cdb )->
-					 TransferLength[0] ) );
+				      &( ( ( PDISK_CDB16 )
+					   Cdb )->TransferLength[0] ) );
 		    }
 		  else
 		    {
@@ -617,34 +617,30 @@ irp__handler_decl ( Disk_DispatchSCSI )
 		      return AoE_Request ( DeviceExtension,
 					   AoE_RequestMode_Read, StartSector,
 					   SectorCount,
-					   ( ( winvblock__uint8_ptr )
-					     Srb->DataBuffer -
+					   ( ( winvblock__uint8_ptr ) Srb->
+					     DataBuffer -
 					     ( winvblock__uint8_ptr )
-					     MmGetMdlVirtualAddress ( Irp->
-								      MdlAddress ) )
-					   +
+					     MmGetMdlVirtualAddress
+					     ( Irp->MdlAddress ) ) +
 					   ( winvblock__uint8_ptr )
-					   MmGetSystemAddressForMdlSafe ( Irp->
-									  MdlAddress,
-									  HighPagePriority ),
-					   Irp );
+					   MmGetSystemAddressForMdlSafe
+					   ( Irp->MdlAddress,
+					     HighPagePriority ), Irp );
 		    }
 		  else
 		    {
 		      return AoE_Request ( DeviceExtension,
 					   AoE_RequestMode_Write, StartSector,
 					   SectorCount,
-					   ( ( winvblock__uint8_ptr )
-					     Srb->DataBuffer -
+					   ( ( winvblock__uint8_ptr ) Srb->
+					     DataBuffer -
 					     ( winvblock__uint8_ptr )
-					     MmGetMdlVirtualAddress ( Irp->
-								      MdlAddress ) )
-					   +
+					     MmGetMdlVirtualAddress
+					     ( Irp->MdlAddress ) ) +
 					   ( winvblock__uint8_ptr )
-					   MmGetSystemAddressForMdlSafe ( Irp->
-									  MdlAddress,
-									  HighPagePriority ),
-					   Irp );
+					   MmGetSystemAddressForMdlSafe
+					   ( Irp->MdlAddress,
+					     HighPagePriority ), Irp );
 		    }
 		  break;
 		case SCSIOP_VERIFY:
@@ -652,11 +648,11 @@ irp__handler_decl ( Disk_DispatchSCSI )
 		  if ( Cdb->AsByte[0] == SCSIOP_VERIFY16 )
 		    {
 		      REVERSE_BYTES_QUAD ( &StartSector,
-					   &( ( ( PDISK_CDB16 ) Cdb )->
-					      LogicalBlock[0] ) );
+					   &( ( ( PDISK_CDB16 )
+						Cdb )->LogicalBlock[0] ) );
 		      REVERSE_BYTES ( &SectorCount,
-				      &( ( ( PDISK_CDB16 ) Cdb )->
-					 TransferLength[0] ) );
+				      &( ( ( PDISK_CDB16 )
+					   Cdb )->TransferLength[0] ) );
 		    }
 		  else
 		    {
@@ -676,20 +672,21 @@ irp__handler_decl ( Disk_DispatchSCSI )
 		case SCSIOP_READ_CAPACITY:
 		  Temp = disk_ptr->SectorSize;
 		  REVERSE_BYTES ( &
-				  ( ( ( PREAD_CAPACITY_DATA ) Srb->
-				      DataBuffer )->BytesPerBlock ), &Temp );
+				  ( ( ( PREAD_CAPACITY_DATA )
+				      Srb->DataBuffer )->BytesPerBlock ),
+				  &Temp );
 		  if ( ( disk_ptr->LBADiskSize - 1 ) > 0xffffffff )
 		    {
-		      ( ( PREAD_CAPACITY_DATA ) Srb->DataBuffer )->
-			LogicalBlockAddress = -1;
+		      ( ( PREAD_CAPACITY_DATA ) Srb->
+			DataBuffer )->LogicalBlockAddress = -1;
 		    }
 		  else
 		    {
 		      Temp = ( ULONG ) ( disk_ptr->LBADiskSize - 1 );
 		      REVERSE_BYTES ( &
-				      ( ( ( PREAD_CAPACITY_DATA ) Srb->
-					  DataBuffer )->LogicalBlockAddress ),
-				      &Temp );
+				      ( ( ( PREAD_CAPACITY_DATA )
+					  Srb->DataBuffer )->
+					LogicalBlockAddress ), &Temp );
 		    }
 		  Irp->IoStatus.Information = sizeof ( READ_CAPACITY_DATA );
 		  Srb->SrbStatus = SRB_STATUS_SUCCESS;
@@ -698,13 +695,15 @@ irp__handler_decl ( Disk_DispatchSCSI )
 		case SCSIOP_READ_CAPACITY16:
 		  Temp = disk_ptr->SectorSize;
 		  REVERSE_BYTES ( &
-				  ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->
-				      DataBuffer )->BytesPerBlock ), &Temp );
+				  ( ( ( PREAD_CAPACITY_DATA_EX )
+				      Srb->DataBuffer )->BytesPerBlock ),
+				  &Temp );
 		  LargeTemp = disk_ptr->LBADiskSize - 1;
 		  REVERSE_BYTES_QUAD ( &
-				       ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->
-					   DataBuffer )->LogicalBlockAddress.
-					 QuadPart ), &LargeTemp );
+				       ( ( ( PREAD_CAPACITY_DATA_EX )
+					   Srb->DataBuffer )->
+					 LogicalBlockAddress.QuadPart ),
+				       &LargeTemp );
 		  Irp->IoStatus.Information = sizeof ( READ_CAPACITY_DATA_EX );
 		  Srb->SrbStatus = SRB_STATUS_SUCCESS;
 		  Status = STATUS_SUCCESS;
@@ -818,9 +817,9 @@ irp__handler_decl ( Disk_DispatchDeviceControl )
 	  {
 	    CopySize =
 	      ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-		sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) ? Stack->Parameters.
-		DeviceIoControl.OutputBufferLength :
-		sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) );
+		sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) ? Stack->
+		Parameters.DeviceIoControl.
+		OutputBufferLength : sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) );
 	    StorageAdapterDescriptor.Version =
 	      sizeof ( STORAGE_ADAPTER_DESCRIPTOR );
 	    StorageAdapterDescriptor.Size =
@@ -847,9 +846,9 @@ irp__handler_decl ( Disk_DispatchDeviceControl )
 	  {
 	    CopySize =
 	      ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-		sizeof ( STORAGE_DEVICE_DESCRIPTOR ) ? Stack->Parameters.
-		DeviceIoControl.OutputBufferLength :
-		sizeof ( STORAGE_DEVICE_DESCRIPTOR ) );
+		sizeof ( STORAGE_DEVICE_DESCRIPTOR ) ? Stack->
+		Parameters.DeviceIoControl.
+		OutputBufferLength : sizeof ( STORAGE_DEVICE_DESCRIPTOR ) );
 	    StorageDeviceDescriptor.Version =
 	      sizeof ( STORAGE_DEVICE_DESCRIPTOR );
 	    StorageDeviceDescriptor.Size =
@@ -881,8 +880,8 @@ irp__handler_decl ( Disk_DispatchDeviceControl )
       case IOCTL_DISK_GET_DRIVE_GEOMETRY:
 	CopySize =
 	  ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-	    sizeof ( DISK_GEOMETRY ) ? Stack->Parameters.
-	    DeviceIoControl.OutputBufferLength : sizeof ( DISK_GEOMETRY ) );
+	    sizeof ( DISK_GEOMETRY ) ? Stack->Parameters.DeviceIoControl.
+	    OutputBufferLength : sizeof ( DISK_GEOMETRY ) );
 	DiskGeometry.MediaType = FixedMedia;
 	DiskGeometry.Cylinders.QuadPart = disk_ptr->Cylinders;
 	DiskGeometry.TracksPerCylinder = disk_ptr->Heads;
@@ -896,8 +895,8 @@ irp__handler_decl ( Disk_DispatchDeviceControl )
       case IOCTL_SCSI_GET_ADDRESS:
 	CopySize =
 	  ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-	    sizeof ( SCSI_ADDRESS ) ? Stack->Parameters.
-	    DeviceIoControl.OutputBufferLength : sizeof ( SCSI_ADDRESS ) );
+	    sizeof ( SCSI_ADDRESS ) ? Stack->Parameters.DeviceIoControl.
+	    OutputBufferLength : sizeof ( SCSI_ADDRESS ) );
 	ScsiAdress.Length = sizeof ( SCSI_ADDRESS );
 	ScsiAdress.PortNumber = 0;
 	ScsiAdress.PathId = 0;
