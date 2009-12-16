@@ -44,12 +44,6 @@
 #include "probe.h"
 
 /* in this file */
-static irp__handler_decl (
-  Bus_DispatchNotSupported
- );
-static irp__handler_decl (
-  Bus_DispatchPower
- );
 winvblock__bool STDCALL Bus_AddChild (
   IN PDEVICE_OBJECT BusDeviceObject,
   IN disk__type Disk,
@@ -322,6 +316,41 @@ Bus_AddChild (
   return TRUE;
 }
 
+static
+irp__handler_decl (
+  sys_ctl
+ )
+{
+  bus__type_ptr bus_ptr = get_bus_ptr ( DeviceExtension );
+  DBG ( "...\n" );
+  IoSkipCurrentIrpStackLocation ( Irp );
+  *completion_ptr = TRUE;
+  return IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
+}
+
+static
+irp__handler_decl (
+  power
+ )
+{
+  bus__type_ptr bus_ptr = get_bus_ptr ( DeviceExtension );
+  PoStartNextPowerIrp ( Irp );
+  IoSkipCurrentIrpStackLocation ( Irp );
+  *completion_ptr = TRUE;
+  return PoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
+}
+
+static
+irp__handler_decl (
+  not_supported
+ )
+{
+  Irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
+  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+  *completion_ptr = TRUE;
+  return Irp->IoStatus.Status;
+}
+
 irp__handling handling_table[] = {
   /*
    * Major, minor, any major?, any minor?, handler
@@ -329,6 +358,12 @@ irp__handling handling_table[] = {
    * Note that the fall-through case must come FIRST!
    * Why? It sets completion to true, so others won't be called
    */
+  {0, 0, TRUE, TRUE, not_supported}
+  ,
+  {IRP_MJ_SYSTEM_CONTROL, 0, FALSE, TRUE, sys_ctl}
+  ,
+  {IRP_MJ_POWER, 0, FALSE, TRUE, power}
+  ,
   {IRP_MJ_DEVICE_CONTROL, 0, FALSE, TRUE, bus_dev_ctl__dispatch}
   ,
   {IRP_MJ_PNP, 0, FALSE, TRUE, bus_pnp__simple}
@@ -342,39 +377,6 @@ irp__handling handling_table[] = {
 };
 
 size_t handling_table_size = sizeof ( handling_table );
-
-irp__handler_decl ( Bus_DispatchSystemControl )
-{
-  bus__type_ptr bus_ptr = get_bus_ptr ( DeviceExtension );
-  DBG ( "...\n" );
-  IoSkipCurrentIrpStackLocation ( Irp );
-  return IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
-}
-
-irp__handler_decl ( Bus_Dispatch )
-{
-  NTSTATUS Status;
-  bus__type_ptr bus_ptr = get_bus_ptr ( DeviceExtension );
-
-  switch ( Stack->MajorFunction )
-    {
-      case IRP_MJ_POWER:
-	PoStartNextPowerIrp ( Irp );
-	IoSkipCurrentIrpStackLocation ( Irp );
-	Status = PoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
-	break;
-      case IRP_MJ_SYSTEM_CONTROL:
-	Status =
-	  Bus_DispatchSystemControl ( DeviceObject, Irp, Stack,
-				      DeviceExtension, completion_ptr );
-	break;
-      default:
-	Status = STATUS_NOT_SUPPORTED;
-	Irp->IoStatus.Status = Status;
-	IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-    }
-  return Status;
-}
 
 NTSTATUS STDCALL
 Bus_GetDeviceCapabilities (
@@ -464,7 +466,7 @@ Bus_AddDevice (
   bus_dev_ext_ptr = ( driver__dev_ext_ptr ) bus__fdo->DeviceExtension;
   RtlZeroMemory ( bus_dev_ext_ptr, new_dev_ext_size );
   bus_dev_ext_ptr->IsBus = TRUE;
-  bus_dev_ext_ptr->dispatch = Bus_Dispatch;
+  bus_dev_ext_ptr->dispatch = not_supported;
   bus_dev_ext_ptr->DriverObject = DriverObject;
   bus_dev_ext_ptr->Self = bus__fdo;
   bus_dev_ext_ptr->State = NotStarted;

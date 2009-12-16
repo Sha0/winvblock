@@ -59,10 +59,6 @@ extern NTSTATUS STDCALL Bus_AddDevice (
   IN PDEVICE_OBJECT PhysicalDeviceObject
  );
 
-extern irp__handler_decl (
-  Bus_DispatchSystemControl
- );
-
 extern VOID STDCALL Bus_AddTarget (
   IN winvblock__uint8_ptr ClientMac,
   IN winvblock__uint8_ptr ServerMac,
