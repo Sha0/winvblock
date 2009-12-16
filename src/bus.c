@@ -331,6 +331,62 @@ Bus_AddChild (
   return TRUE;
 }
 
+static
+irp__handler_decl (
+  pnp_start_dev
+ )
+{
+  NTSTATUS status;
+  KEVENT event;
+  bus__type_ptr bus_ptr;
+
+  bus_ptr = get_bus_ptr ( DeviceExtension );
+  KeInitializeEvent ( &event, NotificationEvent, FALSE );
+  IoCopyCurrentIrpStackLocationToNext ( Irp );
+  IoSetCompletionRoutine ( Irp,
+			   ( PIO_COMPLETION_ROUTINE ) Bus_IoCompletionRoutine,
+			   ( PVOID ) & event, TRUE, TRUE, TRUE );
+  status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
+  if ( status == STATUS_PENDING )
+    {
+      DBG ( "Locked\n" );
+      KeWaitForSingleObject ( &event, Executive, KernelMode, FALSE, NULL );
+    }
+  if ( NT_SUCCESS ( status = Irp->IoStatus.Status ) )
+    {
+      DeviceExtension->OldState = DeviceExtension->State;
+      DeviceExtension->State = Started;
+    }
+  status = STATUS_SUCCESS;
+  Irp->IoStatus.Status = status;
+  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+  *completion_ptr = TRUE;
+  return status;
+}
+
+static
+irp__handler_decl (
+  foo
+ )
+{
+  DBG ( "BUS PNP test\n" );
+  return STATUS_SUCCESS;
+}
+
+irp__handling handling_table[] = {
+  /*
+   * Major, minor, any major?, any minor?, handler
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * Note that the fall-through case must come FIRST!
+   * Why? It sets completion to true, so others won't be called
+   */
+  {IRP_MJ_PNP, IRP_MN_START_DEVICE, FALSE, FALSE, pnp_start_dev}
+  ,
+  {IRP_MJ_PNP, IRP_MN_QUERY_DEVICE_RELATIONS, FALSE, FALSE, foo}
+};
+
+size_t handling_table_size = sizeof ( handling_table );
+
 irp__handler_decl ( Bus_DispatchPnP )
 {
   NTSTATUS Status;
@@ -348,29 +404,6 @@ irp__handler_decl ( Bus_DispatchPnP )
 
   switch ( Stack->MinorFunction )
     {
-      case IRP_MN_START_DEVICE:
-	KeInitializeEvent ( &Event, NotificationEvent, FALSE );
-	IoCopyCurrentIrpStackLocationToNext ( Irp );
-	IoSetCompletionRoutine ( Irp,
-				 ( PIO_COMPLETION_ROUTINE )
-				 Bus_IoCompletionRoutine, ( PVOID ) & Event,
-				 TRUE, TRUE, TRUE );
-	Status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
-	if ( Status == STATUS_PENDING )
-	  {
-	    DBG ( "Locked\n" );
-	    KeWaitForSingleObject ( &Event, Executive, KernelMode, FALSE,
-				    NULL );
-	  }
-	if ( NT_SUCCESS ( Status = Irp->IoStatus.Status ) )
-	  {
-	    DeviceExtension->OldState = DeviceExtension->State;
-	    DeviceExtension->State = Started;
-	  }
-	Status = STATUS_SUCCESS;
-	Irp->IoStatus.Status = Status;
-	IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-	return Status;
       case IRP_MN_REMOVE_DEVICE:
 	DeviceExtension->OldState = DeviceExtension->State;
 	DeviceExtension->State = Deleted;
@@ -802,7 +835,7 @@ Bus_AddDevice (
   RtlInitUnicodeString ( &DosDeviceName, L"\\DosDevices\\AoE" );
   new_dev_ext_size =
     sizeof ( driver__dev_ext ) + sizeof ( bus__type ) +
-    driver__handling_table_size;
+    driver__handling_table_size + handling_table_size;
   if ( !NT_SUCCESS
        ( Status =
 	 IoCreateDevice ( DriverObject, new_dev_ext_size, &DeviceName,
@@ -831,8 +864,12 @@ Bus_AddDevice (
     sizeof ( bus__type );
   RtlCopyMemory ( bus_dev_ext_ptr->irp_handler_stack_ptr,
 		  driver__handling_table, driver__handling_table_size );
+  RtlCopyMemory ( ( winvblock__uint8 * ) bus_dev_ext_ptr->
+		  irp_handler_stack_ptr + driver__handling_table_size,
+		  handling_table, handling_table_size );
   bus_dev_ext_ptr->irp_handler_stack_size =
-    driver__handling_table_size / sizeof ( irp__handling );
+    ( driver__handling_table_size +
+      handling_table_size ) / sizeof ( irp__handling );
   /*
    * Establish a pointer into the bus device's extension space
    */
