@@ -60,10 +60,6 @@ extern NTSTATUS STDCALL Bus_AddDevice (
  );
 
 extern irp__handler_decl (
-  Bus_DispatchDeviceControl
- );
-
-extern irp__handler_decl (
   Bus_DispatchSystemControl
  );
 
