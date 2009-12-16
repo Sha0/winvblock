@@ -153,6 +153,65 @@ Driver_DispatchNotSupported (
   return Irp->IoStatus.Status;
 }
 
+static
+irp__handler_decl (
+  create_close
+ )
+{
+  NTSTATUS status = STATUS_SUCCESS;
+
+  Irp->IoStatus.Status = status;
+  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+  *completion_ptr = TRUE;
+  return status;
+}
+
+static
+irp__handler_decl (
+  all_irps
+ )
+{
+  NTSTATUS status = STATUS_NOT_SUPPORTED;
+
+  DBG ( "Fell through.\n" );
+  *completion_ptr = TRUE;
+  return status;
+}
+
+static
+irp__handler_decl (
+  old_strategy
+ )
+{
+  NTSTATUS status;
+  /*
+   * Old IRP handling strategy
+   */
+  status =
+    DeviceExtension->dispatch ( DeviceObject, Irp, Stack, DeviceExtension,
+				completion_ptr );
+  *completion_ptr = TRUE;
+  return status;
+}
+
+irp__handling driver__handling_table[] = {
+  /*
+   * Major, minor, any major?, any minor?, handler
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * Note that the fall-through case must come FIRST!
+   * Why? It sets completion to true, so others won't be called
+   */
+  {0, 0, TRUE, TRUE, all_irps}
+  ,
+  {0, 0, TRUE, TRUE, old_strategy}
+  ,
+  {IRP_MJ_CLOSE, 0, FALSE, TRUE, create_close}
+  ,
+  {IRP_MJ_CREATE, 0, FALSE, TRUE, create_close}
+};
+
+size_t driver__handling_table_size = sizeof ( driver__handling_table );
+
 NTSTATUS STDCALL
 Driver_Dispatch (
   IN PDEVICE_OBJECT DeviceObject,
@@ -226,26 +285,11 @@ Driver_Dispatch (
 	break;
     }
 
-  /*
-   * Old IRP handling strategy 
-   */
-  switch ( Stack->MajorFunction )
-    {
-      case IRP_MJ_CREATE:
-      case IRP_MJ_CLOSE:
-	status = STATUS_SUCCESS;
-	Irp->IoStatus.Status = status;
-	IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-	break;
-      default:
-	status =
-	  DeviceExtension->dispatch ( DeviceObject, Irp, Stack,
-				      DeviceExtension, &completion );
-    }
 #ifdef DEBUGIRPS
   if ( status != STATUS_PENDING )
     Debug_IrpEnd ( Irp, status );
 #endif
+
   return status;
 }
 
