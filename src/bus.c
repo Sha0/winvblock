@@ -34,6 +34,7 @@
 #include "driver.h"
 #include "disk.h"
 #include "bus.h"
+#include "bus_pnp.h"
 #include "aoe.h"
 #include "mount.h"
 #include "debug.h"
@@ -52,11 +53,6 @@ winvblock__bool STDCALL Bus_AddChild (
   IN PDEVICE_OBJECT BusDeviceObject,
   IN disk__type Disk,
   IN winvblock__bool Boot
- );
-static NTSTATUS STDCALL Bus_IoCompletionRoutine (
-  IN PDEVICE_OBJECT DeviceObject,
-  IN PIRP Irp,
-  IN PKEVENT Event
  );
 
 typedef struct _BUS_TARGETLIST
@@ -242,8 +238,8 @@ Bus_AddChild (
     Disk.DiskType == OpticalDisc ? FILE_DEVICE_CD_ROM : FILE_DEVICE_DISK;
   ULONG DiskType2 =
     Disk.DiskType ==
-    OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.DiskType
-    == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
+    OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.
+    DiskType == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
 
   DBG ( "Entry\n" );
   /*
@@ -331,48 +327,6 @@ Bus_AddChild (
   return TRUE;
 }
 
-static
-irp__handler_decl (
-  pnp_start_dev
- )
-{
-  NTSTATUS status;
-  KEVENT event;
-  bus__type_ptr bus_ptr;
-
-  bus_ptr = get_bus_ptr ( DeviceExtension );
-  KeInitializeEvent ( &event, NotificationEvent, FALSE );
-  IoCopyCurrentIrpStackLocationToNext ( Irp );
-  IoSetCompletionRoutine ( Irp,
-			   ( PIO_COMPLETION_ROUTINE ) Bus_IoCompletionRoutine,
-			   ( PVOID ) & event, TRUE, TRUE, TRUE );
-  status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
-  if ( status == STATUS_PENDING )
-    {
-      DBG ( "Locked\n" );
-      KeWaitForSingleObject ( &event, Executive, KernelMode, FALSE, NULL );
-    }
-  if ( NT_SUCCESS ( status = Irp->IoStatus.Status ) )
-    {
-      DeviceExtension->OldState = DeviceExtension->State;
-      DeviceExtension->State = Started;
-    }
-  status = STATUS_SUCCESS;
-  Irp->IoStatus.Status = status;
-  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-  *completion_ptr = TRUE;
-  return status;
-}
-
-static
-irp__handler_decl (
-  foo
- )
-{
-  DBG ( "BUS PNP test\n" );
-  return STATUS_SUCCESS;
-}
-
 irp__handling handling_table[] = {
   /*
    * Major, minor, any major?, any minor?, handler
@@ -380,129 +334,17 @@ irp__handling handling_table[] = {
    * Note that the fall-through case must come FIRST!
    * Why? It sets completion to true, so others won't be called
    */
-  {IRP_MJ_PNP, IRP_MN_START_DEVICE, FALSE, FALSE, pnp_start_dev}
+  {IRP_MJ_PNP, 0, FALSE, TRUE, bus_pnp__simple}
   ,
-  {IRP_MJ_PNP, IRP_MN_QUERY_DEVICE_RELATIONS, FALSE, FALSE, foo}
+  {IRP_MJ_PNP, IRP_MN_START_DEVICE, FALSE, FALSE, bus_pnp__start_dev}
+  ,
+  {IRP_MJ_PNP, IRP_MN_REMOVE_DEVICE, FALSE, FALSE, bus_pnp__remove_dev}
+  ,
+  {IRP_MJ_PNP, IRP_MN_QUERY_DEVICE_RELATIONS, FALSE, FALSE,
+   bus_pnp__query_dev_relations}
 };
 
 size_t handling_table_size = sizeof ( handling_table );
-
-irp__handler_decl ( Bus_DispatchPnP )
-{
-  NTSTATUS Status;
-  KEVENT Event;
-  PDEVICE_RELATIONS DeviceRelations;
-  bus__type_ptr bus_ptr;
-  disk__type_ptr Walker,
-   Next;
-  ULONG Count;
-
-  /*
-   * Establish a pointer into the bus device's extension space
-   */
-  bus_ptr = get_bus_ptr ( DeviceExtension );
-
-  switch ( Stack->MinorFunction )
-    {
-      case IRP_MN_REMOVE_DEVICE:
-	DeviceExtension->OldState = DeviceExtension->State;
-	DeviceExtension->State = Deleted;
-	Irp->IoStatus.Information = 0;
-	Irp->IoStatus.Status = STATUS_SUCCESS;
-	IoSkipCurrentIrpStackLocation ( Irp );
-	Status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
-	Walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
-	while ( Walker != NULL )
-	  {
-	    Next = Walker->next_sibling_ptr;
-	    IoDeleteDevice ( Walker->dev_ext_ptr->Self );
-	    Walker = Next;
-	  }
-	bus_ptr->Children = 0;
-	bus_ptr->first_child_ptr = NULL;
-	IoDetachDevice ( bus_ptr->LowerDeviceObject );
-	IoDeleteDevice ( DeviceExtension->Self );
-	return Status;
-      case IRP_MN_QUERY_DEVICE_RELATIONS:
-	if ( Stack->Parameters.QueryDeviceRelations.Type != BusRelations
-	     || Irp->IoStatus.Information )
-	  {
-	    Status = Irp->IoStatus.Status;
-	    break;
-	  }
-	Count = 0;
-	Walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
-	while ( Walker != NULL )
-	  {
-	    Count++;
-	    Walker = Walker->next_sibling_ptr;
-	  }
-	DeviceRelations =
-	  ( PDEVICE_RELATIONS ) ExAllocatePool ( NonPagedPool,
-						 sizeof ( DEVICE_RELATIONS ) +
-						 ( sizeof ( PDEVICE_OBJECT ) *
-						   Count ) );
-	if ( DeviceRelations == NULL )
-	  {
-	    Irp->IoStatus.Information = 0;
-	    Status = STATUS_INSUFFICIENT_RESOURCES;
-	    break;
-	  }
-	DeviceRelations->Count = Count;
-
-	Count = 0;
-	Walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
-	while ( Walker != NULL )
-	  {
-	    ObReferenceObject ( Walker->dev_ext_ptr->Self );
-	    DeviceRelations->Objects[Count] = Walker->dev_ext_ptr->Self;
-	    Count++;
-	    Walker = Walker->next_sibling_ptr;
-	  }
-	Irp->IoStatus.Information = ( ULONG_PTR ) DeviceRelations;
-	Status = STATUS_SUCCESS;
-	break;
-      case IRP_MN_QUERY_PNP_DEVICE_STATE:
-	Irp->IoStatus.Information = 0;
-	Status = STATUS_SUCCESS;
-	break;
-      case IRP_MN_QUERY_STOP_DEVICE:
-	DeviceExtension->OldState = DeviceExtension->State;
-	DeviceExtension->State = StopPending;
-	Status = STATUS_SUCCESS;
-	break;
-      case IRP_MN_CANCEL_STOP_DEVICE:
-	DeviceExtension->State = DeviceExtension->OldState;
-	Status = STATUS_SUCCESS;
-	break;
-      case IRP_MN_STOP_DEVICE:
-	DeviceExtension->OldState = DeviceExtension->State;
-	DeviceExtension->State = Stopped;
-	Status = STATUS_SUCCESS;
-	break;
-      case IRP_MN_QUERY_REMOVE_DEVICE:
-	DeviceExtension->OldState = DeviceExtension->State;
-	DeviceExtension->State = RemovePending;
-	Status = STATUS_SUCCESS;
-	break;
-      case IRP_MN_CANCEL_REMOVE_DEVICE:
-	DeviceExtension->State = DeviceExtension->OldState;
-	Status = STATUS_SUCCESS;
-	break;
-      case IRP_MN_SURPRISE_REMOVAL:
-	DeviceExtension->OldState = DeviceExtension->State;
-	DeviceExtension->State = SurpriseRemovePending;
-	Status = STATUS_SUCCESS;
-	break;
-      default:
-	Status = Irp->IoStatus.Status;
-    }
-
-  Irp->IoStatus.Status = Status;
-  IoSkipCurrentIrpStackLocation ( Irp );
-  Status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
-  return Status;
-}
 
 irp__handler_decl ( Bus_DispatchDeviceControl )
 {
@@ -565,14 +407,16 @@ irp__handler_decl ( Bus_DispatchDeviceControl )
 	    TargetWalker = TargetWalker->Next;
 	  }
 	RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Targets,
-			( Stack->Parameters.
-			  DeviceIoControl.OutputBufferLength <
+			( Stack->Parameters.DeviceIoControl.
+			  OutputBufferLength <
 			  ( sizeof ( MOUNT_TARGETS ) +
 			    ( Count *
-			      sizeof ( MOUNT_TARGET ) ) ) ? Stack->
-			  Parameters.DeviceIoControl.OutputBufferLength
-			  : ( sizeof ( MOUNT_TARGETS ) +
-			      ( Count * sizeof ( MOUNT_TARGET ) ) ) ) );
+			      sizeof ( MOUNT_TARGET ) ) ) ? Stack->Parameters.
+			  DeviceIoControl.
+			  OutputBufferLength : ( sizeof ( MOUNT_TARGETS ) +
+						 ( Count *
+						   sizeof
+						   ( MOUNT_TARGET ) ) ) ) );
 	ExFreePool ( Targets );
 
 	KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
@@ -621,14 +465,16 @@ irp__handler_decl ( Bus_DispatchDeviceControl )
 	    DiskWalker = DiskWalker->next_sibling_ptr;
 	  }
 	RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, Disks,
-			( Stack->Parameters.
-			  DeviceIoControl.OutputBufferLength <
+			( Stack->Parameters.DeviceIoControl.
+			  OutputBufferLength <
 			  ( sizeof ( MOUNT_DISKS ) +
 			    ( Count *
-			      sizeof ( MOUNT_DISK ) ) ) ? Stack->
-			  Parameters.DeviceIoControl.OutputBufferLength
-			  : ( sizeof ( MOUNT_DISKS ) +
-			      ( Count * sizeof ( MOUNT_DISK ) ) ) ) );
+			      sizeof ( MOUNT_DISK ) ) ) ? Stack->Parameters.
+			  DeviceIoControl.
+			  OutputBufferLength : ( sizeof ( MOUNT_DISKS ) +
+						 ( Count *
+						   sizeof
+						   ( MOUNT_DISK ) ) ) ) );
 	ExFreePool ( Disks );
 
 	Status = STATUS_SUCCESS;
@@ -732,11 +578,6 @@ irp__handler_decl ( Bus_Dispatch )
 	IoSkipCurrentIrpStackLocation ( Irp );
 	Status = PoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
 	break;
-      case IRP_MJ_PNP:
-	Status =
-	  Bus_DispatchPnP ( DeviceObject, Irp, Stack, DeviceExtension,
-			    completion_ptr );
-	break;
       case IRP_MJ_SYSTEM_CONTROL:
 	Status =
 	  Bus_DispatchSystemControl ( DeviceObject, Irp, Stack,
@@ -753,17 +594,6 @@ irp__handler_decl ( Bus_Dispatch )
 	IoCompleteRequest ( Irp, IO_NO_INCREMENT );
     }
   return Status;
-}
-
-static NTSTATUS STDCALL
-Bus_IoCompletionRoutine (
-  IN PDEVICE_OBJECT DeviceObject,
-  IN PIRP Irp,
-  IN PKEVENT Event
- )
-{
-  KeSetEvent ( Event, 0, FALSE );
-  return STATUS_MORE_PROCESSING_REQUIRED;
 }
 
 NTSTATUS STDCALL
@@ -864,9 +694,9 @@ Bus_AddDevice (
     sizeof ( bus__type );
   RtlCopyMemory ( bus_dev_ext_ptr->irp_handler_stack_ptr,
 		  driver__handling_table, driver__handling_table_size );
-  RtlCopyMemory ( ( winvblock__uint8 * ) bus_dev_ext_ptr->
-		  irp_handler_stack_ptr + driver__handling_table_size,
-		  handling_table, handling_table_size );
+  RtlCopyMemory ( ( winvblock__uint8 * ) bus_dev_ext_ptr->irp_handler_stack_ptr
+		  + driver__handling_table_size, handling_table,
+		  handling_table_size );
   bus_dev_ext_ptr->irp_handler_stack_size =
     ( driver__handling_table_size +
       handling_table_size ) / sizeof ( irp__handling );
