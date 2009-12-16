@@ -235,7 +235,7 @@ Protocol_SearchNIC (
   return FALSE;
 }
 
-ULONG STDCALL
+winvblock__uint32 STDCALL
 Protocol_GetMTU (
   IN winvblock__uint8_ptr Mac
  )
@@ -258,7 +258,7 @@ Protocol_Send (
   IN winvblock__uint8_ptr SourceMac,
   IN winvblock__uint8_ptr DestinationMac,
   IN winvblock__uint8_ptr Data,
-  IN ULONG DataSize,
+  IN winvblock__uint32 DataSize,
   IN PVOID PacketContext
  )
 {
@@ -624,7 +624,7 @@ Protocol_BindAdapter (
   NDIS_MEDIUM MediumArray[] = { NdisMedium802_3 };
   NDIS_STRING AdapterInstanceName;
   NDIS_REQUEST Request;
-  ULONG InformationBuffer = NDIS_PACKET_TYPE_DIRECTED;
+  winvblock__uint32 InformationBuffer = NDIS_PACKET_TYPE_DIRECTED;
   winvblock__uint8 Mac[6];
   KIRQL Irql;
 #if defined(DEBUGMOSTPROTOCOLCALLS) || defined(DEBUGALLPROTOCOLCALLS)

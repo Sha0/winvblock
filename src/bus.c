@@ -58,7 +58,7 @@ winvblock__bool STDCALL Bus_AddChild (
 
 bus__target_list_ptr Bus_Globals_TargetList = NULL;
 KSPIN_LOCK Bus_Globals_TargetListSpinLock;
-static ULONG Bus_Globals_NextDisk = 0;
+static winvblock__uint32 Bus_Globals_NextDisk = 0;
 PDEVICE_OBJECT bus__fdo = NULL;
 
 NTSTATUS STDCALL
@@ -231,10 +231,10 @@ Bus_AddChild (
    Walker;
   DEVICE_TYPE DiskType =
     Disk.DiskType == OpticalDisc ? FILE_DEVICE_CD_ROM : FILE_DEVICE_DISK;
-  ULONG DiskType2 =
+  winvblock__uint32 DiskType2 =
     Disk.DiskType ==
-    OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.DiskType
-    == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
+    OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.
+    DiskType == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
 
   DBG ( "Entry\n" );
   /*
@@ -474,9 +474,9 @@ Bus_AddDevice (
     sizeof ( bus__type );
   RtlCopyMemory ( bus_dev_ext_ptr->irp_handler_stack_ptr,
 		  driver__handling_table, driver__handling_table_size );
-  RtlCopyMemory ( ( winvblock__uint8 * ) bus_dev_ext_ptr->
-		  irp_handler_stack_ptr + driver__handling_table_size,
-		  handling_table, handling_table_size );
+  RtlCopyMemory ( ( winvblock__uint8 * ) bus_dev_ext_ptr->irp_handler_stack_ptr
+		  + driver__handling_table_size, handling_table,
+		  handling_table_size );
   bus_dev_ext_ptr->irp_handler_stack_size =
     ( driver__handling_table_size +
       handling_table_size ) / sizeof ( irp__handling );

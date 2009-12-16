@@ -111,7 +111,7 @@ irp__handler_decl ( bus_pnp__query_dev_relations )
 {
   NTSTATUS status;
   bus__type_ptr bus_ptr;
-  ULONG count;
+  winvblock__uint32 count;
   disk__type_ptr walker;
   PDEVICE_RELATIONS dev_relations;
 
@@ -158,7 +158,7 @@ irp__handler_decl ( bus_pnp__query_dev_relations )
       count++;
       walker = walker->next_sibling_ptr;
     }
-  Irp->IoStatus.Information = ( ULONG_PTR ) dev_relations;
+  Irp->IoStatus.Information = ( winvblock__uint32_ptr ) dev_relations;
   status = STATUS_SUCCESS;
   Irp->IoStatus.Status = status;
   IoSkipCurrentIrpStackLocation ( Irp );

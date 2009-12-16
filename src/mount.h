@@ -47,8 +47,8 @@ typedef struct _MOUNT_TARGET
 {
   winvblock__uint8 ClientMac[6];
   winvblock__uint8 ServerMac[6];
-  ULONG Major;
-  ULONG Minor;
+  winvblock__uint32 Major;
+  winvblock__uint32 Minor;
   LONGLONG LBASize;
   LARGE_INTEGER ProbeTime;
 } MOUNT_TARGET,
@@ -56,25 +56,25 @@ typedef struct _MOUNT_TARGET
 
 typedef struct _MOUNT_TARGETS
 {
-  ULONG Count;
+  winvblock__uint32 Count;
   MOUNT_TARGET Target[];
 } MOUNT_TARGETS,
 *PMOUNT_TARGETS;
 
 typedef struct _MOUNT_DISK
 {
-  ULONG Disk;
+  winvblock__uint32 Disk;
   winvblock__uint8 ClientMac[6];
   winvblock__uint8 ServerMac[6];
-  ULONG Major;
-  ULONG Minor;
+  winvblock__uint32 Major;
+  winvblock__uint32 Minor;
   LONGLONG LBASize;
 } MOUNT_DISK,
 *PMOUNT_DISK;
 
 typedef struct _MOUNT_DISKS
 {
-  ULONG Count;
+  winvblock__uint32 Count;
   MOUNT_DISK Disk[];
 } MOUNT_DISKS,
 *PMOUNT_DISKS;

@@ -61,7 +61,7 @@ winvblock__def_struct ( disk__type )
   KSPIN_LOCK SpinLock;
   winvblock__bool BootDrive;
   winvblock__bool Unmount;
-  ULONG DiskNumber;
+  winvblock__uint32 DiskNumber;
   winvblock__bool IsRamdisk;
   winvblock__uint32 DiskType;
   winvblock__bool STDCALL (
@@ -76,10 +76,10 @@ winvblock__def_struct ( disk__type )
   };
   LONGLONG LBADiskSize;
   LONGLONG Cylinders;
-  ULONG Heads;
-  ULONG Sectors;
+  winvblock__uint32 Heads;
+  winvblock__uint32 Sectors;
   winvblock__uint32 SectorSize;
-  ULONG SpecialFileCount;
+  winvblock__uint32 SpecialFileCount;
 };
 
 #endif				/* _DISK_H */

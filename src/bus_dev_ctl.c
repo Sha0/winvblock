@@ -44,7 +44,7 @@ irp__handler_decl (
  )
 {
   KIRQL irql;
-  ULONG count;
+  winvblock__uint32 count;
   bus__target_list_ptr target_walker;
   PMOUNT_TARGETS targets;
 
@@ -88,10 +88,11 @@ irp__handler_decl (
 		  ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
 		    ( sizeof ( MOUNT_TARGETS ) +
 		      ( count *
-			sizeof ( MOUNT_TARGET ) ) ) ? Stack->
-		    Parameters.DeviceIoControl.OutputBufferLength
-		    : ( sizeof ( MOUNT_TARGETS ) +
-			( count * sizeof ( MOUNT_TARGET ) ) ) ) );
+			sizeof ( MOUNT_TARGET ) ) ) ? Stack->Parameters.
+		    DeviceIoControl.
+		    OutputBufferLength : ( sizeof ( MOUNT_TARGETS ) +
+					   ( count *
+					     sizeof ( MOUNT_TARGET ) ) ) ) );
   ExFreePool ( targets );
 
   KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, irql );
@@ -104,7 +105,7 @@ irp__handler_decl (
   aoe_show
  )
 {
-  ULONG count;
+  winvblock__uint32 count;
   disk__type_ptr disk_walker;
   bus__type_ptr bus_ptr;
   PMOUNT_DISKS disks;
@@ -154,10 +155,11 @@ irp__handler_decl (
 		  ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
 		    ( sizeof ( MOUNT_DISKS ) +
 		      ( count *
-			sizeof ( MOUNT_DISK ) ) ) ? Stack->
-		    Parameters.DeviceIoControl.OutputBufferLength
-		    : ( sizeof ( MOUNT_DISKS ) +
-			( count * sizeof ( MOUNT_DISK ) ) ) ) );
+			sizeof ( MOUNT_DISK ) ) ) ? Stack->Parameters.
+		    DeviceIoControl.
+		    OutputBufferLength : ( sizeof ( MOUNT_DISKS ) +
+					   ( count *
+					     sizeof ( MOUNT_DISK ) ) ) ) );
   ExFreePool ( disks );
 
   return STATUS_SUCCESS;
@@ -212,12 +214,13 @@ irp__handler_decl (
    prev_disk_walker;
   bus__type_ptr bus_ptr;
 
-  DBG ( "Got IOCTL_AOE_UMOUNT for disk: %d\n", *( PULONG ) buffer );
+  DBG ( "Got IOCTL_AOE_UMOUNT for disk: %d\n",
+	*( winvblock__uint32_ptr ) buffer );
   bus_ptr = get_bus_ptr ( DeviceExtension );
   disk_walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
   prev_disk_walker = disk_walker;
   while ( ( disk_walker != NULL )
-	  && ( disk_walker->DiskNumber != *( PULONG ) buffer ) )
+	  && ( disk_walker->DiskNumber != *( winvblock__uint32_ptr ) buffer ) )
     {
       prev_disk_walker = disk_walker;
       disk_walker = disk_walker->next_sibling_ptr;

@@ -47,7 +47,7 @@ extern NTSTATUS STDCALL AoE_Request (
   IN driver__dev_ext_ptr DeviceExtension,
   IN AOE_REQUESTMODE Mode,
   IN LONGLONG StartSector,
-  IN ULONG SectorCount,
+  IN winvblock__uint32 SectorCount,
   IN winvblock__uint8_ptr Buffer,
   IN PIRP Irp
  );

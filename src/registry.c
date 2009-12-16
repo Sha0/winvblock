@@ -100,7 +100,7 @@ Registry_FetchKVI (
  )
 {
   UNICODE_STRING u_value_name;
-  ULONG kvi_len;
+  winvblock__uint32 kvi_len;
   NTSTATUS status;
 
   /*
@@ -167,7 +167,7 @@ Registry_FetchSZ (
  )
 {
   PKEY_VALUE_PARTIAL_INFORMATION kvi;
-  ULONG value_len;
+  winvblock__uint32 value_len;
   NTSTATUS status;
 
   /*
@@ -216,9 +216,9 @@ Registry_FetchMultiSZ (
 {
   PKEY_VALUE_PARTIAL_INFORMATION kvi;
   LPWSTR string;
-  ULONG num_strings;
-  ULONG values_len;
-  ULONG i;
+  winvblock__uint32 num_strings;
+  winvblock__uint32 values_len;
+  winvblock__uint32 i;
   NTSTATUS status;
 
   /*
@@ -294,7 +294,7 @@ Registry_StoreSZ (
   value_len = ( ( wcslen ( value ) + 1 ) * sizeof ( value[0] ) );
   status =
     ZwSetValueKey ( reg_key, &u_value_name, 0, REG_SZ, value,
-		    ( ( ULONG ) value_len ) );
+		    ( ( winvblock__uint32 ) value_len ) );
   if ( !NT_SUCCESS ( status ) )
     {
       DBG ( "Could not store value \"%S\": %x\n", value_name, status );
@@ -316,7 +316,7 @@ static NTSTATUS
 Registry_StoreDWord (
   HANDLE reg_key,
   LPCWSTR value_name,
-  ULONG value
+  winvblock__uint32 value
  )
 {
   UNICODE_STRING u_value_name;
@@ -398,7 +398,7 @@ Registry_Setup (
   HANDLE ControlKeyHandle,
    NetworkClassKeyHandle,
    SubKeyHandle;
-  ULONG i,
+  winvblock__uint32 i,
    SubkeyIndex,
    ResultLength,
    InterfacesKeyStringLength,
@@ -759,9 +759,8 @@ Registry_Setup (
 						     sizeof
 						     ( DriverServiceNamePath )
 						     +
-						     KeyValueInformation->
-						     DataLength -
-						     sizeof ( WCHAR ) ) ) ==
+						     KeyValueInformation->DataLength
+						     - sizeof ( WCHAR ) ) ) ==
 		       NULL )
 		    {
 		      DBG ( "ExAllocatePool DriverServiceNameString "

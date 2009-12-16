@@ -32,7 +32,7 @@ winvblock__def_struct ( bus__type )
 {
   PDEVICE_OBJECT LowerDeviceObject;
   PDEVICE_OBJECT PhysicalDeviceObject;
-  ULONG Children;
+  winvblock__uint32 Children;
   winvblock__uint8_ptr first_child_ptr;
   KSPIN_LOCK SpinLock;
 };

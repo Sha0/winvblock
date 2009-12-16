@@ -52,7 +52,7 @@ extern int sprintf (
 typedef struct _DEBUG_IRPLIST
 {
   PIRP Irp;
-  ULONG Number;
+  winvblock__uint32 Number;
   PCHAR DebugMessage;
   struct _DEBUG_IRPLIST *Next;
   struct _DEBUG_IRPLIST *Previous;
@@ -61,7 +61,7 @@ typedef struct _DEBUG_IRPLIST
 
 static PDEBUG_IRPLIST Debug_Globals_IrpList = NULL;
 static KSPIN_LOCK Debug_Globals_SpinLock;
-static ULONG Debug_Globals_Number = 0;
+static winvblock__uint32 Debug_Globals_Number = 0;
 
 /* in this file */
 static PDEBUG_IRPLIST STDCALL Debug_IrpListRecord (
@@ -94,7 +94,7 @@ static PCHAR STDCALL Debug_SrbFunctionString (
   IN winvblock__uint8 Function
  );
 static PCHAR STDCALL Debug_DeviceIoControlString (
-  IN ULONG IoControlCode
+  IN winvblock__uint32 IoControlCode
  );
 static PCHAR STDCALL Debug_DeviceTextTypeString (
   IN DEVICE_TEXT_TYPE DeviceTextType
@@ -238,7 +238,7 @@ Debug_DecodeIrp (
   PIO_STACK_LOCATION Stack = IoGetCurrentIrpStackLocation ( Irp );
   PSCSI_REQUEST_BLOCK Srb;
   PCDB Cdb;
-  ULONG StartSector,
+  winvblock__uint32 StartSector,
    SectorCount;
   PSTORAGE_PROPERTY_QUERY StoragePropertyQuery;
 
@@ -248,8 +248,8 @@ Debug_DecodeIrp (
     {
       case IRP_MJ_SYSTEM_CONTROL:
 	sprintf ( DebugMessage, "%s %s", DebugMessage,
-		  Debug_SystemControlMinorFunctionString
-		  ( Stack->MinorFunction ) );
+		  Debug_SystemControlMinorFunctionString ( Stack->
+							   MinorFunction ) );
 	break;
       case IRP_MJ_PNP:
 	sprintf ( DebugMessage, "%s %s", DebugMessage,
@@ -258,26 +258,29 @@ Debug_DecodeIrp (
 	  {
 	    case IRP_MN_QUERY_ID:
 	      sprintf ( DebugMessage, "%s %s", DebugMessage,
-			Debug_QueryIdString ( Stack->Parameters.
-					      QueryId.IdType ) );
+			Debug_QueryIdString ( Stack->Parameters.QueryId.
+					      IdType ) );
 	      break;
 	    case IRP_MN_QUERY_DEVICE_TEXT:
 	      sprintf ( DebugMessage, "%s %s", DebugMessage,
-			Debug_DeviceTextTypeString ( Stack->Parameters.
-						     QueryDeviceText.DeviceTextType ) );
+			Debug_DeviceTextTypeString ( Stack->
+						     Parameters.QueryDeviceText.
+						     DeviceTextType ) );
 	      break;
 	    case IRP_MN_QUERY_DEVICE_RELATIONS:
 	      sprintf ( DebugMessage, "%s %s", DebugMessage,
-			Debug_QueryDeviceRelationsString ( Stack->
-							   Parameters.QueryDeviceRelations.Type ) );
+			Debug_QueryDeviceRelationsString ( Stack->Parameters.
+							   QueryDeviceRelations.
+							   Type ) );
 	      break;
 	  }
 	break;
       case IRP_MJ_DEVICE_CONTROL:
 	sprintf ( DebugMessage, "%s (0x%08x) %s", DebugMessage,
 		  ( int )Stack->Parameters.DeviceIoControl.IoControlCode,
-		  Debug_DeviceIoControlString ( Stack->Parameters.
-						DeviceIoControl.IoControlCode ) );
+		  Debug_DeviceIoControlString ( Stack->
+						Parameters.DeviceIoControl.
+						IoControlCode ) );
 	if ( !DeviceExtension->IsBus
 	     && Stack->Parameters.DeviceIoControl.IoControlCode ==
 	     IOCTL_STORAGE_QUERY_PROPERTY )
@@ -636,7 +639,7 @@ Debug_SrbFunctionString (
 
 static PCHAR STDCALL
 Debug_DeviceIoControlString (
-  IN ULONG IoControlCode
+  IN winvblock__uint32 IoControlCode
  )
 {
   switch ( IoControlCode )

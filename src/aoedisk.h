@@ -30,13 +30,13 @@
 
 typedef struct _AOEDISK_AOEDISK
 {
-  ULONG MTU;
+  winvblock__uint32 MTU;
   winvblock__uint8 ClientMac[6];
   winvblock__uint8 ServerMac[6];
-  ULONG Major;
-  ULONG Minor;
-  ULONG MaxSectorsPerPacket;
-  ULONG Timeout;
+  winvblock__uint32 Major;
+  winvblock__uint32 Minor;
+  winvblock__uint32 MaxSectorsPerPacket;
+  winvblock__uint32 Timeout;
 } AOEDISK_AOEDISK,
 *PAOEDISK_AOEDISK;
 

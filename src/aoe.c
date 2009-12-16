@@ -111,11 +111,11 @@ typedef struct _AOE_PACKET
 typedef struct _AOE_REQUEST
 {
   AOE_REQUESTMODE Mode;
-  ULONG SectorCount;
+  winvblock__uint32 SectorCount;
   winvblock__uint8_ptr Buffer;
   PIRP Irp;
-  ULONG TagCount;
-  ULONG TotalTags;
+  winvblock__uint32 TagCount;
+  winvblock__uint32 TotalTags;
 } AOE_REQUEST,
 *PAOE_REQUEST;
 
@@ -125,13 +125,13 @@ typedef struct _AOE_TAG
   AOE_TAGTYPE Type;
   driver__dev_ext_ptr DeviceExtension;
   PAOE_REQUEST Request;
-  ULONG Id;
+  winvblock__uint32 Id;
   PAOE_PACKET PacketData;
-  ULONG PacketSize;
+  winvblock__uint32 PacketSize;
   LARGE_INTEGER FirstSendTime;
   LARGE_INTEGER SendTime;
-  ULONG BufferOffset;
-  ULONG SectorCount;
+  winvblock__uint32 BufferOffset;
+  winvblock__uint32 SectorCount;
   struct _AOE_TAG *Next;
   struct _AOE_TAG *Previous;
 } AOE_TAG,
@@ -205,8 +205,8 @@ AoE_Start (
    */
   if ( ( AoE_Globals_ProbeTag->PacketData =
 	 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-					  AoE_Globals_ProbeTag->PacketSize ) )
-       == NULL )
+					  AoE_Globals_ProbeTag->
+					  PacketSize ) ) == NULL )
     {
       DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
       ExFreePool ( AoE_Globals_ProbeTag );
@@ -315,9 +315,8 @@ AoE_Stop (
   while ( DiskSearch != NULL )
     {
       KeSetEvent ( &
-		   ( get_disk_ptr
-		     ( DiskSearch->DeviceExtension )->SearchEvent ), 0,
-		   FALSE );
+		   ( get_disk_ptr ( DiskSearch->DeviceExtension )->
+		     SearchEvent ), 0, FALSE );
       PreviousDiskSearch = DiskSearch;
       DiskSearch = DiskSearch->Next;
       ExFreePool ( PreviousDiskSearch );
@@ -387,7 +386,7 @@ AoE_SearchDrive (
   KIRQL Irql,
    InnerIrql;
   LARGE_INTEGER MaxSectorsPerPacketSendTime;
-  ULONG MTU;
+  winvblock__uint32 MTU;
   disk__type_ptr disk_ptr;
 
   /*
@@ -764,7 +763,7 @@ AoE_Request (
   IN driver__dev_ext_ptr DeviceExtension,
   IN AOE_REQUESTMODE Mode,
   IN LONGLONG StartSector,
-  IN ULONG SectorCount,
+  IN winvblock__uint32 SectorCount,
   IN winvblock__uint8_ptr Buffer,
   IN PIRP Irp
  )
@@ -774,7 +773,7 @@ AoE_Request (
    NewTagList = NULL,
     PreviousTag = NULL;
   KIRQL Irql;
-  ULONG i;
+  winvblock__uint32 i;
   PHYSICAL_ADDRESS PhysicalAddress;
   winvblock__uint8_ptr PhysicalMemory;
   disk__type_ptr disk_ptr;
@@ -1140,9 +1139,9 @@ AoE_Reply (
 
   KeQuerySystemTime ( &CurrentTime );
   disk_ptr->AoE.Timeout -=
-    ( ULONG ) ( ( disk_ptr->AoE.Timeout -
-		  ( CurrentTime.QuadPart -
-		    Tag->FirstSendTime.QuadPart ) ) / 1024 );
+    ( winvblock__uint32 ) ( ( disk_ptr->AoE.Timeout -
+			      ( CurrentTime.QuadPart -
+				Tag->FirstSendTime.QuadPart ) ) / 1024 );
   /*
    * TODO: Replace the values below with #defined constants 
    */
@@ -1270,14 +1269,14 @@ AoE_Thread (
    CurrentTime,
    ProbeTime,
    ReportTime;
-  ULONG NextTagId = 1;
+  winvblock__uint32 NextTagId = 1;
   PAOE_TAG Tag;
   KIRQL Irql;
-  ULONG Sends = 0;
-  ULONG Resends = 0;
-  ULONG ResendFails = 0;
-  ULONG Fails = 0;
-  ULONG RequestTimeout = 0;
+  winvblock__uint32 Sends = 0;
+  winvblock__uint32 Resends = 0;
+  winvblock__uint32 ResendFails = 0;
+  winvblock__uint32 Fails = 0;
+  winvblock__uint32 RequestTimeout = 0;
   disk__type_ptr disk_ptr;
 
   DBG ( "Entry\n" );
@@ -1332,9 +1331,8 @@ AoE_Thread (
 	  AoE_Globals_ProbeTag->PacketData->Tag = AoE_Globals_ProbeTag->Id;
 	  Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
 			  "\xff\xff\xff\xff\xff\xff",
-			  ( winvblock__uint8_ptr )
-			  AoE_Globals_ProbeTag->PacketData,
-			  AoE_Globals_ProbeTag->PacketSize, NULL );
+			  ( winvblock__uint8_ptr ) AoE_Globals_ProbeTag->
+			  PacketData, AoE_Globals_ProbeTag->PacketSize, NULL );
 	  KeQuerySystemTime ( &AoE_Globals_ProbeTag->SendTime );
 	}
 

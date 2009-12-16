@@ -63,10 +63,10 @@ main (
   PMOUNT_DISKS Disks;
   winvblock__uint8 Mac[6];
   DWORD BytesReturned;
-  ULONG Major,
+  winvblock__uint32 Major,
    Minor,
    Disk;
-  ULONG i;
+  winvblock__uint32 i;
 
   if ( argc < 2 )
     {
