@@ -178,20 +178,6 @@ get_bus_ptr (
   return bus_ptr;
 }
 
-/*
- * Establish a pointer into the child disk device's extension space
- */
-disk__type_ptr STDCALL
-get_disk_ptr (
-  driver__dev_ext_ptr dev_ext_ptr
- )
-{
-  winvblock__uint8_ptr tmp = ( winvblock__uint8_ptr ) dev_ext_ptr;
-  disk__type_ptr disk_ptr =
-    ( disk__type_ptr ) ( tmp + sizeof ( driver__dev_ext ) );
-  return disk_ptr;
-}
-
 /**
  * Add a child node to the bus
  *
@@ -227,8 +213,8 @@ Bus_AddChild (
     Disk.DiskType == OpticalDisc ? FILE_DEVICE_CD_ROM : FILE_DEVICE_DISK;
   winvblock__uint32 DiskType2 =
     Disk.DiskType ==
-    OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.
-    DiskType == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
+    OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.DiskType
+    == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
 
   DBG ( "Entry\n" );
   /*
@@ -241,7 +227,7 @@ Bus_AddChild (
    */
   new_dev_ext_size =
     sizeof ( driver__dev_ext ) + sizeof ( disk__type ) +
-    driver__handling_table_size;
+    driver__handling_table_size + disk__handling_table_size;
   if ( !NT_SUCCESS
        ( Status =
 	 IoCreateDevice ( bus_dev_ext_ptr->DriverObject, new_dev_ext_size,
@@ -253,17 +239,12 @@ Bus_AddChild (
       Error ( "Bus_AddChild IoCreateDevice", Status );
       return FALSE;
     }
-  /*
-   * Establish pointers into the child disk device's extension space
-   */
   disk_dev_ext_ptr = ( driver__dev_ext_ptr ) DeviceObject->DeviceExtension;
-  disk_ptr = get_disk_ptr ( disk_dev_ext_ptr );
   /*
    * Clear the extension space and establish parameters
    */
   RtlZeroMemory ( disk_dev_ext_ptr, new_dev_ext_size );
   disk_dev_ext_ptr->IsBus = FALSE;
-  disk_dev_ext_ptr->dispatch = Disk_Dispatch;
   disk_dev_ext_ptr->Self = DeviceObject;
   disk_dev_ext_ptr->DriverObject = bus_dev_ext_ptr->DriverObject;
   disk_dev_ext_ptr->State = NotStarted;
@@ -273,8 +254,17 @@ Bus_AddChild (
     sizeof ( disk__type );
   RtlCopyMemory ( disk_dev_ext_ptr->irp_handler_stack_ptr,
 		  driver__handling_table, driver__handling_table_size );
+  RtlCopyMemory ( ( winvblock__uint8 * ) disk_dev_ext_ptr->
+		  irp_handler_stack_ptr + driver__handling_table_size,
+		  disk__handling_table, disk__handling_table_size );
   disk_dev_ext_ptr->irp_handler_stack_size =
-    driver__handling_table_size / sizeof ( irp__handling );
+    ( driver__handling_table_size +
+      disk__handling_table_size ) / sizeof ( irp__handling );
+
+  /*
+   * Establish pointers into the child disk device's extension space
+   */
+  disk_ptr = get_disk_ptr ( disk_dev_ext_ptr );
   /*
    * Copy the provided disk parameters into the disk extension space
    */
@@ -340,26 +330,10 @@ irp__handler_decl (
   return PoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
 }
 
-static
-irp__handler_decl (
-  not_supported
- )
-{
-  Irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
-  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-  *completion_ptr = TRUE;
-  return Irp->IoStatus.Status;
-}
-
 irp__handling handling_table[] = {
   /*
    * Major, minor, any major?, any minor?, handler
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   * Note that the fall-through case must come FIRST!
-   * Why? It sets completion to true, so others won't be called
    */
-  {0, 0, TRUE, TRUE, not_supported}
-  ,
   {IRP_MJ_SYSTEM_CONTROL, 0, FALSE, TRUE, sys_ctl}
   ,
   {IRP_MJ_POWER, 0, FALSE, TRUE, power}
@@ -466,7 +440,6 @@ Bus_AddDevice (
   bus_dev_ext_ptr = ( driver__dev_ext_ptr ) bus__fdo->DeviceExtension;
   RtlZeroMemory ( bus_dev_ext_ptr, new_dev_ext_size );
   bus_dev_ext_ptr->IsBus = TRUE;
-  bus_dev_ext_ptr->dispatch = not_supported;
   bus_dev_ext_ptr->DriverObject = DriverObject;
   bus_dev_ext_ptr->Self = bus__fdo;
   bus_dev_ext_ptr->State = NotStarted;
@@ -476,9 +449,9 @@ Bus_AddDevice (
     sizeof ( bus__type );
   RtlCopyMemory ( bus_dev_ext_ptr->irp_handler_stack_ptr,
 		  driver__handling_table, driver__handling_table_size );
-  RtlCopyMemory ( ( winvblock__uint8 * ) bus_dev_ext_ptr->irp_handler_stack_ptr
-		  + driver__handling_table_size, handling_table,
-		  handling_table_size );
+  RtlCopyMemory ( ( winvblock__uint8 * ) bus_dev_ext_ptr->
+		  irp_handler_stack_ptr + driver__handling_table_size,
+		  handling_table, handling_table_size );
   bus_dev_ext_ptr->irp_handler_stack_size =
     ( driver__handling_table_size +
       handling_table_size ) / sizeof ( irp__handling );

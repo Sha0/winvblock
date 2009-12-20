@@ -71,7 +71,7 @@ winvblock__def_struct ( disk__type )
    );
   union
   {
-    AOEDISK_AOEDISK AoE;
+    aoedisk__type AoE;
     RAMDISK_RAMDISK RAMDisk;
   };
   LONGLONG LBADiskSize;
@@ -81,5 +81,12 @@ winvblock__def_struct ( disk__type )
   winvblock__uint32 SectorSize;
   winvblock__uint32 SpecialFileCount;
 };
+
+/*
+ * Establish a pointer into the child disk device's extension space
+ */
+extern disk__type_ptr STDCALL get_disk_ptr (
+  driver__dev_ext_ptr dev_ext_ptr
+ );
 
 #endif				/* _DISK_H */

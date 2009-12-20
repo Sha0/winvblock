@@ -68,7 +68,6 @@ winvblock__def_struct ( driver__dev_ext )
   driver__state OldState;
   irp__handling_ptr irp_handler_stack_ptr;
   size_t irp_handler_stack_size;
-  irp__handler dispatch;
 };
 
 extern VOID STDCALL Driver_CompletePendingIrp (
@@ -87,11 +86,6 @@ extern NTSTATUS STDCALL Error (
 extern NTSTATUS STDCALL DriverEntry (
   IN PDRIVER_OBJECT DriverObject,
   IN PUNICODE_STRING RegistryPath
- );
-
-extern NTSTATUS STDCALL Driver_Dispatch (
-  IN PDEVICE_OBJECT DeviceObject,
-  IN PIRP Irp
  );
 
 #endif				/* _DRIVER_H */

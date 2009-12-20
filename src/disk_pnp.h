@@ -18,28 +18,33 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _AOEDISK_H
-#  define _AOEDISK_H
+#ifndef _DISK_PNP_H
+#  define _DISK_PNP_H
 
 /**
  * @file
  *
- * AoE disk specifics
+ * Disk PnP IRP handling
  *
  */
 
-winvblock__def_struct ( aoedisk__type )
-{
-  winvblock__uint32 MTU;
-  winvblock__uint8 ClientMac[6];
-  winvblock__uint8 ServerMac[6];
-  winvblock__uint32 Major;
-  winvblock__uint32 Minor;
-  winvblock__uint32 MaxSectorsPerPacket;
-  winvblock__uint32 Timeout;
-};
+extern irp__handler_decl (
+  disk_pnp__query_id
+ );
+extern irp__handler_decl (
+  disk_pnp__query_dev_text
+ );
+extern irp__handler_decl (
+  disk_pnp__query_dev_relations
+ );
+extern irp__handler_decl (
+  disk_pnp__query_bus_info
+ );
+extern irp__handler_decl (
+  disk_pnp__query_capabilities
+ );
+extern irp__handler_decl (
+  disk_pnp__simple
+ );
 
-extern irp__handling disk__handling_table[];
-extern size_t disk__handling_table_size;
-
-#endif				/* _AOEDISK_H */
+#endif				/* _DISK_PNP_H */
