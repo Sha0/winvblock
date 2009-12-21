@@ -394,7 +394,10 @@ irp__handler_decl ( disk_pnp__query_capabilities )
   DeviceCapabilities->D3Latency = 0;
   DeviceCapabilities->EjectSupported = FALSE;
   DeviceCapabilities->HardwareDisabled = FALSE;
-  DeviceCapabilities->Removable = FALSE;
+  if ( disk_ptr->DiskType == HardDisk )
+    DeviceCapabilities->Removable = FALSE;
+  else
+    DeviceCapabilities->Removable = TRUE;
   DeviceCapabilities->SurpriseRemovalOK = FALSE;
   DeviceCapabilities->UniqueID = FALSE;
   DeviceCapabilities->SilentInstall = FALSE;

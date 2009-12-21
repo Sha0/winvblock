@@ -32,6 +32,8 @@
 #include <ntdddisk.h>
 #include <ntddscsi.h>
 #include <ntddstor.h>
+#include <ntddvol.h>
+#include <mountdev.h>
 
 #include "winvblock.h"
 #include "portable.h"
@@ -48,22 +50,26 @@ irp__handler_decl (
   NTSTATUS status = STATUS_INVALID_PARAMETER;
   PSTORAGE_PROPERTY_QUERY storage_prop_query = Irp->AssociatedIrp.SystemBuffer;
   winvblock__uint32 copy_size;
-  disk__type_ptr disk_ptr = get_disk_ptr ( DeviceExtension );
+  disk__type_ptr disk_ptr;
   STORAGE_ADAPTER_DESCRIPTOR storage_adapter_desc;
   STORAGE_DEVICE_DESCRIPTOR storage_dev_desc;
 
+  disk_ptr = get_disk_ptr ( DeviceExtension );
   if ( storage_prop_query->PropertyId == StorageAdapterProperty
        && storage_prop_query->QueryType == PropertyStandardQuery )
     {
       copy_size =
 	( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-	  sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) ? Stack->Parameters.
-	  DeviceIoControl.OutputBufferLength :
-	  sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) );
+	  sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) ? Stack->
+	  Parameters.DeviceIoControl.
+	  OutputBufferLength : sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) );
       storage_adapter_desc.Version = sizeof ( STORAGE_ADAPTER_DESCRIPTOR );
       storage_adapter_desc.Size = sizeof ( STORAGE_ADAPTER_DESCRIPTOR );
-      storage_adapter_desc.MaximumTransferLength =
-	disk_ptr->SectorSize * disk_ptr->AoE.MaxSectorsPerPacket;
+      if ( disk_ptr->IsRamdisk )
+	storage_adapter_desc.MaximumTransferLength = 1024 * 1024;
+      else
+	storage_adapter_desc.MaximumTransferLength =
+	  disk_ptr->SectorSize * disk_ptr->AoE.MaxSectorsPerPacket;
 #if 0
       storage_adapter_desc.MaximumTransferLength = SECTORSIZE * POOLSIZE;
 #endif
@@ -85,14 +91,17 @@ irp__handler_decl (
     {
       copy_size =
 	( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-	  sizeof ( STORAGE_DEVICE_DESCRIPTOR ) ? Stack->Parameters.
-	  DeviceIoControl.OutputBufferLength :
-	  sizeof ( STORAGE_DEVICE_DESCRIPTOR ) );
+	  sizeof ( STORAGE_DEVICE_DESCRIPTOR ) ? Stack->
+	  Parameters.DeviceIoControl.
+	  OutputBufferLength : sizeof ( STORAGE_DEVICE_DESCRIPTOR ) );
       storage_dev_desc.Version = sizeof ( STORAGE_DEVICE_DESCRIPTOR );
       storage_dev_desc.Size = sizeof ( STORAGE_DEVICE_DESCRIPTOR );
       storage_dev_desc.DeviceType = DIRECT_ACCESS_DEVICE;
       storage_dev_desc.DeviceTypeModifier = 0;
-      storage_dev_desc.RemovableMedia = FALSE;
+      if ( disk_ptr->DiskType == HardDisk )
+	storage_dev_desc.RemovableMedia = FALSE;
+      else
+	storage_dev_desc.RemovableMedia = TRUE;
       storage_dev_desc.CommandQueueing = FALSE;
       storage_dev_desc.VendorIdOffset = 0;
       storage_dev_desc.ProductIdOffset = 0;
@@ -126,8 +135,8 @@ irp__handler_decl (
 
   copy_size =
     ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-      sizeof ( DISK_GEOMETRY ) ? Stack->Parameters.
-      DeviceIoControl.OutputBufferLength : sizeof ( DISK_GEOMETRY ) );
+      sizeof ( DISK_GEOMETRY ) ? Stack->Parameters.DeviceIoControl.
+      OutputBufferLength : sizeof ( DISK_GEOMETRY ) );
   disk_geom.MediaType = FixedMedia;
   disk_ptr = get_disk_ptr ( DeviceExtension );
   disk_geom.Cylinders.QuadPart = disk_ptr->Cylinders;
@@ -150,8 +159,8 @@ irp__handler_decl (
 
   copy_size =
     ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-      sizeof ( SCSI_ADDRESS ) ? Stack->Parameters.
-      DeviceIoControl.OutputBufferLength : sizeof ( SCSI_ADDRESS ) );
+      sizeof ( SCSI_ADDRESS ) ? Stack->Parameters.DeviceIoControl.
+      OutputBufferLength : sizeof ( SCSI_ADDRESS ) );
   scsi_address.Length = sizeof ( SCSI_ADDRESS );
   scsi_address.PortNumber = 0;
   scsi_address.PathId = 0;
@@ -184,6 +193,18 @@ irp__handler_decl ( disk_dev_ctl__dispatch )
 	  scsi_get_address ( DeviceObject, Irp, Stack, DeviceExtension,
 			     completion_ptr );
 	break;
+	/*
+	 * Some cases that pop up on Windows Server 2003 
+	 */
+#if 0
+      case IOCTL_MOUNTDEV_UNIQUE_ID_CHANGE_NOTIFY:
+      case IOCTL_MOUNTDEV_LINK_CREATED:
+      case IOCTL_MOUNTDEV_QUERY_STABLE_GUID:
+      case IOCTL_VOLUME_ONLINE:
+	Irp->IoStatus.Information = 0;
+	status = STATUS_SUCCESS;
+	break;
+#endif
       default:
 	Irp->IoStatus.Information = 0;
 	status = STATUS_INVALID_PARAMETER;

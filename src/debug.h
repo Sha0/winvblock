@@ -35,10 +35,15 @@
 #  ifdef DBG
 #    undef DBG
 #  endif
-#  define DBG( ... ) xDbgPrint ( __FILE__, ( const PCHAR )__FUNCTION__, \
-                                  __LINE__ ) || 1 ? \
-                                  DbgPrint ( __VA_ARGS__ ) : \
-                                  0
+/* Uncomment to enable */
+#  if 0
+#    define DBG( ... ) \
+\
+xDbgPrint ( __FILE__, ( const PCHAR )__FUNCTION__, \
+            __LINE__ ) || 1 ? DbgPrint ( __VA_ARGS__ ) : 0
+#  else
+#    define DBG( ... ) (void)0
+#  endif
 
 extern NTSTATUS STDCALL xDbgPrint (
   IN PCHAR File,

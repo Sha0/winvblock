@@ -183,12 +183,11 @@ scsi_op (
     }
 
   if ( ( ( ( winvblock__uint8_ptr ) Srb->DataBuffer -
-	   ( winvblock__uint8_ptr ) MmGetMdlVirtualAddress ( Irp->
-							     MdlAddress ) ) +
-	 ( winvblock__uint8_ptr ) MmGetSystemAddressForMdlSafe ( Irp->
-								 MdlAddress,
-								 HighPagePriority ) )
-       == NULL )
+	   ( winvblock__uint8_ptr )
+	   MmGetMdlVirtualAddress ( Irp->MdlAddress ) ) +
+	 ( winvblock__uint8_ptr )
+	 MmGetSystemAddressForMdlSafe ( Irp->MdlAddress,
+					HighPagePriority ) ) == NULL )
     {
       status = STATUS_INSUFFICIENT_RESOURCES;
       Irp->IoStatus.Information = 0;
@@ -260,22 +259,18 @@ scsi_op (
   read_capacity
  )
 {
-  winvblock__uint32 temp;
+  winvblock__uint32 temp = disk_ptr->SectorSize;
+  PREAD_CAPACITY_DATA data = ( PREAD_CAPACITY_DATA ) Srb->DataBuffer;
 
-  temp = disk_ptr->SectorSize;
-  REVERSE_BYTES ( &
-		  ( ( ( PREAD_CAPACITY_DATA ) Srb->
-		      DataBuffer )->BytesPerBlock ), &temp );
+  REVERSE_BYTES ( &data->BytesPerBlock, &temp );
   if ( ( disk_ptr->LBADiskSize - 1 ) > 0xffffffff )
     {
-      ( ( PREAD_CAPACITY_DATA ) Srb->DataBuffer )->LogicalBlockAddress = -1;
+      data->LogicalBlockAddress = -1;
     }
   else
     {
       temp = ( winvblock__uint32 ) ( disk_ptr->LBADiskSize - 1 );
-      REVERSE_BYTES ( &
-		      ( ( ( PREAD_CAPACITY_DATA ) Srb->
-			  DataBuffer )->LogicalBlockAddress ), &temp );
+      REVERSE_BYTES ( &data->LogicalBlockAddress, &temp );
     }
   Irp->IoStatus.Information = sizeof ( READ_CAPACITY_DATA );
   Srb->SrbStatus = SRB_STATUS_SUCCESS;
@@ -292,13 +287,12 @@ scsi_op (
 
   temp = disk_ptr->SectorSize;
   REVERSE_BYTES ( &
-		  ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->
-		      DataBuffer )->BytesPerBlock ), &temp );
+		  ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->DataBuffer )->
+		    BytesPerBlock ), &temp );
   big_temp = disk_ptr->LBADiskSize - 1;
   REVERSE_BYTES_QUAD ( &
-		       ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->
-			   DataBuffer )->LogicalBlockAddress.QuadPart ),
-		       &big_temp );
+		       ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->DataBuffer )->
+			 LogicalBlockAddress.QuadPart ), &big_temp );
   Irp->IoStatus.Information = sizeof ( READ_CAPACITY_DATA_EX );
   Srb->SrbStatus = SRB_STATUS_SUCCESS;
   return STATUS_SUCCESS;
@@ -319,7 +313,10 @@ scsi_op (
   mode_param_header = ( PMODE_PARAMETER_HEADER ) Srb->DataBuffer;
   RtlZeroMemory ( mode_param_header, Srb->DataTransferLength );
   mode_param_header->ModeDataLength = sizeof ( MODE_PARAMETER_HEADER );
-  mode_param_header->MediumType = FixedMedia;
+  if ( disk_ptr->DiskType == HardDisk )
+    mode_param_header->MediumType = FixedMedia;
+  else
+    mode_param_header->MediumType = RemovableMedia;
   mode_param_header->BlockDescriptorLength = 0;
   Srb->DataTransferLength = sizeof ( MODE_PARAMETER_HEADER );
   Irp->IoStatus.Information = sizeof ( MODE_PARAMETER_HEADER );

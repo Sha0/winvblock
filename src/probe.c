@@ -313,6 +313,9 @@ check_mbft (
       Disk.SectorSize = 512;
     }
   DBG ( "RAM Drive is type: %d\n", Disk.DiskType );
+  Disk.Cylinders = mBFT->MDI.cylinders;
+  Disk.Heads = mBFT->MDI.heads;
+  Disk.Sectors = mBFT->MDI.sectors;
   Disk.IsRamdisk = TRUE;
   if ( !Bus_AddChild ( bus__fdo, Disk, TRUE ) )
     {
@@ -432,8 +435,8 @@ find_grub4dos_disks (
       Grub4DosDriveMapSlotPtr =
 	( grub4dos_drive_mapping_ptr ) ( PhysicalMemory +
 					 ( ( ( winvblock__uint32 )
-					     InterruptVector->
-					     Segment ) << 4 ) + 0x20 );
+					     InterruptVector->Segment ) << 4 )
+					 + 0x20 );
       while ( i-- )
 	{
 	  DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
@@ -470,8 +473,8 @@ find_grub4dos_disks (
 	  else
 	    {
 	      Disk.DiskType =
-		Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ? HardDisk :
-		FloppyDisk;
+		Grub4DosDriveMapSlotPtr[i].
+		SourceDrive & 0x80 ? HardDisk : FloppyDisk;
 	      Disk.SectorSize = 512;
 	    }
 	  DBG ( "RAM Drive is type: %d\n", Disk.DiskType );
