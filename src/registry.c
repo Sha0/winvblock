@@ -365,7 +365,7 @@ Registry_NoteOsLoadOptions (
    */
   status =
     Registry_FetchSZ ( control_key, L"SystemStartOptions",
-		       Registry_Globals_OsLoadOptions );
+		       &Registry_Globals_OsLoadOptions );
   if ( !NT_SUCCESS ( status ) )
     goto err_fetchsz;
 
@@ -759,8 +759,9 @@ Registry_Setup (
 						     sizeof
 						     ( DriverServiceNamePath )
 						     +
-						     KeyValueInformation->DataLength
-						     - sizeof ( WCHAR ) ) ) ==
+						     KeyValueInformation->
+						     DataLength -
+						     sizeof ( WCHAR ) ) ) ==
 		       NULL )
 		    {
 		      DBG ( "ExAllocatePool DriverServiceNameString "

@@ -213,8 +213,8 @@ Bus_AddChild (
     Disk.DiskType == OpticalDisc ? FILE_DEVICE_CD_ROM : FILE_DEVICE_DISK;
   winvblock__uint32 DiskType2 =
     Disk.DiskType ==
-    OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.DiskType
-    == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
+    OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.
+    DiskType == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
 
   DBG ( "Entry\n" );
   /*
@@ -250,13 +250,15 @@ Bus_AddChild (
   disk_dev_ext_ptr->State = NotStarted;
   disk_dev_ext_ptr->OldState = NotStarted;
   disk_dev_ext_ptr->irp_handler_stack_ptr =
-    ( winvblock__uint8 * ) disk_dev_ext_ptr + sizeof ( driver__dev_ext ) +
-    sizeof ( disk__type );
+    ( irp__handling_ptr ) ( ( winvblock__uint8 * ) disk_dev_ext_ptr +
+			    sizeof ( driver__dev_ext ) +
+			    sizeof ( disk__type ) );
   RtlCopyMemory ( disk_dev_ext_ptr->irp_handler_stack_ptr,
 		  driver__handling_table, driver__handling_table_size );
-  RtlCopyMemory ( ( winvblock__uint8 * ) disk_dev_ext_ptr->
-		  irp_handler_stack_ptr + driver__handling_table_size,
-		  disk__handling_table, disk__handling_table_size );
+  RtlCopyMemory ( ( winvblock__uint8 * )
+		  disk_dev_ext_ptr->irp_handler_stack_ptr +
+		  driver__handling_table_size, disk__handling_table,
+		  disk__handling_table_size );
   disk_dev_ext_ptr->irp_handler_stack_size =
     ( driver__handling_table_size +
       disk__handling_table_size ) / sizeof ( irp__handling );
@@ -293,7 +295,7 @@ Bus_AddChild (
    */
   if ( bus_ptr->first_child_ptr == NULL )
     {
-      bus_ptr->first_child_ptr = disk_ptr;
+      bus_ptr->first_child_ptr = ( winvblock__uint8_ptr ) disk_ptr;
     }
   else
     {
@@ -445,13 +447,14 @@ Bus_AddDevice (
   bus_dev_ext_ptr->State = NotStarted;
   bus_dev_ext_ptr->OldState = NotStarted;
   bus_dev_ext_ptr->irp_handler_stack_ptr =
-    ( winvblock__uint8 * ) bus_dev_ext_ptr + sizeof ( driver__dev_ext ) +
-    sizeof ( bus__type );
+    ( irp__handling_ptr ) ( ( winvblock__uint8 * ) bus_dev_ext_ptr +
+			    sizeof ( driver__dev_ext ) +
+			    sizeof ( bus__type ) );
   RtlCopyMemory ( bus_dev_ext_ptr->irp_handler_stack_ptr,
 		  driver__handling_table, driver__handling_table_size );
-  RtlCopyMemory ( ( winvblock__uint8 * ) bus_dev_ext_ptr->
-		  irp_handler_stack_ptr + driver__handling_table_size,
-		  handling_table, handling_table_size );
+  RtlCopyMemory ( ( winvblock__uint8 * ) bus_dev_ext_ptr->irp_handler_stack_ptr
+		  + driver__handling_table_size, handling_table,
+		  handling_table_size );
   bus_dev_ext_ptr->irp_handler_stack_size =
     ( driver__handling_table_size +
       handling_table_size ) / sizeof ( irp__handling );

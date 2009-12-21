@@ -39,7 +39,7 @@
 #include "debug.h"
 #include "aoe.h"
 
-#if _WIN32_WINNT <= 0x0500
+#if _WIN32_WINNT <= 0x0600
 #  if 0				/* FIXME: To build with WINDDK 6001.18001 */
 #    ifdef _MSC_VER
 #      pragma pack(1)
@@ -64,7 +64,7 @@ typedef union _EIGHT_BYTE
 #    endif
 #  endif			/* To build with WINDDK 6001.18001 */
 
-#  if _WIN32_WINNT < 0x0502
+#  if _WIN32_WINNT < 0x0500
 #    if 0			/* FIXME: To build with WINDDK 6001.18001 */
 #      ifdef _MSC_VER
 #        pragma pack(1)
@@ -79,7 +79,7 @@ typedef struct _READ_CAPACITY_DATA_EX
 #        pragma pack()
 #      endif
 #    endif			/* To build with WINDDK 6001.18001 */
-#  endif			/* _WIN32_WINNT < 0x0502 */
+#  endif			/* _WIN32_WINNT < 0x0500 */
 
 #  ifdef _MSC_VER
 #    pragma pack(1)
@@ -112,7 +112,7 @@ typedef struct _DISK_CDB16
   d->Byte1 = s->Byte6;                            \
   d->Byte0 = s->Byte7;                            \
 }
-#endif				/* if _WIN32_WINNT <= 0x0500 */
+#endif				/* if _WIN32_WINNT <= 0x0600 */
 
 #define scsi_op( x ) \
 \
@@ -183,11 +183,12 @@ scsi_op (
     }
 
   if ( ( ( ( winvblock__uint8_ptr ) Srb->DataBuffer -
-	   ( winvblock__uint8_ptr )
-	   MmGetMdlVirtualAddress ( Irp->MdlAddress ) ) +
-	 ( winvblock__uint8_ptr )
-	 MmGetSystemAddressForMdlSafe ( Irp->MdlAddress,
-					HighPagePriority ) ) == NULL )
+	   ( winvblock__uint8_ptr ) MmGetMdlVirtualAddress ( Irp->
+							     MdlAddress ) ) +
+	 ( winvblock__uint8_ptr ) MmGetSystemAddressForMdlSafe ( Irp->
+								 MdlAddress,
+								 HighPagePriority ) )
+       == NULL )
     {
       status = STATUS_INSUFFICIENT_RESOURCES;
       Irp->IoStatus.Information = 0;
@@ -287,12 +288,13 @@ scsi_op (
 
   temp = disk_ptr->SectorSize;
   REVERSE_BYTES ( &
-		  ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->DataBuffer )->
-		    BytesPerBlock ), &temp );
+		  ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->
+		      DataBuffer )->BytesPerBlock ), &temp );
   big_temp = disk_ptr->LBADiskSize - 1;
   REVERSE_BYTES_QUAD ( &
-		       ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->DataBuffer )->
-			 LogicalBlockAddress.QuadPart ), &big_temp );
+		       ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->
+			   DataBuffer )->LogicalBlockAddress.QuadPart ),
+		       &big_temp );
   Irp->IoStatus.Information = sizeof ( READ_CAPACITY_DATA_EX );
   Srb->SrbStatus = SRB_STATUS_SUCCESS;
   return STATUS_SUCCESS;

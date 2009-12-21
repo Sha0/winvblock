@@ -60,9 +60,9 @@ irp__handler_decl (
     {
       copy_size =
 	( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-	  sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) ? Stack->
-	  Parameters.DeviceIoControl.
-	  OutputBufferLength : sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) );
+	  sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) ? Stack->Parameters.
+	  DeviceIoControl.OutputBufferLength :
+	  sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) );
       storage_adapter_desc.Version = sizeof ( STORAGE_ADAPTER_DESCRIPTOR );
       storage_adapter_desc.Size = sizeof ( STORAGE_ADAPTER_DESCRIPTOR );
       if ( disk_ptr->IsRamdisk )
@@ -82,7 +82,7 @@ irp__handler_decl (
       storage_adapter_desc.BusType = BusTypeScsi;
       RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, &storage_adapter_desc,
 		      copy_size );
-      Irp->IoStatus.Information = ( winvblock__uint32_ptr ) copy_size;
+      Irp->IoStatus.Information = ( ULONG_PTR ) copy_size;
       status = STATUS_SUCCESS;
     }
 
@@ -91,9 +91,9 @@ irp__handler_decl (
     {
       copy_size =
 	( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-	  sizeof ( STORAGE_DEVICE_DESCRIPTOR ) ? Stack->
-	  Parameters.DeviceIoControl.
-	  OutputBufferLength : sizeof ( STORAGE_DEVICE_DESCRIPTOR ) );
+	  sizeof ( STORAGE_DEVICE_DESCRIPTOR ) ? Stack->Parameters.
+	  DeviceIoControl.OutputBufferLength :
+	  sizeof ( STORAGE_DEVICE_DESCRIPTOR ) );
       storage_dev_desc.Version = sizeof ( STORAGE_DEVICE_DESCRIPTOR );
       storage_dev_desc.Size = sizeof ( STORAGE_DEVICE_DESCRIPTOR );
       storage_dev_desc.DeviceType = DIRECT_ACCESS_DEVICE;
@@ -111,7 +111,7 @@ irp__handler_decl (
       storage_dev_desc.RawPropertiesLength = 0;
       RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, &storage_dev_desc,
 		      copy_size );
-      Irp->IoStatus.Information = ( winvblock__uint32_ptr ) copy_size;
+      Irp->IoStatus.Information = ( ULONG_PTR ) copy_size;
       status = STATUS_SUCCESS;
     }
 
@@ -135,8 +135,8 @@ irp__handler_decl (
 
   copy_size =
     ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-      sizeof ( DISK_GEOMETRY ) ? Stack->Parameters.DeviceIoControl.
-      OutputBufferLength : sizeof ( DISK_GEOMETRY ) );
+      sizeof ( DISK_GEOMETRY ) ? Stack->Parameters.
+      DeviceIoControl.OutputBufferLength : sizeof ( DISK_GEOMETRY ) );
   disk_geom.MediaType = FixedMedia;
   disk_ptr = get_disk_ptr ( DeviceExtension );
   disk_geom.Cylinders.QuadPart = disk_ptr->Cylinders;
@@ -144,7 +144,7 @@ irp__handler_decl (
   disk_geom.SectorsPerTrack = disk_ptr->Sectors;
   disk_geom.BytesPerSector = disk_ptr->SectorSize;
   RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, &disk_geom, copy_size );
-  Irp->IoStatus.Information = ( winvblock__uint32_ptr ) copy_size;
+  Irp->IoStatus.Information = ( ULONG_PTR ) copy_size;
   return STATUS_SUCCESS;
 }
 
@@ -159,8 +159,8 @@ irp__handler_decl (
 
   copy_size =
     ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-      sizeof ( SCSI_ADDRESS ) ? Stack->Parameters.DeviceIoControl.
-      OutputBufferLength : sizeof ( SCSI_ADDRESS ) );
+      sizeof ( SCSI_ADDRESS ) ? Stack->Parameters.
+      DeviceIoControl.OutputBufferLength : sizeof ( SCSI_ADDRESS ) );
   scsi_address.Length = sizeof ( SCSI_ADDRESS );
   scsi_address.PortNumber = 0;
   scsi_address.PathId = 0;
@@ -168,7 +168,7 @@ irp__handler_decl (
   scsi_address.TargetId = ( winvblock__uint8 ) disk_ptr->DiskNumber;
   scsi_address.Lun = 0;
   RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, &scsi_address, copy_size );
-  Irp->IoStatus.Information = ( winvblock__uint32_ptr ) copy_size;
+  Irp->IoStatus.Information = ( ULONG_PTR ) copy_size;
   return STATUS_SUCCESS;
 }
 

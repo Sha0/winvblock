@@ -76,9 +76,8 @@ irp__handler_decl ( disk_pnp__query_id )
 			 disk_ptr->AoE.Minor ) + 1;
 	  }
 	Irp->IoStatus.Information =
-	  ( winvblock__uint32_ptr ) ExAllocatePool ( PagedPool,
-						     string_length *
-						     sizeof ( WCHAR ) );
+	  ( ULONG_PTR ) ExAllocatePool ( PagedPool,
+					 string_length * sizeof ( WCHAR ) );
 	if ( Irp->IoStatus.Information == 0 )
 	  {
 	    DBG ( "ExAllocatePool BusQueryDeviceID\n" );
@@ -104,9 +103,8 @@ irp__handler_decl ( disk_pnp__query_id )
 			 disk_ptr->AoE.Minor ) + 1;
 	  }
 	Irp->IoStatus.Information =
-	  ( winvblock__uint32_ptr ) ExAllocatePool ( PagedPool,
-						     string_length *
-						     sizeof ( WCHAR ) );
+	  ( ULONG_PTR ) ExAllocatePool ( PagedPool,
+					 string_length * sizeof ( WCHAR ) );
 	if ( Irp->IoStatus.Information == 0 )
 	  {
 	    DBG ( "ExAllocatePool BusQueryInstanceID\n" );
@@ -139,9 +137,8 @@ irp__handler_decl ( disk_pnp__query_id )
 	      swprintf ( &string[string_length], L"GenDisk" ) + 4;
 	  }
 	Irp->IoStatus.Information =
-	  ( winvblock__uint32_ptr ) ExAllocatePool ( PagedPool,
-						     string_length *
-						     sizeof ( WCHAR ) );
+	  ( ULONG_PTR ) ExAllocatePool ( PagedPool,
+					 string_length * sizeof ( WCHAR ) );
 	if ( Irp->IoStatus.Information == 0 )
 	  {
 	    DBG ( "ExAllocatePool BusQueryHardwareIDs\n" );
@@ -167,9 +164,8 @@ irp__handler_decl ( disk_pnp__query_id )
 	    string_length = swprintf ( string, L"GenDisk" ) + 4;
 	  }
 	Irp->IoStatus.Information =
-	  ( winvblock__uint32_ptr ) ExAllocatePool ( PagedPool,
-						     string_length *
-						     sizeof ( WCHAR ) );
+	  ( ULONG_PTR ) ExAllocatePool ( PagedPool,
+					 string_length * sizeof ( WCHAR ) );
 	if ( Irp->IoStatus.Information == 0 )
 	  {
 	    DBG ( "ExAllocatePool BusQueryCompatibleIDs\n" );
@@ -223,9 +219,8 @@ irp__handler_decl ( disk_pnp__query_dev_text )
       case DeviceTextDescription:
 	string_length = swprintf ( string, L"WinVBlock Disk" ) + 1;
 	Irp->IoStatus.Information =
-	  ( winvblock__uint32_ptr ) ExAllocatePool ( PagedPool,
-						     string_length *
-						     sizeof ( WCHAR ) );
+	  ( ULONG_PTR ) ExAllocatePool ( PagedPool,
+					 string_length * sizeof ( WCHAR ) );
 	if ( Irp->IoStatus.Information == 0 )
 	  {
 	    DBG ( "ExAllocatePool DeviceTextDescription\n" );
@@ -242,9 +237,8 @@ irp__handler_decl ( disk_pnp__query_dev_text )
 	  swprintf ( string, L"WinVBlock AoE e%d.%d", disk_ptr->AoE.Major,
 		     disk_ptr->AoE.Minor ) + 1;
 	Irp->IoStatus.Information =
-	  ( winvblock__uint32_ptr ) ExAllocatePool ( PagedPool,
-						     string_length *
-						     sizeof ( WCHAR ) );
+	  ( ULONG_PTR ) ExAllocatePool ( PagedPool,
+					 string_length * sizeof ( WCHAR ) );
 	if ( Irp->IoStatus.Information == 0 )
 	  {
 	    DBG ( "ExAllocatePool DeviceTextLocationInformation\n" );
@@ -297,7 +291,7 @@ irp__handler_decl ( disk_pnp__query_dev_relations )
   dev_relations->Objects[0] = DeviceExtension->Self;
   dev_relations->Count = 1;
   ObReferenceObject ( DeviceExtension->Self );
-  Irp->IoStatus.Information = ( winvblock__uint32_ptr ) dev_relations;
+  Irp->IoStatus.Information = ( ULONG_PTR ) dev_relations;
   status = STATUS_SUCCESS;
 
   /*
@@ -332,7 +326,7 @@ irp__handler_decl ( disk_pnp__query_bus_info )
   pnp_bus_info->BusTypeGuid = GUID_BUS_TYPE_INTERNAL;
   pnp_bus_info->LegacyBusType = PNPBus;
   pnp_bus_info->BusNumber = 0;
-  Irp->IoStatus.Information = ( winvblock__uint32_ptr ) pnp_bus_info;
+  Irp->IoStatus.Information = ( ULONG_PTR ) pnp_bus_info;
   status = STATUS_SUCCESS;
 
   /*

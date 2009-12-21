@@ -384,7 +384,7 @@ Protocol_SendComplete (
   NdisUnchainBufferAtFront ( Packet, &Buffer );
   if ( Buffer != NULL )
     {
-      DataBuffer = NdisBufferVirtualAddress ( Buffer );
+      DataBuffer = MmGetSystemAddressForMdlSafe ( Buffer, HighPagePriority );
       ExFreePool ( DataBuffer );
       NdisFreeBuffer ( Buffer );
     }
@@ -416,7 +416,7 @@ Protocol_TransferDataComplete (
   NdisUnchainBufferAtFront ( Packet, &Buffer );
   if ( Buffer != NULL )
     {
-      NdisQueryBuffer ( Buffer, &Data, &DataSize );
+      NdisQueryBufferSafe ( Buffer, &Data, &DataSize, HighPagePriority );
       NdisFreeBuffer ( Buffer );
     }
   else
@@ -426,7 +426,7 @@ Protocol_TransferDataComplete (
   NdisUnchainBufferAtBack ( Packet, &Buffer );
   if ( Buffer != NULL )
     {
-      NdisQueryBuffer ( Buffer, &Header, &HeaderSize );
+      NdisQueryBufferSafe ( Buffer, &Header, &HeaderSize, HighPagePriority );
       NdisFreeBuffer ( Buffer );
     }
   else
