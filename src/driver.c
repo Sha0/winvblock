@@ -59,6 +59,12 @@ static VOID STDCALL Driver_Unload (
   IN PDRIVER_OBJECT DriverObject
  );
 
+static NTSTATUS STDCALL DriverReinitialize (
+  IN PDRIVER_OBJECT DriverObject,
+  IN PVOID Context,
+  winvblock__uint32 Count
+ );
+
 static PVOID Driver_Globals_StateHandle;
 static winvblock__bool Driver_Globals_Started = FALSE;
 
@@ -73,7 +79,6 @@ DriverEntry (
  )
 {
   NTSTATUS Status;
-  PDEVICE_OBJECT PDODeviceObject = NULL;
   int i;
 
 		/**
@@ -134,6 +139,38 @@ DriverEntry (
    */
   DriverObject->DriverExtension->AddDevice = Bus_AddDevice;
   DriverObject->DriverUnload = Driver_Unload;
+
+  /*
+   * There might be a bus device stored in the registry.  We
+   * give it a chance to be started by the PnP manager.  If we
+   * don't find evidence of a bus device in our re-initialization
+   * function, we'll add a bus device at that time
+   */
+  IoRegisterBootDriverReinitialization ( DriverObject,
+					 ( PDRIVER_REINITIALIZE )
+					 DriverReinitialize, NULL );
+  return STATUS_SUCCESS;
+}
+
+static NTSTATUS STDCALL
+DriverReinitialize (
+  IN PDRIVER_OBJECT DriverObject,
+  IN PVOID Context,
+  winvblock__uint32 Count
+ )
+{
+  PDEVICE_OBJECT PDODeviceObject = NULL;
+  NTSTATUS Status = STATUS_SUCCESS;
+
+  /*
+   * Did PnP manager start up a previously installed bus?
+   */
+  if ( bus__fdo )
+    goto have_bus;
+
+  /*
+   * No previously installed bus.  Add one
+   */
   IoReportDetectedDevice ( DriverObject, InterfaceTypeUndefined, -1, -1, NULL,
 			   NULL, FALSE, &PDODeviceObject );
   if ( !NT_SUCCESS
@@ -143,6 +180,8 @@ DriverEntry (
       AoE_Stop (  );
       return Error ( "Bus_AddDevice", Status );
     }
+
+have_bus:
   probe__disks (  );
   Driver_Globals_Started = TRUE;
   return Status;

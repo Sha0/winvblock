@@ -1,0 +1,894 @@
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue Dec 22 10:34:55 2009 -0500
+
+    [driver] Use pre-installed bus if possible
+    
+    To ensure that we function, we've historically forced the creation
+    of the bus device.  The documentation suggests that users use the
+    Add New Hardware Wizard to add the driver.  This resulted in two bus
+    devices: The proper one known as a SCSI adapter, and a boot-up
+    unknown device which was annoying.  For PE environments where our
+    driver is very simply injected through TXTSETUP.SIF entries, the
+    boot-up unknown device bus will still be generated.
+
+commit 06190549903b808c26dd973e694c6cb3687af8ff
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Dec 21 10:48:39 2009 -0500
+
+    [fixups] Clean compilation
+    
+    Notably:
+    
+    Commit f92581dcd0d3e80f5a4b26959a3a5621d8378c83 should not have
+    changed ULONG_PTR to winvblock__uint32_ptr.  ULONG_PTR is not
+    an unsigned long *, but an unsigned long which pointers are
+    sometimes cast to and from.
+    
+    ExAllocatePool() is deprecated and so has been wrapped with a
+    macro which instead calls ExAllocatePoolWithTag() with the tag
+    'klBV' ("VBlk").
+    
+    NdisQueryBuffer -> NdisQueryBufferSafe
+    NdisBufferVirtualAddress -> MmGetSystemAddressForMdlSafe
+    
+    Some cast fix-ups.
+    
+    Cleanly compiled under a variety of build environments:
+    2000 x86
+    XP x86
+    2003 x86
+    2003 x64/IA-64
+    Vista x86
+
+commit 22540b2f23508a3dad32cb935c11ca2643df1ebd
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Dec 21 03:47:01 2009 -0500
+
+    [disk] Fix booting Windows 2003 PE .ISO
+    
+    Several changes made hither and thither to pay closer attention
+    to fixed versus removable media responses to queries.  Windows
+    Server 2003 appeared to be trying to probe for a FAT filesystem
+    on the emulated ODD.  That's fixed now.
+    
+    Also fixed MEMDISK probing to correctly set the heads, cylinders
+    and sectors-per-track.
+    
+    A lot of the responses we provide to queries could be simpler
+    copies of structures built at device creation time.  These could
+    go into the device extension space.  Another ToDo.
+
+commit eb1a53bbdc153fad5464d515864030aff5e3ee24
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Dec 20 02:19:26 2009 -0500
+
+    [aoedisk,disk] Split aoedisk into dev_ctl, pnp, scsi portions
+    
+    Major code shuffling.  The mini IRP stack handling is used in
+    aoedisk now.  The handling has been split into disk_dev_ctl,
+    disk_pnp and disk_scsi modules.
+    
+    "aoedisk" should eventually simply become "disk", where RAM
+    disk versus AoE disk specifics are moved into appropriate
+    modules.
+
+commit 4029e9c48e87aef0b1346b97dc45c821da6d71e4
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Dec 16 10:39:10 2009 -0500
+
+    [bus] Move remaining IRP handling to mini stack
+    
+    In this module only.  Things are getting cleaner.
+
+commit 32a95716eaf7264c16186383534a0884b84aecde
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Dec 16 10:21:42 2009 -0500
+
+    [bus] Remove Bus_DispatchDeviceControl from header
+    
+    Forgot to remove this extern declaration earlier.
+
+commit f92581dcd0d3e80f5a4b26959a3a5621d8378c83
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Dec 16 09:28:20 2009 -0500
+
+    [headers] ULONG renamed to winvblock__uint32
+    
+    Includes PULONG and ULONG_PTR renamed to winvblock__uint32_ptr.
+
+commit ea9184821df8d03d08b4061fd00b995d72775492
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Dec 16 00:54:10 2009 -0500
+
+    [bus_dev_ctl] Move bus device control IRP handling into bus_dev_ctl
+    
+    Put in own file.  Should eventually mimic the mini IRP handling.
+
+commit b0acc0bca47ce711036865e71c70751c1b909f67
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue Dec 15 23:12:50 2009 -0500
+
+    [bus_pnp] Move bus PnP IRP handling into bus_pnp
+    
+    Changed functions to use mini IRP handling.  Put in own file.
+
+commit a4273d6327afefd4e5d0fce27d87be1fb5f7d78a
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue Dec 15 20:51:45 2009 -0500
+
+    [bus] Initial test for mini IRP handling
+    
+    Implemented handling_table[] in the bus module.  The bus module has
+    also been updated to copy this table into a new bus device.
+    
+    The picture of a bus device's mini IRP handling stack now goes:
+    IRP_MJ_PNP && IRP_MN_QUERY_DEVICE_RELATIONS ? bus foo()
+    IRP_MJ_PNP && IRP_MN_START_DEVICE ? bus pnp_start_dev()
+    IRP_MJ_CREATE ? driver create_close()
+    IRP_MJ_CLOSE ? driver create_close()
+    driver old_strategy()
+    driver all_irps()
+    
+    Where lower handlings are only pursued if
+    the completion boolean is not set.
+    
+    A simple foo() which catches IRP_MJ_PNP with
+    IRP_MN_QUERY_DEVICE_RELATIONS just for testing.
+    foo() should be removed soon.
+    
+    IRP_MJ_PNP, IRP_MN_START_DEVICE moved to pnp_start_dev()
+
+commit 18a8cef7c3294ff6b403bae607ac2385e536a4ac
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue Dec 15 19:45:22 2009 -0500
+
+    [driver] First test with new mini IRP handling strategy
+    
+    The driver IRP dispatch routine now scans through the DeviceObject's
+    DeviceExtension's irp_handler_stack(_ptr) looking for IRP major and
+    minor function matches.  An appropriate handler function is called,
+    if available.
+    
+    The IRP_MJ_CREATE and IRP_MJ_CLOSE have their own create_close()
+    IRP handler function now, for example.
+    
+    Now each of the case labels in the IRP function-handling switch
+    statements in all modules can be re-worked to use this system.
+    This means less indentation!
+    
+    Also of note is a change to the bus module to copy the default
+    mini-stack of IRP handlings from the driver module to any new device.
+
+commit 398a9b8022e79eae713b036153f18c76faab2099
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue Dec 15 15:17:45 2009 -0500
+
+    [irp,driver] Add mini IRP handling stacks
+    
+    An irp__handling structure esentially matches an irp__handler
+    function to the IRP major and minor functions it is intended to
+    handle.  Booleans are used for the case where such a handler handles
+    multiple major and/or minor combinations.
+    
+    In order to facilitate knowledge of when an Irp has been fully
+    handled for the driver module, we implement a boolean completion
+    status parameter.  If an irp__handler wants to prevent the Irp
+    from further processing by the driver Irp dispatch routine, it
+    should set the completion status to TRUE.
+    
+    This miniature IRP handling strategy is sitting doing nothing until
+    routines are ported to use it.
+
+commit 829543cf8efd7ef18f99f6a6ef4cfb08246dd661
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Dec 14 23:21:24 2009 -0500
+
+    [cosmetics] Remove STDCALL where unneeded
+    
+    STDCALL should not affect 'foo func(void)' functions.  (Functions
+    taking no parameters.)
+
+commit aa5b3fc1bef2f8839ab0bc645d4d4c29c11b6e25
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Dec 14 22:46:16 2009 -0500
+
+    [cosmetics] Fix tab-size
+    
+    All this time the tab-size was set to two spaces.  Wrong.
+    It made things in git look like...  Well, gitweb, that is, looked
+    pretty poor.  Better now, I hope.
+
+commit acce82f6d985da6d14cbb2f4e003ba49e30c4b8f
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Dec 14 20:34:34 2009 -0500
+
+    [bus] Fix AoE unmounting
+    
+    When we invalidate our bus relations, we are queried for them.  Each
+    of the PDOs that were previously known are dereferenced, so we need to
+    balance that by referencing each PDO we report before the report is
+    complete.
+    
+    This is the fix for item 10 in V.'s readme.txt (I believe).
+
+commit d34ab875f773f5684555af064f3a61356ad66c9f
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Dec 14 15:18:40 2009 -0500
+
+    [protocol] Fix AoE startup
+    
+    Use NDIS 4.0.  Check if we registered the protocol properly.
+    Startup AoE upon IOCTL_AOE_SCAN.
+
+commit 9fb8a14632ffc0239b590f83deeed3ac1998ed06
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Dec 14 13:38:36 2009 -0500
+
+    [driver] Remove bus and disk details from the device extension
+    
+    The eventual goal is for each module to know what it needs to know
+    and to delegate module-specific tasks to the appropriate modules.
+    
+    In working towards this goal, the device extension in driver.h no
+    longer contains space for bus or disk structures.  This involved
+    major access changes.  Where modules used to access the bus/disk
+    members of the device extension, they now use helper functions to
+    get a pointer to these structures.
+    
+    The helper functions get_bus_ptr() and get_disk_ptr() are in the bus
+    module.  This isn't really right, since the bus module should
+    eventually know nothing about disks.  It's a temporary measure.
+    
+    The bus module has always been responsible for adding child devices
+    as well as the bus device itself.  When adding a device, the bus
+    module now allocates enough device extension space to include the
+    driver-common structure as well as the appropriate bus- or disk-
+    specific structure.
+    
+    It might be good if other modules inform
+    the bus module of how much device extension space they need in the
+    future.  This commit does not introduce such logic, but it's an
+    idea for later.
+
+commit cd5508e2186210eee82fb8bdef4b4120555ed609
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Dec 13 23:49:57 2009 -0500
+
+    [bus] Do not include bus.h from driver.h
+    
+    bus__bus renamed to bus__type.  bus.h is included by modules
+    before they include driver.h, since driver.h needs to know the size
+    of bus__type.
+
+commit 03018f65d2c3bbbb6925a6063201bd73cb3df3bc
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Dec 13 23:38:29 2009 -0500
+
+    [disk] Do not include disk.h from driver.h
+    
+    DISK_DISK renamed to disk__type.  disk.h is included by modules
+    before they include driver.h, since driver.h needs to know the size
+    of disk__type.
+
+commit 8042c6774e7c0e1a444bda0f339b4186af27e3b6
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Dec 13 22:45:31 2009 -0500
+
+    [irp] Introduce IRP header
+    
+    Moved some IRP specifics out of driver.h.
+    
+    We have an unfortunate circular dependency where several modules
+    need to know the driver__dev_ext structure from driver.h, but that
+    structure also includes structures from irp.h, bus.h, disk.h.  These
+    things need to be shuffled around some more until they're prettier.
+
+commit 3d805e4dfcda8b37dc654bcd8a455eb8fa494dcd
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Dec 13 18:44:34 2009 -0500
+
+    [probe] Minor functions renames
+    
+    Probe_GetSafeHook() renamed to get_safe_hook()
+    Probe_MemDisk_mBFT() renamed to check_mbft()
+
+commit 90ae51f139be65a3c96305a9921846a98a7080dd
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Dec 13 18:34:04 2009 -0500
+
+    [bus,driver,probe] Re-work probe invocation and bus FDO creation
+    
+    Probe routines had a bus FDO parameters.  We only allow for one such
+    global FDO, so this was silly.  The global bus FDO is renamed from
+    Bus_Globals_Self to bus__fdo.  Probe routines simply use it.
+    
+    The driver code was calling each of the probe routines by name.  Now
+    we call a single routine probe__disks() which itself can call each
+    probe routine by name.
+    
+    The bus FDO creation has been modified to work directly with the
+    bus__fdo global instead of the previous middle-man behaviour.
+    Hopefully this does not lead to any race conditions.
+
+commit f58636c5745a93ccfcd6e440f65245da87254b6e
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Dec 13 01:37:12 2009 -0500
+
+    [bus] BUS_BUS renamed to bus__bus
+
+commit 2074c5ef64ea242865d53a7a87b5523cdb6e1b47
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Dec 13 01:12:41 2009 -0500
+
+    [cosmetics] indent_add.sh shell script added
+    
+    This script indents and does 'git add' to specified files.
+
+commit 8e74a5afe014742b2f1292713986a49c95416a02
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Dec 13 01:05:26 2009 -0500
+
+    [probe] Probe_NoInitialize renamed to no_init
+
+commit 992e7f40ecb7246d0f00f24306267c43322ba708
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Dec 13 01:01:05 2009 -0500
+
+    [driver] DRIVER_DEVICEEXTENSION renamed to driver__dev_ext
+
+commit 36fd4e324b09f4abbc6cbc6966ae0580a60a217b
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Dec 13 00:38:01 2009 -0500
+
+    [driver] SEARCHSTATE renamed to driver__search_state
+
+commit cc8f98505cd06dd24127685e1f356598334aa6df
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Dec 13 00:18:54 2009 -0500
+
+    [driver] STATE renamed to driver__state
+
+commit 813cb575a88838d9b0a2c3f21f877bbf6dbd61be
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Dec 13 00:03:31 2009 -0500
+
+    [headers] Add winvblock__def_enum convenience macro
+    
+    Not 100% convenient in avoiding writing the same name twice, but
+    this macro will set up typedefs for an enumerated type that begins
+    with an underscore.
+
+commit 137dd083dc01eb5c4613cac454f035d7ffaba0e0
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Dec 11 16:57:05 2009 -0500
+
+    [headers] BOOLEAN renamed to winvblock__bool
+
+commit 909fe8861acdb60a2bbe1b768f811852e22f7232
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Dec 11 16:47:41 2009 -0500
+
+    [headers] Type definition convenience macro
+
+commit d75646fcd37c6beceada9b9418c9620520a4bba2
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Dec 11 16:32:21 2009 -0500
+
+    [headers] UINT renamed to winvblock__uint32
+    
+    Not including pxe.asm and pxe.c subdirectories.
+
+commit aa247bac79faa0cbca73ef09afdd2732a72fc807
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Dec 11 16:21:04 2009 -0500
+
+    [headers] USHORT and UINT16 renamed to winvblock__uint16
+    
+    Not including pxe.asm and pxe.c subdirectories.
+
+commit e6d249b55c73f08f5b93c1f15dbd9e4457ab15de
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Dec 11 16:09:33 2009 -0500
+
+    [headers] UINT32 renamed to winvblock__uint32
+    
+    Not including pxe.asm and pxe.c subdirectories.
+
+commit f19decc39e6cde47721dccd66ab8e77fd17f8f0a
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Dec 11 16:04:48 2009 -0500
+
+    [headers] UINT64 renamed to winvblock__uint64
+
+commit 6ae027d2597049809164362082902366310ff1b9
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Dec 11 12:47:45 2009 -0500
+
+    [headers] UCHAR and UINT8 renamed to winvblock__uint8
+    
+    Not including pxe.asm and pxe.c subdirectories.
+
+commit 8b20087898af6f1919d0bc80d3492f431ff2b5f0
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Dec 11 12:06:12 2009 -0500
+
+    [probe] PROBE_GRUB4DOSDRIVEMAPSLOT renamed to grub4dos_drive_mapping
+
+commit 68522ae5389479bacf6fecad527a8ced2577a7cb
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Dec 11 12:01:28 2009 -0500
+
+    [probe] PROBE_SAFEMBRHOOK renamed to safe_mbr_hook
+
+commit 6ab5e9967660c2a0d5cc93252ff260a891f277aa
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Dec 11 11:55:15 2009 -0500
+
+    [probe] PROBE_ABFT renamed to abft
+
+commit b3c95afb6cdf3a70d3892bd1d8a4148479bed8f8
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Dec 11 11:50:19 2009 -0500
+
+    [probe] PROBE_INT_VECTOR renamed to int_vector
+
+commit ba4956aacd29c7a5c63c8ebca52e9a2e7f705cce
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Dec 11 11:45:59 2009 -0500
+
+    [headers] Introduce winvblock header for common material
+    
+    winvblock.h will help to facilitate code style and abstraction.
+    Currently, it provides a means to define and typedef structures in code.
+
+commit bfddbfd379ee4e489bbae577b25384a1af925457
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Dec 11 10:39:18 2009 -0500
+
+    [project] Ignore wxDev-Cpp layout file
+
+commit c7ef5ca173a4cd4b67d261dd1a6e0078047d8deb
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Dec 11 01:13:39 2009 -0500
+
+    [probe] Fix GRUB4DOS sector-size detection
+    
+    GRUB4DOS was just broken by the recent sector-size detection.  Fixed.
+
+commit 53f704ff3d61687483577c3dcc9c522d65c7e29c
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Dec 10 23:31:52 2009 -0500
+
+    [version] Version is now 0.0.0.7
+
+commit c25005e9befa3ee28e5f3185eeab3c4e3d654c14
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Dec 10 23:27:31 2009 -0500
+
+    [disk] Use the appropriate sector-size
+    
+    ODDs get a sector-size of 2048 bytes.  Others get 512.
+
+commit 52ca021bb4699d406e42e86966c5db7ca2a35275
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Dec 10 01:22:15 2009 -0500
+
+    [aoedisk] Support optical disc emulation
+    
+    We should be able to pick up MEMDISK and GRUB4DOS ODDs now.
+    Floppies are unfortunately detected as removable-storage disks, but
+    not specifically as floppies.
+
+commit 0b73f801b5dd3d550f2ac1604b19f0c3e2feb2fb
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Dec 9 18:06:23 2009 -0500
+
+    [probe] Support multiple GRUB4DOS mappings
+    
+    Walk the "safe hook" chain and for each instance of GRUB4DOS found,
+    check all 8 possible slots for RAM drive mappings.
+
+commit eae22a729452f2157c161476dbdfccaaf45edcca
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Dec 9 03:23:38 2009 -0500
+
+    [aoedisk] Support multiple RAM disk instances
+    
+    Give each RAM disk a PnP devnode name based on its physical address.
+    
+    TODO: Move each disk type's code out of aoedisk.c; A RAM disk is not
+    an AoE disk.
+
+commit 8f4fe393425e3db016a44c3eb3753dbfe074ffc6
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Dec 9 02:10:01 2009 -0500
+
+    [probe] Support MEMDISK mBFT and safe hook
+    
+    The recent mBFT and "safe hook" additions to MEMDISK were added to
+    facilitate OS drivers being able to find and use MEMDISK instances.
+    WinVBlock now supports this.
+    
+    Duplicate PnP devnode names will have to be worked out.
+
+commit e35a82dec9d414f37fad82c63a2a49ed4b24792b
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Sep 6 23:27:26 2009 -0400
+
+    [version] Up version to 0.0.0.2
+
+commit 6cac6ca193404385f6db9bc12ae39e75866398c9
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Sep 6 23:25:40 2009 -0400
+
+    [registry] Added Michael Brown's registry routines from sanbootconf
+    
+    Michael Brown's registry manipulation functions in his "sanbootconf"
+    package for helping MS iSCSI drivers to work with gPXE (especially
+    for Windows XP, where you need a static IP address) are really quite
+    handy.  This patch adds them, and starts to make use of them.
+    
+    Unfortunately, I forgot to release a previous bug-fix for a fairly
+    serious bug, so this commit is functional, but not the end of changes
+    to registry.c.  After upping the version and releasing, changes to
+    registry.c will continue.
+
+commit b62596c9cb83c1732e26cc04b3852fc55771f1a7
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Sep 2 18:23:25 2009 -0400
+
+    [driver] Add check for DriverEntry() re-entry
+    
+    We do not really wish to execute DriverEntry() code more than once.
+
+commit 9f874666d3c746d1a09e8374a6b92e6acc4fe18a
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue Sep 1 23:58:26 2009 -0400
+
+    [bus] Bus_Stop() now nullifies global pointer to bus object
+    
+    Even though we are typically about to unload the driver anyway.
+
+commit 6b729bd6bdcee65841468ff8b3d86346cf0013f5
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue Sep 1 23:22:57 2009 -0400
+
+    [aoe] Fix BSoD where we stop AoE when not started
+    
+    Added a missing check in AoE_Stop() to only stop if started.
+
+commit d9dcd1f82147981306ee99fd0c4a419672ed29ae
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Aug 31 19:40:34 2009 -0400
+
+    [diskio,probe] Map memory on each I/O request
+    
+    Probing code no longer attempts to map the physical memory for the
+    RAM disk to virtual memory for the driver's access all at once.
+    Instead, each I/O request will map memory, and only for the size of
+    the I/O buffer.
+    
+    Users were running into trouble mapping 1.2 GB images, so I am
+    hopeful that this helps that situation.
+
+commit fc04c59d64dea6b819717f1068488cd96d5c8ee2
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Aug 31 19:00:01 2009 -0400
+
+    [project] Project is now officially forked as WinVBlock
+    
+    Information pertaining to WinAoE is still present in various places.
+
+commit 6bd5336986d2849160bae96b4ec5713a4894b7c4
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Aug 27 17:39:42 2009 -0400
+
+    [grub4dos] Initial GRUB4DOS memory-mapped drive support
+    
+    A little more abstraction, as well as initial support for a single
+    GRUB4DOS memory-mapped disk.
+
+commit caa59920704bb4e4def990b8991ae21085c78cd7
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Aug 26 01:01:23 2009 -0400
+
+    [abstraction] Rework IRP handlers, move boot-disk probing code
+    
+    - Changed my mind about IRP handlers; we use an IRPHandler function
+      type now
+    - We used to probe for a MEMDISK and/or an AoE target (via aBFT)
+      in the bus code; we call these functions in probe.c from
+      DriverEntry() now
+    - driver.c handles device creation and closing now, and passes on
+      any other IRPs to the device's particular Dispatch() function.
+      Currently, there is only a Bus and Disk device type, where Disk
+      should really be abstracted some more to split AoE from MEMDISK
+    
+    All of the 'include's are looking really messy right now, but we
+    _should_ be on our way to being cleaner, where modules should not
+    need to know so much about other modules.
+
+commit 6ecd190a09a6969dc46a032cc7cfb7fcf7a8cf1b
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Aug 24 19:18:51 2009 -0400
+
+    [abstraction] Several things -- see commit message
+    
+    - Renamed DEVICEEXTENSION to DRIVER_DEVICEEXTENSION
+    - Began abstraction of IRP MajorFunction dispatching
+    - Split away AoE disk parameters from RAM disk parameters
+    - Removed a couple of compiler warnings
+
+commit 269c92ae9aa903fc18551edb4ee877b5ad50c9d1
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Aug 23 05:19:30 2009 -0400
+
+    [memdisk] Changes to support MEMDISK as the boot disk
+    
+    We only do Protocol_Start() now when we add an actual AoE device to the
+    bus.  The bus itself is forced as a reported device.  Just tested with
+    a Windows XP SP2 PE HDD image.  Still need some serious abstraction.
+
+commit 0db12888cc482225e2096cfc5f6bef37d155cf8c
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Aug 21 21:28:20 2009 -0400
+
+    [cosmetics] Make mdi.h consistent with previous commit
+
+commit 14bc2e7465a6b35a2be9a3d136fa5ec430cd973d
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Aug 21 20:29:58 2009 -0400
+
+    [cosmetics] Global, function, typedef naming convention
+    
+    Minor cosmetic changes to globals', functions' and typedefs' names so
+    that I can more easily identify where things come from.  Looks somewhat OO,
+    but with an underscore instead of :: or . or ->
+    
+    Module_Globals_SomeGlobal
+    MODULE_SOMESTRUCT
+    Module_Function
+    
+    Most things without a module prefix are going to be locally-scoped vars or
+    external WinDDK functions and types.
+
+commit c8df06125ac45f90219d63c0f26f8cc237dc485f
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Aug 20 09:43:47 2009 -0400
+
+    [devel] Minor changes for development convenience
+    
+    Made a wxDev-Cpp project file and changed a batch file to point to the WinDDK.
+
+commit f8f571404724191bff041d1736f28ffb9b18dc38
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Aug 20 09:40:46 2009 -0400
+
+    [feature] MEMDISK support
+    
+    The code is extremely hacky, but MEMDISKs can be discovered and used
+    at boot time now.  We check the old real-mode INT 0x13 hook, follow some
+    bread crumbs to find MEMDISK 3.82, then note the MEMDISK's geometry and
+    details.
+    
+    We hack AoERequest() to simply copy memory for the MEMDISK case.
+    
+    Neither the wacky globals/statics, nor the MEMDISK installation check,
+    nor the AoE I/O hijacking check are really the right strategy, but reworking
+    WinAoE has been slow going thus far.  The ToDos are becoming more obvious.
+    
+    It would likely be best to implement classes for an AoE disk and a MEMDISK,
+    and to split out (abstract) knowledge of AoE specifics from things like
+    the bus and disk code.  This will take time, but would allow for other
+    classes to eventually be implemented...  Things like:
+    
+    Software RAID
+    File-backed disks
+    User-mode back-ends
+    HTTPDisk (already exists, but reworked to sit on our bus)
+    
+    Also, regardless of the disk's interface, we should support floppy, HDD,
+    and ODD (optical disc drive) emulation.
+
+commit 18458560588bc70f702fe9c24183a61afd88cd72
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Aug 17 19:23:58 2009 -0400
+
+    [cosmetics] Changed my mind about indent again
+    
+    Re-indented all files using the options documented in indent.txt.  There is
+    also a shell script called indent.sh now.  Goto labels seem ugly.
+
+commit 8a31df0ae86d3d78f5f7733f28efd21fe5025592
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Aug 17 18:03:51 2009 -0400
+
+    [repository] Insert void into empty arguments in function declarations
+
+commit 7f7673d675262e9ee8f9fc7e08d0f57df05e29db
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Aug 10 17:08:03 2009 -0400
+
+    [cosmetics] Added static and extern qualifiers for variables
+    
+    As well as static for __divdi3() function.
+
+commit f1ea7943943edbc859153e594ea3d53df3e096f3
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Aug 10 16:35:05 2009 -0400
+
+    [cosmetics] Added static and extern qualifiers for functions
+
+commit fea74bed91d61dad9d5c4ec5acb4f7df52b5ffb9
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Aug 10 15:33:38 2009 -0400
+
+    [cosmetics] Cosmetic changes, C-style comments, copyright text
+    
+    Also moved some things into headers.
+
+commit f89e426271c0dc01732b54e194479d2b5f765d6e
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Jul 9 21:07:39 2009 -0400
+
+    [driver] Added a commented-out fun test for driver messages
+    
+    The fun test prints to the Windows boot screen forever.
+
+commit d39d5964902a6909c9ef521741964c73afce1a77
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Tue Jul 7 23:31:08 2009 -0400
+
+    [debug] Improve DBG() macro
+    
+    DBG() is a hook which calls xDbgPrint() and then DbgPrint().  The macro
+    uses the ternary operator to accomplish the hook, and produces a code
+    path which can never yield false.  The compiler should optimize the
+    resulting code, thus saving any additional cost in space.  The hook is
+    thus accomplished for free.  It's a hook in the sense that args from DBG()
+    are passed through to DbgPrint(), but not before we inject another
+    function call with unrelated and position-dependent args.
+
+commit 0c7e3ede7b92bd166a23d019d2f4b20be70e27cd
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Mon Jul 6 23:10:51 2009 -0400
+
+    [aoe] Add missing return path for error condition
+    
+    We had a code path which freed memory but then used it right afterwards.
+
+commit 265c7ab518b8f6d761640180866d5a97e96bb6b7
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Sun Jul 5 22:25:50 2009 -0400
+
+    [debugging] Add missing #include for bus.c, disk.c, driver.c, protocol.c
+
+commit c6620e7b077960470a015cdc1b36cd07b71b87cf
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Sun Jul 5 22:23:46 2009 -0400
+
+    [registry] Use new debugging message system
+
+commit 7ba83526dde7431ea3827709dd4db5ca1e8ea7f8
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Sun Jul 5 22:13:13 2009 -0400
+
+    [protocol] Use new debugging message system
+
+commit 64f3723552f75794a62bbb6acbabaea7f4e5b6e3
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Sun Jul 5 22:05:07 2009 -0400
+
+    [driver] Use new debugging message system
+
+commit 8cbf46fce3876c6eaf62c10aa5f21daaff4fb686
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Sun Jul 5 22:02:36 2009 -0400
+
+    [disk] Use new debugging message system
+
+commit 22a8b105ad498b027555bbf443df01c841341ea6
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Sun Jul 5 21:55:18 2009 -0400
+
+    [bus] Use new debugging message system
+
+commit eac001200cd866dbf769c588a9dcf231501af1d4
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Sun Jul 5 21:42:46 2009 -0400
+
+    [debug] Fix debugging message system to actually work
+    
+    That's right.
+
+commit b5973d4d097db0595e52574b0af2bed99f977bce
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Sun Jul 5 18:20:12 2009 -0400
+
+    [disk] FIXME: Hack to allow compilation with WinDDK 6001.18001
+    
+    _EIGHT_BYTE and _READ_CAPACITY_DATA_EX are already available in the
+    WinDDK 6001.18001 Windows 2000 build environment. This is not likely a
+    permanent solution.
+
+commit 3ecaa9d20a0e5157841fb4a05570afc7f128ed46
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Sun Jul 5 17:24:45 2009 -0400
+
+    [aoe] Use new debugging message system
+    
+    aoe.c now uses the new DBG() macro to output debugging messages.  File,
+    function and line number are automatically output.
+
+commit effa6f8bd1502d5bb553a18e71d0d39d959729ce
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Sun Jul 5 14:11:25 2009 -0400
+
+    [debug] Add DBG() and xDbgPrint() debugging message system
+    
+    Debug messages can now use DBG() instead of DbgPrint(). File, function and
+    line number will be automatically included in the debugging output message.
+
+commit 6f71dacaaae987cde04aeb4bcb4e2cbdbca1fe1b
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Fri Jul 3 09:18:02 2009 -0400
+
+    [aoe] Modify debugging output
+    
+    Debugging messages in aoe.c now clearly indicate which file and function they
+    belong to.
+    
+    TODO: Change the debugging message system throughout the driver to avoid
+    redundancy, but to indicate file and function.
+
+commit 3130251291c717e85c850e043bfba03eadc015a9
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Fri Jul 3 08:12:57 2009 -0400
+
+    [make_system] DOS2UNIX the main Makefile
+
+commit e468d897e28e1ad695e3fb92e58525de5684cf40
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Fri Jul 3 08:06:14 2009 -0400
+
+    [aoe] Add some initial comments
+
+commit ff084677ad196d5e903dc5b96399e6025789c107
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Wed Jul 1 13:23:24 2009 -0400
+
+    [repository] Another spacing style change for C files
+    
+    Used 'indent -prs -pcs -kr -l79 -ncs' this time.
+
+commit 77196ff29a013b8c68bc0ea09e5a2a1277807195
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Wed Jul 1 12:56:14 2009 -0400
+
+    [repository] Spacing style change to *.h and *.c files
+    
+    'indent -prs -pcs -kr -i8 -l80 -ncs' command used on all C files.
+    Command suggested by Joshua Oreman ("rwcr").
+
+commit 4214182001cf76de6331e661ac2484d0030c1460
+Author: Shao Miller <shao.miller@yrdsb.edu.on.ca>
+Date:   Wed Jul 1 12:49:49 2009 -0400
+
+    [repository] DOS2UNIX all *.h and *.c files
+
+commit 517fe954c7e9c06c3d85caf42b41536f86e290de
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Jun 29 19:20:47 2009 -0400
+
+    [repository] Add .gitignore file to ignore built items
+    
+    Built items should not be noticed by git
+
+commit c7274a30a2abc49ef2469347dcc9f254998c4305
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Jun 29 18:48:21 2009 -0400
+
+    [repository] Initial population of WinAoE into git repository
+    
+    Build environment: MSYS (MingW)
+    Git environment:   Cygwin
