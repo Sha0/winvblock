@@ -1,4 +1,15 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue Dec 22 10:52:04 2009 -0500
+
+    [doc] Update ReadMe.txt and changelog.txt
+    
+    Quick note in ReadMe.txt to introduce WinVBlock.
+    
+    Changes are now tracked in CHANGES.log.  changelog.txt from WinAoE
+    says as much.  CHANGES.log is simply the git commit log.
+
+commit a8a50995e33657e06d23e07115d5c9bc69e4dd41
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Tue Dec 22 10:34:55 2009 -0500
 
     [driver] Use pre-installed bus if possible

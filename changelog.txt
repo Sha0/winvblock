@@ -1,3 +1,10 @@
+WinVBlock changes are in CHANGES.log
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+WinVBlock is derived from WinAoE.
+
+Original ChangeLog.txt from WinAoE follows:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 0.97g:
 - added changelog.txt
 - fixed resend scheduler

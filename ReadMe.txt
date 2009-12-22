@@ -1,3 +1,19 @@
+WinVBlock
+~~~~~~~~~
+A virtual disk driver for Windows.
+
+Supports MEMDISK 3.84+ and GRUB4DOS RAM disks.
+
+Use Add New Hardware Wizard to install the .INF as a SCSI Adapter.
+
+This driver was derived from WinAoE (see below).  As such, it maintains AoE functionality and depends on NDIS.  Where you wish to use WinVBlock, you need NDIS.
+
+See also: Firadisk
+
+
+
+Original ReadMe.txt from WinAoE follows:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 WinAoE (http://winaoe.org/)
 
 Diskless AoE Driver for:
