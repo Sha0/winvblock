@@ -32,10 +32,9 @@
 #include "winvblock.h"
 #include "portable.h"
 #include "debug.h"
+#include "irp.h"
+#include "driver.h"
 #include "registry.h"
-
-/** Contains BOOT.INI-style OsLoadOptions parameters */
-static LPWSTR Registry_Globals_OsLoadOptions;
 
 /**
  * Open registry key
@@ -365,11 +364,11 @@ Registry_NoteOsLoadOptions (
    */
   status =
     Registry_FetchSZ ( control_key, L"SystemStartOptions",
-		       &Registry_Globals_OsLoadOptions );
+		       &driver__os_load_opts );
   if ( !NT_SUCCESS ( status ) )
     goto err_fetchsz;
 
-  DBG ( "OsLoadOptions: %S\n", Registry_Globals_OsLoadOptions );
+  DBG ( "OsLoadOptions: %S\n", driver__os_load_opts );
 
   /*
    * We do not free this global 
@@ -759,9 +758,8 @@ Registry_Setup (
 						     sizeof
 						     ( DriverServiceNamePath )
 						     +
-						     KeyValueInformation->
-						     DataLength -
-						     sizeof ( WCHAR ) ) ) ==
+						     KeyValueInformation->DataLength
+						     - sizeof ( WCHAR ) ) ) ==
 		       NULL )
 		    {
 		      DBG ( "ExAllocatePool DriverServiceNameString "
@@ -853,5 +851,6 @@ Registry_Check (
     {
       DBG ( "Registry updated\n" );
     }
-  return status;
+  Registry_NoteOsLoadOptions (  );
+  return STATUS_SUCCESS;
 }

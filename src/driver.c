@@ -68,6 +68,83 @@ static NTSTATUS STDCALL DriverReinitialize (
 static PVOID Driver_Globals_StateHandle;
 static winvblock__bool Driver_Globals_Started = FALSE;
 
+/* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters */
+LPWSTR driver__os_load_opts = NULL;
+
+static LPWSTR STDCALL
+get_opt (
+  IN LPWSTR opt_name
+ )
+{
+  LPWSTR our_opts,
+   the_opt;
+  WCHAR our_sig[] = L"WINVBLOCK=";
+/* To produce constant integer expressions */
+  enum
+  {
+    our_sig_len_bytes = sizeof ( our_sig ) - sizeof ( WCHAR ),
+    our_sig_len = our_sig_len_bytes / sizeof ( WCHAR )
+  };
+  size_t opt_name_len,
+   opt_name_len_bytes;
+
+  if ( !driver__os_load_opts || !opt_name )
+    return NULL;
+
+  /*
+   * Find /WINVBLOCK= options
+   */
+  our_opts = driver__os_load_opts;
+  while ( *our_opts != L'\0' )
+    {
+      if ( RtlCompareMemory ( our_opts, our_sig, our_sig_len_bytes ) !=
+	   our_sig_len_bytes )
+	{
+	  our_opts++;
+	  continue;
+	}
+      our_opts += our_sig_len;
+      break;
+    }
+
+  /*
+   * Search for the specific option
+   */
+  the_opt = our_opts;
+  opt_name_len = wcslen ( opt_name );
+  opt_name_len_bytes = opt_name_len * sizeof ( WCHAR );
+  while ( *the_opt != L'\0' && *the_opt != L' ' )
+    {
+      if ( RtlCompareMemory ( the_opt, opt_name, opt_name_len_bytes ) !=
+	   opt_name_len_bytes )
+	{
+	  while ( *the_opt != L'\0' && *the_opt != L' ' && *the_opt != L',' )
+	    the_opt++;
+	  continue;
+	}
+      the_opt += opt_name_len;
+      break;
+    }
+
+  if ( *the_opt == L'\0' || *the_opt == L' ' )
+    return NULL;
+
+  /*
+   * Next should come "=" 
+   */
+  if ( *the_opt != L'=' )
+    return NULL;
+
+  /*
+   * And finally our option's value.  The caller needs
+   * to worry about looking past the end of the option 
+   */
+  the_opt++;
+  if ( *the_opt == L'\0' || *the_opt == L' ' )
+    return NULL;
+  return the_opt;
+}
+
 /*
  * Note the exception to the function naming convention.
  * TODO: See if a Makefile change is good enough
@@ -80,6 +157,7 @@ DriverEntry (
 {
   NTSTATUS Status;
   int i;
+  LPWSTR make_bus;
 
 		/**
      * TODO: Remove this fun test
@@ -144,11 +222,22 @@ DriverEntry (
    * There might be a bus device stored in the registry.  We
    * give it a chance to be started by the PnP manager.  If we
    * don't find evidence of a bus device in our re-initialization
-   * function, we'll add a bus device at that time
+   * function, we'll add a bus device at that time.
+   * If the user requested early bus creation explicitly in BOOT.INI
+   * or TXTSETUP.SIF, oblige them
    */
-  IoRegisterBootDriverReinitialization ( DriverObject,
-					 ( PDRIVER_REINITIALIZE )
-					 DriverReinitialize, NULL );
+  make_bus = get_opt ( L"BUS" );
+  if ( make_bus )
+    {
+      DBG ( "Early bus creation\n" );
+      DriverReinitialize ( DriverObject, NULL, 0 );
+    }
+  else
+    {
+      IoRegisterBootDriverReinitialization ( DriverObject,
+					     ( PDRIVER_REINITIALIZE )
+					     DriverReinitialize, NULL );
+    }
   return STATUS_SUCCESS;
 }
 

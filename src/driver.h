@@ -56,6 +56,7 @@ winvblock__def_enum ( driver__state );
 
 extern irp__handling driver__handling_table[];
 extern size_t driver__handling_table_size;
+extern LPWSTR driver__os_load_opts;
 
 /* Driver-common device extension detail */
 winvblock__def_struct ( driver__dev_ext )

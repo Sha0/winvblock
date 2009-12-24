@@ -1,4 +1,25 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Dec 24 17:52:24 2009 -0500
+
+    [driver] OsLoadOptions support needed for Recovery Console
+    
+    We now make a note of the OsLoadOptions during registry checking
+    and implement get_opt() in the driver module for finding a
+    specific WinVBlock option.  WinVBlock options should appear in
+    BOOT.INI or TXTSETUP.SIF as a switch like this:
+    
+    /WINVBLOCK=option1=value1,option2=value2
+    
+    Recovery Console requires our disks to be discovered before the
+    driver re-initialization routine.  Using the above feature, we
+    will now execute the re-initialization routine early if the user
+    requests, since this routine will create a bus object.  The user
+    requests this with an OsLoadOption like this:
+    
+    /WINVBLOCK=BUS=1
+
+commit c874b072859250c816a72aa5ed5d6eb16661d073
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Tue Dec 22 10:52:04 2009 -0500
 
     [doc] Update ReadMe.txt and changelog.txt
