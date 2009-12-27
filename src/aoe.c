@@ -748,6 +748,17 @@ AoE_SearchDrive (
     }
 }
 
+/* With thanks to karyonix, who makes FiraDisk */
+static __inline void STDCALL
+fast_copy (
+  void *dest,
+  const void *src,
+  size_t count
+ )
+{
+  __movsd ( dest, src, count >> 2 );
+}
+
 /**
  * I/O Request
  *
@@ -827,11 +838,11 @@ AoE_Request (
 	  return STATUS_INSUFFICIENT_RESOURCES;
 	}
       if ( Mode == AoE_RequestMode_Write )
-	RtlCopyMemory ( PhysicalMemory, Buffer,
-			SectorCount * disk_ptr->SectorSize );
+	fast_copy ( PhysicalMemory, Buffer,
+		    SectorCount * disk_ptr->SectorSize );
       else
-	RtlCopyMemory ( Buffer, PhysicalMemory,
-			SectorCount * disk_ptr->SectorSize );
+	fast_copy ( Buffer, PhysicalMemory,
+		    SectorCount * disk_ptr->SectorSize );
       MmUnmapIoSpace ( PhysicalMemory, SectorCount * disk_ptr->SectorSize );
       Irp->IoStatus.Information = SectorCount * disk_ptr->SectorSize;
       Irp->IoStatus.Status = STATUS_SUCCESS;

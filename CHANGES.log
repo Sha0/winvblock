@@ -1,4 +1,18 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Dec 27 15:27:34 2009 -0500
+
+    [aoe] Implement fast_copy for RAM disks
+    
+    According to karyonix (developer of FiraDisk), the Windows
+    compiler intrinsics __movsd and __movsq are faster than
+    RtlCopyMemory() for RAM disk I/O.  We implement fast_copy()
+    in aoe.c to accomplish this.
+    
+    Of course, once AoE and RAM disks have been properly split,
+    this should end up with just the RAM disks.
+
+commit 2b62f3796fe30b03d63436c85d9256c8298ef9ac
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Thu Dec 24 17:52:24 2009 -0500
 
     [driver] OsLoadOptions support needed for Recovery Console
