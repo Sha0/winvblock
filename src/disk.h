@@ -28,9 +28,6 @@
  *
  */
 
-#  include "aoedisk.h"
-#  include "ramdisk.h"
-
 enum DISK_DISKTYPE
 {
   FloppyDisk,
@@ -50,6 +47,23 @@ enum _disk__search_state
   Done
 };
 winvblock__def_enum ( disk__search_state );
+
+winvblock__def_struct ( aoedisk_type )
+{
+  winvblock__uint32 MTU;
+  winvblock__uint8 ClientMac[6];
+  winvblock__uint8 ServerMac[6];
+  winvblock__uint32 Major;
+  winvblock__uint32 Minor;
+  winvblock__uint32 MaxSectorsPerPacket;
+  winvblock__uint32 Timeout;
+};
+
+winvblock__def_struct ( ramdisk_type )
+{
+  winvblock__uint32 DiskBuf;
+  winvblock__uint32 DiskSize;
+};
 
 winvblock__def_struct ( disk__type )
 {
@@ -71,8 +85,8 @@ winvblock__def_struct ( disk__type )
    );
   union
   {
-    aoedisk__type AoE;
-    RAMDISK_RAMDISK RAMDisk;
+    aoedisk_type AoE;
+    ramdisk_type RAMDisk;
   };
   LONGLONG LBADiskSize;
   LONGLONG Cylinders;
@@ -81,6 +95,9 @@ winvblock__def_struct ( disk__type )
   winvblock__uint32 SectorSize;
   winvblock__uint32 SpecialFileCount;
 };
+
+extern irp__handling disk__handling_table[];
+extern size_t disk__handling_table_size;
 
 /*
  * Establish a pointer into the child disk device's extension space

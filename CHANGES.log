@@ -1,4 +1,15 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Dec 27 17:27:30 2009 -0500
+
+    [disk] aoedisk module becomes disk module
+    
+    aoedisk.c was hardly AoE-specific anymore, so it is renamed
+    to disk.c.  Details from aoedisk.h and ramdisk.h have been
+    temporarily merged into disk.h.  These details should be moved
+    out at some point, perhaps.
+
+commit 8053cfc88458ff4298d2f8fad57609c3b382c711
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sun Dec 27 15:27:34 2009 -0500
 
     [aoe] Implement fast_copy for RAM disks
