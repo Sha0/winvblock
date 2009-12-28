@@ -36,20 +36,11 @@
 #  define ntohs(x) (winvblock__uint16)((((x) << 8) & 0xff00) | \
                                        (((x) >> 8) & 0xff))
 
-typedef enum
-{ AoE_RequestMode_Read, AoE_RequestMode_Write } AOE_REQUESTMODE,
-*PAOE_REQUESTMODE;
-
 extern winvblock__bool STDCALL AoE_SearchDrive (
   IN driver__dev_ext_ptr DeviceExtension
  );
-extern NTSTATUS STDCALL AoE_Request (
-  IN driver__dev_ext_ptr DeviceExtension,
-  IN AOE_REQUESTMODE Mode,
-  IN LONGLONG StartSector,
-  IN winvblock__uint32 SectorCount,
-  IN winvblock__uint8_ptr Buffer,
-  IN PIRP Irp
+extern disk__io_decl (
+  aoe__disk_io
  );
 extern NTSTATUS STDCALL AoE_Reply (
   IN winvblock__uint8_ptr SourceMac,

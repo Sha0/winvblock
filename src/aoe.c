@@ -110,7 +110,7 @@ typedef struct _AOE_PACKET
 /** A request */
 typedef struct _AOE_REQUEST
 {
-  AOE_REQUESTMODE Mode;
+  disk__io_mode Mode;
   winvblock__uint32 SectorCount;
   winvblock__uint8_ptr Buffer;
   PIRP Irp;
@@ -205,8 +205,8 @@ AoE_Start (
    */
   if ( ( AoE_Globals_ProbeTag->PacketData =
 	 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-					  AoE_Globals_ProbeTag->
-					  PacketSize ) ) == NULL )
+					  AoE_Globals_ProbeTag->PacketSize ) )
+       == NULL )
     {
       DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
       ExFreePool ( AoE_Globals_ProbeTag );
@@ -315,8 +315,9 @@ AoE_Stop (
   while ( DiskSearch != NULL )
     {
       KeSetEvent ( &
-		   ( get_disk_ptr ( DiskSearch->DeviceExtension )->
-		     SearchEvent ), 0, FALSE );
+		   ( get_disk_ptr
+		     ( DiskSearch->DeviceExtension )->SearchEvent ), 0,
+		   FALSE );
       PreviousDiskSearch = DiskSearch;
       DiskSearch = DiskSearch->Next;
       ExFreePool ( PreviousDiskSearch );
@@ -748,36 +749,7 @@ AoE_SearchDrive (
     }
 }
 
-/* With thanks to karyonix, who makes FiraDisk */
-static __inline void STDCALL
-fast_copy (
-  void *dest,
-  const void *src,
-  size_t count
- )
-{
-  __movsd ( dest, src, count >> 2 );
-}
-
-/**
- * I/O Request
- *
- * @v DeviceExtension The device extension for the disk
- * @v Mode            Read / write mode
- * @v StartSector     First sector for request
- * @v SectorCount     Number of sectors to work with
- * @v Buffer          Buffer to read / write sectors to / from
- * @v Irp             Interrupt request packet for this request
- */
-NTSTATUS
-AoE_Request (
-  IN driver__dev_ext_ptr DeviceExtension,
-  IN AOE_REQUESTMODE Mode,
-  IN LONGLONG StartSector,
-  IN winvblock__uint32 SectorCount,
-  IN winvblock__uint8_ptr Buffer,
-  IN PIRP Irp
- )
+disk__io_decl ( aoe__disk_io )
 {
   PAOE_REQUEST Request;
   PAOE_TAG Tag,
@@ -792,62 +764,28 @@ AoE_Request (
   /*
    * Establish a pointer into the disk device's extension space
    */
-  disk_ptr = get_disk_ptr ( DeviceExtension );
+  disk_ptr = get_disk_ptr ( dev_ext_ptr );
   if ( AoE_Globals_Stop )
     {
       /*
        * Shutting down AoE; we can't service this request 
        */
-      Irp->IoStatus.Information = 0;
-      Irp->IoStatus.Status = STATUS_CANCELLED;
-      IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+      irp->IoStatus.Information = 0;
+      irp->IoStatus.Status = STATUS_CANCELLED;
+      IoCompleteRequest ( irp, IO_NO_INCREMENT );
       return STATUS_CANCELLED;
     }
 
-  if ( SectorCount < 1 )
+  if ( sector_count < 1 )
     {
       /*
        * A silly request 
        */
-      DBG ( "SectorCount < 1; cancelling\n" );
-      Irp->IoStatus.Information = 0;
-      Irp->IoStatus.Status = STATUS_CANCELLED;
-      IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+      DBG ( "sector_count < 1; cancelling\n" );
+      irp->IoStatus.Information = 0;
+      irp->IoStatus.Status = STATUS_CANCELLED;
+      IoCompleteRequest ( irp, IO_NO_INCREMENT );
       return STATUS_CANCELLED;
-    }
-
-  /*
-   * Handle the Ram disk case
-   */
-  if ( disk_ptr->IsRamdisk )
-    {
-      PhysicalAddress.QuadPart =
-	disk_ptr->RAMDisk.DiskBuf + ( StartSector * disk_ptr->SectorSize );
-      /*
-       * Possible precision loss
-       */
-      PhysicalMemory =
-	MmMapIoSpace ( PhysicalAddress, SectorCount * disk_ptr->SectorSize,
-		       MmNonCached );
-      if ( !PhysicalMemory )
-	{
-	  DBG ( "Could not map memory for RAM disk!\n" );
-	  Irp->IoStatus.Information = 0;
-	  Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-	  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-	  return STATUS_INSUFFICIENT_RESOURCES;
-	}
-      if ( Mode == AoE_RequestMode_Write )
-	fast_copy ( PhysicalMemory, Buffer,
-		    SectorCount * disk_ptr->SectorSize );
-      else
-	fast_copy ( Buffer, PhysicalMemory,
-		    SectorCount * disk_ptr->SectorSize );
-      MmUnmapIoSpace ( PhysicalMemory, SectorCount * disk_ptr->SectorSize );
-      Irp->IoStatus.Information = SectorCount * disk_ptr->SectorSize;
-      Irp->IoStatus.Status = STATUS_SUCCESS;
-      IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-      return STATUS_SUCCESS;
     }
 
   /*
@@ -858,9 +796,9 @@ AoE_Request (
 					   sizeof ( AOE_REQUEST ) ) ) == NULL )
     {
       DBG ( "Couldn't allocate Request; bye!\n" );
-      Irp->IoStatus.Information = 0;
-      Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-      IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+      irp->IoStatus.Information = 0;
+      irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+      IoCompleteRequest ( irp, IO_NO_INCREMENT );
       return STATUS_INSUFFICIENT_RESOURCES;
     }
   RtlZeroMemory ( Request, sizeof ( AOE_REQUEST ) );
@@ -868,16 +806,16 @@ AoE_Request (
   /*
    * Initialize the request 
    */
-  Request->Mode = Mode;
-  Request->SectorCount = SectorCount;
-  Request->Buffer = Buffer;
-  Request->Irp = Irp;
+  Request->Mode = mode;
+  Request->SectorCount = sector_count;
+  Request->Buffer = buffer;
+  Request->Irp = irp;
   Request->TagCount = 0;
 
   /*
    * Split the requested sectors into packets in tags
    */
-  for ( i = 0; i < SectorCount; i += disk_ptr->AoE.MaxSectorsPerPacket )
+  for ( i = 0; i < sector_count; i += disk_ptr->AoE.MaxSectorsPerPacket )
     {
       /*
        * Allocate each tag 
@@ -899,9 +837,9 @@ AoE_Request (
 	      ExFreePool ( PreviousTag );
 	    }
 	  ExFreePool ( Request );
-	  Irp->IoStatus.Information = 0;
-	  Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-	  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+	  irp->IoStatus.Information = 0;
+	  irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+	  IoCompleteRequest ( irp, IO_NO_INCREMENT );
 	  return STATUS_INSUFFICIENT_RESOURCES;
 	}
 
@@ -911,20 +849,20 @@ AoE_Request (
       RtlZeroMemory ( Tag, sizeof ( AOE_TAG ) );
       Tag->Type = AoE_RequestType;
       Tag->Request = Request;
-      Tag->DeviceExtension = DeviceExtension;
+      Tag->DeviceExtension = dev_ext_ptr;
       Request->TagCount++;
       Tag->Id = 0;
       Tag->BufferOffset = i * disk_ptr->SectorSize;
       Tag->SectorCount =
-	( ( SectorCount - i ) <
-	  disk_ptr->AoE.MaxSectorsPerPacket ? SectorCount -
+	( ( sector_count - i ) <
+	  disk_ptr->AoE.MaxSectorsPerPacket ? sector_count -
 	  i : disk_ptr->AoE.MaxSectorsPerPacket );
 
       /*
        * Allocate and initialize each tag's AoE packet 
        */
       Tag->PacketSize = sizeof ( AOE_PACKET );
-      if ( Mode == AoE_RequestMode_Write )
+      if ( mode == disk__io_mode_write )
 	Tag->PacketSize += Tag->SectorCount * disk_ptr->SectorSize;
       if ( ( Tag->PacketData =
 	     ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
@@ -945,9 +883,9 @@ AoE_Request (
 	      ExFreePool ( PreviousTag );
 	    }
 	  ExFreePool ( Request );
-	  Irp->IoStatus.Information = 0;
-	  Irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-	  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+	  irp->IoStatus.Information = 0;
+	  irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+	  IoCompleteRequest ( irp, IO_NO_INCREMENT );
 	  return STATUS_INSUFFICIENT_RESOURCES;
 	}
       RtlZeroMemory ( Tag->PacketData, Tag->PacketSize );
@@ -958,7 +896,7 @@ AoE_Request (
       Tag->PacketData->Tag = 0;
       Tag->PacketData->Command = 0;
       Tag->PacketData->ExtendedAFlag = TRUE;
-      if ( Mode == AoE_RequestMode_Read )
+      if ( mode == disk__io_mode_read )
 	{
 	  Tag->PacketData->Cmd = 0x24;	/* READ SECTOR */
 	}
@@ -969,23 +907,23 @@ AoE_Request (
 	}
       Tag->PacketData->Count = ( winvblock__uint8 ) Tag->SectorCount;
       Tag->PacketData->Lba0 =
-	( winvblock__uint8 ) ( ( ( StartSector + i ) >> 0 ) & 255 );
+	( winvblock__uint8 ) ( ( ( start_sector + i ) >> 0 ) & 255 );
       Tag->PacketData->Lba1 =
-	( winvblock__uint8 ) ( ( ( StartSector + i ) >> 8 ) & 255 );
+	( winvblock__uint8 ) ( ( ( start_sector + i ) >> 8 ) & 255 );
       Tag->PacketData->Lba2 =
-	( winvblock__uint8 ) ( ( ( StartSector + i ) >> 16 ) & 255 );
+	( winvblock__uint8 ) ( ( ( start_sector + i ) >> 16 ) & 255 );
       Tag->PacketData->Lba3 =
-	( winvblock__uint8 ) ( ( ( StartSector + i ) >> 24 ) & 255 );
+	( winvblock__uint8 ) ( ( ( start_sector + i ) >> 24 ) & 255 );
       Tag->PacketData->Lba4 =
-	( winvblock__uint8 ) ( ( ( StartSector + i ) >> 32 ) & 255 );
+	( winvblock__uint8 ) ( ( ( start_sector + i ) >> 32 ) & 255 );
       Tag->PacketData->Lba5 =
-	( winvblock__uint8 ) ( ( ( StartSector + i ) >> 40 ) & 255 );
+	( winvblock__uint8 ) ( ( ( start_sector + i ) >> 40 ) & 255 );
 
       /*
        * For a write request, copy from the buffer into the AoE packet 
        */
-      if ( Mode == AoE_RequestMode_Write )
-	RtlCopyMemory ( Tag->PacketData->Data, &Buffer[Tag->BufferOffset],
+      if ( mode == disk__io_mode_write )
+	RtlCopyMemory ( Tag->PacketData->Data, &buffer[Tag->BufferOffset],
 			Tag->SectorCount * disk_ptr->SectorSize );
 
       /*
@@ -1030,9 +968,9 @@ AoE_Request (
    */
   AoE_Globals_TagListLast = Tag;
 
-  Irp->IoStatus.Information = 0;
-  Irp->IoStatus.Status = STATUS_PENDING;
-  IoMarkIrpPending ( Irp );
+  irp->IoStatus.Information = 0;
+  irp->IoStatus.Status = STATUS_PENDING;
+  IoMarkIrpPending ( irp );
 
   KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
   KeSetEvent ( &AoE_Globals_ThreadSignalEvent, 0, FALSE );
@@ -1235,7 +1173,7 @@ AoE_Reply (
 	/*
 	 * If the reply is in response to a read request, get our data! 
 	 */
-	if ( Tag->Request->Mode == AoE_RequestMode_Read )
+	if ( Tag->Request->Mode == disk__io_mode_read )
 	  RtlCopyMemory ( &Tag->Request->Buffer[Tag->BufferOffset],
 			  Reply->Data,
 			  Tag->SectorCount * disk_ptr->SectorSize );
@@ -1342,8 +1280,9 @@ AoE_Thread (
 	  AoE_Globals_ProbeTag->PacketData->Tag = AoE_Globals_ProbeTag->Id;
 	  Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
 			  "\xff\xff\xff\xff\xff\xff",
-			  ( winvblock__uint8_ptr ) AoE_Globals_ProbeTag->
-			  PacketData, AoE_Globals_ProbeTag->PacketSize, NULL );
+			  ( winvblock__uint8_ptr )
+			  AoE_Globals_ProbeTag->PacketData,
+			  AoE_Globals_ProbeTag->PacketSize, NULL );
 	  KeQuerySystemTime ( &AoE_Globals_ProbeTag->SendTime );
 	}
 

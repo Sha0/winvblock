@@ -35,6 +35,13 @@ enum DISK_DISKTYPE
   OpticalDisc
 };
 
+enum _disk__io_mode
+{
+  disk__io_mode_read,
+  disk__io_mode_write
+};
+winvblock__def_enum ( disk__io_mode );
+
 enum _disk__search_state
 {
   SearchNIC,
@@ -47,6 +54,35 @@ enum _disk__search_state
   Done
 };
 winvblock__def_enum ( disk__search_state );
+
+/**
+ * I/O Request
+ *
+ * @v dev_ext_ptr     The device extension space
+ * @v mode            Read / write mode
+ * @v start_sector    First sector for request
+ * @v sector_count    Number of sectors to work with
+ * @v buffer          Buffer to read / write sectors to / from
+ * @v irp             Interrupt request packet for this request
+ */
+#  define disk__io_decl( x ) \
+\
+NTSTATUS \
+x ( \
+  IN driver__dev_ext_ptr dev_ext_ptr, \
+  IN disk__io_mode mode, \
+  IN LONGLONG start_sector, \
+  IN winvblock__uint32 sector_count, \
+  IN winvblock__uint8_ptr buffer, \
+  IN PIRP irp \
+ )
+/*
+ * Function pointer for a disk I/O routine.
+ * 'indent' mangles this, so it looks weird
+ */
+typedef disk__io_decl (
+   ( *disk__io_routine )
+ );
 
 winvblock__def_struct ( aoedisk_type )
 {
@@ -88,6 +124,7 @@ winvblock__def_struct ( disk__type )
     aoedisk_type AoE;
     ramdisk_type RAMDisk;
   };
+  disk__io_routine io;
   LONGLONG LBADiskSize;
   LONGLONG Cylinders;
   winvblock__uint32 Heads;
@@ -105,5 +142,21 @@ extern size_t disk__handling_table_size;
 extern disk__type_ptr STDCALL get_disk_ptr (
   driver__dev_ext_ptr dev_ext_ptr
  );
+
+static __inline
+disk__io_decl (
+  disk__io
+ )
+{
+  disk__type_ptr disk_ptr;
+
+  /*
+   * Establish a pointer into the disk device's extension space
+   */
+  disk_ptr = get_disk_ptr ( dev_ext_ptr );
+
+  return disk_ptr->io ( dev_ext_ptr, mode, start_sector, sector_count, buffer,
+			irp );
+}
 
 #endif				/* _DISK_H */

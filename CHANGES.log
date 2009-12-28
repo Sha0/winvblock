@@ -1,4 +1,20 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Dec 28 02:36:37 2009 -0500
+
+    [disk] Split disk IO into AoE and RAM disk modules
+    
+    The disk structure now includes a function pointer member to
+    represent the appropriate I/O routine for the different disk
+    classes.  These classes are currently AoE and RAM, but could
+    include others in the future, such as file-backed disks.
+    
+    disk__io() is a function which calls the appropriate routine
+    for a given disk (via the device extension space for now).
+    
+    The AoE module no longer has any knowledge of RAM disks.  Yay.
+
+commit 52b637363104e038ddc72551ce54ba6b0f2489f5
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sun Dec 27 17:27:30 2009 -0500
 
     [disk] aoedisk module becomes disk module

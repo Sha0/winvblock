@@ -1,7 +1,7 @@
 [Project]
 FileName=WinVBlock.dev
 Name=WinVBlock
-UnitCount=34
+UnitCount=36
 PchHead=-1
 PchSource=-1
 Ver=3
@@ -414,7 +414,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit35]
-FileName=src\disk_scsi.c
+FileName=src\ramdisk.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -424,7 +424,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit36]
-FileName=src\disk_scsi.h
+FileName=src\ramdisk.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1

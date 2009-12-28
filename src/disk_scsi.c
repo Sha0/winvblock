@@ -183,12 +183,11 @@ scsi_op (
     }
 
   if ( ( ( ( winvblock__uint8_ptr ) Srb->DataBuffer -
-	   ( winvblock__uint8_ptr ) MmGetMdlVirtualAddress ( Irp->
-							     MdlAddress ) ) +
-	 ( winvblock__uint8_ptr ) MmGetSystemAddressForMdlSafe ( Irp->
-								 MdlAddress,
-								 HighPagePriority ) )
-       == NULL )
+	   ( winvblock__uint8_ptr )
+	   MmGetMdlVirtualAddress ( Irp->MdlAddress ) ) +
+	 ( winvblock__uint8_ptr )
+	 MmGetSystemAddressForMdlSafe ( Irp->MdlAddress,
+					HighPagePriority ) ) == NULL )
     {
       status = STATUS_INSUFFICIENT_RESOURCES;
       Irp->IoStatus.Information = 0;
@@ -198,28 +197,28 @@ scsi_op (
   if ( Cdb->AsByte[0] == SCSIOP_READ || Cdb->AsByte[0] == SCSIOP_READ16 )
     {
       *completion_ptr = TRUE;
-      return AoE_Request ( DeviceExtension, AoE_RequestMode_Read, start_sector,
-			   sector_count,
-			   ( ( winvblock__uint8_ptr ) Srb->DataBuffer -
-			     ( winvblock__uint8_ptr )
-			     MmGetMdlVirtualAddress ( Irp->MdlAddress ) ) +
-			   ( winvblock__uint8_ptr )
-			   MmGetSystemAddressForMdlSafe ( Irp->MdlAddress,
-							  HighPagePriority ),
-			   Irp );
+      return disk__io ( DeviceExtension, disk__io_mode_read, start_sector,
+			sector_count,
+			( ( winvblock__uint8_ptr ) Srb->DataBuffer -
+			  ( winvblock__uint8_ptr )
+			  MmGetMdlVirtualAddress ( Irp->MdlAddress ) ) +
+			( winvblock__uint8_ptr )
+			MmGetSystemAddressForMdlSafe ( Irp->MdlAddress,
+						       HighPagePriority ),
+			Irp );
     }
   else
     {
       *completion_ptr = TRUE;
-      return AoE_Request ( DeviceExtension, AoE_RequestMode_Write,
-			   start_sector, sector_count,
-			   ( ( winvblock__uint8_ptr ) Srb->DataBuffer -
-			     ( winvblock__uint8_ptr )
-			     MmGetMdlVirtualAddress ( Irp->MdlAddress ) ) +
-			   ( winvblock__uint8_ptr )
-			   MmGetSystemAddressForMdlSafe ( Irp->MdlAddress,
-							  HighPagePriority ),
-			   Irp );
+      return disk__io ( DeviceExtension, disk__io_mode_write, start_sector,
+			sector_count,
+			( ( winvblock__uint8_ptr ) Srb->DataBuffer -
+			  ( winvblock__uint8_ptr )
+			  MmGetMdlVirtualAddress ( Irp->MdlAddress ) ) +
+			( winvblock__uint8_ptr )
+			MmGetSystemAddressForMdlSafe ( Irp->MdlAddress,
+						       HighPagePriority ),
+			Irp );
     }
   return status;
 }
@@ -288,13 +287,12 @@ scsi_op (
 
   temp = disk_ptr->SectorSize;
   REVERSE_BYTES ( &
-		  ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->
-		      DataBuffer )->BytesPerBlock ), &temp );
+		  ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->DataBuffer )->
+		    BytesPerBlock ), &temp );
   big_temp = disk_ptr->LBADiskSize - 1;
   REVERSE_BYTES_QUAD ( &
-		       ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->
-			   DataBuffer )->LogicalBlockAddress.QuadPart ),
-		       &big_temp );
+		       ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->DataBuffer )->
+			 LogicalBlockAddress.QuadPart ), &big_temp );
   Irp->IoStatus.Information = sizeof ( READ_CAPACITY_DATA_EX );
   Srb->SrbStatus = SRB_STATUS_SUCCESS;
   return STATUS_SUCCESS;
