@@ -93,3 +93,11 @@ disk__io_decl ( ramdisk__io )
   IoCompleteRequest ( irp, IO_NO_INCREMENT );
   return STATUS_SUCCESS;
 }
+
+winvblock__uint32
+ramdisk__max_xfer_len (
+  disk__type_ptr disk_ptr
+ )
+{
+  return 1024 * 1024;
+}

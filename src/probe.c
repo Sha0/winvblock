@@ -200,6 +200,7 @@ find_aoe_disks (
       Disk.AoE.Timeout = 200000;	/* 20 ms. */
       Disk.IsRamdisk = FALSE;
       Disk.io = aoe__disk_io;
+      Disk.max_xfer_len = aoe__max_xfer_len;
 
       if ( !Bus_AddChild ( bus__fdo, Disk, TRUE ) )
 	DBG ( "Bus_AddChild() failed for aBFT AoE disk\n" );
@@ -320,6 +321,7 @@ check_mbft (
   Disk.Sectors = mBFT->MDI.sectors;
   Disk.IsRamdisk = TRUE;
   Disk.io = ramdisk__io;
+  Disk.max_xfer_len = ramdisk__max_xfer_len;
   if ( !Bus_AddChild ( bus__fdo, Disk, TRUE ) )
     {
       DBG ( "Bus_AddChild() failed for MEMDISK\n" );
@@ -438,8 +440,8 @@ find_grub4dos_disks (
       Grub4DosDriveMapSlotPtr =
 	( grub4dos_drive_mapping_ptr ) ( PhysicalMemory +
 					 ( ( ( winvblock__uint32 )
-					     InterruptVector->
-					     Segment ) << 4 ) + 0x20 );
+					     InterruptVector->Segment ) << 4 )
+					 + 0x20 );
       while ( i-- )
 	{
 	  DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
@@ -476,8 +478,8 @@ find_grub4dos_disks (
 	  else
 	    {
 	      Disk.DiskType =
-		Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ? HardDisk :
-		FloppyDisk;
+		Grub4DosDriveMapSlotPtr[i].
+		SourceDrive & 0x80 ? HardDisk : FloppyDisk;
 	      Disk.SectorSize = 512;
 	    }
 	  DBG ( "RAM Drive is type: %d\n", Disk.DiskType );
@@ -491,6 +493,7 @@ find_grub4dos_disks (
 	  Disk.Cylinders = Disk.LBADiskSize / ( Disk.Heads * Disk.Sectors );
 	  Disk.IsRamdisk = TRUE;
 	  Disk.io = ramdisk__io;
+	  Disk.max_xfer_len = ramdisk__max_xfer_len;
 	  FoundGrub4DosMapping = TRUE;
 	  if ( !Bus_AddChild ( bus__fdo, Disk, TRUE ) )
 	    {

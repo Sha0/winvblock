@@ -88,10 +88,11 @@ irp__handler_decl (
 		  ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
 		    ( sizeof ( MOUNT_TARGETS ) +
 		      ( count *
-			sizeof ( MOUNT_TARGET ) ) ) ? Stack->
-		    Parameters.DeviceIoControl.OutputBufferLength
-		    : ( sizeof ( MOUNT_TARGETS ) +
-			( count * sizeof ( MOUNT_TARGET ) ) ) ) );
+			sizeof ( MOUNT_TARGET ) ) ) ? Stack->Parameters.
+		    DeviceIoControl.
+		    OutputBufferLength : ( sizeof ( MOUNT_TARGETS ) +
+					   ( count *
+					     sizeof ( MOUNT_TARGET ) ) ) ) );
   ExFreePool ( targets );
 
   KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, irql );
@@ -154,10 +155,11 @@ irp__handler_decl (
 		  ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
 		    ( sizeof ( MOUNT_DISKS ) +
 		      ( count *
-			sizeof ( MOUNT_DISK ) ) ) ? Stack->
-		    Parameters.DeviceIoControl.OutputBufferLength
-		    : ( sizeof ( MOUNT_DISKS ) +
-			( count * sizeof ( MOUNT_DISK ) ) ) ) );
+			sizeof ( MOUNT_DISK ) ) ) ? Stack->Parameters.
+		    DeviceIoControl.
+		    OutputBufferLength : ( sizeof ( MOUNT_DISKS ) +
+					   ( count *
+					     sizeof ( MOUNT_DISK ) ) ) ) );
   ExFreePool ( disks );
 
   return STATUS_SUCCESS;
@@ -185,6 +187,7 @@ irp__handler_decl (
   disk.AoE.Timeout = 200000;	/* 20 ms. */
   disk.IsRamdisk = FALSE;
   disk.io = aoe__disk_io;
+  disk.max_xfer_len = aoe__max_xfer_len;
   if ( !Bus_AddChild ( DeviceObject, disk, FALSE ) )
     {
       DBG ( "Bus_AddChild() failed\n" );

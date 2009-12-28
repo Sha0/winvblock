@@ -1,4 +1,16 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Dec 28 03:19:53 2009 -0500
+
+    [disk_dev_ctl] Split MaximumTransferLength logic for disk class
+    
+    The MaximumTransferLength we return for an IOCTL_STORAGE_QUERY_PROPERTY
+    is now returned from a disk class-specific function: The max_xfer_len
+    function pointer member of the disk type structure.
+    
+    AoE and RAM disk modules now implement their own max_xfer_len() func.
+
+commit 694552819802c2630d2f2f0fe12634bef7ab265d
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Mon Dec 28 02:36:37 2009 -0500
 
     [disk] Split disk IO into AoE and RAM disk modules

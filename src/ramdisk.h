@@ -29,5 +29,8 @@
 extern disk__io_decl (
   ramdisk__io
  );
+extern winvblock__uint32 ramdisk__max_xfer_len (
+  disk__type_ptr disk_ptr
+ );
 
 #endif				/* _ramdisk_h */

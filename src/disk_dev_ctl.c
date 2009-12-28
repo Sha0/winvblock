@@ -60,16 +60,13 @@ irp__handler_decl (
     {
       copy_size =
 	( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-	  sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) ? Stack->Parameters.
-	  DeviceIoControl.OutputBufferLength :
-	  sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) );
+	  sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) ? Stack->
+	  Parameters.DeviceIoControl.
+	  OutputBufferLength : sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) );
       storage_adapter_desc.Version = sizeof ( STORAGE_ADAPTER_DESCRIPTOR );
       storage_adapter_desc.Size = sizeof ( STORAGE_ADAPTER_DESCRIPTOR );
-      if ( disk_ptr->IsRamdisk )
-	storage_adapter_desc.MaximumTransferLength = 1024 * 1024;
-      else
-	storage_adapter_desc.MaximumTransferLength =
-	  disk_ptr->SectorSize * disk_ptr->AoE.MaxSectorsPerPacket;
+      storage_adapter_desc.MaximumTransferLength =
+	disk__max_xfer_len ( disk_ptr );
 #if 0
       storage_adapter_desc.MaximumTransferLength = SECTORSIZE * POOLSIZE;
 #endif
@@ -91,9 +88,9 @@ irp__handler_decl (
     {
       copy_size =
 	( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-	  sizeof ( STORAGE_DEVICE_DESCRIPTOR ) ? Stack->Parameters.
-	  DeviceIoControl.OutputBufferLength :
-	  sizeof ( STORAGE_DEVICE_DESCRIPTOR ) );
+	  sizeof ( STORAGE_DEVICE_DESCRIPTOR ) ? Stack->
+	  Parameters.DeviceIoControl.
+	  OutputBufferLength : sizeof ( STORAGE_DEVICE_DESCRIPTOR ) );
       storage_dev_desc.Version = sizeof ( STORAGE_DEVICE_DESCRIPTOR );
       storage_dev_desc.Size = sizeof ( STORAGE_DEVICE_DESCRIPTOR );
       storage_dev_desc.DeviceType = DIRECT_ACCESS_DEVICE;
@@ -135,8 +132,8 @@ irp__handler_decl (
 
   copy_size =
     ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-      sizeof ( DISK_GEOMETRY ) ? Stack->Parameters.
-      DeviceIoControl.OutputBufferLength : sizeof ( DISK_GEOMETRY ) );
+      sizeof ( DISK_GEOMETRY ) ? Stack->Parameters.DeviceIoControl.
+      OutputBufferLength : sizeof ( DISK_GEOMETRY ) );
   disk_geom.MediaType = FixedMedia;
   disk_ptr = get_disk_ptr ( DeviceExtension );
   disk_geom.Cylinders.QuadPart = disk_ptr->Cylinders;
@@ -159,8 +156,8 @@ irp__handler_decl (
 
   copy_size =
     ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-      sizeof ( SCSI_ADDRESS ) ? Stack->Parameters.
-      DeviceIoControl.OutputBufferLength : sizeof ( SCSI_ADDRESS ) );
+      sizeof ( SCSI_ADDRESS ) ? Stack->Parameters.DeviceIoControl.
+      OutputBufferLength : sizeof ( SCSI_ADDRESS ) );
   scsi_address.Length = sizeof ( SCSI_ADDRESS );
   scsi_address.PortNumber = 0;
   scsi_address.PathId = 0;

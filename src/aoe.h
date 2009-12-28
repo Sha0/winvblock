@@ -42,6 +42,9 @@ extern winvblock__bool STDCALL AoE_SearchDrive (
 extern disk__io_decl (
   aoe__disk_io
  );
+extern winvblock__uint32 aoe__max_xfer_len (
+  disk__type_ptr disk_ptr
+ );
 extern NTSTATUS STDCALL AoE_Reply (
   IN winvblock__uint8_ptr SourceMac,
   IN winvblock__uint8_ptr DestinationMac,

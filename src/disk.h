@@ -125,6 +125,7 @@ winvblock__def_struct ( disk__type )
     ramdisk_type RAMDisk;
   };
   disk__io_routine io;
+  winvblock__uint32 ( *max_xfer_len ) ( disk__type_ptr disk_ptr );
   LONGLONG LBADiskSize;
   LONGLONG Cylinders;
   winvblock__uint32 Heads;
@@ -157,6 +158,14 @@ disk__io_decl (
 
   return disk_ptr->io ( dev_ext_ptr, mode, start_sector, sector_count, buffer,
 			irp );
+}
+
+static __inline winvblock__uint32
+disk__max_xfer_len (
+  disk__type_ptr disk_ptr
+ )
+{
+  return disk_ptr->max_xfer_len ( disk_ptr );
 }
 
 #endif				/* _DISK_H */
