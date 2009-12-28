@@ -135,8 +135,7 @@ irp__handler_decl ( disk_pnp__query_dev_text )
 
       case DeviceTextLocationInformation:
 	string_length =
-	  swprintf ( string, L"WinVBlock AoE e%d.%d", disk_ptr->AoE.Major,
-		     disk_ptr->AoE.Minor ) + 1;
+	  disk_ptr->query_id ( disk_ptr, BusQueryInstanceID, string );
 	Irp->IoStatus.Information =
 	  ( ULONG_PTR ) ExAllocatePool ( PagedPool,
 					 string_length * sizeof ( WCHAR ) );

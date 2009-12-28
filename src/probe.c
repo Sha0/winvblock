@@ -128,7 +128,7 @@ find_aoe_disks (
    i;
   winvblock__bool FoundAbft = FALSE;
   abft AoEBootRecord;
-  disk__type Disk;
+  aoe__disk_type aoe_disk;
   bus__type_ptr bus_ptr;
 
   /*
@@ -191,19 +191,19 @@ find_aoe_disks (
 	    AoEBootRecord.ClientMac[2], AoEBootRecord.ClientMac[3],
 	    AoEBootRecord.ClientMac[4], AoEBootRecord.ClientMac[5],
 	    AoEBootRecord.Major, AoEBootRecord.Minor );
-      Disk.Initialize = AoE_SearchDrive;
-      RtlCopyMemory ( Disk.AoE.ClientMac, AoEBootRecord.ClientMac, 6 );
-      RtlFillMemory ( Disk.AoE.ServerMac, 6, 0xff );
-      Disk.AoE.Major = AoEBootRecord.Major;
-      Disk.AoE.Minor = AoEBootRecord.Minor;
-      Disk.AoE.MaxSectorsPerPacket = 1;
-      Disk.AoE.Timeout = 200000;	/* 20 ms. */
-      Disk.IsRamdisk = FALSE;
-      Disk.io = aoe__disk_io;
-      Disk.max_xfer_len = aoe__max_xfer_len;
-      Disk.query_id = aoe__query_id;
+      aoe_disk.disk.Initialize = AoE_SearchDrive;
+      RtlCopyMemory ( aoe_disk.ClientMac, AoEBootRecord.ClientMac, 6 );
+      RtlFillMemory ( aoe_disk.ServerMac, 6, 0xff );
+      aoe_disk.Major = AoEBootRecord.Major;
+      aoe_disk.Minor = AoEBootRecord.Minor;
+      aoe_disk.MaxSectorsPerPacket = 1;
+      aoe_disk.Timeout = 200000;	/* 20 ms. */
+      aoe_disk.disk.io = aoe__disk_io;
+      aoe_disk.disk.max_xfer_len = aoe__max_xfer_len;
+      aoe_disk.disk.query_id = aoe__query_id;
+      aoe_disk.disk.dev_ext.size = sizeof ( aoe__disk_type );
 
-      if ( !Bus_AddChild ( bus__fdo, Disk, TRUE ) )
+      if ( !Bus_AddChild ( bus__fdo, &aoe_disk.disk, TRUE ) )
 	DBG ( "Bus_AddChild() failed for aBFT AoE disk\n" );
       else
 	{
@@ -259,7 +259,7 @@ check_mbft (
   winvblock__uint32 i;
   winvblock__uint8 Checksum = 0;
   safe_mbr_hook_ptr AssociatedHook;
-  disk__type Disk;
+  ramdisk__type ramdisk;
   bus__type_ptr bus_ptr;
 
   /*
@@ -300,31 +300,31 @@ check_mbft (
     }
   DBG ( "MEMDISK DiskBuf: 0x%08x\n", mBFT->MDI.diskbuf );
   DBG ( "MEMDISK DiskSize: %d sectors\n", mBFT->MDI.disksize );
-  Disk.Initialize = no_init;
-  Disk.RAMDisk.DiskBuf = mBFT->MDI.diskbuf;
-  Disk.LBADiskSize = Disk.RAMDisk.DiskSize = mBFT->MDI.disksize;
+  ramdisk.disk.Initialize = no_init;
+  ramdisk.DiskBuf = mBFT->MDI.diskbuf;
+  ramdisk.disk.LBADiskSize = ramdisk.DiskSize = mBFT->MDI.disksize;
   if ( mBFT->MDI.driveno == 0xE0 )
     {
-      Disk.DiskType = OpticalDisc;
-      Disk.SectorSize = 2048;
+      ramdisk.disk.DiskType = OpticalDisc;
+      ramdisk.disk.SectorSize = 2048;
     }
   else
     {
       if ( mBFT->MDI.driveno & 0x80 )
-	Disk.DiskType = HardDisk;
+	ramdisk.disk.DiskType = HardDisk;
       else
-	Disk.DiskType = FloppyDisk;
-      Disk.SectorSize = 512;
+	ramdisk.disk.DiskType = FloppyDisk;
+      ramdisk.disk.SectorSize = 512;
     }
-  DBG ( "RAM Drive is type: %d\n", Disk.DiskType );
-  Disk.Cylinders = mBFT->MDI.cylinders;
-  Disk.Heads = mBFT->MDI.heads;
-  Disk.Sectors = mBFT->MDI.sectors;
-  Disk.IsRamdisk = TRUE;
-  Disk.io = ramdisk__io;
-  Disk.max_xfer_len = ramdisk__max_xfer_len;
-  Disk.query_id = ramdisk__query_id;
-  if ( !Bus_AddChild ( bus__fdo, Disk, TRUE ) )
+  DBG ( "RAM Drive is type: %d\n", ramdisk.disk.DiskType );
+  ramdisk.disk.Cylinders = mBFT->MDI.cylinders;
+  ramdisk.disk.Heads = mBFT->MDI.heads;
+  ramdisk.disk.Sectors = mBFT->MDI.sectors;
+  ramdisk.disk.io = ramdisk__io;
+  ramdisk.disk.max_xfer_len = ramdisk__max_xfer_len;
+  ramdisk.disk.query_id = ramdisk__query_id;
+  ramdisk.disk.dev_ext.size = sizeof ( ramdisk__type );
+  if ( !Bus_AddChild ( bus__fdo, &ramdisk.disk, TRUE ) )
     {
       DBG ( "Bus_AddChild() failed for MEMDISK\n" );
     }
@@ -405,7 +405,7 @@ find_grub4dos_disks (
   grub4dos_drive_mapping_ptr Grub4DosDriveMapSlotPtr;
   winvblock__uint32 i = 8;
   winvblock__bool FoundGrub4DosMapping = FALSE;
-  disk__type Disk;
+  ramdisk__type ramdisk;
   bus__type_ptr bus_ptr;
 
   /*
@@ -442,8 +442,8 @@ find_grub4dos_disks (
       Grub4DosDriveMapSlotPtr =
 	( grub4dos_drive_mapping_ptr ) ( PhysicalMemory +
 					 ( ( ( winvblock__uint32 )
-					     InterruptVector->
-					     Segment ) << 4 ) + 0x20 );
+					     InterruptVector->Segment ) << 4 )
+					 + 0x20 );
       while ( i-- )
 	{
 	  DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
@@ -468,37 +468,39 @@ find_grub4dos_disks (
 	      DBG ( "Skipping non-RAM disk GRUB4DOS mapping\n" );
 	      continue;
 	    }
-	  Disk.Initialize = no_init;
+	  ramdisk.disk.Initialize = no_init;
 	  /*
 	   * Possible precision loss
 	   */
 	  if ( Grub4DosDriveMapSlotPtr[i].SourceODD )
 	    {
-	      Disk.DiskType = OpticalDisc;
-	      Disk.SectorSize = 2048;
+	      ramdisk.disk.DiskType = OpticalDisc;
+	      ramdisk.disk.SectorSize = 2048;
 	    }
 	  else
 	    {
-	      Disk.DiskType =
-		Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ? HardDisk :
-		FloppyDisk;
-	      Disk.SectorSize = 512;
+	      ramdisk.disk.DiskType =
+		Grub4DosDriveMapSlotPtr[i].
+		SourceDrive & 0x80 ? HardDisk : FloppyDisk;
+	      ramdisk.disk.SectorSize = 512;
 	    }
-	  DBG ( "RAM Drive is type: %d\n", Disk.DiskType );
-	  Disk.RAMDisk.DiskBuf =
+	  DBG ( "RAM Drive is type: %d\n", ramdisk.disk.DiskType );
+	  ramdisk.DiskBuf =
 	    ( winvblock__uint32 ) ( Grub4DosDriveMapSlotPtr[i].SectorStart *
 				    512 );
-	  Disk.LBADiskSize = Disk.RAMDisk.DiskSize =
+	  ramdisk.disk.LBADiskSize = ramdisk.DiskSize =
 	    ( winvblock__uint32 ) Grub4DosDriveMapSlotPtr[i].SectorCount;
-	  Disk.Heads = Grub4DosDriveMapSlotPtr[i].MaxHead + 1;
-	  Disk.Sectors = Grub4DosDriveMapSlotPtr[i].DestMaxSector;
-	  Disk.Cylinders = Disk.LBADiskSize / ( Disk.Heads * Disk.Sectors );
-	  Disk.IsRamdisk = TRUE;
-	  Disk.io = ramdisk__io;
-	  Disk.max_xfer_len = ramdisk__max_xfer_len;
-	  Disk.query_id = ramdisk__query_id;
+	  ramdisk.disk.Heads = Grub4DosDriveMapSlotPtr[i].MaxHead + 1;
+	  ramdisk.disk.Sectors = Grub4DosDriveMapSlotPtr[i].DestMaxSector;
+	  ramdisk.disk.Cylinders =
+	    ramdisk.disk.LBADiskSize / ( ramdisk.disk.Heads *
+					 ramdisk.disk.Sectors );
+	  ramdisk.disk.io = ramdisk__io;
+	  ramdisk.disk.max_xfer_len = ramdisk__max_xfer_len;
+	  ramdisk.disk.query_id = ramdisk__query_id;
+	  ramdisk.disk.dev_ext.size = sizeof ( ramdisk__type );
 	  FoundGrub4DosMapping = TRUE;
-	  if ( !Bus_AddChild ( bus__fdo, Disk, TRUE ) )
+	  if ( !Bus_AddChild ( bus__fdo, &ramdisk.disk, TRUE ) )
 	    {
 	      DBG ( "Bus_AddChild() failed for GRUB4DOS\n" );
 	    }

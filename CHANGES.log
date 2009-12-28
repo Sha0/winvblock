@@ -1,4 +1,37 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Dec 28 18:38:08 2009 -0500
+
+    [major] Turn disk structure inside out
+    
+    ...Kind of.  There are currently five places where devices are
+    created:
+    
+    1. Bus created in bus.c
+    2. AoE disk created in bus_dev_ctl.c
+    3. AoE disk created in probe.c
+    4. GRUB4DOS disk created in probe.c
+    5. MEMDISK created in probe.c
+    
+    Each of these places is currently responsible for populating the
+    details of the device class structures.  They will now inform
+    the Bus_AddChild() routine of how much device extension space
+    they require.
+    
+    For example, a RAM disk contains a disk and a disk contains the
+    device-common structure.  Thus Bus_AddChild() needs to allocate
+    (via IoCreateDevice()) enough device extension space for all of
+    this.
+    
+    Previously, the disk structure contained a union of the different
+    disk classes.  I prefer the model where a child class can have
+    knowledge of a parent class, but not vice versa.
+    
+    This change involved a lot of shuffling, as well as the need to
+    fix a bug which probably should have been fixed separately;
+    see the DeviceTextLocationInformation handling in disk_pnp.c.
+
+commit e82adc0efaeafdf6e9c15ec08e7e7db9fef897cd
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Mon Dec 28 04:48:28 2009 -0500
 
     [disk_pnp] Split ID query logic for disk class

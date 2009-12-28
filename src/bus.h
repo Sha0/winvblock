@@ -30,6 +30,7 @@
 
 winvblock__def_struct ( bus__type )
 {
+  driver__dev_ext dev_ext;
   PDEVICE_OBJECT LowerDeviceObject;
   PDEVICE_OBJECT PhysicalDeviceObject;
   winvblock__uint32 Children;
@@ -81,16 +82,24 @@ struct _disk__type;
 
 extern winvblock__bool STDCALL Bus_AddChild (
   IN PDEVICE_OBJECT BusDeviceObject,
-  IN struct _disk__type Disk,
+  IN disk__type_ptr Disk,
   IN winvblock__bool Boot
  );
 
-extern bus__type_ptr STDCALL get_bus_ptr (
+/*
+ * Establish a pointer into the bus device's extension space
+ */
+__inline bus__type_ptr STDCALL
+get_bus_ptr (
   driver__dev_ext_ptr dev_ext_ptr
- );
-extern disk__type_ptr STDCALL get_disk_ptr (
-  driver__dev_ext_ptr dev_ext_ptr
- );
+ )
+{
+  /*
+   * Since the device extension is the first member of a bus
+   * structure, a simple cast will suffice
+   */
+  return ( bus__type_ptr ) dev_ext_ptr;
+}
 
 extern PDEVICE_OBJECT bus__fdo;
 

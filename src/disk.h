@@ -84,46 +84,23 @@ typedef disk__io_decl (
    ( *disk__io_routine )
  );
 
-winvblock__def_struct ( aoedisk_type )
-{
-  winvblock__uint32 MTU;
-  winvblock__uint8 ClientMac[6];
-  winvblock__uint8 ServerMac[6];
-  winvblock__uint32 Major;
-  winvblock__uint32 Minor;
-  winvblock__uint32 MaxSectorsPerPacket;
-  winvblock__uint32 Timeout;
-};
-
-winvblock__def_struct ( ramdisk_type )
-{
-  winvblock__uint32 DiskBuf;
-  winvblock__uint32 DiskSize;
-};
-
 winvblock__def_struct ( disk__type )
 {
+  driver__dev_ext dev_ext;
   PDEVICE_OBJECT Parent;
   disk__type_ptr next_sibling_ptr;
-  driver__dev_ext_ptr dev_ext_ptr;
   KEVENT SearchEvent;
   disk__search_state SearchState;
   KSPIN_LOCK SpinLock;
   winvblock__bool BootDrive;
   winvblock__bool Unmount;
   winvblock__uint32 DiskNumber;
-  winvblock__bool IsRamdisk;
   winvblock__uint32 DiskType;
   winvblock__bool STDCALL (
   *Initialize
    ) (
   IN struct _driver__dev_ext * DeviceExtension
    );
-  union
-  {
-    aoedisk_type AoE;
-    ramdisk_type RAMDisk;
-  };
   disk__io_routine io;
   winvblock__uint32 ( *max_xfer_len ) ( disk__type_ptr disk_ptr );
   winvblock__uint32 ( *query_id ) ( disk__type_ptr disk_ptr,
@@ -143,9 +120,17 @@ extern size_t disk__handling_table_size;
 /*
  * Establish a pointer into the child disk device's extension space
  */
-extern disk__type_ptr STDCALL get_disk_ptr (
+__inline disk__type_ptr STDCALL
+get_disk_ptr (
   driver__dev_ext_ptr dev_ext_ptr
- );
+ )
+{
+  /*
+   * Since the device extension is the first member of a disk
+   * structure, a simple cast will suffice
+   */
+  return ( disk__type_ptr ) dev_ext_ptr;
+}
 
 static __inline
 disk__io_decl (

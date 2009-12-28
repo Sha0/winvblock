@@ -206,8 +206,8 @@ AoE_Start (
    */
   if ( ( AoE_Globals_ProbeTag->PacketData =
 	 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-					  AoE_Globals_ProbeTag->PacketSize ) )
-       == NULL )
+					  AoE_Globals_ProbeTag->
+					  PacketSize ) ) == NULL )
     {
       DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
       ExFreePool ( AoE_Globals_ProbeTag );
@@ -316,9 +316,8 @@ AoE_Stop (
   while ( DiskSearch != NULL )
     {
       KeSetEvent ( &
-		   ( get_disk_ptr
-		     ( DiskSearch->DeviceExtension )->SearchEvent ), 0,
-		   FALSE );
+		   ( get_disk_ptr ( DiskSearch->DeviceExtension )->
+		     SearchEvent ), 0, FALSE );
       PreviousDiskSearch = DiskSearch;
       DiskSearch = DiskSearch->Next;
       ExFreePool ( PreviousDiskSearch );
@@ -390,11 +389,13 @@ AoE_SearchDrive (
   LARGE_INTEGER MaxSectorsPerPacketSendTime;
   winvblock__uint32 MTU;
   disk__type_ptr disk_ptr;
+  aoe__disk_type_ptr aoe_disk_ptr;
 
   /*
-   * Establish a pointer into the disk device's extension space
+   * Establish pointers into the disk device's extension space
    */
   disk_ptr = get_disk_ptr ( DeviceExtension );
+  aoe_disk_ptr = aoe__get_disk_ptr ( DeviceExtension );
   if ( !NT_SUCCESS ( AoE_Start (  ) ) )
     {
       DBG ( "AoE startup failure!\n" );
@@ -475,7 +476,7 @@ AoE_SearchDrive (
 
       if ( disk_ptr->SearchState == SearchNIC )
 	{
-	  if ( !Protocol_SearchNIC ( disk_ptr->AoE.ClientMac ) )
+	  if ( !Protocol_SearchNIC ( aoe_disk_ptr->ClientMac ) )
 	    {
 	      KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
 	      continue;
@@ -485,7 +486,7 @@ AoE_SearchDrive (
 	      /*
 	       * We found the adapter to use, get MTU next 
 	       */
-	      disk_ptr->AoE.MTU = Protocol_GetMTU ( disk_ptr->AoE.ClientMac );
+	      aoe_disk_ptr->MTU = Protocol_GetMTU ( aoe_disk_ptr->ClientMac );
 	      disk_ptr->SearchState = GetSize;
 	    }
 	}
@@ -519,8 +520,8 @@ AoE_SearchDrive (
 	       MaxSectorsPerPacketSendTime.QuadPart + 2500000LL )
 	    {
 	      DBG ( "No reply after 250ms for MaxSectorsPerPacket %d, "
-		    "giving up\n", disk_ptr->AoE.MaxSectorsPerPacket );
-	      disk_ptr->AoE.MaxSectorsPerPacket--;
+		    "giving up\n", aoe_disk_ptr->MaxSectorsPerPacket );
+	      aoe_disk_ptr->MaxSectorsPerPacket--;
 	      disk_ptr->SearchState = Done;
 	    }
 	  else
@@ -633,7 +634,7 @@ AoE_SearchDrive (
 		"sectors: %u sectors per packet: %u\n",
 		disk_ptr->LBADiskSize / 2048, disk_ptr->Cylinders,
 		disk_ptr->Heads, disk_ptr->Sectors,
-		disk_ptr->AoE.MaxSectorsPerPacket );
+		aoe_disk_ptr->MaxSectorsPerPacket );
 	  return TRUE;
 	}
 
@@ -678,8 +679,8 @@ AoE_SearchDrive (
       RtlZeroMemory ( Tag->PacketData, Tag->PacketSize );
       Tag->PacketData->Ver = AOEPROTOCOLVER;
       Tag->PacketData->Major =
-	htons ( ( winvblock__uint16 ) disk_ptr->AoE.Major );
-      Tag->PacketData->Minor = ( winvblock__uint8 ) disk_ptr->AoE.Minor;
+	htons ( ( winvblock__uint16 ) aoe_disk_ptr->Major );
+      Tag->PacketData->Minor = ( winvblock__uint8 ) aoe_disk_ptr->Minor;
       Tag->PacketData->ExtendedAFlag = TRUE;
 
       /*
@@ -709,13 +710,13 @@ AoE_SearchDrive (
 	     */
 	    Tag->PacketData->Cmd = 0x24;	/* READ SECTOR */
 	    Tag->PacketData->Count =
-	      ( winvblock__uint8 ) ( ++disk_ptr->AoE.MaxSectorsPerPacket );
+	      ( winvblock__uint8 ) ( ++aoe_disk_ptr->MaxSectorsPerPacket );
 	    KeQuerySystemTime ( &MaxSectorsPerPacketSendTime );
 	    disk_ptr->SearchState = GettingMaxSectorsPerPacket;
 	    /*
 	     * TODO: Make the below value into a #defined constant 
 	     */
-	    disk_ptr->AoE.Timeout = 200000;
+	    aoe_disk_ptr->Timeout = 200000;
 	    break;
 	  default:
 	    DBG ( "Undefined SearchState!!\n" );
@@ -761,11 +762,14 @@ disk__io_decl ( aoe__disk_io )
   PHYSICAL_ADDRESS PhysicalAddress;
   winvblock__uint8_ptr PhysicalMemory;
   disk__type_ptr disk_ptr;
+  aoe__disk_type_ptr aoe_disk_ptr;
 
   /*
-   * Establish a pointer into the disk device's extension space
+   * Establish pointers into the disk device's extension space
    */
   disk_ptr = get_disk_ptr ( dev_ext_ptr );
+  aoe_disk_ptr = aoe__get_disk_ptr ( dev_ext_ptr );
+
   if ( AoE_Globals_Stop )
     {
       /*
@@ -816,7 +820,7 @@ disk__io_decl ( aoe__disk_io )
   /*
    * Split the requested sectors into packets in tags
    */
-  for ( i = 0; i < sector_count; i += disk_ptr->AoE.MaxSectorsPerPacket )
+  for ( i = 0; i < sector_count; i += aoe_disk_ptr->MaxSectorsPerPacket )
     {
       /*
        * Allocate each tag 
@@ -856,8 +860,8 @@ disk__io_decl ( aoe__disk_io )
       Tag->BufferOffset = i * disk_ptr->SectorSize;
       Tag->SectorCount =
 	( ( sector_count - i ) <
-	  disk_ptr->AoE.MaxSectorsPerPacket ? sector_count -
-	  i : disk_ptr->AoE.MaxSectorsPerPacket );
+	  aoe_disk_ptr->MaxSectorsPerPacket ? sector_count -
+	  i : aoe_disk_ptr->MaxSectorsPerPacket );
 
       /*
        * Allocate and initialize each tag's AoE packet 
@@ -892,8 +896,8 @@ disk__io_decl ( aoe__disk_io )
       RtlZeroMemory ( Tag->PacketData, Tag->PacketSize );
       Tag->PacketData->Ver = AOEPROTOCOLVER;
       Tag->PacketData->Major =
-	htons ( ( winvblock__uint16 ) disk_ptr->AoE.Major );
-      Tag->PacketData->Minor = ( winvblock__uint8 ) disk_ptr->AoE.Minor;
+	htons ( ( winvblock__uint16 ) aoe_disk_ptr->Major );
+      Tag->PacketData->Minor = ( winvblock__uint8 ) aoe_disk_ptr->Minor;
       Tag->PacketData->Tag = 0;
       Tag->PacketData->Command = 0;
       Tag->PacketData->ExtendedAFlag = TRUE;
@@ -1001,6 +1005,7 @@ AoE_Reply (
   winvblock__bool Found = FALSE;
   LARGE_INTEGER CurrentTime;
   disk__type_ptr disk_ptr;
+  aoe__disk_type_ptr aoe_disk_ptr;
 
   /*
    * Discard non-responses 
@@ -1070,33 +1075,34 @@ AoE_Reply (
   KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
 
   /*
-   * Establish a pointer into the disk device's extension space
+   * Establish pointers into the disk device's extension space
    */
   disk_ptr = get_disk_ptr ( Tag->DeviceExtension );
+  aoe_disk_ptr = aoe__get_disk_ptr ( Tag->DeviceExtension );
 
   /*
    * If our tag was a discovery request, note the server 
    */
   if ( RtlCompareMemory
-       ( disk_ptr->AoE.ServerMac, "\xff\xff\xff\xff\xff\xff", 6 ) == 6 )
+       ( aoe_disk_ptr->ServerMac, "\xff\xff\xff\xff\xff\xff", 6 ) == 6 )
     {
-      RtlCopyMemory ( disk_ptr->AoE.ServerMac, SourceMac, 6 );
+      RtlCopyMemory ( aoe_disk_ptr->ServerMac, SourceMac, 6 );
       DBG ( "Major: %d minor: %d found on server "
-	    "%02x:%02x:%02x:%02x:%02x:%02x\n", disk_ptr->AoE.Major,
-	    disk_ptr->AoE.Minor, SourceMac[0], SourceMac[1], SourceMac[2],
+	    "%02x:%02x:%02x:%02x:%02x:%02x\n", aoe_disk_ptr->Major,
+	    aoe_disk_ptr->Minor, SourceMac[0], SourceMac[1], SourceMac[2],
 	    SourceMac[3], SourceMac[4], SourceMac[5] );
     }
 
   KeQuerySystemTime ( &CurrentTime );
-  disk_ptr->AoE.Timeout -=
-    ( winvblock__uint32 ) ( ( disk_ptr->AoE.Timeout -
+  aoe_disk_ptr->Timeout -=
+    ( winvblock__uint32 ) ( ( aoe_disk_ptr->Timeout -
 			      ( CurrentTime.QuadPart -
 				Tag->FirstSendTime.QuadPart ) ) / 1024 );
   /*
    * TODO: Replace the values below with #defined constants 
    */
-  if ( disk_ptr->AoE.Timeout > 100000000 )
-    disk_ptr->AoE.Timeout = 100000000;
+  if ( aoe_disk_ptr->Timeout > 100000000 )
+    aoe_disk_ptr->Timeout = 100000000;
 
   switch ( Tag->Type )
     {
@@ -1135,30 +1141,30 @@ AoE_Reply (
 	    case GettingMaxSectorsPerPacket:
 	      DataSize -= sizeof ( AOE_PACKET );
 	      if ( DataSize <
-		   ( disk_ptr->AoE.MaxSectorsPerPacket *
+		   ( aoe_disk_ptr->MaxSectorsPerPacket *
 		     disk_ptr->SectorSize ) )
 		{
 		  DBG ( "Packet size too low while getting "
 			"MaxSectorsPerPacket (tried %d, got size of %d)\n",
-			disk_ptr->AoE.MaxSectorsPerPacket, DataSize );
-		  disk_ptr->AoE.MaxSectorsPerPacket--;
+			aoe_disk_ptr->MaxSectorsPerPacket, DataSize );
+		  aoe_disk_ptr->MaxSectorsPerPacket--;
 		  disk_ptr->SearchState = Done;
 		}
-	      else if ( disk_ptr->AoE.MTU <
+	      else if ( aoe_disk_ptr->MTU <
 			( sizeof ( AOE_PACKET ) +
-			  ( ( disk_ptr->AoE.MaxSectorsPerPacket +
+			  ( ( aoe_disk_ptr->MaxSectorsPerPacket +
 			      1 ) * disk_ptr->SectorSize ) ) )
 		{
 		  DBG ( "Got MaxSectorsPerPacket %d at size of %d. "
 			"MTU of %d reached\n",
-			disk_ptr->AoE.MaxSectorsPerPacket, DataSize,
-			disk_ptr->AoE.MTU );
+			aoe_disk_ptr->MaxSectorsPerPacket, DataSize,
+			aoe_disk_ptr->MTU );
 		  disk_ptr->SearchState = Done;
 		}
 	      else
 		{
 		  DBG ( "Got MaxSectorsPerPacket %d at size of %d, "
-			"trying next...\n", disk_ptr->AoE.MaxSectorsPerPacket,
+			"trying next...\n", aoe_disk_ptr->MaxSectorsPerPacket,
 			DataSize );
 		  disk_ptr->SearchState = GetMaxSectorsPerPacket;
 		}
@@ -1228,6 +1234,7 @@ AoE_Thread (
   winvblock__uint32 Fails = 0;
   winvblock__uint32 RequestTimeout = 0;
   disk__type_ptr disk_ptr;
+  aoe__disk_type_ptr aoe_disk_ptr;
 
   DBG ( "Entry\n" );
   ReportTime.QuadPart = 0LL;
@@ -1281,9 +1288,8 @@ AoE_Thread (
 	  AoE_Globals_ProbeTag->PacketData->Tag = AoE_Globals_ProbeTag->Id;
 	  Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
 			  "\xff\xff\xff\xff\xff\xff",
-			  ( winvblock__uint8_ptr )
-			  AoE_Globals_ProbeTag->PacketData,
-			  AoE_Globals_ProbeTag->PacketSize, NULL );
+			  ( winvblock__uint8_ptr ) AoE_Globals_ProbeTag->
+			  PacketData, AoE_Globals_ProbeTag->PacketSize, NULL );
 	  KeQuerySystemTime ( &AoE_Globals_ProbeTag->SendTime );
 	}
 
@@ -1297,11 +1303,12 @@ AoE_Thread (
       while ( Tag != NULL )
 	{
 	  /*
-	   * Establish a pointer into the disk device's extension space
+	   * Establish pointers into the disk device's extension space
 	   */
 	  disk_ptr = get_disk_ptr ( Tag->DeviceExtension );
+	  aoe_disk_ptr = aoe__get_disk_ptr ( Tag->DeviceExtension );
 
-	  RequestTimeout = disk_ptr->AoE.Timeout;
+	  RequestTimeout = aoe_disk_ptr->Timeout;
 	  if ( Tag->Id == 0 )
 	    {
 	      if ( AoE_Globals_OutstandingTags <= 64 )
@@ -1316,7 +1323,7 @@ AoE_Thread (
 		    NextTagId++;
 		  Tag->PacketData->Tag = Tag->Id;
 		  if ( Protocol_Send
-		       ( disk_ptr->AoE.ClientMac, disk_ptr->AoE.ServerMac,
+		       ( aoe_disk_ptr->ClientMac, aoe_disk_ptr->ServerMac,
 			 ( winvblock__uint8_ptr ) Tag->PacketData,
 			 Tag->PacketSize, Tag ) )
 		    {
@@ -1338,17 +1345,17 @@ AoE_Thread (
 	      KeQuerySystemTime ( &CurrentTime );
 	      if ( CurrentTime.QuadPart >
 		   ( Tag->SendTime.QuadPart +
-		     ( LONGLONG ) ( disk_ptr->AoE.Timeout * 2 ) ) )
+		     ( LONGLONG ) ( aoe_disk_ptr->Timeout * 2 ) ) )
 		{
 		  if ( Protocol_Send
-		       ( disk_ptr->AoE.ClientMac, disk_ptr->AoE.ServerMac,
+		       ( aoe_disk_ptr->ClientMac, aoe_disk_ptr->ServerMac,
 			 ( winvblock__uint8_ptr ) Tag->PacketData,
 			 Tag->PacketSize, Tag ) )
 		    {
 		      KeQuerySystemTime ( &Tag->SendTime );
-		      disk_ptr->AoE.Timeout += disk_ptr->AoE.Timeout / 1000;
-		      if ( disk_ptr->AoE.Timeout > 100000000 )
-			disk_ptr->AoE.Timeout = 100000000;
+		      aoe_disk_ptr->Timeout += aoe_disk_ptr->Timeout / 1000;
+		      if ( aoe_disk_ptr->Timeout > 100000000 )
+			aoe_disk_ptr->Timeout = 100000000;
 		      Resends++;
 		    }
 		  else
@@ -1374,7 +1381,9 @@ aoe__max_xfer_len (
   disk__type_ptr disk_ptr
  )
 {
-  return disk_ptr->SectorSize * disk_ptr->AoE.MaxSectorsPerPacket;
+  aoe__disk_type_ptr aoe_disk_ptr = aoe__get_disk_ptr ( &disk_ptr->dev_ext );
+
+  return disk_ptr->SectorSize * aoe_disk_ptr->MaxSectorsPerPacket;
 }
 
 winvblock__uint32
@@ -1384,19 +1393,21 @@ aoe__query_id (
   PWCHAR buf_512
  )
 {
+  aoe__disk_type_ptr aoe_disk_ptr = aoe__get_disk_ptr ( &disk_ptr->dev_ext );
+
   switch ( query_type )
     {
       case BusQueryDeviceID:
 	return swprintf ( buf_512, L"WinVBlock\\AoEe%d.%d",
-			  disk_ptr->AoE.Major, disk_ptr->AoE.Minor ) + 1;
+			  aoe_disk_ptr->Major, aoe_disk_ptr->Minor ) + 1;
       case BusQueryInstanceID:
-	return swprintf ( buf_512, L"AOEDISK%d.%d", disk_ptr->AoE.Major,
-			  disk_ptr->AoE.Minor ) + 1;
+	return swprintf ( buf_512, L"AOEDISK%d.%d", aoe_disk_ptr->Major,
+			  aoe_disk_ptr->Minor ) + 1;
       case BusQueryHardwareIDs:
 	{
 	  winvblock__uint32 tmp =
-	    swprintf ( buf_512, L"WinVBlock\\AoEe%d.%d", disk_ptr->AoE.Major,
-		       disk_ptr->AoE.Minor ) + 1;
+	    swprintf ( buf_512, L"WinVBlock\\AoEe%d.%d", aoe_disk_ptr->Major,
+		       aoe_disk_ptr->Minor ) + 1;
 	  tmp += swprintf ( &buf_512[tmp], L"GenDisk" ) + 4;
 	  return tmp;
 	}

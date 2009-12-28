@@ -43,13 +43,6 @@
 #include "protocol.h"
 #include "probe.h"
 
-/* in this file */
-winvblock__bool STDCALL Bus_AddChild (
-  IN PDEVICE_OBJECT BusDeviceObject,
-  IN disk__type Disk,
-  IN winvblock__bool Boot
- );
-
 bus__target_list_ptr Bus_Globals_TargetList = NULL;
 KSPIN_LOCK Bus_Globals_TargetListSpinLock;
 static winvblock__uint32 Bus_Globals_NextDisk = 0;
@@ -164,20 +157,6 @@ Bus_CleanupTargetList (
 {
 }
 
-/*
- * Establish a pointer into the bus device's extension space
- */
-bus__type_ptr STDCALL
-get_bus_ptr (
-  driver__dev_ext_ptr dev_ext_ptr
- )
-{
-  winvblock__uint8_ptr tmp = ( winvblock__uint8_ptr ) dev_ext_ptr;
-  bus__type_ptr bus_ptr =
-    ( bus__type_ptr ) ( tmp + sizeof ( driver__dev_ext ) );
-  return bus_ptr;
-}
-
 /**
  * Add a child node to the bus
  *
@@ -190,11 +169,11 @@ get_bus_ptr (
 winvblock__bool STDCALL
 Bus_AddChild (
   IN PDEVICE_OBJECT BusDeviceObject,
-  IN disk__type Disk,
+  IN disk__type_ptr Disk,
   IN winvblock__bool Boot
  )
 {
-	/**
+  /**
    * @v Status              Status of last operation
    * @v BusDeviceExtension  Shortcut to the bus' device extension
    * @v DeviceObject        The new node's device object
@@ -210,11 +189,11 @@ Bus_AddChild (
   disk__type_ptr disk_ptr,
    Walker;
   DEVICE_TYPE DiskType =
-    Disk.DiskType == OpticalDisc ? FILE_DEVICE_CD_ROM : FILE_DEVICE_DISK;
+    Disk->DiskType == OpticalDisc ? FILE_DEVICE_CD_ROM : FILE_DEVICE_DISK;
   winvblock__uint32 DiskType2 =
-    Disk.DiskType ==
-    OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk.
-    DiskType == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
+    Disk->DiskType ==
+    OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk->DiskType
+    == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
 
   DBG ( "Entry\n" );
   /*
@@ -226,8 +205,8 @@ Bus_AddChild (
    * Create the child device
    */
   new_dev_ext_size =
-    sizeof ( driver__dev_ext ) + sizeof ( disk__type ) +
-    driver__handling_table_size + disk__handling_table_size;
+    Disk->dev_ext.size + driver__handling_table_size +
+    disk__handling_table_size;
   if ( !NT_SUCCESS
        ( Status =
 	 IoCreateDevice ( bus_dev_ext_ptr->DriverObject, new_dev_ext_size,
@@ -244,6 +223,14 @@ Bus_AddChild (
    * Clear the extension space and establish parameters
    */
   RtlZeroMemory ( disk_dev_ext_ptr, new_dev_ext_size );
+  /*
+   * Copy the provided disk parameters into the disk extension space
+   */
+  RtlCopyMemory ( disk_dev_ext_ptr, Disk, Disk->dev_ext.size );
+  /*
+   * Establish pointers into the child disk device's extension space
+   */
+  disk_ptr = get_disk_ptr ( disk_dev_ext_ptr );
   disk_dev_ext_ptr->IsBus = FALSE;
   disk_dev_ext_ptr->Self = DeviceObject;
   disk_dev_ext_ptr->DriverObject = bus_dev_ext_ptr->DriverObject;
@@ -251,27 +238,16 @@ Bus_AddChild (
   disk_dev_ext_ptr->OldState = NotStarted;
   disk_dev_ext_ptr->irp_handler_stack_ptr =
     ( irp__handling_ptr ) ( ( winvblock__uint8 * ) disk_dev_ext_ptr +
-			    sizeof ( driver__dev_ext ) +
-			    sizeof ( disk__type ) );
+			    Disk->dev_ext.size );
   RtlCopyMemory ( disk_dev_ext_ptr->irp_handler_stack_ptr,
 		  driver__handling_table, driver__handling_table_size );
-  RtlCopyMemory ( ( winvblock__uint8 * )
-		  disk_dev_ext_ptr->irp_handler_stack_ptr +
-		  driver__handling_table_size, disk__handling_table,
-		  disk__handling_table_size );
+  RtlCopyMemory ( ( winvblock__uint8 * ) disk_dev_ext_ptr->
+		  irp_handler_stack_ptr + driver__handling_table_size,
+		  disk__handling_table, disk__handling_table_size );
   disk_dev_ext_ptr->irp_handler_stack_size =
     ( driver__handling_table_size +
       disk__handling_table_size ) / sizeof ( irp__handling );
 
-  /*
-   * Establish pointers into the child disk device's extension space
-   */
-  disk_ptr = get_disk_ptr ( disk_dev_ext_ptr );
-  /*
-   * Copy the provided disk parameters into the disk extension space
-   */
-  RtlCopyMemory ( disk_ptr, &Disk, sizeof ( disk__type ) );
-  disk_ptr->dev_ext_ptr = disk_dev_ext_ptr;
   disk_ptr->Parent = BusDeviceObject;
   disk_ptr->next_sibling_ptr = NULL;
   KeInitializeEvent ( &disk_ptr->SearchEvent, SynchronizationEvent, FALSE );
@@ -422,8 +398,7 @@ Bus_AddDevice (
   RtlInitUnicodeString ( &DeviceName, L"\\Device\\AoE" );
   RtlInitUnicodeString ( &DosDeviceName, L"\\DosDevices\\AoE" );
   new_dev_ext_size =
-    sizeof ( driver__dev_ext ) + sizeof ( bus__type ) +
-    driver__handling_table_size + handling_table_size;
+    sizeof ( bus__type ) + driver__handling_table_size + handling_table_size;
   if ( !NT_SUCCESS
        ( Status =
 	 IoCreateDevice ( DriverObject, new_dev_ext_size, &DeviceName,
@@ -442,19 +417,19 @@ Bus_AddDevice (
   bus_dev_ext_ptr = ( driver__dev_ext_ptr ) bus__fdo->DeviceExtension;
   RtlZeroMemory ( bus_dev_ext_ptr, new_dev_ext_size );
   bus_dev_ext_ptr->IsBus = TRUE;
+  bus_dev_ext_ptr->size = sizeof ( bus__type );
   bus_dev_ext_ptr->DriverObject = DriverObject;
   bus_dev_ext_ptr->Self = bus__fdo;
   bus_dev_ext_ptr->State = NotStarted;
   bus_dev_ext_ptr->OldState = NotStarted;
   bus_dev_ext_ptr->irp_handler_stack_ptr =
     ( irp__handling_ptr ) ( ( winvblock__uint8 * ) bus_dev_ext_ptr +
-			    sizeof ( driver__dev_ext ) +
 			    sizeof ( bus__type ) );
   RtlCopyMemory ( bus_dev_ext_ptr->irp_handler_stack_ptr,
 		  driver__handling_table, driver__handling_table_size );
-  RtlCopyMemory ( ( winvblock__uint8 * ) bus_dev_ext_ptr->irp_handler_stack_ptr
-		  + driver__handling_table_size, handling_table,
-		  handling_table_size );
+  RtlCopyMemory ( ( winvblock__uint8 * ) bus_dev_ext_ptr->
+		  irp_handler_stack_ptr + driver__handling_table_size,
+		  handling_table, handling_table_size );
   bus_dev_ext_ptr->irp_handler_stack_size =
     ( driver__handling_table_size +
       handling_table_size ) / sizeof ( irp__handling );

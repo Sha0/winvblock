@@ -32,6 +32,7 @@
 #include "irp.h"
 #include "driver.h"
 #include "disk.h"
+#include "ramdisk.h"
 #include "debug.h"
 
 /* With thanks to karyonix, who makes FiraDisk */
@@ -50,11 +51,13 @@ disk__io_decl ( ramdisk__io )
   PHYSICAL_ADDRESS PhysicalAddress;
   winvblock__uint8_ptr PhysicalMemory;
   disk__type_ptr disk_ptr;
+  ramdisk__type_ptr ramdisk_ptr;
 
   /*
-   * Establish a pointer into the disk device's extension space
+   * Establish pointers into the disk device's extension space
    */
   disk_ptr = get_disk_ptr ( dev_ext_ptr );
+  ramdisk_ptr = ramdisk__get_ptr ( dev_ext_ptr );
 
   if ( sector_count < 1 )
     {
@@ -69,7 +72,7 @@ disk__io_decl ( ramdisk__io )
     }
 
   PhysicalAddress.QuadPart =
-    disk_ptr->RAMDisk.DiskBuf + ( start_sector * disk_ptr->SectorSize );
+    ramdisk_ptr->DiskBuf + ( start_sector * disk_ptr->SectorSize );
   /*
    * Possible precision loss
    */
@@ -110,19 +113,20 @@ ramdisk__query_id (
   PWCHAR buf_512
  )
 {
+  ramdisk__type_ptr ramdisk_ptr = ramdisk__get_ptr ( &disk_ptr->dev_ext );
+
   switch ( query_type )
     {
       case BusQueryDeviceID:
 	return swprintf ( buf_512, L"WinVBlock\\RAMDisk%08x",
-			  disk_ptr->RAMDisk.DiskBuf ) + 1;
+			  ramdisk_ptr->DiskBuf ) + 1;
       case BusQueryInstanceID:
-	return swprintf ( buf_512, L"RAMDisk%08x",
-			  disk_ptr->RAMDisk.DiskBuf ) + 1;
+	return swprintf ( buf_512, L"RAMDisk%08x", ramdisk_ptr->DiskBuf ) + 1;
       case BusQueryHardwareIDs:
 	{
 	  winvblock__uint32 tmp =
 	    swprintf ( buf_512, L"WinVBlock\\RAMDisk%08x",
-		       disk_ptr->RAMDisk.DiskBuf ) + 1;
+		       ramdisk_ptr->DiskBuf ) + 1;
 	  tmp +=
 	    swprintf ( &buf_512[tmp],
 		       disk_ptr->DiskType ==

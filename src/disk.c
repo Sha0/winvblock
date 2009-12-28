@@ -49,20 +49,6 @@ __divdi3 (
 }
 #endif
 
-/*
- * Establish a pointer into the child disk device's extension space
- */
-disk__type_ptr STDCALL
-get_disk_ptr (
-  driver__dev_ext_ptr dev_ext_ptr
- )
-{
-  winvblock__uint8_ptr tmp = ( winvblock__uint8_ptr ) dev_ext_ptr;
-  disk__type_ptr disk_ptr =
-    ( disk__type_ptr ) ( tmp + sizeof ( driver__dev_ext ) );
-  return disk_ptr;
-}
-
 static
 irp__handler_decl (
   power

@@ -61,6 +61,7 @@ extern LPWSTR driver__os_load_opts;
 /* Driver-common device extension detail */
 winvblock__def_struct ( driver__dev_ext )
 {
+  size_t size;
   driver__dev_ext_ptr driver_dev_ext;
   winvblock__bool IsBus;	/* For debugging */
   PDEVICE_OBJECT Self;

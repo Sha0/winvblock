@@ -88,10 +88,11 @@ irp__handler_decl (
 		  ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
 		    ( sizeof ( MOUNT_TARGETS ) +
 		      ( count *
-			sizeof ( MOUNT_TARGET ) ) ) ? Stack->
-		    Parameters.DeviceIoControl.OutputBufferLength
-		    : ( sizeof ( MOUNT_TARGETS ) +
-			( count * sizeof ( MOUNT_TARGET ) ) ) ) );
+			sizeof ( MOUNT_TARGET ) ) ) ? Stack->Parameters.
+		    DeviceIoControl.
+		    OutputBufferLength : ( sizeof ( MOUNT_TARGETS ) +
+					   ( count *
+					     sizeof ( MOUNT_TARGET ) ) ) ) );
   ExFreePool ( targets );
 
   KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, irql );
@@ -139,13 +140,16 @@ irp__handler_decl (
   disk_walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
   while ( disk_walker != NULL )
     {
+      aoe__disk_type_ptr aoe_disk_ptr =
+	aoe__get_disk_ptr ( &disk_walker->dev_ext );
+
       disks->Disk[count].Disk = disk_walker->DiskNumber;
-      RtlCopyMemory ( &disks->Disk[count].ClientMac,
-		      &disk_walker->AoE.ClientMac, 6 );
-      RtlCopyMemory ( &disks->Disk[count].ServerMac,
-		      &disk_walker->AoE.ServerMac, 6 );
-      disks->Disk[count].Major = disk_walker->AoE.Major;
-      disks->Disk[count].Minor = disk_walker->AoE.Minor;
+      RtlCopyMemory ( &disks->Disk[count].ClientMac, &aoe_disk_ptr->ClientMac,
+		      6 );
+      RtlCopyMemory ( &disks->Disk[count].ServerMac, &aoe_disk_ptr->ServerMac,
+		      6 );
+      disks->Disk[count].Major = aoe_disk_ptr->Major;
+      disks->Disk[count].Minor = aoe_disk_ptr->Minor;
       disks->Disk[count].LBASize = disk_walker->LBADiskSize;
       count++;
       disk_walker = disk_walker->next_sibling_ptr;
@@ -154,10 +158,11 @@ irp__handler_decl (
 		  ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
 		    ( sizeof ( MOUNT_DISKS ) +
 		      ( count *
-			sizeof ( MOUNT_DISK ) ) ) ? Stack->
-		    Parameters.DeviceIoControl.OutputBufferLength
-		    : ( sizeof ( MOUNT_DISKS ) +
-			( count * sizeof ( MOUNT_DISK ) ) ) ) );
+			sizeof ( MOUNT_DISK ) ) ) ? Stack->Parameters.
+		    DeviceIoControl.
+		    OutputBufferLength : ( sizeof ( MOUNT_DISKS ) +
+					   ( count *
+					     sizeof ( MOUNT_DISK ) ) ) ) );
   ExFreePool ( disks );
 
   return STATUS_SUCCESS;
@@ -169,25 +174,25 @@ irp__handler_decl (
  )
 {
   winvblock__uint8_ptr buffer = Irp->AssociatedIrp.SystemBuffer;
-  disk__type disk;
+  aoe__disk_type aoe_disk;
   bus__type_ptr bus_ptr;
 
   DBG ( "Got IOCTL_AOE_MOUNT for client: %02x:%02x:%02x:%02x:%02x:%02x "
 	"Major:%d Minor:%d\n", buffer[0], buffer[1], buffer[2], buffer[3],
 	buffer[4], buffer[5], *( winvblock__uint16_ptr ) ( &buffer[6] ),
 	( winvblock__uint8 ) buffer[8] );
-  disk.Initialize = AoE_SearchDrive;
-  RtlCopyMemory ( disk.AoE.ClientMac, buffer, 6 );
-  RtlFillMemory ( disk.AoE.ServerMac, 6, 0xff );
-  disk.AoE.Major = *( winvblock__uint16_ptr ) ( &buffer[6] );
-  disk.AoE.Minor = ( winvblock__uint8 ) buffer[8];
-  disk.AoE.MaxSectorsPerPacket = 1;
-  disk.AoE.Timeout = 200000;	/* 20 ms. */
-  disk.IsRamdisk = FALSE;
-  disk.io = aoe__disk_io;
-  disk.max_xfer_len = aoe__max_xfer_len;
-  disk.query_id = aoe__query_id;
-  if ( !Bus_AddChild ( DeviceObject, disk, FALSE ) )
+  aoe_disk.disk.Initialize = AoE_SearchDrive;
+  RtlCopyMemory ( aoe_disk.ClientMac, buffer, 6 );
+  RtlFillMemory ( aoe_disk.ServerMac, 6, 0xff );
+  aoe_disk.Major = *( winvblock__uint16_ptr ) ( &buffer[6] );
+  aoe_disk.Minor = ( winvblock__uint8 ) buffer[8];
+  aoe_disk.MaxSectorsPerPacket = 1;
+  aoe_disk.Timeout = 200000;	/* 20 ms. */
+  aoe_disk.disk.io = aoe__disk_io;
+  aoe_disk.disk.max_xfer_len = aoe__max_xfer_len;
+  aoe_disk.disk.query_id = aoe__query_id;
+  aoe_disk.disk.dev_ext.size = sizeof ( aoe__disk_type );
+  if ( !Bus_AddChild ( DeviceObject, &aoe_disk.disk, FALSE ) )
     {
       DBG ( "Bus_AddChild() failed\n" );
     }

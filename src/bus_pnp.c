@@ -96,7 +96,7 @@ irp__handler_decl ( bus_pnp__remove_dev )
   while ( walker != NULL )
     {
       next = walker->next_sibling_ptr;
-      IoDeleteDevice ( walker->dev_ext_ptr->Self );
+      IoDeleteDevice ( walker->dev_ext.Self );
       walker = next;
     }
   bus_ptr->Children = 0;
@@ -153,8 +153,8 @@ irp__handler_decl ( bus_pnp__query_dev_relations )
   walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
   while ( walker != NULL )
     {
-      ObReferenceObject ( walker->dev_ext_ptr->Self );
-      dev_relations->Objects[count] = walker->dev_ext_ptr->Self;
+      ObReferenceObject ( walker->dev_ext.Self );
+      dev_relations->Objects[count] = walker->dev_ext.Self;
       count++;
       walker = walker->next_sibling_ptr;
     }

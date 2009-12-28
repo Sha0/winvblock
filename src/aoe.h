@@ -28,13 +28,22 @@
  *
  */
 
-#  include "portable.h"
-#  include "driver.h"
-
 #  define htons(x) (winvblock__uint16)((((x) << 8) & 0xff00) | \
                                        (((x) >> 8) & 0xff))
 #  define ntohs(x) (winvblock__uint16)((((x) << 8) & 0xff00) | \
                                        (((x) >> 8) & 0xff))
+
+winvblock__def_struct ( aoe__disk_type )
+{
+  disk__type disk;
+  winvblock__uint32 MTU;
+  winvblock__uint8 ClientMac[6];
+  winvblock__uint8 ServerMac[6];
+  winvblock__uint32 Major;
+  winvblock__uint32 Minor;
+  winvblock__uint32 MaxSectorsPerPacket;
+  winvblock__uint32 Timeout;
+};
 
 extern winvblock__bool STDCALL AoE_SearchDrive (
   IN driver__dev_ext_ptr DeviceExtension
@@ -65,5 +74,21 @@ extern NTSTATUS AoE_Start (
 extern VOID AoE_Stop (
   void
  );
+
+/*
+ * Establish a pointer into the AoE disk device's extension space
+ */
+__inline aoe__disk_type_ptr STDCALL
+aoe__get_disk_ptr (
+  driver__dev_ext_ptr dev_ext_ptr
+ )
+{
+  /*
+   * Since the device extension is the first member of the disk
+   * member of an AoE disk, and the disk structure is itself the
+   * first member of an AoE disk structure, a simple cast will suffice
+   */
+  return ( aoe__disk_type_ptr ) dev_ext_ptr;
+}
 
 #endif				/* _AOE_H */
