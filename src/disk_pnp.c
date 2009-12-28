@@ -47,9 +47,6 @@ irp__handler_decl ( disk_pnp__query_id )
   disk__type_ptr disk_ptr;
 
   disk_ptr = get_disk_ptr ( DeviceExtension );
-  /*
-   * TODO: AoE specifics are in here; move them
-   */
   string =
     ( PWCHAR ) ExAllocatePool ( NonPagedPool, ( 512 * sizeof ( WCHAR ) ) );
   if ( string == NULL )
@@ -60,127 +57,31 @@ irp__handler_decl ( disk_pnp__query_id )
     }
   RtlZeroMemory ( string, ( 512 * sizeof ( WCHAR ) ) );
 
-  switch ( Stack->Parameters.QueryId.IdType )
+  /*
+   * Invoke the specific disk class ID query 
+   */
+  string_length =
+    disk__query_id ( disk_ptr, Stack->Parameters.QueryId.IdType, string );
+
+  if ( string_length == 0 )
     {
-      case BusQueryDeviceID:
-	if ( disk_ptr->IsRamdisk )
-	  {
-	    string_length =
-	      swprintf ( string, L"WinVBlock\\RAMDisk%08x",
-			 disk_ptr->RAMDisk.DiskBuf ) + 1;
-	  }
-	else
-	  {
-	    string_length =
-	      swprintf ( string, L"WinVBlock\\AoEe%d.%d", disk_ptr->AoE.Major,
-			 disk_ptr->AoE.Minor ) + 1;
-	  }
-	Irp->IoStatus.Information =
-	  ( ULONG_PTR ) ExAllocatePool ( PagedPool,
-					 string_length * sizeof ( WCHAR ) );
-	if ( Irp->IoStatus.Information == 0 )
-	  {
-	    DBG ( "ExAllocatePool BusQueryDeviceID\n" );
-	    status = STATUS_INSUFFICIENT_RESOURCES;
-	    goto alloc_info;
-	  }
-	RtlCopyMemory ( ( PWCHAR ) Irp->IoStatus.Information, string,
-			string_length * sizeof ( WCHAR ) );
-	status = STATUS_SUCCESS;
-	goto alloc_info;
-
-      case BusQueryInstanceID:
-	if ( disk_ptr->IsRamdisk )
-	  {
-	    string_length =
-	      swprintf ( string, L"RAMDisk%08x",
-			 disk_ptr->RAMDisk.DiskBuf ) + 1;
-	  }
-	else
-	  {
-	    string_length =
-	      swprintf ( string, L"AOEDISK%d.%d", disk_ptr->AoE.Major,
-			 disk_ptr->AoE.Minor ) + 1;
-	  }
-	Irp->IoStatus.Information =
-	  ( ULONG_PTR ) ExAllocatePool ( PagedPool,
-					 string_length * sizeof ( WCHAR ) );
-	if ( Irp->IoStatus.Information == 0 )
-	  {
-	    DBG ( "ExAllocatePool BusQueryInstanceID\n" );
-	    status = STATUS_INSUFFICIENT_RESOURCES;
-	    goto alloc_info;
-	  }
-	RtlCopyMemory ( ( PWCHAR ) Irp->IoStatus.Information, string,
-			string_length * sizeof ( WCHAR ) );
-	status = STATUS_SUCCESS;
-	goto alloc_string;
-
-      case BusQueryHardwareIDs:
-	if ( disk_ptr->IsRamdisk )
-	  {
-	    string_length =
-	      swprintf ( string, L"WinVBlock\\RAMDisk%08x",
-			 disk_ptr->RAMDisk.DiskBuf ) + 1;
-	    string_length +=
-	      swprintf ( &string[string_length],
-			 disk_ptr->DiskType ==
-			 OpticalDisc ? L"GenCdRom" : disk_ptr->DiskType ==
-			 FloppyDisk ? L"GenSFloppy" : L"GenDisk" ) + 4;
-	  }
-	else
-	  {
-	    string_length =
-	      swprintf ( string, L"WinVBlock\\AoEe%d.%d", disk_ptr->AoE.Major,
-			 disk_ptr->AoE.Minor ) + 1;
-	    string_length +=
-	      swprintf ( &string[string_length], L"GenDisk" ) + 4;
-	  }
-	Irp->IoStatus.Information =
-	  ( ULONG_PTR ) ExAllocatePool ( PagedPool,
-					 string_length * sizeof ( WCHAR ) );
-	if ( Irp->IoStatus.Information == 0 )
-	  {
-	    DBG ( "ExAllocatePool BusQueryHardwareIDs\n" );
-	    status = STATUS_INSUFFICIENT_RESOURCES;
-	    goto alloc_info;
-	  }
-	RtlCopyMemory ( ( PWCHAR ) Irp->IoStatus.Information, string,
-			string_length * sizeof ( WCHAR ) );
-	status = STATUS_SUCCESS;
-	goto alloc_info;
-
-      case BusQueryCompatibleIDs:
-	if ( disk_ptr->IsRamdisk )
-	  {
-	    string_length =
-	      swprintf ( string,
-			 disk_ptr->DiskType ==
-			 OpticalDisc ? L"GenCdRom" : disk_ptr->DiskType ==
-			 FloppyDisk ? L"GenSFloppy" : L"GenDisk" ) + 4;
-	  }
-	else
-	  {
-	    string_length = swprintf ( string, L"GenDisk" ) + 4;
-	  }
-	Irp->IoStatus.Information =
-	  ( ULONG_PTR ) ExAllocatePool ( PagedPool,
-					 string_length * sizeof ( WCHAR ) );
-	if ( Irp->IoStatus.Information == 0 )
-	  {
-	    DBG ( "ExAllocatePool BusQueryCompatibleIDs\n" );
-	    status = STATUS_INSUFFICIENT_RESOURCES;
-	    goto alloc_info;
-	  }
-	RtlCopyMemory ( ( PWCHAR ) Irp->IoStatus.Information, string,
-			string_length * sizeof ( WCHAR ) );
-	status = STATUS_SUCCESS;
-	goto alloc_info;
-
-      default:
-	Irp->IoStatus.Information = 0;
-	status = STATUS_NOT_SUPPORTED;
+      Irp->IoStatus.Information = 0;
+      status = STATUS_NOT_SUPPORTED;
+      goto alloc_info;
     }
+
+  Irp->IoStatus.Information =
+    ( ULONG_PTR ) ExAllocatePool ( PagedPool,
+				   string_length * sizeof ( WCHAR ) );
+  if ( Irp->IoStatus.Information == 0 )
+    {
+      DBG ( "ExAllocatePool failed.\n" );
+      status = STATUS_INSUFFICIENT_RESOURCES;
+      goto alloc_info;
+    }
+  RtlCopyMemory ( ( PWCHAR ) Irp->IoStatus.Information, string,
+		  string_length * sizeof ( WCHAR ) );
+  status = STATUS_SUCCESS;
   /*
    * Irp->IoStatus.Information not freed 
    */

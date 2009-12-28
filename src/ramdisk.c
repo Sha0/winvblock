@@ -24,6 +24,7 @@
  *
  */
 
+#include <stdio.h>
 #include <ntddk.h>
 
 #include "winvblock.h"
@@ -100,4 +101,41 @@ ramdisk__max_xfer_len (
  )
 {
   return 1024 * 1024;
+}
+
+winvblock__uint32
+ramdisk__query_id (
+  disk__type_ptr disk_ptr,
+  BUS_QUERY_ID_TYPE query_type,
+  PWCHAR buf_512
+ )
+{
+  switch ( query_type )
+    {
+      case BusQueryDeviceID:
+	return swprintf ( buf_512, L"WinVBlock\\RAMDisk%08x",
+			  disk_ptr->RAMDisk.DiskBuf ) + 1;
+      case BusQueryInstanceID:
+	return swprintf ( buf_512, L"RAMDisk%08x",
+			  disk_ptr->RAMDisk.DiskBuf ) + 1;
+      case BusQueryHardwareIDs:
+	{
+	  winvblock__uint32 tmp =
+	    swprintf ( buf_512, L"WinVBlock\\RAMDisk%08x",
+		       disk_ptr->RAMDisk.DiskBuf ) + 1;
+	  tmp +=
+	    swprintf ( &buf_512[tmp],
+		       disk_ptr->DiskType ==
+		       OpticalDisc ? L"GenCdRom" : disk_ptr->DiskType ==
+		       FloppyDisk ? L"GenSFloppy" : L"GenDisk" ) + 4;
+	  return tmp;
+	}
+      case BusQueryCompatibleIDs:
+	return swprintf ( buf_512,
+			  disk_ptr->DiskType ==
+			  OpticalDisc ? L"GenCdRom" : disk_ptr->DiskType ==
+			  FloppyDisk ? L"GenSFloppy" : L"GenDisk" ) + 4;
+      default:
+	return 0;
+    }
 }

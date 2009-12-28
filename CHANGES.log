@@ -1,4 +1,20 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Dec 28 04:48:28 2009 -0500
+
+    [disk_pnp] Split ID query logic for disk class
+    
+    The PnP ID query now calls disk__query_id() which in turn
+    calls the disk class-specific function to return the right
+    ID(s) in the passed wide-char string buffer.
+    
+    There should no longer be any checks anywhere for the
+    IsRamdisk boolean member of the disk structure.  Now we
+    are free to remove that member and re-arrange how we use the
+    device extension space, rather than having a union for our
+    difference disk classes.
+
+commit 9368fb48b5e2064a471725f23b0816c474fa741e
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Mon Dec 28 03:19:53 2009 -0500
 
     [disk_dev_ctl] Split MaximumTransferLength logic for disk class

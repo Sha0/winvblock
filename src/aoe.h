@@ -45,6 +45,11 @@ extern disk__io_decl (
 extern winvblock__uint32 aoe__max_xfer_len (
   disk__type_ptr disk_ptr
  );
+extern winvblock__uint32 aoe__query_id (
+  disk__type_ptr disk_ptr,
+  BUS_QUERY_ID_TYPE query_type,
+  PWCHAR buf_512
+ );
 extern NTSTATUS STDCALL AoE_Reply (
   IN winvblock__uint8_ptr SourceMac,
   IN winvblock__uint8_ptr DestinationMac,

@@ -26,6 +26,7 @@
  *
  */
 
+#include <stdio.h>
 #include <ntddk.h>
 
 #include "winvblock.h"
@@ -205,8 +206,8 @@ AoE_Start (
    */
   if ( ( AoE_Globals_ProbeTag->PacketData =
 	 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-					  AoE_Globals_ProbeTag->
-					  PacketSize ) ) == NULL )
+					  AoE_Globals_ProbeTag->PacketSize ) )
+       == NULL )
     {
       DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
       ExFreePool ( AoE_Globals_ProbeTag );
@@ -315,8 +316,9 @@ AoE_Stop (
   while ( DiskSearch != NULL )
     {
       KeSetEvent ( &
-		   ( get_disk_ptr ( DiskSearch->DeviceExtension )->
-		     SearchEvent ), 0, FALSE );
+		   ( get_disk_ptr
+		     ( DiskSearch->DeviceExtension )->SearchEvent ), 0,
+		   FALSE );
       PreviousDiskSearch = DiskSearch;
       DiskSearch = DiskSearch->Next;
       ExFreePool ( PreviousDiskSearch );
@@ -1279,8 +1281,9 @@ AoE_Thread (
 	  AoE_Globals_ProbeTag->PacketData->Tag = AoE_Globals_ProbeTag->Id;
 	  Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
 			  "\xff\xff\xff\xff\xff\xff",
-			  ( winvblock__uint8_ptr ) AoE_Globals_ProbeTag->
-			  PacketData, AoE_Globals_ProbeTag->PacketSize, NULL );
+			  ( winvblock__uint8_ptr )
+			  AoE_Globals_ProbeTag->PacketData,
+			  AoE_Globals_ProbeTag->PacketSize, NULL );
 	  KeQuerySystemTime ( &AoE_Globals_ProbeTag->SendTime );
 	}
 
@@ -1372,4 +1375,34 @@ aoe__max_xfer_len (
  )
 {
   return disk_ptr->SectorSize * disk_ptr->AoE.MaxSectorsPerPacket;
+}
+
+winvblock__uint32
+aoe__query_id (
+  disk__type_ptr disk_ptr,
+  BUS_QUERY_ID_TYPE query_type,
+  PWCHAR buf_512
+ )
+{
+  switch ( query_type )
+    {
+      case BusQueryDeviceID:
+	return swprintf ( buf_512, L"WinVBlock\\AoEe%d.%d",
+			  disk_ptr->AoE.Major, disk_ptr->AoE.Minor ) + 1;
+      case BusQueryInstanceID:
+	return swprintf ( buf_512, L"AOEDISK%d.%d", disk_ptr->AoE.Major,
+			  disk_ptr->AoE.Minor ) + 1;
+      case BusQueryHardwareIDs:
+	{
+	  winvblock__uint32 tmp =
+	    swprintf ( buf_512, L"WinVBlock\\AoEe%d.%d", disk_ptr->AoE.Major,
+		       disk_ptr->AoE.Minor ) + 1;
+	  tmp += swprintf ( &buf_512[tmp], L"GenDisk" ) + 4;
+	  return tmp;
+	}
+      case BusQueryCompatibleIDs:
+	return swprintf ( buf_512, L"GenDisk" ) + 4;
+      default:
+	return 0;
+    }
 }

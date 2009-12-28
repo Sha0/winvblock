@@ -126,6 +126,9 @@ winvblock__def_struct ( disk__type )
   };
   disk__io_routine io;
   winvblock__uint32 ( *max_xfer_len ) ( disk__type_ptr disk_ptr );
+  winvblock__uint32 ( *query_id ) ( disk__type_ptr disk_ptr,
+				    BUS_QUERY_ID_TYPE query_type,
+				    PWCHAR buf_512 );
   LONGLONG LBADiskSize;
   LONGLONG Cylinders;
   winvblock__uint32 Heads;
@@ -166,6 +169,16 @@ disk__max_xfer_len (
  )
 {
   return disk_ptr->max_xfer_len ( disk_ptr );
+}
+
+static __inline winvblock__uint32
+disk__query_id (
+  disk__type_ptr disk_ptr,
+  BUS_QUERY_ID_TYPE query_type,
+  PWCHAR buf_512
+ )
+{
+  return disk_ptr->query_id ( disk_ptr, query_type, buf_512 );
 }
 
 #endif				/* _DISK_H */
