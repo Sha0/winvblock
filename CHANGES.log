@@ -1,4 +1,15 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Dec 28 21:58:36 2009 -0500
+
+    [probe] Split GRUB4DOS out into its own module
+    
+    GRUB4DOS specifics are now in their own module.
+    
+    Probing of the aBFT for a boot-time AoE disk should
+    undergo the same treatment.
+
+commit 91dcb15f46e362f84cfecbbf30783dfafe95534a
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Mon Dec 28 21:38:36 2009 -0500
 
     [probe] Split MEMDISK out into its own module
