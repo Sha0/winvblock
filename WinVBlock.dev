@@ -1,7 +1,7 @@
 [Project]
 FileName=WinVBlock.dev
 Name=WinVBlock
-UnitCount=36
+UnitCount=38
 PchHead=-1
 PchSource=-1
 Ver=3
@@ -435,6 +435,26 @@ BuildCmd=
 
 [Unit19]
 FileName=src\probe.c
+CompileCpp=1
+Folder=WinVBlock
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit37]
+FileName=src\memdisk.h
+CompileCpp=1
+Folder=WinVBlock
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit38]
+FileName=src\memdisk.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1

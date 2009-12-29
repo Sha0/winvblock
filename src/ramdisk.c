@@ -143,3 +143,11 @@ ramdisk__query_id (
 	return 0;
     }
 }
+
+winvblock__bool STDCALL
+ramdisk__no_init (
+  IN driver__dev_ext_ptr dev_ext
+ )
+{
+  return TRUE;
+}

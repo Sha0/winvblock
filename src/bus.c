@@ -37,9 +37,7 @@
 #include "bus.h"
 #include "bus_pnp.h"
 #include "bus_dev_ctl.h"
-#include "aoe.h"
 #include "debug.h"
-#include "mdi.h"
 #include "protocol.h"
 #include "probe.h"
 

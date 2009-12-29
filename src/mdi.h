@@ -11,8 +11,8 @@
  *   Boston MA 02111-1307, USA; either version 2 of the License, or
  *   (at your option) any later version; incorporated herein by reference.
  */
-#ifndef _MDI_H
-#  define _MDI_H
+#ifndef _mdi_h
+#  define _mdi_h
 
 /**
  * @file
@@ -24,7 +24,7 @@
 #  ifdef _MSC_VER
 #    pragma pack(1)
 #  endif
-typedef struct _MDI_PATCHAREA
+winvblock__def_struct ( mdi__patch_area )
 {
   winvblock__uint16 mdi_bytes;
   winvblock__uint8 mdi_version_minor;
@@ -61,7 +61,9 @@ typedef struct _MDI_PATCHAREA
   /*
    * WinVBlock does not need anything more 
    */
-} __attribute__ ( ( __packed__ ) ) MDI_PATCHAREA, *PMDI_PATCHAREA;
+}
+
+__attribute__ ( ( __packed__ ) );
 #  ifdef _MSC_VER
 #    pragma pack()
 #  endif
@@ -69,7 +71,7 @@ typedef struct _MDI_PATCHAREA
 #  ifdef _MSC_VER
 #    pragma pack(1)
 #  endif
-typedef struct _MDI_MBFT
+winvblock__def_struct ( mdi__mbft )
 {
   winvblock__uint8 Signature[4];	/* ("mBFT") */
   winvblock__uint32 Length;
@@ -79,10 +81,12 @@ typedef struct _MDI_MBFT
   winvblock__uint8 OEMTableID[8];
   winvblock__uint8 Reserved1[12];
   winvblock__uint32 SafeHook;
-  MDI_PATCHAREA MDI;
-} __attribute__ ( ( __packed__ ) ) MDI_MBFT, *PMDI_MBFT;
+  mdi__patch_area mdi;
+}
+
+__attribute__ ( ( __packed__ ) );
 #  ifdef _MSC_VER
 #    pragma pack()
 #  endif
 
-#endif				/* _MDI_H */
+#endif				/* _mdi_h */

@@ -1,4 +1,14 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Dec 28 21:38:36 2009 -0500
+
+    [probe] Split MEMDISK out into its own module
+    
+    MEMDISK specifics are now in their own module.
+    
+    GRUB4DOS RAM disks should undergo the same treatment.
+
+commit 043daf101d9baee2381bdac2375ec15929dd625f
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Mon Dec 28 18:38:08 2009 -0500
 
     [major] Turn disk structure inside out

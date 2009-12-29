@@ -1,7 +1,5 @@
 /**
  * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
- * Copyright 2006-2008, V.
- * For WinAoE contact information, see http://winaoe.org/
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -18,47 +16,18 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _probe_h
-#  define _probe_h
+#ifndef _memdisk_h
+#  define _memdisk_h
 
 /**
  * @file
  *
- * Boot-time disk probing specifics
+ * MEMDISK specifics
  *
  */
 
-winvblock__def_struct ( int_vector )
-{
-  winvblock__uint16 Offset;
-  winvblock__uint16 Segment;
-};
-
-#  ifdef _MSC_VER
-#    pragma pack(1)
-#  endif
-winvblock__def_struct ( safe_mbr_hook )
-{
-  winvblock__uint8 Jump[3];
-  winvblock__uint8 Signature[8];
-  winvblock__uint8 VendorID[8];
-  int_vector PrevHook;
-  winvblock__uint32 Flags;
-  winvblock__uint32 mBFT;	/* MEMDISK only */
-}
-
-__attribute__ ( ( __packed__ ) );
-#  ifdef _MSC_VER
-#    pragma pack()
-#  endif
-
-extern safe_mbr_hook_ptr STDCALL get_safe_hook (
-  IN winvblock__uint8_ptr PhysicalMemory,
-  IN int_vector_ptr InterruptVector
- );
-
-extern void probe__disks (
+extern void memdisk__find (
   void
  );
 
-#endif				/* _probe_h */
+#endif				/* _memdisk_h */
