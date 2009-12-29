@@ -1,4 +1,19 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Dec 28 22:28:35 2009 -0500
+
+    [cosmetics] Run indent twice due to indent bug
+    
+    You might or might not have noticed that 'indent' will take
+    a file and change its mind about how to indent it.  Take that
+    resulting file and run 'indent' again and it will put the file
+    back the way it was.  Thus there is an "even" format and an
+    "odd" format.  This is silly.  As a work-around, the indent.sh
+    and indent_add.sh scripts will run 'indent' twice on a file.
+    
+    Yeesh.
+
+commit c5eaee18347fe4bf55ea17b4d37c59ca7f955d91
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Mon Dec 28 22:22:38 2009 -0500
 
     [probe] Split aBFT probing out into the AoE module
