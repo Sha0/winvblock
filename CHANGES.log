@@ -1,4 +1,15 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon Dec 28 22:22:38 2009 -0500
+
+    [probe] Split aBFT probing out into the AoE module
+    
+    Probing of the aBFT for a boot-time AoE disk is now a
+    routine in the AoE module (aoe.c).
+    
+    Testing an AoE SAN-boot from gPXE yielded pleasant results.
+
+commit 6bb7f2b5a8208d4b5a6efcc9c14f8b057f0ad1c9
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Mon Dec 28 21:58:36 2009 -0500
 
     [probe] Split GRUB4DOS out into its own module

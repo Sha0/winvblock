@@ -74,6 +74,9 @@ extern NTSTATUS AoE_Start (
 extern VOID AoE_Stop (
   void
  );
+extern void aoe__process_abft (
+  void
+ );
 
 /*
  * Establish a pointer into the AoE disk device's extension space
