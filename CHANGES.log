@@ -1,4 +1,16 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue Dec 29 02:07:49 2009 -0500
+
+    [filedisk] Introduce skeleton for file-backed disk class
+    
+    A rip-off of the RAM disk module, minus RAM disk functionality.
+    This skeleton will be developed into a file-backed disk class.
+    Currently implemented is a probing routine which will create a
+    single 10 MB dummy HDD which silently discards writes and reads
+    as all zeroes.
+
+commit 2669130893f1f61ae79a069bbd621bcbbf911808
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Mon Dec 28 22:28:35 2009 -0500
 
     [cosmetics] Run indent twice due to indent bug

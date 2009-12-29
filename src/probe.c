@@ -41,6 +41,7 @@
 #include "ramdisk.h"
 #include "memdisk.h"
 #include "grub4dos.h"
+#include "filedisk.h"
 #include "probe.h"
 
 safe_mbr_hook_ptr STDCALL
@@ -80,4 +81,5 @@ probe__disks (
   aoe__process_abft (  );
   memdisk__find (  );
   grub4dos__find (  );
+  filedisk__find (  );
 }
