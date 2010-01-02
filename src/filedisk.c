@@ -41,6 +41,9 @@ disk__io_decl ( filedisk__io )
 {
   disk__type_ptr disk_ptr;
   filedisk__type_ptr filedisk_ptr;
+  LARGE_INTEGER offset;
+  NTSTATUS status;
+  IO_STATUS_BLOCK io_status;
 
   /*
    * Establish pointers into the disk device's extension space
@@ -60,14 +63,19 @@ disk__io_decl ( filedisk__io )
       return STATUS_CANCELLED;
     }
 
+  offset.QuadPart = start_sector * disk_ptr->SectorSize;
   if ( mode == disk__io_mode_write )
-    ( void )0;
+    status =
+      ZwWriteFile ( filedisk_ptr->file, NULL, NULL, NULL, &io_status, buffer,
+		    sector_count * disk_ptr->SectorSize, &offset, NULL );
   else
-    RtlZeroMemory ( buffer, sector_count * disk_ptr->SectorSize );
+    status =
+      ZwReadFile ( filedisk_ptr->file, NULL, NULL, NULL, &io_status, buffer,
+		   sector_count * disk_ptr->SectorSize, &offset, NULL );
   irp->IoStatus.Information = sector_count * disk_ptr->SectorSize;
-  irp->IoStatus.Status = STATUS_SUCCESS;
+  irp->IoStatus.Status = status;
   IoCompleteRequest ( irp, IO_NO_INCREMENT );
-  return STATUS_SUCCESS;
+  return status;
 }
 
 winvblock__uint32
@@ -90,14 +98,15 @@ filedisk__query_id (
   switch ( query_type )
     {
       case BusQueryDeviceID:
-	return swprintf ( buf_512, L"WinVBlock\\FileDisk%08x", 19 ) + 1;
+	return swprintf ( buf_512, L"WinVBlock\\FileDisk%08x",
+			  filedisk_ptr->hash ) + 1;
       case BusQueryInstanceID:
-	return swprintf ( buf_512, L"FileDisk%08x", 19 ) + 1;
+	return swprintf ( buf_512, L"FileDisk%08x", filedisk_ptr->hash ) + 1;
       case BusQueryHardwareIDs:
 	{
 	  winvblock__uint32 tmp =
 	    swprintf ( buf_512, L"WinVBlock\\FileDisk%08x",
-		       19 ) + 1;
+		       filedisk_ptr->hash ) + 1;
 	  tmp +=
 	    swprintf ( &buf_512[tmp],
 		       disk_ptr->DiskType ==
@@ -123,26 +132,81 @@ filedisk__no_init (
   return TRUE;
 }
 
-void
-filedisk__find (
-  void
- )
+irp__handler_decl ( filedisk__attach )
 {
-  filedisk__type filedisk;
   bus__type_ptr bus_ptr;
+  ANSI_STRING file_path1;
+  winvblock__uint8_ptr buf = Irp->AssociatedIrp.SystemBuffer;
+  mount__filedisk_ptr params = ( mount__filedisk_ptr ) buf;
+  UNICODE_STRING file_path2;
+  OBJECT_ATTRIBUTES obj_attrs;
+  NTSTATUS status;
+  HANDLE file = NULL;
+  IO_STATUS_BLOCK io_status;
+  filedisk__type filedisk = { 0 };
 
   /*
    * Establish a pointer into the bus device's extension space
    */
   bus_ptr = get_bus_ptr ( ( driver__dev_ext_ptr ) bus__fdo->DeviceExtension );
+
+  RtlInitAnsiString ( &file_path1,
+		      ( char * )&buf[sizeof ( mount__filedisk )] );
+  status = RtlAnsiStringToUnicodeString ( &file_path2, &file_path1, TRUE );
+  if ( !NT_SUCCESS ( status ) )
+    return status;
+  InitializeObjectAttributes ( &obj_attrs, &file_path2,
+			       OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, NULL,
+			       NULL );
+  /*
+   * FIXME: We leak handles! 
+   */
+  status =
+    ZwCreateFile ( &file, GENERIC_READ | GENERIC_WRITE, &obj_attrs, &io_status,
+		   NULL, FILE_ATTRIBUTE_NORMAL,
+		   FILE_SHARE_READ | FILE_SHARE_DELETE | FILE_SHARE_WRITE,
+		   FILE_OPEN,
+		   FILE_NON_DIRECTORY_FILE | FILE_RANDOM_ACCESS |
+		   FILE_NO_INTERMEDIATE_BUFFERING |
+		   FILE_SYNCHRONOUS_IO_NONALERT, NULL, 0 );
+  RtlFreeUnicodeString ( &file_path2 );
+  if ( !NT_SUCCESS ( status ) )
+    return status;
+
+  filedisk.file = file;
   filedisk.disk.Initialize = filedisk__no_init;
-  filedisk.disk.DiskType = HardDisk;
-  filedisk.disk.SectorSize = 512;
+  switch ( params->type )
+    {
+      case 'f':
+	filedisk.disk.DiskType = FloppyDisk;
+	filedisk.disk.SectorSize = 512;
+	break;
+      case 'c':
+	filedisk.disk.DiskType = OpticalDisc;
+	filedisk.disk.SectorSize = 2048;
+	break;
+      default:
+	filedisk.disk.DiskType = HardDisk;
+	filedisk.disk.SectorSize = 512;
+	break;
+    }
   DBG ( "File-backed disk is type: %d\n", filedisk.disk.DiskType );
-  filedisk.disk.LBADiskSize = 20480;
-  filedisk.disk.Heads = 64;
-  filedisk.disk.Sectors = 32;
-  filedisk.disk.Cylinders = 10;
+  filedisk.disk.Cylinders = params->cylinders;
+  filedisk.disk.Heads = params->heads;
+  filedisk.disk.Sectors = params->sectors;
+  filedisk.disk.LBADiskSize =
+    params->cylinders * params->heads * params->sectors;
+  /*
+   * A really stupid "hash".  RtlHashUnicodeString() would have been
+   * good, but is only available >= Windows XP
+   */
+  filedisk.hash = ( winvblock__uint32 ) filedisk.disk.LBADiskSize;
+  {
+    char *path_iterator = file_path1.Buffer;
+
+    while ( *path_iterator )
+      filedisk.hash += *path_iterator++;
+  }
   filedisk.disk.io = filedisk__io;
   filedisk.disk.max_xfer_len = filedisk__max_xfer_len;
   filedisk.disk.query_id = filedisk__query_id;
@@ -156,4 +220,5 @@ filedisk__find (
       IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
 				    BusRelations );
     }
+  return STATUS_SUCCESS;
 }

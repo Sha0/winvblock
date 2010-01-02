@@ -1523,6 +1523,7 @@ aoe__process_abft (
       aoe_disk.Minor = AoEBootRecord.Minor;
       aoe_disk.MaxSectorsPerPacket = 1;
       aoe_disk.Timeout = 200000;	/* 20 ms. */
+      aoe_disk.disk.BootDrive = TRUE;
       aoe_disk.disk.io = aoe__disk_io;
       aoe_disk.disk.max_xfer_len = aoe__max_xfer_len;
       aoe_disk.disk.query_id = aoe__query_id;

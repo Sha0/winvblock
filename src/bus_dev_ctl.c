@@ -37,6 +37,7 @@
 #include "bus.h"
 #include "debug.h"
 #include "aoe.h"
+#include "filedisk.h"
 
 static
 irp__handler_decl (
@@ -281,6 +282,16 @@ irp__handler_decl ( bus_dev_ctl__dispatch )
 		      completion_ptr );
 	break;
       case IOCTL_AOE_UMOUNT:
+	status =
+	  aoe_umount ( DeviceObject, Irp, Stack, DeviceExtension,
+		       completion_ptr );
+	break;
+      case IOCTL_FILE_ATTACH:
+	status =
+	  filedisk__attach ( DeviceObject, Irp, Stack, DeviceExtension,
+			     completion_ptr );
+	break;
+      case IOCTL_FILE_DETACH:
 	status =
 	  aoe_umount ( DeviceObject, Irp, Stack, DeviceExtension,
 		       completion_ptr );

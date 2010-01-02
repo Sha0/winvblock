@@ -22,7 +22,7 @@ echo [SourceDisksNames] >> bin/winvblk.inf
 echo 0="Install Disk" >> bin/winvblk.inf
 echo. >> bin/winvblk.inf
 echo [SourceDisksFiles] >> bin/winvblk.inf
-echo aoe.exe=0 >> bin/winvblk.inf
+echo winvblk.exe=0 >> bin/winvblk.inf
 echo wvblk32.sys=0 >> bin/winvblk.inf
 echo wvblk64.sys=0 >> bin/winvblk.inf
 echo. >> bin/winvblk.inf
@@ -38,7 +38,7 @@ echo [Files.Driver.NTamd64] >> bin/winvblk.inf
 echo wvblk64.sys >> bin/winvblk.inf
 echo. >> bin/winvblk.inf
 echo [Files.Tools] >> bin/winvblk.inf
-echo aoe.exe >> bin/winvblk.inf
+echo winvblk.exe >> bin/winvblk.inf
 echo. >> bin/winvblk.inf
 echo [WinVBlock] >> bin/winvblk.inf
 echo CopyFiles=Files.Driver,Files.Tools >> bin/winvblk.inf

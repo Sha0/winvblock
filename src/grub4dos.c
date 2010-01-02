@@ -71,7 +71,7 @@ grub4dos__find (
   grub4dos_drive_mapping_ptr Grub4DosDriveMapSlotPtr;
   winvblock__uint32 i = 8;
   winvblock__bool FoundGrub4DosMapping = FALSE;
-  ramdisk__type ramdisk;
+  ramdisk__type ramdisk = { 0 };
   bus__type_ptr bus_ptr;
 
   /*
@@ -161,6 +161,7 @@ grub4dos__find (
 	  ramdisk.disk.Cylinders =
 	    ramdisk.disk.LBADiskSize / ( ramdisk.disk.Heads *
 					 ramdisk.disk.Sectors );
+	  ramdisk.disk.BootDrive = TRUE;
 	  ramdisk.disk.io = ramdisk__io;
 	  ramdisk.disk.max_xfer_len = ramdisk__max_xfer_len;
 	  ramdisk.disk.query_id = ramdisk__query_id;

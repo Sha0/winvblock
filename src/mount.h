@@ -42,6 +42,12 @@
 #  define IOCTL_AOE_UMOUNT CTL_CODE(FILE_DEVICE_CONTROLLER, 0x803,\
                                   METHOD_BUFFERED,\
                                   FILE_READ_DATA | FILE_WRITE_DATA)
+#  define IOCTL_FILE_ATTACH CTL_CODE(FILE_DEVICE_CONTROLLER, 0x804,\
+                                  METHOD_BUFFERED,\
+                                  FILE_READ_DATA | FILE_WRITE_DATA)
+#  define IOCTL_FILE_DETACH CTL_CODE(FILE_DEVICE_CONTROLLER, 0x805,\
+                                  METHOD_BUFFERED,\
+                                  FILE_READ_DATA | FILE_WRITE_DATA)
 
 typedef struct _MOUNT_TARGET
 {
@@ -78,5 +84,13 @@ typedef struct _MOUNT_DISKS
   MOUNT_DISK Disk[];
 } MOUNT_DISKS,
 *PMOUNT_DISKS;
+
+winvblock__def_struct ( mount__filedisk )
+{
+  char type;
+  int cylinders;
+  int heads;
+  int sectors;
+};
 
 #endif				/* _MOUNT_H */

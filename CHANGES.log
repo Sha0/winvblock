@@ -1,4 +1,61 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat Jan 2 17:52:12 2010 -0500
+
+    [filedisk] Initial file-backed disk support
+    
+    Fairly messy, this commit introduces file-backed disk support.
+    
+    The aoe.exe user-mode program has been renamed to winvblk.exe.
+    It now accepts two new commands:
+    
+    winvblk attach \??\<path> <type> <cyls> <heads> <sectors>
+    winvblk detach <disk num>
+    
+    <path> is the file path to a disk image.  For now, you should prefix
+    "\??\" in front of the path.
+    
+    <type> is one of 'f', 'c', 'h' for floppy, optical disc, hard disk,
+    respectively.
+    
+    <cyls> is the cylinder count.  Common values might be:
+    65535: for an optical disc drive
+       80: for a floppy disk
+    
+    <heads> is the count of heads.  Common values might be:
+    255: for an optical disc drive
+      2: for a floppy disk
+    
+    <sectors> is the count of sectors per track, not to be confused
+    with the total sector count for the media.  Common values might be:
+    15: for an optical disc drive
+    18: for a 1.44 MB floppy disk
+    36: for a 2.88 MB floppy disk
+    
+    These geometry parameters are not optional at this time.
+    
+    <disk num> is the internal disk number.  Unfortunately the only
+    way to currently find this out is with 'winvblk show', which yields
+    some garbage since it is interpreting all disks as AoE SANs.  This
+    is obviously a FIXME item.
+    
+    GRUB4DOS and MEMDISK modules also got a slight fix to initialize
+    disk parameters with all zeroes.
+    
+    The file-backed disk logic currently leaks HANDLES, since it does
+    not close them upon a 'detach'.  This is obviously a FIXME item.
+    
+    To prevent duplicate PDOs, every file-backed disk has a 32-bit
+    "hash" which is really just a very stupid attempt at a unique ID
+    based on LBADiskSize and the file path to the disk image.  Heh.
+    
+    Some examples for attaching file-backed disks:
+    
+    winvblk attach \??\d:\RamXP.HDD h 52 128 63
+    winvblk attach \??\d:\some.iso c 65535 255 15
+    winvblk attach \??\d:\floppy144.vfd f 80 2 18
+
+commit c9a4d42ff431d71cd339aaa58be5a2d4ba9e0588
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Tue Dec 29 02:07:49 2009 -0500
 
     [filedisk] Introduce skeleton for file-backed disk class

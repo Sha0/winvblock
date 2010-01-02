@@ -49,7 +49,7 @@ check_mbft (
   winvblock__uint32 i;
   winvblock__uint8 Checksum = 0;
   safe_mbr_hook_ptr AssociatedHook;
-  ramdisk__type ramdisk;
+  ramdisk__type ramdisk = { 0 };
   bus__type_ptr bus_ptr;
 
   /*
@@ -110,6 +110,7 @@ check_mbft (
   ramdisk.disk.Cylinders = mBFT->mdi.cylinders;
   ramdisk.disk.Heads = mBFT->mdi.heads;
   ramdisk.disk.Sectors = mBFT->mdi.sectors;
+  ramdisk.disk.BootDrive = TRUE;
   ramdisk.disk.io = ramdisk__io;
   ramdisk.disk.max_xfer_len = ramdisk__max_xfer_len;
   ramdisk.disk.query_id = ramdisk__query_id;

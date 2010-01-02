@@ -26,26 +26,36 @@
  *
  */
 
-#include "portable.h"
 #include <windows.h>
 #include <winioctl.h>
 #include <stdio.h>
+
+#include "winvblock.h"
+#include "portable.h"
 #include "mount.h"
 
 typedef enum
-{ CommandScan, CommandShow, CommandMount, CommandUmount } COMMAND;
+{ CommandScan, CommandShow, CommandMount, CommandUmount, CommandAttach,
+  CommandDetach
+} COMMAND;
 
 static void
 Help (
   void
  )
 {
-  printf ( "aoe <scan|show|mount|umount>\n\n" );
+  printf ( "winvblk <scan|show|mount|umount|attach|detach>\n\n" );
   printf ( "  scan\n        Shows the reachable AoE targets.\n\n" );
   printf ( "  show\n        Shows the mounted AoE targets.\n\n" );
-  printf
-    ( "  mount <client mac address> <major> <minor>\n        Mounts an AoE target.\n\n" );
+  printf ( "  mount <client mac address> <major> <minor>\n"
+	   "        Mounts an AoE target.\n\n" );
   printf ( "  umount <disk number>\n        Unmounts an AoE disk.\n\n" );
+  printf ( "  attach <filepath> <disk type> <cyls> <heads> <sectors>\n"
+	   "        Attaches <filepath> disk image file.\n"
+	   "        <disk type> is 'f' for floppy, 'c' for CD/DVD, "
+	   "'h' for HDD\n\n" );
+  printf ( "  detach <disk number>\n"
+	   "        Detaches file-backed disk.\n\n" );
 }
 
 int
@@ -57,7 +67,7 @@ main (
 {
   COMMAND Command;
   HANDLE DeviceHandle;
-  winvblock__uint8 InBuffer[1024];
+  winvblock__uint8 InBuffer[sizeof ( mount__filedisk ) + 1024];
   winvblock__uint8 String[256];
   PMOUNT_TARGETS Targets;
   PMOUNT_DISKS Disks;
@@ -90,6 +100,14 @@ main (
     {
       Command = CommandUmount;
     }
+  else if ( strcmp ( argv[1], "attach" ) == 0 )
+    {
+      Command = CommandAttach;
+    }
+  else if ( strcmp ( argv[1], "detach" ) == 0 )
+    {
+      Command = CommandDetach;
+    }
   else
     {
       Help (  );
@@ -99,7 +117,7 @@ main (
     }
 
   DeviceHandle =
-    CreateFile ( "\\\\.\\AoE", GENERIC_READ | GENERIC_WRITE,
+    CreateFile ( "\\\\.\\WinVBlock", GENERIC_READ | GENERIC_WRITE,
 		 FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0,
 		 NULL );
   if ( DeviceHandle == INVALID_HANDLE_VALUE )
@@ -220,7 +238,8 @@ main (
 		 ( int )Major, ( int )Minor, Mac[0], Mac[1], Mac[2], Mac[3],
 		 Mac[4], Mac[5] );
 	memcpy ( &InBuffer[0], Mac, 6 );
-	*( Pwinvblock__uint16 ) ( &InBuffer[6] ) = ( winvblock__uint16 ) Major;
+	*( winvblock__uint16_ptr ) ( &InBuffer[6] ) =
+	  ( winvblock__uint16 ) Major;
 	*( winvblock__uint8_ptr ) ( &InBuffer[8] ) =
 	  ( winvblock__uint8 ) Minor;
 	if ( !DeviceIoControl
@@ -241,8 +260,45 @@ main (
 	    printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
 	  }
 	break;
-    }
+      case CommandAttach:
+	{
+	  mount__filedisk filedisk;
 
+	  if ( argc < 6 )
+	    {
+	      printf ( "Too few parameters.\n" );
+	      Help (  );
+	      CloseHandle ( DeviceHandle );
+	      return 1;
+	    }
+	  filedisk.type = *argv[3];
+	  sscanf ( argv[4], "%d", ( int * )&filedisk.cylinders );
+	  sscanf ( argv[5], "%d", ( int * )&filedisk.heads );
+	  sscanf ( argv[6], "%d", ( int * )&filedisk.sectors );
+	  memcpy ( &InBuffer, &filedisk, sizeof ( mount__filedisk ) );
+	  memcpy ( &InBuffer[sizeof ( mount__filedisk )], argv[2],
+		   strlen ( argv[2] ) + 1 );
+	  if ( !DeviceIoControl
+	       ( DeviceHandle, IOCTL_FILE_ATTACH, InBuffer,
+		 sizeof ( InBuffer ), NULL, 0, &BytesReturned,
+		 ( LPOVERLAPPED ) NULL ) )
+	    {
+	      printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
+	    }
+	  break;
+	}
+      case CommandDetach:
+	sscanf ( argv[2], "%d", ( int * )&Disk );
+	printf ( "Detaching file-backed disk %d\n", ( int )Disk );
+	memcpy ( &InBuffer, &Disk, 4 );
+	if ( !DeviceIoControl
+	     ( DeviceHandle, IOCTL_FILE_DETACH, InBuffer, sizeof ( InBuffer ),
+	       NULL, 0, &BytesReturned, ( LPOVERLAPPED ) NULL ) )
+	  {
+	    printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
+	  }
+	break;
+    }
   CloseHandle ( DeviceHandle );
 
 end:

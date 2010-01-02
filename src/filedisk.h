@@ -29,6 +29,8 @@
 winvblock__def_struct ( filedisk__type )
 {
   disk__type disk;
+  HANDLE file;
+  winvblock__uint32 hash;
 };
 
 extern disk__io_decl (
@@ -62,8 +64,8 @@ filedisk__get_ptr (
 extern winvblock__bool STDCALL filedisk__no_init (
   IN driver__dev_ext_ptr dev_ext
  );
-extern void filedisk__find (
-  void
+extern irp__handler_decl (
+  filedisk__attach
  );
 
 #endif				/* _filedisk_h */

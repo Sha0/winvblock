@@ -26,11 +26,13 @@
  *
  */
 
-#include "portable.h"
 #include <stdio.h>
 #include <windows.h>
 #include <Setupapi.h>
 #include <newdev.h>
+
+#include "winvblock.h"
+#include "portable.h"
 
 #define MAX_CLASS_NAME_LEN 64
 

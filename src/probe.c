@@ -81,5 +81,4 @@ probe__disks (
   aoe__process_abft (  );
   memdisk__find (  );
   grub4dos__find (  );
-  filedisk__find (  );
 }
