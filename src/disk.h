@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _DISK_H
-#  define _DISK_H
+#ifndef _disk_h
+#  define _disk_h
 
 /**
  * @file
@@ -192,7 +192,7 @@ get_disk_ptr (
   return ( disk__type_ptr ) dev_ext_ptr;
 }
 
-static __inline
+__inline
 disk__io_decl (
   disk__io
  )
@@ -208,7 +208,7 @@ disk__io_decl (
 			     buffer, irp );
 }
 
-static __inline
+__inline
 disk__max_xfer_len_decl (
   disk__max_xfer_len
  )
@@ -239,4 +239,4 @@ disk__pnp_id_decl (
   return disk_ptr->ops->pnp_id ( disk_ptr, query_type, buf_512 );
 }
 
-#endif				/* _DISK_H */
+#endif				/* _disk_h */

@@ -1,4 +1,10 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Jan 3 06:45:37 2010 -0500
+
+    [disk] Minor cosmetic touch-ups
+
+commit d7a8f1f5bda8d638f00a9d5669717ffc05c0ad42
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sun Jan 3 06:27:39 2010 -0500
 
     [disk] Abstract disk PnP ID response routine as a disk operation
