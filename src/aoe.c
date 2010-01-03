@@ -113,8 +113,8 @@ __attribute__ ( ( __packed__ ) );
 #  pragma pack()
 #endif
 
-/** A request */
-typedef struct _AOE_REQUEST
+/** An I/O request */
+winvblock__def_struct ( io_req )
 {
   disk__io_mode Mode;
   winvblock__uint32 SectorCount;
@@ -122,15 +122,14 @@ typedef struct _AOE_REQUEST
   PIRP Irp;
   winvblock__uint32 TagCount;
   winvblock__uint32 TotalTags;
-} AOE_REQUEST,
-*PAOE_REQUEST;
+};
 
 /** A tag */
 typedef struct _AOE_TAG
 {
   tag_type type;
   driver__dev_ext_ptr DeviceExtension;
-  PAOE_REQUEST Request;
+  io_req_ptr request_ptr;
   winvblock__uint32 Id;
   packet_ptr packet_data;
   winvblock__uint32 PacketSize;
@@ -334,12 +333,12 @@ AoE_Stop (
   Tag = AoE_Globals_TagList;
   while ( Tag != NULL )
     {
-      if ( Tag->Request != NULL && --Tag->Request->TagCount == 0 )
+      if ( Tag->request_ptr != NULL && --Tag->request_ptr->TagCount == 0 )
 	{
-	  Tag->Request->Irp->IoStatus.Information = 0;
-	  Tag->Request->Irp->IoStatus.Status = STATUS_CANCELLED;
-	  IoCompleteRequest ( Tag->Request->Irp, IO_NO_INCREMENT );
-	  ExFreePool ( Tag->Request );
+	  Tag->request_ptr->Irp->IoStatus.Information = 0;
+	  Tag->request_ptr->Irp->IoStatus.Status = STATUS_CANCELLED;
+	  IoCompleteRequest ( Tag->request_ptr->Irp, IO_NO_INCREMENT );
+	  ExFreePool ( Tag->request_ptr );
 	}
       if ( Tag->Next == NULL )
 	{
@@ -758,7 +757,7 @@ AoE_SearchDrive (
 
 disk__io_decl ( aoe__disk_io )
 {
-  PAOE_REQUEST Request;
+  io_req_ptr request_ptr;
   PAOE_TAG Tag,
    NewTagList = NULL,
     PreviousTag = NULL;
@@ -801,26 +800,26 @@ disk__io_decl ( aoe__disk_io )
   /*
    * Allocate and zero-fill our request 
    */
-  if ( ( Request =
-	 ( PAOE_REQUEST ) ExAllocatePool ( NonPagedPool,
-					   sizeof ( AOE_REQUEST ) ) ) == NULL )
+  if ( ( request_ptr =
+	 ( io_req_ptr ) ExAllocatePool ( NonPagedPool,
+					 sizeof ( io_req ) ) ) == NULL )
     {
-      DBG ( "Couldn't allocate Request; bye!\n" );
+      DBG ( "Couldn't allocate for reques_ptr; bye!\n" );
       irp->IoStatus.Information = 0;
       irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
       IoCompleteRequest ( irp, IO_NO_INCREMENT );
       return STATUS_INSUFFICIENT_RESOURCES;
     }
-  RtlZeroMemory ( Request, sizeof ( AOE_REQUEST ) );
+  RtlZeroMemory ( request_ptr, sizeof ( io_req ) );
 
   /*
    * Initialize the request 
    */
-  Request->Mode = mode;
-  Request->SectorCount = sector_count;
-  Request->Buffer = buffer;
-  Request->Irp = irp;
-  Request->TagCount = 0;
+  request_ptr->Mode = mode;
+  request_ptr->SectorCount = sector_count;
+  request_ptr->Buffer = buffer;
+  request_ptr->Irp = irp;
+  request_ptr->TagCount = 0;
 
   /*
    * Split the requested sectors into packets in tags
@@ -846,7 +845,7 @@ disk__io_decl ( aoe__disk_io )
 	      ExFreePool ( PreviousTag->packet_data );
 	      ExFreePool ( PreviousTag );
 	    }
-	  ExFreePool ( Request );
+	  ExFreePool ( request_ptr );
 	  irp->IoStatus.Information = 0;
 	  irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
 	  IoCompleteRequest ( irp, IO_NO_INCREMENT );
@@ -858,9 +857,9 @@ disk__io_decl ( aoe__disk_io )
        */
       RtlZeroMemory ( Tag, sizeof ( AOE_TAG ) );
       Tag->type = tag_type_io;
-      Tag->Request = Request;
+      Tag->request_ptr = request_ptr;
       Tag->DeviceExtension = dev_ext_ptr;
-      Request->TagCount++;
+      request_ptr->TagCount++;
       Tag->Id = 0;
       Tag->BufferOffset = i * disk_ptr->SectorSize;
       Tag->SectorCount =
@@ -892,7 +891,7 @@ disk__io_decl ( aoe__disk_io )
 	      ExFreePool ( PreviousTag->packet_data );
 	      ExFreePool ( PreviousTag );
 	    }
-	  ExFreePool ( Request );
+	  ExFreePool ( request_ptr );
 	  irp->IoStatus.Information = 0;
 	  irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
 	  IoCompleteRequest ( irp, IO_NO_INCREMENT );
@@ -954,7 +953,7 @@ disk__io_decl ( aoe__disk_io )
   /*
    * Split the requested sectors into packets in tags
    */
-  Request->TotalTags = Request->TagCount;
+  request_ptr->TotalTags = request_ptr->TagCount;
 
   /*
    * Wait until we have the global spin-lock 
@@ -1185,21 +1184,21 @@ AoE_Reply (
 	/*
 	 * If the reply is in response to a read request, get our data! 
 	 */
-	if ( Tag->Request->Mode == disk__io_mode_read )
-	  RtlCopyMemory ( &Tag->Request->Buffer[Tag->BufferOffset],
+	if ( Tag->request_ptr->Mode == disk__io_mode_read )
+	  RtlCopyMemory ( &Tag->request_ptr->Buffer[Tag->BufferOffset],
 			  reply->Data,
 			  Tag->SectorCount * disk_ptr->SectorSize );
 	/*
 	 * If this is the last reply expected for the read request,
 	 * complete the IRP and free the request
 	 */
-	if ( InterlockedDecrement ( &Tag->Request->TagCount ) == 0 )
+	if ( InterlockedDecrement ( &Tag->request_ptr->TagCount ) == 0 )
 	  {
-	    Tag->Request->Irp->IoStatus.Information =
-	      Tag->Request->SectorCount * disk_ptr->SectorSize;
-	    Tag->Request->Irp->IoStatus.Status = STATUS_SUCCESS;
-	    Driver_CompletePendingIrp ( Tag->Request->Irp );
-	    ExFreePool ( Tag->Request );
+	    Tag->request_ptr->Irp->IoStatus.Information =
+	      Tag->request_ptr->SectorCount * disk_ptr->SectorSize;
+	    Tag->request_ptr->Irp->IoStatus.Status = STATUS_SUCCESS;
+	    Driver_CompletePendingIrp ( Tag->request_ptr->Irp );
+	    ExFreePool ( Tag->request_ptr );
 	  }
 	break;
       default:

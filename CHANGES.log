@@ -1,4 +1,10 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat Jan 2 20:36:07 2010 -0500
+
+    [aoe] AOE_REQUEST renamed to io_req
+
+commit ac1ef556e281c04e4f205cb1470dede340abfa95
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sat Jan 2 20:23:22 2010 -0500
 
     [aoe] AOE_PACKET renamed to packet
