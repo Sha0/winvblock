@@ -1398,11 +1398,9 @@ disk__max_xfer_len_decl (
   return disk_ptr->SectorSize * aoe_disk_ptr->MaxSectorsPerPacket;
 }
 
-winvblock__uint32
-aoe__query_id (
-  disk__type_ptr disk_ptr,
-  BUS_QUERY_ID_TYPE query_type,
-  PWCHAR buf_512
+static
+disk__pnp_id_decl (
+  query_id
  )
 {
   aoe__disk_type_ptr aoe_disk_ptr = aoe__get_disk_ptr ( &disk_ptr->dev_ext );
@@ -1456,7 +1454,8 @@ __attribute__ ( ( __packed__ ) );
 disk__ops aoe__default_ops = {
   io,
   max_xfer_len,
-  init
+  init,
+  query_id
 };
 
 void
@@ -1542,7 +1541,6 @@ aoe__process_abft (
       aoe_disk.Timeout = 200000;	/* 20 ms. */
       aoe_disk.disk.BootDrive = TRUE;
       aoe_disk.disk.ops = &aoe__default_ops;
-      aoe_disk.disk.query_id = aoe__query_id;
       aoe_disk.disk.dev_ext.size = sizeof ( aoe__disk_type );
 
       if ( !Bus_AddChild ( bus__fdo, &aoe_disk.disk, TRUE ) )

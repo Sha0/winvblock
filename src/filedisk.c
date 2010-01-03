@@ -81,11 +81,9 @@ disk__io_decl (
   return status;
 }
 
-winvblock__uint32
-filedisk__query_id (
-  disk__type_ptr disk_ptr,
-  BUS_QUERY_ID_TYPE query_type,
-  PWCHAR buf_512
+static
+disk__pnp_id_decl (
+  query_id
  )
 {
   filedisk__type_ptr filedisk_ptr = filedisk__get_ptr ( &disk_ptr->dev_ext );
@@ -198,7 +196,6 @@ irp__handler_decl ( filedisk__attach )
       filedisk.hash += *path_iterator++;
   }
   filedisk.disk.ops = &default_ops;
-  filedisk.disk.query_id = filedisk__query_id;
   filedisk.disk.dev_ext.size = sizeof ( filedisk__type );
   if ( !Bus_AddChild ( bus__fdo, &filedisk.disk, TRUE ) )
     {
@@ -215,5 +212,6 @@ irp__handler_decl ( filedisk__attach )
 static disk__ops default_ops = {
   io,
   disk__default_max_xfer_len,
-  disk__default_init
+  disk__default_init,
+  query_id
 };

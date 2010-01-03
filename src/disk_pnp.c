@@ -135,7 +135,7 @@ irp__handler_decl ( disk_pnp__query_dev_text )
 
       case DeviceTextLocationInformation:
 	string_length =
-	  disk_ptr->query_id ( disk_ptr, BusQueryInstanceID, string );
+	  disk__query_id ( disk_ptr, BusQueryInstanceID, string );
 	Irp->IoStatus.Information =
 	  ( ULONG_PTR ) ExAllocatePool ( PagedPool,
 					 string_length * sizeof ( WCHAR ) );

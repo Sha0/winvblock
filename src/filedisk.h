@@ -33,12 +33,6 @@ winvblock__def_struct ( filedisk__type )
   winvblock__uint32 hash;
 };
 
-extern winvblock__uint32 filedisk__query_id (
-  disk__type_ptr disk_ptr,
-  BUS_QUERY_ID_TYPE query_type,
-  PWCHAR buf_512
- );
-
 /*
  * Establish a pointer into the file-backed disk device's extension space
  */

@@ -1,4 +1,13 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Jan 3 06:27:39 2010 -0500
+
+    [disk] Abstract disk PnP ID response routine as a disk operation
+    
+    Each disk class implements their own PnP ID response routine,
+    so we formalize this as a disk operation.
+
+commit 7fa951e723d20f39636d66ff14a7df0cb1b6b995
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sun Jan 3 05:53:25 2010 -0500
 
     [disk] Abstract initialization routine as a disk operation

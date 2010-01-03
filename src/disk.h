@@ -121,11 +121,37 @@ extern disk__init_decl (
   disk__default_init
  );
 
+/**
+ * Disk PnP ID reponse routine
+ *
+ * @v disk_ptr        The disk device being queried
+ * @v query_type      The query type
+ * @v buf_512         Wide character 512-element buffer for ID response
+ *
+ * Returns the number of wide characters in the response.
+ */
+#  define disk__pnp_id_decl( x ) \
+\
+winvblock__uint32 STDCALL \
+x ( \
+  IN disk__type_ptr disk_ptr, \
+  IN BUS_QUERY_ID_TYPE query_type, \
+  OUT PWCHAR buf_512 \
+ )
+/*
+ * Function pointer for a disk PnP response routine.
+ * 'indent' mangles this, so it looks weird
+ */
+typedef disk__pnp_id_decl (
+   ( *disk__pnp_id_routine )
+ );
+
 winvblock__def_struct ( disk__ops )
 {
   disk__io_routine io;
   disk__max_xfer_len_routine max_xfer_len;
   disk__init_routine init;
+  disk__pnp_id_routine pnp_id;
 };
 
 struct _disk__type
@@ -140,13 +166,6 @@ struct _disk__type
   winvblock__uint32 DiskNumber;
   disk__media media;
   disk__ops_ptr ops;
-   winvblock__uint32 (
-  *query_id
-   ) (
-  disk__type_ptr disk_ptr,
-  BUS_QUERY_ID_TYPE query_type,
-  PWCHAR buf_512
-   );
   LONGLONG LBADiskSize;
   LONGLONG Cylinders;
   winvblock__uint32 Heads;
@@ -212,14 +231,12 @@ disk__init_decl (
   return disk_ptr->ops->init ( dev_ext_ptr );
 }
 
-static __inline winvblock__uint32
-disk__query_id (
-  disk__type_ptr disk_ptr,
-  BUS_QUERY_ID_TYPE query_type,
-  PWCHAR buf_512
+__inline
+disk__pnp_id_decl (
+  disk__query_id
  )
 {
-  return disk_ptr->query_id ( disk_ptr, query_type, buf_512 );
+  return disk_ptr->ops->pnp_id ( disk_ptr, query_type, buf_512 );
 }
 
 #endif				/* _DISK_H */

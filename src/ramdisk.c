@@ -101,11 +101,9 @@ disk__io_decl (
   return STATUS_SUCCESS;
 }
 
-winvblock__uint32
-ramdisk__query_id (
-  disk__type_ptr disk_ptr,
-  BUS_QUERY_ID_TYPE query_type,
-  PWCHAR buf_512
+static
+disk__pnp_id_decl (
+  query_id
  )
 {
   ramdisk__type_ptr ramdisk_ptr = ramdisk__get_ptr ( &disk_ptr->dev_ext );
@@ -144,5 +142,6 @@ ramdisk__query_id (
 disk__ops ramdisk__default_ops = {
   io,
   disk__default_max_xfer_len,
-  disk__default_init
+  disk__default_init,
+  query_id
 };
