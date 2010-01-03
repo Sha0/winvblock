@@ -129,16 +129,18 @@ ramdisk__query_id (
 		       ramdisk_ptr->DiskBuf ) + 1;
 	  tmp +=
 	    swprintf ( &buf_512[tmp],
-		       disk_ptr->DiskType ==
-		       OpticalDisc ? L"GenCdRom" : disk_ptr->DiskType ==
-		       FloppyDisk ? L"GenSFloppy" : L"GenDisk" ) + 4;
+		       disk_ptr->media ==
+		       disk__media_optical ? L"GenCdRom" : disk_ptr->media ==
+		       disk__media_floppy ? L"GenSFloppy" : L"GenDisk" ) + 4;
 	  return tmp;
 	}
       case BusQueryCompatibleIDs:
 	return swprintf ( buf_512,
-			  disk_ptr->DiskType ==
-			  OpticalDisc ? L"GenCdRom" : disk_ptr->DiskType ==
-			  FloppyDisk ? L"GenSFloppy" : L"GenDisk" ) + 4;
+			  disk_ptr->media ==
+			  disk__media_optical ? L"GenCdRom" : disk_ptr->media
+			  ==
+			  disk__media_floppy ? L"GenSFloppy" : L"GenDisk" ) +
+	  4;
       default:
 	return 0;
     }

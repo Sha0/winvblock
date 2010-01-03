@@ -109,16 +109,18 @@ filedisk__query_id (
 		       filedisk_ptr->hash ) + 1;
 	  tmp +=
 	    swprintf ( &buf_512[tmp],
-		       disk_ptr->DiskType ==
-		       OpticalDisc ? L"GenCdRom" : disk_ptr->DiskType ==
-		       FloppyDisk ? L"GenSFloppy" : L"GenDisk" ) + 4;
+		       disk_ptr->media ==
+		       disk__media_optical ? L"GenCdRom" : disk_ptr->media ==
+		       disk__media_floppy ? L"GenSFloppy" : L"GenDisk" ) + 4;
 	  return tmp;
 	}
       case BusQueryCompatibleIDs:
 	return swprintf ( buf_512,
-			  disk_ptr->DiskType ==
-			  OpticalDisc ? L"GenCdRom" : disk_ptr->DiskType ==
-			  FloppyDisk ? L"GenSFloppy" : L"GenDisk" ) + 4;
+			  disk_ptr->media ==
+			  disk__media_optical ? L"GenCdRom" : disk_ptr->media
+			  ==
+			  disk__media_floppy ? L"GenSFloppy" : L"GenDisk" ) +
+	  4;
       default:
 	return 0;
     }
@@ -178,19 +180,19 @@ irp__handler_decl ( filedisk__attach )
   switch ( params->type )
     {
       case 'f':
-	filedisk.disk.DiskType = FloppyDisk;
+	filedisk.disk.media = disk__media_floppy;
 	filedisk.disk.SectorSize = 512;
 	break;
       case 'c':
-	filedisk.disk.DiskType = OpticalDisc;
+	filedisk.disk.media = disk__media_optical;
 	filedisk.disk.SectorSize = 2048;
 	break;
       default:
-	filedisk.disk.DiskType = HardDisk;
+	filedisk.disk.media = disk__media_hard;
 	filedisk.disk.SectorSize = 512;
 	break;
     }
-  DBG ( "File-backed disk is type: %d\n", filedisk.disk.DiskType );
+  DBG ( "File-backed disk is type: %d\n", filedisk.disk.media );
   filedisk.disk.Cylinders = params->cylinders;
   filedisk.disk.Heads = params->heads;
   filedisk.disk.Sectors = params->sectors;

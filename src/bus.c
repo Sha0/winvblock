@@ -187,11 +187,12 @@ Bus_AddChild (
   disk__type_ptr disk_ptr,
    Walker;
   DEVICE_TYPE DiskType =
-    Disk->DiskType == OpticalDisc ? FILE_DEVICE_CD_ROM : FILE_DEVICE_DISK;
+    Disk->media == disk__media_optical ? FILE_DEVICE_CD_ROM : FILE_DEVICE_DISK;
   winvblock__uint32 DiskType2 =
-    Disk->DiskType ==
-    OpticalDisc ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA : Disk->DiskType
-    == FloppyDisk ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
+    Disk->media ==
+    disk__media_optical ? FILE_READ_ONLY_DEVICE | FILE_REMOVABLE_MEDIA :
+    Disk->media ==
+    disk__media_floppy ? FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE : 0;
 
   DBG ( "Entry\n" );
   /*

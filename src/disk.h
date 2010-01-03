@@ -28,12 +28,13 @@
  *
  */
 
-enum DISK_DISKTYPE
+enum _disk__media
 {
-  FloppyDisk,
-  HardDisk,
-  OpticalDisc
+  disk__media_floppy,
+  disk__media_hard,
+  disk__media_optical
 };
+winvblock__def_enum ( disk__media );
 
 enum _disk__io_mode
 {
@@ -95,7 +96,7 @@ winvblock__def_struct ( disk__type )
   winvblock__bool BootDrive;
   winvblock__bool Unmount;
   winvblock__uint32 DiskNumber;
-  winvblock__uint32 DiskType;
+  disk__media media;
   winvblock__bool STDCALL (
   *Initialize
    ) (

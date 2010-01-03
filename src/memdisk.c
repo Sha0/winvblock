@@ -95,18 +95,18 @@ check_mbft (
   ramdisk.disk.LBADiskSize = ramdisk.DiskSize = mBFT->mdi.disksize;
   if ( mBFT->mdi.driveno == 0xE0 )
     {
-      ramdisk.disk.DiskType = OpticalDisc;
+      ramdisk.disk.media = disk__media_optical;
       ramdisk.disk.SectorSize = 2048;
     }
   else
     {
       if ( mBFT->mdi.driveno & 0x80 )
-	ramdisk.disk.DiskType = HardDisk;
+	ramdisk.disk.media = disk__media_hard;
       else
-	ramdisk.disk.DiskType = FloppyDisk;
+	ramdisk.disk.media = disk__media_floppy;
       ramdisk.disk.SectorSize = 512;
     }
-  DBG ( "RAM Drive is type: %d\n", ramdisk.disk.DiskType );
+  DBG ( "RAM Drive is type: %d\n", ramdisk.disk.media );
   ramdisk.disk.Cylinders = mBFT->mdi.cylinders;
   ramdisk.disk.Heads = mBFT->mdi.heads;
   ramdisk.disk.Sectors = mBFT->mdi.sectors;

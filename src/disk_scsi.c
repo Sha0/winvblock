@@ -313,7 +313,7 @@ scsi_op (
   mode_param_header = ( PMODE_PARAMETER_HEADER ) Srb->DataBuffer;
   RtlZeroMemory ( mode_param_header, Srb->DataTransferLength );
   mode_param_header->ModeDataLength = sizeof ( MODE_PARAMETER_HEADER );
-  if ( disk_ptr->DiskType == HardDisk )
+  if ( disk_ptr->media == disk__media_hard )
     mode_param_header->MediumType = FixedMedia;
   else
     mode_param_header->MediumType = RemovableMedia;

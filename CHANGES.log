@@ -1,4 +1,14 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Jan 3 03:08:59 2010 -0500
+
+    [disk] DISK_DISKTYPE renamed to disk__media
+    
+    FloppyDisk renamed to disk__media_floppy
+    HardDisk renamed to disk__media_hard
+    OpticalDisc renamed to disk__media_optical
+
+commit 27e0c774d2f2858b3ac5b329788437b6eac34b81
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sat Jan 2 21:41:46 2010 -0500
 
     [aoe] AOE_DISKSEARCH renamed to disk_search

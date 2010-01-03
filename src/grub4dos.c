@@ -140,17 +140,17 @@ grub4dos__find (
 	   */
 	  if ( Grub4DosDriveMapSlotPtr[i].SourceODD )
 	    {
-	      ramdisk.disk.DiskType = OpticalDisc;
+	      ramdisk.disk.media = disk__media_optical;
 	      ramdisk.disk.SectorSize = 2048;
 	    }
 	  else
 	    {
-	      ramdisk.disk.DiskType =
-		Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ? HardDisk :
-		FloppyDisk;
+	      ramdisk.disk.media =
+		Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ?
+		disk__media_hard : disk__media_floppy;
 	      ramdisk.disk.SectorSize = 512;
 	    }
-	  DBG ( "RAM Drive is type: %d\n", ramdisk.disk.DiskType );
+	  DBG ( "RAM Drive is type: %d\n", ramdisk.disk.media );
 	  ramdisk.DiskBuf =
 	    ( winvblock__uint32 ) ( Grub4DosDriveMapSlotPtr[i].SectorStart *
 				    512 );
