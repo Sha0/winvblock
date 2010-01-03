@@ -102,14 +102,6 @@ disk__io_decl (
 }
 
 winvblock__uint32
-ramdisk__max_xfer_len (
-  disk__type_ptr disk_ptr
- )
-{
-  return 1024 * 1024;
-}
-
-winvblock__uint32
 ramdisk__query_id (
   disk__type_ptr disk_ptr,
   BUS_QUERY_ID_TYPE query_type,
@@ -158,5 +150,6 @@ ramdisk__no_init (
 }
 
 disk__ops ramdisk__default_ops = {
-  io
+  io,
+  disk__default_max_xfer_len
 };

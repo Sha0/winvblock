@@ -43,6 +43,9 @@ enum _disk__io_mode
 };
 winvblock__def_enum ( disk__io_mode );
 
+/* Forward declaration */
+winvblock__def_struct ( disk__type );
+
 /**
  * I/O Request
  *
@@ -72,12 +75,36 @@ typedef disk__io_decl (
    ( *disk__io_routine )
  );
 
+/**
+ * Maximum transfer length response routine
+ *
+ * @v disk_ptr        The disk being queried
+ */
+#  define disk__max_xfer_len_decl( x ) \
+\
+winvblock__uint32 \
+x ( \
+  IN disk__type_ptr disk_ptr \
+ )
+/*
+ * Function pointer for a maximum transfer length response routine.
+ * 'indent' mangles this, so it looks weird
+ */
+typedef disk__max_xfer_len_decl (
+   ( *disk__max_xfer_len_routine )
+ );
+
+extern disk__max_xfer_len_decl (
+  disk__default_max_xfer_len
+ );
+
 winvblock__def_struct ( disk__ops )
 {
   disk__io_routine io;
+  disk__max_xfer_len_routine max_xfer_len;
 };
 
-winvblock__def_struct ( disk__type )
+struct _disk__type
 {
   driver__dev_ext dev_ext;
   PDEVICE_OBJECT Parent;
@@ -94,10 +121,13 @@ winvblock__def_struct ( disk__type )
   IN struct _driver__dev_ext * DeviceExtension
    );
   disk__ops_ptr ops;
-  winvblock__uint32 ( *max_xfer_len ) ( disk__type_ptr disk_ptr );
-  winvblock__uint32 ( *query_id ) ( disk__type_ptr disk_ptr,
-				    BUS_QUERY_ID_TYPE query_type,
-				    PWCHAR buf_512 );
+   winvblock__uint32 (
+  *query_id
+   ) (
+  disk__type_ptr disk_ptr,
+  BUS_QUERY_ID_TYPE query_type,
+  PWCHAR buf_512
+   );
   LONGLONG LBADiskSize;
   LONGLONG Cylinders;
   winvblock__uint32 Heads;
@@ -140,12 +170,12 @@ disk__io_decl (
 			     buffer, irp );
 }
 
-static __inline winvblock__uint32
-disk__max_xfer_len (
-  disk__type_ptr disk_ptr
+static __inline
+disk__max_xfer_len_decl (
+  disk__max_xfer_len
  )
 {
-  return disk_ptr->max_xfer_len ( disk_ptr );
+  return disk_ptr->ops->max_xfer_len ( disk_ptr );
 }
 
 static __inline winvblock__uint32

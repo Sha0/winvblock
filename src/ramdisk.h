@@ -34,9 +34,6 @@ winvblock__def_struct ( ramdisk__type )
 };
 
 extern disk__ops ramdisk__default_ops;
-extern winvblock__uint32 ramdisk__max_xfer_len (
-  disk__type_ptr disk_ptr
- );
 extern winvblock__uint32 ramdisk__query_id (
   disk__type_ptr disk_ptr,
   BUS_QUERY_ID_TYPE query_type,

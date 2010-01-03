@@ -190,7 +190,6 @@ irp__handler_decl (
   aoe_disk.MaxSectorsPerPacket = 1;
   aoe_disk.Timeout = 200000;	/* 20 ms. */
   aoe_disk.disk.ops = &aoe__default_ops;
-  aoe_disk.disk.max_xfer_len = aoe__max_xfer_len;
   aoe_disk.disk.query_id = aoe__query_id;
   aoe_disk.disk.dev_ext.size = sizeof ( aoe__disk_type );
   if ( !Bus_AddChild ( DeviceObject, &aoe_disk.disk, FALSE ) )

@@ -63,9 +63,6 @@ extern winvblock__bool STDCALL AoE_SearchDrive (
   IN driver__dev_ext_ptr DeviceExtension
  );
 extern disk__ops aoe__default_ops;
-extern winvblock__uint32 aoe__max_xfer_len (
-  disk__type_ptr disk_ptr
- );
 extern winvblock__uint32 aoe__query_id (
   disk__type_ptr disk_ptr,
   BUS_QUERY_ID_TYPE query_type,

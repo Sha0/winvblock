@@ -163,7 +163,6 @@ grub4dos__find (
 					 ramdisk.disk.Sectors );
 	  ramdisk.disk.BootDrive = TRUE;
 	  ramdisk.disk.ops = &ramdisk__default_ops;
-	  ramdisk.disk.max_xfer_len = ramdisk__max_xfer_len;
 	  ramdisk.disk.query_id = ramdisk__query_id;
 	  ramdisk.disk.dev_ext.size = sizeof ( ramdisk__type );
 	  FoundGrub4DosMapping = TRUE;

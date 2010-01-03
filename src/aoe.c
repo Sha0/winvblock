@@ -1389,9 +1389,9 @@ thread (
     }
 }
 
-winvblock__uint32
-aoe__max_xfer_len (
-  disk__type_ptr disk_ptr
+static
+disk__max_xfer_len_decl (
+  max_xfer_len
  )
 {
   aoe__disk_type_ptr aoe_disk_ptr = aoe__get_disk_ptr ( &disk_ptr->dev_ext );
@@ -1455,7 +1455,8 @@ __attribute__ ( ( __packed__ ) );
 #endif
 
 disk__ops aoe__default_ops = {
-  io
+  io,
+  max_xfer_len
 };
 
 void
@@ -1542,7 +1543,6 @@ aoe__process_abft (
       aoe_disk.Timeout = 200000;	/* 20 ms. */
       aoe_disk.disk.BootDrive = TRUE;
       aoe_disk.disk.ops = &aoe__default_ops;
-      aoe_disk.disk.max_xfer_len = aoe__max_xfer_len;
       aoe_disk.disk.query_id = aoe__query_id;
       aoe_disk.disk.dev_ext.size = sizeof ( aoe__disk_type );
 
