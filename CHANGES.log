@@ -1,4 +1,13 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat Jan 2 19:56:07 2010 -0500
+
+    [aoe] AOE_TAGTYPE renamed to tag_type
+    
+    AoE_RequestType renamed to tag_type_io
+    AoE_SearchDriveType renamed to tag_type_search_drive
+
+commit f750eb04802d25a9f4f25d34c92ac0397f93980d
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sat Jan 2 19:35:01 2010 -0500
 
     [aoe] AoE_Thread renamed to thread

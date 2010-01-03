@@ -52,14 +52,17 @@ static void STDCALL thread (
   IN void *StartContext
  );
 
+/** Tag types */
+enum _tag_type
+{
+  tag_type_io,
+  tag_type_search_drive
+};
+winvblock__def_enum ( tag_type );
+
 #ifdef _MSC_VER
 #  pragma pack(1)
 #endif
-
-/** Tag types */
-typedef enum
-{ AoE_RequestType, AoE_SearchDriveType } AOE_TAGTYPE,
-*PAOE_TAGTYPE;
 
 /** AoE packet */
 typedef struct _AOE_PACKET
@@ -123,7 +126,7 @@ typedef struct _AOE_REQUEST
 /** A tag */
 typedef struct _AOE_TAG
 {
-  AOE_TAGTYPE Type;
+  tag_type type;
   driver__dev_ext_ptr DeviceExtension;
   PAOE_REQUEST Request;
   winvblock__uint32 Id;
@@ -656,7 +659,7 @@ AoE_SearchDrive (
 	  continue;
 	}
       RtlZeroMemory ( Tag, sizeof ( AOE_TAG ) );
-      Tag->Type = AoE_SearchDriveType;
+      Tag->type = tag_type_search_drive;
       Tag->DeviceExtension = DeviceExtension;
 
       /*
@@ -852,7 +855,7 @@ disk__io_decl ( aoe__disk_io )
        * Initialize each tag 
        */
       RtlZeroMemory ( Tag, sizeof ( AOE_TAG ) );
-      Tag->Type = AoE_RequestType;
+      Tag->type = tag_type_io;
       Tag->Request = Request;
       Tag->DeviceExtension = dev_ext_ptr;
       Request->TagCount++;
@@ -1104,9 +1107,9 @@ AoE_Reply (
   if ( aoe_disk_ptr->Timeout > 100000000 )
     aoe_disk_ptr->Timeout = 100000000;
 
-  switch ( Tag->Type )
+  switch ( Tag->type )
     {
-      case AoE_SearchDriveType:
+      case tag_type_search_drive:
 	KeAcquireSpinLock ( &disk_ptr->SpinLock, &Irql );
 	switch ( disk_ptr->SearchState )
 	  {
@@ -1176,7 +1179,7 @@ AoE_Reply (
 	KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
 	KeSetEvent ( &disk_ptr->SearchEvent, 0, FALSE );
 	break;
-      case AoE_RequestType:
+      case tag_type_io:
 	/*
 	 * If the reply is in response to a read request, get our data! 
 	 */
