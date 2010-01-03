@@ -65,13 +65,13 @@ extern NTSTATUS STDCALL AoE_Reply (
   IN winvblock__uint8_ptr Data,
   IN winvblock__uint32 DataSize
  );
-extern VOID AoE_ResetProbe (
+extern void AoE_ResetProbe (
   void
  );
 extern NTSTATUS AoE_Start (
   void
  );
-extern VOID AoE_Stop (
+extern void AoE_Stop (
   void
  );
 extern void aoe__process_abft (

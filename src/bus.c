@@ -56,7 +56,7 @@ Bus_Start (
   return STATUS_SUCCESS;
 }
 
-VOID STDCALL
+void STDCALL
 Bus_Stop (
   void
  )
@@ -81,7 +81,7 @@ Bus_Stop (
   bus__fdo = NULL;
 }
 
-VOID STDCALL
+void STDCALL
 Bus_AddTarget (
   IN winvblock__uint8_ptr ClientMac,
   IN winvblock__uint8_ptr ServerMac,
@@ -148,7 +148,7 @@ Bus_AddTarget (
   KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
 }
 
-VOID STDCALL
+void STDCALL
 Bus_CleanupTargetList (
   void
  )

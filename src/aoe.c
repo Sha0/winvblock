@@ -48,8 +48,8 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject (
  );
 
 /* In this file */
-static VOID STDCALL AoE_Thread (
-  IN PVOID StartContext
+static void STDCALL AoE_Thread (
+  IN void *StartContext
  );
 
 #ifdef _MSC_VER
@@ -171,7 +171,7 @@ AoE_Start (
 {
   NTSTATUS Status;
   OBJECT_ATTRIBUTES ObjectAttributes;
-  PVOID ThreadObject;
+  void *ThreadObject;
 
   DBG ( "Entry\n" );
 
@@ -269,7 +269,7 @@ AoE_Start (
 /**
  * Stop AoE operations
  */
-VOID
+void
 AoE_Stop (
   void
  )
@@ -1208,7 +1208,7 @@ AoE_Reply (
   return STATUS_SUCCESS;
 }
 
-VOID
+void
 AoE_ResetProbe (
   void
  )
@@ -1216,9 +1216,9 @@ AoE_ResetProbe (
   AoE_Globals_ProbeTag->SendTime.QuadPart = 0LL;
 }
 
-static VOID STDCALL
+static void STDCALL
 AoE_Thread (
-  IN PVOID StartContext
+  IN void *StartContext
  )
 {
   LARGE_INTEGER Timeout,

@@ -42,31 +42,31 @@
 #include "debug.h"
 
 /* in this file */
-static VOID STDCALL Protocol_OpenAdapterComplete (
+static void STDCALL Protocol_OpenAdapterComplete (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN NDIS_STATUS Status,
   IN NDIS_STATUS OpenErrorStatus
  );
-static VOID STDCALL Protocol_CloseAdapterComplete (
+static void STDCALL Protocol_CloseAdapterComplete (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN NDIS_STATUS Status
  );
-static VOID STDCALL Protocol_SendComplete (
+static void STDCALL Protocol_SendComplete (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN PNDIS_PACKET Packet,
   IN NDIS_STATUS Status
  );
-static VOID STDCALL Protocol_TransferDataComplete (
+static void STDCALL Protocol_TransferDataComplete (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN PNDIS_PACKET Packet,
   IN NDIS_STATUS Status,
   IN winvblock__uint32 BytesTransferred
  );
-static VOID STDCALL Protocol_ResetComplete (
+static void STDCALL Protocol_ResetComplete (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN NDIS_STATUS Status
  );
-static VOID STDCALL Protocol_RequestComplete (
+static void STDCALL Protocol_RequestComplete (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN PNDIS_REQUEST NdisRequest,
   IN NDIS_STATUS Status
@@ -74,32 +74,32 @@ static VOID STDCALL Protocol_RequestComplete (
 static NDIS_STATUS STDCALL Protocol_Receive (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN NDIS_HANDLE MacReceiveContext,
-  IN PVOID HeaderBuffer,
+  IN void *HeaderBuffer,
   IN winvblock__uint32 HeaderBufferSize,
-  IN PVOID LookAheadBuffer,
+  IN void *LookAheadBuffer,
   IN winvblock__uint32 LookaheadBufferSize,
   IN winvblock__uint32 PacketSize
  );
-static VOID STDCALL Protocol_ReceiveComplete (
+static void STDCALL Protocol_ReceiveComplete (
   IN NDIS_HANDLE ProtocolBindingContext
  );
-static VOID STDCALL Protocol_Status (
+static void STDCALL Protocol_Status (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN NDIS_STATUS GeneralStatus,
-  IN PVOID StatusBuffer,
+  IN void *StatusBuffer,
   IN winvblock__uint32 StatusBufferSize
  );
-static VOID STDCALL Protocol_StatusComplete (
+static void STDCALL Protocol_StatusComplete (
   IN NDIS_HANDLE ProtocolBindingContext
  );
-static VOID STDCALL Protocol_BindAdapter (
+static void STDCALL Protocol_BindAdapter (
   OUT PNDIS_STATUS Status,
   IN NDIS_HANDLE BindContext,
   IN PNDIS_STRING DeviceName,
-  IN PVOID SystemSpecific1,
-  IN PVOID SystemSpecific2
+  IN void *SystemSpecific1,
+  IN void *SystemSpecific2
  );
-static VOID STDCALL Protocol_UnbindAdapter (
+static void STDCALL Protocol_UnbindAdapter (
   OUT PNDIS_STATUS Status,
   IN NDIS_HANDLE ProtocolBindingContext,
   IN NDIS_HANDLE UnbindContext
@@ -197,7 +197,7 @@ Protocol_Start (
   return Status;
 }
 
-VOID STDCALL
+void STDCALL
 Protocol_Stop (
   void
  )
@@ -259,7 +259,7 @@ Protocol_Send (
   IN winvblock__uint8_ptr DestinationMac,
   IN winvblock__uint8_ptr Data,
   IN winvblock__uint32 DataSize,
-  IN PVOID PacketContext
+  IN void *PacketContext
  )
 {
   PPROTOCOL_BINDINGCONTEXT Context = Protocol_Globals_BindingContextList;
@@ -335,14 +335,14 @@ Protocol_Send (
     }
 
   NdisChainBufferAtFront ( Packet, Buffer );
-  *( PVOID * ) Packet->ProtocolReserved = PacketContext;
+  *( void ** )Packet->ProtocolReserved = PacketContext;
   NdisSend ( &Status, Context->BindingHandle, Packet );
   if ( Status != NDIS_STATUS_PENDING )
     Protocol_SendComplete ( Context, Packet, Status );
   return TRUE;
 }
 
-static VOID STDCALL
+static void STDCALL
 Protocol_OpenAdapterComplete (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN NDIS_STATUS Status,
@@ -355,7 +355,7 @@ Protocol_OpenAdapterComplete (
     DBG ( "0x%08x 0x%08x\n", Status, OpenErrorStatus );
 }
 
-static VOID STDCALL
+static void STDCALL
 Protocol_CloseAdapterComplete (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN NDIS_STATUS Status
@@ -367,7 +367,7 @@ Protocol_CloseAdapterComplete (
     Error ( "Protocol_CloseAdapterComplete", Status );
 }
 
-static VOID STDCALL
+static void STDCALL
 Protocol_SendComplete (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN PNDIS_PACKET Packet,
@@ -395,7 +395,7 @@ Protocol_SendComplete (
   NdisFreePacket ( Packet );
 }
 
-static VOID STDCALL
+static void STDCALL
 Protocol_TransferDataComplete (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN PNDIS_PACKET Packet,
@@ -442,7 +442,7 @@ Protocol_TransferDataComplete (
   NdisFreePacket ( Packet );
 }
 
-static VOID STDCALL
+static void STDCALL
 Protocol_ResetComplete (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN NDIS_STATUS Status
@@ -454,7 +454,7 @@ Protocol_ResetComplete (
     Error ( "Protocol_ResetComplete", Status );
 }
 
-static VOID STDCALL
+static void STDCALL
 Protocol_RequestComplete (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN PNDIS_REQUEST NdisRequest,
@@ -476,9 +476,9 @@ static NDIS_STATUS STDCALL
 Protocol_Receive (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN NDIS_HANDLE MacReceiveContext,
-  IN PVOID HeaderBuffer,
+  IN void *HeaderBuffer,
   IN winvblock__uint32 HeaderBufferSize,
-  IN PVOID LookAheadBuffer,
+  IN void *LookAheadBuffer,
   IN winvblock__uint32 LookaheadBufferSize,
   IN winvblock__uint32 PacketSize
  )
@@ -572,7 +572,7 @@ Protocol_Receive (
   return Status;
 }
 
-static VOID STDCALL
+static void STDCALL
 Protocol_ReceiveComplete (
   IN NDIS_HANDLE ProtocolBindingContext
  )
@@ -582,11 +582,11 @@ Protocol_ReceiveComplete (
 #endif
 }
 
-static VOID STDCALL
+static void STDCALL
 Protocol_Status (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN NDIS_STATUS GeneralStatus,
-  IN PVOID StatusBuffer,
+  IN void *StatusBuffer,
   IN winvblock__uint32 StatusBufferSize
  )
 {
@@ -596,7 +596,7 @@ Protocol_Status (
     Error ( "Protocol_Status", GeneralStatus );
 }
 
-static VOID STDCALL
+static void STDCALL
 Protocol_StatusComplete (
   IN NDIS_HANDLE ProtocolBindingContext
  )
@@ -606,13 +606,13 @@ Protocol_StatusComplete (
 #endif
 }
 
-static VOID STDCALL
+static void STDCALL
 Protocol_BindAdapter (
   OUT PNDIS_STATUS StatusOut,
   IN NDIS_HANDLE BindContext,
   IN PNDIS_STRING DeviceName,
-  IN PVOID SystemSpecific1,
-  IN PVOID SystemSpecific2
+  IN void *SystemSpecific1,
+  IN void *SystemSpecific2
  )
 {
   PPROTOCOL_BINDINGCONTEXT Context,
@@ -645,7 +645,7 @@ Protocol_BindAdapter (
   KeInitializeEvent ( &Context->Event, SynchronizationEvent, FALSE );
 
   NdisAllocatePacketPool ( &Status, &Context->PacketPoolHandle, POOLSIZE,
-			   ( 4 * sizeof ( VOID * ) ) );
+			   ( 4 * sizeof ( void * ) ) );
   if ( !NT_SUCCESS ( Status ) )
     {
       Error ( "Protocol_BindAdapter NdisAllocatePacketPool", Status );
@@ -816,7 +816,7 @@ Protocol_BindAdapter (
   *StatusOut = NDIS_STATUS_SUCCESS;
 }
 
-static VOID STDCALL
+static void STDCALL
 Protocol_UnbindAdapter (
   OUT PNDIS_STATUS StatusOut,
   IN NDIS_HANDLE ProtocolBindingContext,

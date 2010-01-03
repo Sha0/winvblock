@@ -1,4 +1,12 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat Jan 2 19:15:05 2010 -0500
+
+    [cosmetics] VOID renamed to void
+    
+    And PVOID changed to 'void *'.  Why not?
+
+commit 82c0572209016fe97fe51cf89f31c24c270da7a3
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sat Jan 2 17:52:12 2010 -0500
 
     [filedisk] Initial file-backed disk support

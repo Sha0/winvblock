@@ -41,12 +41,12 @@ extern winvblock__bool STDCALL Protocol_Send (
   IN winvblock__uint8_ptr DestinationMac,
   IN winvblock__uint8_ptr Data,
   IN winvblock__uint32 DataSize,
-  IN PVOID PacketContext
+  IN void *PacketContext
  );
 extern NTSTATUS Protocol_Start (
   void
  );
-extern VOID Protocol_Stop (
+extern void Protocol_Stop (
   void
  );
 

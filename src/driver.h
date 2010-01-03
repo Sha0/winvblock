@@ -72,7 +72,7 @@ winvblock__def_struct ( driver__dev_ext )
   size_t irp_handler_stack_size;
 };
 
-extern VOID STDCALL Driver_CompletePendingIrp (
+extern void STDCALL Driver_CompletePendingIrp (
   IN PIRP Irp
  );
 /*

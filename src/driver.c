@@ -55,17 +55,17 @@ static NTSTATUS STDCALL Driver_Dispatch (
   IN PIRP Irp
  );
 
-static VOID STDCALL Driver_Unload (
+static void STDCALL Driver_Unload (
   IN PDRIVER_OBJECT DriverObject
  );
 
 static NTSTATUS STDCALL DriverReinitialize (
   IN PDRIVER_OBJECT DriverObject,
-  IN PVOID Context,
+  IN void *Context,
   winvblock__uint32 Count
  );
 
-static PVOID Driver_Globals_StateHandle;
+static void *Driver_Globals_StateHandle;
 static winvblock__bool Driver_Globals_Started = FALSE;
 
 /* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters */
@@ -244,7 +244,7 @@ DriverEntry (
 static NTSTATUS STDCALL
 DriverReinitialize (
   IN PDRIVER_OBJECT DriverObject,
-  IN PVOID Context,
+  IN void *Context,
   winvblock__uint32 Count
  )
 {
@@ -409,7 +409,7 @@ Driver_Dispatch (
   return status;
 }
 
-static VOID STDCALL
+static void STDCALL
 Driver_Unload (
   IN PDRIVER_OBJECT DriverObject
  )
@@ -423,7 +423,7 @@ Driver_Unload (
   DBG ( "Done\n" );
 }
 
-VOID STDCALL
+void STDCALL
 Driver_CompletePendingIrp (
   IN PIRP Irp
  )

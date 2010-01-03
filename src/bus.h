@@ -51,7 +51,7 @@ extern NTSTATUS Bus_Start (
   void
  );
 
-extern VOID Bus_Stop (
+extern void Bus_Stop (
   void
  );
 
@@ -60,7 +60,7 @@ extern NTSTATUS STDCALL Bus_AddDevice (
   IN PDEVICE_OBJECT PhysicalDeviceObject
  );
 
-extern VOID STDCALL Bus_AddTarget (
+extern void STDCALL Bus_AddTarget (
   IN winvblock__uint8_ptr ClientMac,
   IN winvblock__uint8_ptr ServerMac,
   winvblock__uint16 Major,
@@ -68,7 +68,7 @@ extern VOID STDCALL Bus_AddTarget (
   LONGLONG LBASize
  );
 
-extern VOID Bus_CleanupTargetList (
+extern void Bus_CleanupTargetList (
   void
  );
 

@@ -50,14 +50,14 @@ extern NTSTATUS STDCALL xDbgPrint (
   IN PCHAR Function,
   IN winvblock__uint32 Line
  );
-extern VOID Debug_Initialize (
+extern void Debug_Initialize (
   void
  );
-extern VOID STDCALL Debug_IrpStart (
+extern void STDCALL Debug_IrpStart (
   IN PDEVICE_OBJECT DeviceObject,
   IN PIRP Irp
  );
-extern VOID STDCALL Debug_IrpEnd (
+extern void STDCALL Debug_IrpEnd (
   IN PIRP Irp,
   IN NTSTATUS Status
  );

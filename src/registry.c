@@ -72,7 +72,7 @@ Registry_KeyOpen (
  *
  * @v reg_key   Registry key
  */
-static VOID
+static void
 Registry_KeyClose (
   HANDLE reg_key
  )
@@ -343,7 +343,7 @@ Registry_StoreDWord (
  */
 static NTSTATUS
 Registry_NoteOsLoadOptions (
-  VOID
+  void
  )
 {
   NTSTATUS status;
@@ -842,7 +842,7 @@ err_keyopennetworkclass:
  */
 NTSTATUS
 Registry_Check (
-  VOID
+  void
  )
 {
   NTSTATUS status;

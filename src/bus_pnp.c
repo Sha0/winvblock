@@ -59,7 +59,7 @@ irp__handler_decl ( bus_pnp__start_dev )
   IoCopyCurrentIrpStackLocationToNext ( Irp );
   IoSetCompletionRoutine ( Irp,
 			   ( PIO_COMPLETION_ROUTINE ) Bus_IoCompletionRoutine,
-			   ( PVOID ) & event, TRUE, TRUE, TRUE );
+			   ( void * )&event, TRUE, TRUE, TRUE );
   status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
   if ( status == STATUS_PENDING )
     {

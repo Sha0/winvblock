@@ -67,7 +67,7 @@ static winvblock__uint32 Debug_Globals_Number = 0;
 static PDEBUG_IRPLIST STDCALL Debug_IrpListRecord (
   IN PIRP Irp
  );
-static VOID STDCALL Debug_DecodeIrp (
+static void STDCALL Debug_DecodeIrp (
   IN PDEVICE_OBJECT DeviceObject,
   IN PIRP Irp,
   IN PCHAR DebugMessage
@@ -113,7 +113,7 @@ xDbgPrint (
   return DbgPrint ( "%s: %s() @ line %d: ", File, Function, Line );
 }
 
-VOID
+void
 Debug_Initialize (
   void
  )
@@ -137,7 +137,7 @@ Debug_IrpListRecord (
   return Record;
 }
 
-VOID STDCALL
+void STDCALL
 Debug_IrpStart (
   IN PDEVICE_OBJECT DeviceObject,
   IN PIRP Irp
@@ -185,7 +185,7 @@ Debug_IrpStart (
   DBG ( "IRP %d: %s\n", Record->Number, Record->DebugMessage );
 }
 
-VOID STDCALL
+void STDCALL
 Debug_IrpEnd (
   IN PIRP Irp,
   IN NTSTATUS Status
@@ -226,7 +226,7 @@ Debug_IrpEnd (
   ExFreePool ( Record );
 }
 
-static VOID STDCALL
+static void STDCALL
 Debug_DecodeIrp (
   IN PDEVICE_OBJECT DeviceObject,
   IN PIRP Irp,
