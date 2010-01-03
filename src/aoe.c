@@ -65,7 +65,7 @@ winvblock__def_enum ( tag_type );
 #endif
 
 /** AoE packet */
-typedef struct _AOE_PACKET
+winvblock__def_struct ( packet )
 {
   winvblock__uint8 ReservedFlag:2;
   winvblock__uint8 ErrorFlag:1;
@@ -105,7 +105,9 @@ typedef struct _AOE_PACKET
   winvblock__uint16 Reserved;
 
   winvblock__uint8 Data[];
-} __attribute__ ( ( __packed__ ) ) AOE_PACKET, *PAOE_PACKET;
+}
+
+__attribute__ ( ( __packed__ ) );
 
 #ifdef _MSC_VER
 #  pragma pack()
@@ -130,7 +132,7 @@ typedef struct _AOE_TAG
   driver__dev_ext_ptr DeviceExtension;
   PAOE_REQUEST Request;
   winvblock__uint32 Id;
-  PAOE_PACKET PacketData;
+  packet_ptr packet_data;
   winvblock__uint32 PacketSize;
   LARGE_INTEGER FirstSendTime;
   LARGE_INTEGER SendTime;
@@ -203,32 +205,32 @@ AoE_Start (
   /*
    * Set up the probe tag's AoE packet reference 
    */
-  AoE_Globals_ProbeTag->PacketSize = sizeof ( AOE_PACKET );
+  AoE_Globals_ProbeTag->PacketSize = sizeof ( packet );
   /*
    * Allocate and zero-fill the probe tag's packet reference 
    */
-  if ( ( AoE_Globals_ProbeTag->PacketData =
-	 ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-					  AoE_Globals_ProbeTag->
-					  PacketSize ) ) == NULL )
+  if ( ( AoE_Globals_ProbeTag->packet_data =
+	 ( packet_ptr ) ExAllocatePool ( NonPagedPool,
+					 AoE_Globals_ProbeTag->
+					 PacketSize ) ) == NULL )
     {
-      DBG ( "Couldn't allocate AoE_Globals_ProbeTag->PacketData\n" );
+      DBG ( "Couldn't allocate AoE_Globals_ProbeTag->packet_data\n" );
       ExFreePool ( AoE_Globals_ProbeTag );
       return STATUS_INSUFFICIENT_RESOURCES;
     }
   AoE_Globals_ProbeTag->SendTime.QuadPart = 0LL;
-  RtlZeroMemory ( AoE_Globals_ProbeTag->PacketData,
+  RtlZeroMemory ( AoE_Globals_ProbeTag->packet_data,
 		  AoE_Globals_ProbeTag->PacketSize );
 
   /*
    * Initialize the probe tag's AoE packet 
    */
-  AoE_Globals_ProbeTag->PacketData->Ver = AOEPROTOCOLVER;
-  AoE_Globals_ProbeTag->PacketData->Major =
+  AoE_Globals_ProbeTag->packet_data->Ver = AOEPROTOCOLVER;
+  AoE_Globals_ProbeTag->packet_data->Major =
     htons ( ( winvblock__uint16 ) - 1 );
-  AoE_Globals_ProbeTag->PacketData->Minor = ( winvblock__uint8 ) - 1;
-  AoE_Globals_ProbeTag->PacketData->Cmd = 0xec;	/* IDENTIFY DEVICE */
-  AoE_Globals_ProbeTag->PacketData->Count = 1;
+  AoE_Globals_ProbeTag->packet_data->Minor = ( winvblock__uint8 ) - 1;
+  AoE_Globals_ProbeTag->packet_data->Cmd = 0xec;	/* IDENTIFY DEVICE */
+  AoE_Globals_ProbeTag->packet_data->Count = 1;
 
   /*
    * Initialize global spin-lock and global thread signal event 
@@ -341,14 +343,14 @@ AoE_Stop (
 	}
       if ( Tag->Next == NULL )
 	{
-	  ExFreePool ( Tag->PacketData );
+	  ExFreePool ( Tag->packet_data );
 	  ExFreePool ( Tag );
 	  Tag = NULL;
 	}
       else
 	{
 	  Tag = Tag->Next;
-	  ExFreePool ( Tag->Previous->PacketData );
+	  ExFreePool ( Tag->Previous->packet_data );
 	  ExFreePool ( Tag->Previous );
 	}
     }
@@ -358,7 +360,7 @@ AoE_Stop (
   /*
    * Free the global probe tag and its AoE packet 
    */
-  ExFreePool ( AoE_Globals_ProbeTag->PacketData );
+  ExFreePool ( AoE_Globals_ProbeTag->packet_data );
   ExFreePool ( AoE_Globals_ProbeTag );
 
   /*
@@ -580,7 +582,7 @@ AoE_SearchDrive (
 	      /*
 	       * Free our tag and its AoE packet 
 	       */
-	      ExFreePool ( Tag->PacketData );
+	      ExFreePool ( Tag->packet_data );
 	      ExFreePool ( Tag );
 	    }
 
@@ -665,12 +667,12 @@ AoE_SearchDrive (
       /*
        * Establish our tag's AoE packet 
        */
-      Tag->PacketSize = sizeof ( AOE_PACKET );
-      if ( ( Tag->PacketData =
-	     ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-					      Tag->PacketSize ) ) == NULL )
+      Tag->PacketSize = sizeof ( packet );
+      if ( ( Tag->packet_data =
+	     ( packet_ptr ) ExAllocatePool ( NonPagedPool,
+					     Tag->PacketSize ) ) == NULL )
 	{
-	  DBG ( "Couldn't allocate Tag->PacketData\n" );
+	  DBG ( "Couldn't allocate Tag->packet_data\n" );
 	  ExFreePool ( Tag );
 	  Tag = NULL;
 	  KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
@@ -679,12 +681,12 @@ AoE_SearchDrive (
 	   */
 	  continue;
 	}
-      RtlZeroMemory ( Tag->PacketData, Tag->PacketSize );
-      Tag->PacketData->Ver = AOEPROTOCOLVER;
-      Tag->PacketData->Major =
+      RtlZeroMemory ( Tag->packet_data, Tag->PacketSize );
+      Tag->packet_data->Ver = AOEPROTOCOLVER;
+      Tag->packet_data->Major =
 	htons ( ( winvblock__uint16 ) aoe_disk_ptr->Major );
-      Tag->PacketData->Minor = ( winvblock__uint8 ) aoe_disk_ptr->Minor;
-      Tag->PacketData->ExtendedAFlag = TRUE;
+      Tag->packet_data->Minor = ( winvblock__uint8 ) aoe_disk_ptr->Minor;
+      Tag->packet_data->ExtendedAFlag = TRUE;
 
       /*
        * Initialize the packet appropriately based on our current phase 
@@ -695,24 +697,24 @@ AoE_SearchDrive (
 	    /*
 	     * TODO: Make the below value into a #defined constant 
 	     */
-	    Tag->PacketData->Cmd = 0xec;	/* IDENTIFY DEVICE */
-	    Tag->PacketData->Count = 1;
+	    Tag->packet_data->Cmd = 0xec;	/* IDENTIFY DEVICE */
+	    Tag->packet_data->Count = 1;
 	    disk_ptr->SearchState = GettingSize;
 	    break;
 	  case GetGeometry:
 	    /*
 	     * TODO: Make the below value into a #defined constant 
 	     */
-	    Tag->PacketData->Cmd = 0x24;	/* READ SECTOR */
-	    Tag->PacketData->Count = 1;
+	    Tag->packet_data->Cmd = 0x24;	/* READ SECTOR */
+	    Tag->packet_data->Count = 1;
 	    disk_ptr->SearchState = GettingGeometry;
 	    break;
 	  case GetMaxSectorsPerPacket:
 	    /*
 	     * TODO: Make the below value into a #defined constant 
 	     */
-	    Tag->PacketData->Cmd = 0x24;	/* READ SECTOR */
-	    Tag->PacketData->Count =
+	    Tag->packet_data->Cmd = 0x24;	/* READ SECTOR */
+	    Tag->packet_data->Count =
 	      ( winvblock__uint8 ) ( ++aoe_disk_ptr->MaxSectorsPerPacket );
 	    KeQuerySystemTime ( &MaxSectorsPerPacketSendTime );
 	    disk_ptr->SearchState = GettingMaxSectorsPerPacket;
@@ -723,7 +725,7 @@ AoE_SearchDrive (
 	    break;
 	  default:
 	    DBG ( "Undefined SearchState!!\n" );
-	    ExFreePool ( Tag->PacketData );
+	    ExFreePool ( Tag->packet_data );
 	    ExFreePool ( Tag );
 	    /*
 	     * TODO: Do we need to nullify Tag here? 
@@ -841,7 +843,7 @@ disk__io_decl ( aoe__disk_io )
 	    {
 	      PreviousTag = Tag;
 	      Tag = Tag->Next;
-	      ExFreePool ( PreviousTag->PacketData );
+	      ExFreePool ( PreviousTag->packet_data );
 	      ExFreePool ( PreviousTag );
 	    }
 	  ExFreePool ( Request );
@@ -869,14 +871,14 @@ disk__io_decl ( aoe__disk_io )
       /*
        * Allocate and initialize each tag's AoE packet 
        */
-      Tag->PacketSize = sizeof ( AOE_PACKET );
+      Tag->PacketSize = sizeof ( packet );
       if ( mode == disk__io_mode_write )
 	Tag->PacketSize += Tag->SectorCount * disk_ptr->SectorSize;
-      if ( ( Tag->PacketData =
-	     ( PAOE_PACKET ) ExAllocatePool ( NonPagedPool,
-					      Tag->PacketSize ) ) == NULL )
+      if ( ( Tag->packet_data =
+	     ( packet_ptr ) ExAllocatePool ( NonPagedPool,
+					     Tag->PacketSize ) ) == NULL )
 	{
-	  DBG ( "Couldn't allocate Tag->PacketData; bye!\n" );
+	  DBG ( "Couldn't allocate Tag->packet_data; bye!\n" );
 	  /*
 	   * We failed while allocating an AoE packet; free
 	   * the tags we built
@@ -887,7 +889,7 @@ disk__io_decl ( aoe__disk_io )
 	    {
 	      PreviousTag = Tag;
 	      Tag = Tag->Next;
-	      ExFreePool ( PreviousTag->PacketData );
+	      ExFreePool ( PreviousTag->packet_data );
 	      ExFreePool ( PreviousTag );
 	    }
 	  ExFreePool ( Request );
@@ -896,42 +898,42 @@ disk__io_decl ( aoe__disk_io )
 	  IoCompleteRequest ( irp, IO_NO_INCREMENT );
 	  return STATUS_INSUFFICIENT_RESOURCES;
 	}
-      RtlZeroMemory ( Tag->PacketData, Tag->PacketSize );
-      Tag->PacketData->Ver = AOEPROTOCOLVER;
-      Tag->PacketData->Major =
+      RtlZeroMemory ( Tag->packet_data, Tag->PacketSize );
+      Tag->packet_data->Ver = AOEPROTOCOLVER;
+      Tag->packet_data->Major =
 	htons ( ( winvblock__uint16 ) aoe_disk_ptr->Major );
-      Tag->PacketData->Minor = ( winvblock__uint8 ) aoe_disk_ptr->Minor;
-      Tag->PacketData->Tag = 0;
-      Tag->PacketData->Command = 0;
-      Tag->PacketData->ExtendedAFlag = TRUE;
+      Tag->packet_data->Minor = ( winvblock__uint8 ) aoe_disk_ptr->Minor;
+      Tag->packet_data->Tag = 0;
+      Tag->packet_data->Command = 0;
+      Tag->packet_data->ExtendedAFlag = TRUE;
       if ( mode == disk__io_mode_read )
 	{
-	  Tag->PacketData->Cmd = 0x24;	/* READ SECTOR */
+	  Tag->packet_data->Cmd = 0x24;	/* READ SECTOR */
 	}
       else
 	{
-	  Tag->PacketData->Cmd = 0x34;	/* WRITE SECTOR */
-	  Tag->PacketData->WriteAFlag = 1;
+	  Tag->packet_data->Cmd = 0x34;	/* WRITE SECTOR */
+	  Tag->packet_data->WriteAFlag = 1;
 	}
-      Tag->PacketData->Count = ( winvblock__uint8 ) Tag->SectorCount;
-      Tag->PacketData->Lba0 =
+      Tag->packet_data->Count = ( winvblock__uint8 ) Tag->SectorCount;
+      Tag->packet_data->Lba0 =
 	( winvblock__uint8 ) ( ( ( start_sector + i ) >> 0 ) & 255 );
-      Tag->PacketData->Lba1 =
+      Tag->packet_data->Lba1 =
 	( winvblock__uint8 ) ( ( ( start_sector + i ) >> 8 ) & 255 );
-      Tag->PacketData->Lba2 =
+      Tag->packet_data->Lba2 =
 	( winvblock__uint8 ) ( ( ( start_sector + i ) >> 16 ) & 255 );
-      Tag->PacketData->Lba3 =
+      Tag->packet_data->Lba3 =
 	( winvblock__uint8 ) ( ( ( start_sector + i ) >> 24 ) & 255 );
-      Tag->PacketData->Lba4 =
+      Tag->packet_data->Lba4 =
 	( winvblock__uint8 ) ( ( ( start_sector + i ) >> 32 ) & 255 );
-      Tag->PacketData->Lba5 =
+      Tag->packet_data->Lba5 =
 	( winvblock__uint8 ) ( ( ( start_sector + i ) >> 40 ) & 255 );
 
       /*
        * For a write request, copy from the buffer into the AoE packet 
        */
       if ( mode == disk__io_mode_write )
-	RtlCopyMemory ( Tag->PacketData->Data, &buffer[Tag->BufferOffset],
+	RtlCopyMemory ( Tag->packet_data->Data, &buffer[Tag->BufferOffset],
 			Tag->SectorCount * disk_ptr->SectorSize );
 
       /*
@@ -1001,7 +1003,7 @@ AoE_Reply (
   IN winvblock__uint32 DataSize
  )
 {
-  PAOE_PACKET Reply = ( PAOE_PACKET ) Data;
+  packet_ptr reply = ( packet_ptr ) Data;
   LONGLONG LBASize;
   PAOE_TAG Tag;
   KIRQL Irql;
@@ -1013,17 +1015,17 @@ AoE_Reply (
   /*
    * Discard non-responses 
    */
-  if ( !Reply->ResponseFlag )
+  if ( !reply->ResponseFlag )
     return STATUS_SUCCESS;
 
   /*
    * If the response matches our probe, add the AoE disk device 
    */
-  if ( AoE_Globals_ProbeTag->Id == Reply->Tag )
+  if ( AoE_Globals_ProbeTag->Id == reply->Tag )
     {
-      RtlCopyMemory ( &LBASize, &Reply->Data[200], sizeof ( LONGLONG ) );
-      Bus_AddTarget ( DestinationMac, SourceMac, ntohs ( Reply->Major ),
-		      Reply->Minor, LBASize );
+      RtlCopyMemory ( &LBASize, &reply->Data[200], sizeof ( LONGLONG ) );
+      Bus_AddTarget ( DestinationMac, SourceMac, ntohs ( reply->Major ),
+		      reply->Minor, LBASize );
       return STATUS_SUCCESS;
     }
 
@@ -1043,9 +1045,9 @@ AoE_Reply (
   Tag = AoE_Globals_TagList;
   while ( Tag != NULL )
     {
-      if ( ( Tag->Id == Reply->Tag )
-	   && ( Tag->PacketData->Major == Reply->Major )
-	   && ( Tag->PacketData->Minor == Reply->Minor ) )
+      if ( ( Tag->Id == reply->Tag )
+	   && ( Tag->packet_data->Major == reply->Major )
+	   && ( Tag->packet_data->Minor == reply->Minor ) )
 	{
 	  Found = TRUE;
 	  break;
@@ -1117,7 +1119,7 @@ AoE_Reply (
 	      /*
 	       * The reply tells us the disk size 
 	       */
-	      RtlCopyMemory ( &disk_ptr->LBADiskSize, &Reply->Data[200],
+	      RtlCopyMemory ( &disk_ptr->LBADiskSize, &reply->Data[200],
 			      sizeof ( LONGLONG ) );
 	      /*
 	       * Next we are concerned with the disk geometry 
@@ -1142,7 +1144,7 @@ AoE_Reply (
 	      disk_ptr->SearchState = GetMaxSectorsPerPacket;
 	      break;
 	    case GettingMaxSectorsPerPacket:
-	      DataSize -= sizeof ( AOE_PACKET );
+	      DataSize -= sizeof ( packet );
 	      if ( DataSize <
 		   ( aoe_disk_ptr->MaxSectorsPerPacket *
 		     disk_ptr->SectorSize ) )
@@ -1154,7 +1156,7 @@ AoE_Reply (
 		  disk_ptr->SearchState = Done;
 		}
 	      else if ( aoe_disk_ptr->MTU <
-			( sizeof ( AOE_PACKET ) +
+			( sizeof ( packet ) +
 			  ( ( aoe_disk_ptr->MaxSectorsPerPacket +
 			      1 ) * disk_ptr->SectorSize ) ) )
 		{
@@ -1185,7 +1187,7 @@ AoE_Reply (
 	 */
 	if ( Tag->Request->Mode == disk__io_mode_read )
 	  RtlCopyMemory ( &Tag->Request->Buffer[Tag->BufferOffset],
-			  Reply->Data,
+			  reply->Data,
 			  Tag->SectorCount * disk_ptr->SectorSize );
 	/*
 	 * If this is the last reply expected for the read request,
@@ -1206,7 +1208,7 @@ AoE_Reply (
     }
 
   KeSetEvent ( &AoE_Globals_ThreadSignalEvent, 0, FALSE );
-  ExFreePool ( Tag->PacketData );
+  ExFreePool ( Tag->packet_data );
   ExFreePool ( Tag );
   return STATUS_SUCCESS;
 }
@@ -1288,11 +1290,12 @@ thread (
 	  AoE_Globals_ProbeTag->Id = NextTagId++;
 	  if ( NextTagId == 0 )
 	    NextTagId++;
-	  AoE_Globals_ProbeTag->PacketData->Tag = AoE_Globals_ProbeTag->Id;
+	  AoE_Globals_ProbeTag->packet_data->Tag = AoE_Globals_ProbeTag->Id;
 	  Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
 			  "\xff\xff\xff\xff\xff\xff",
 			  ( winvblock__uint8_ptr ) AoE_Globals_ProbeTag->
-			  PacketData, AoE_Globals_ProbeTag->PacketSize, NULL );
+			  packet_data, AoE_Globals_ProbeTag->PacketSize,
+			  NULL );
 	  KeQuerySystemTime ( &AoE_Globals_ProbeTag->SendTime );
 	}
 
@@ -1324,10 +1327,10 @@ thread (
 		  Tag->Id = NextTagId++;
 		  if ( NextTagId == 0 )
 		    NextTagId++;
-		  Tag->PacketData->Tag = Tag->Id;
+		  Tag->packet_data->Tag = Tag->Id;
 		  if ( Protocol_Send
 		       ( aoe_disk_ptr->ClientMac, aoe_disk_ptr->ServerMac,
-			 ( winvblock__uint8_ptr ) Tag->PacketData,
+			 ( winvblock__uint8_ptr ) Tag->packet_data,
 			 Tag->PacketSize, Tag ) )
 		    {
 		      KeQuerySystemTime ( &Tag->FirstSendTime );
@@ -1352,7 +1355,7 @@ thread (
 		{
 		  if ( Protocol_Send
 		       ( aoe_disk_ptr->ClientMac, aoe_disk_ptr->ServerMac,
-			 ( winvblock__uint8_ptr ) Tag->PacketData,
+			 ( winvblock__uint8_ptr ) Tag->packet_data,
 			 Tag->PacketSize, Tag ) )
 		    {
 		      KeQuerySystemTime ( &Tag->SendTime );

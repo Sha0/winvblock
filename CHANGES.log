@@ -1,4 +1,10 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat Jan 2 20:23:22 2010 -0500
+
+    [aoe] AOE_PACKET renamed to packet
+
+commit 3c92067e83a074f53759f68735ba3c5ac26335d7
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sat Jan 2 19:56:07 2010 -0500
 
     [aoe] AOE_TAGTYPE renamed to tag_type
