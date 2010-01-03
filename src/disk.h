@@ -98,10 +98,34 @@ extern disk__max_xfer_len_decl (
   disk__default_max_xfer_len
  );
 
+/**
+ * Disk initialization routine
+ *
+ * @v dev_ext_ptr     The disk device being initialized
+ */
+#  define disk__init_decl( x ) \
+\
+winvblock__bool STDCALL \
+x ( \
+  IN driver__dev_ext_ptr dev_ext_ptr \
+ )
+/*
+ * Function pointer for a disk initialization routine.
+ * 'indent' mangles this, so it looks weird
+ */
+typedef disk__init_decl (
+   ( *disk__init_routine )
+ );
+
+extern disk__init_decl (
+  disk__default_init
+ );
+
 winvblock__def_struct ( disk__ops )
 {
   disk__io_routine io;
   disk__max_xfer_len_routine max_xfer_len;
+  disk__init_routine init;
 };
 
 struct _disk__type
@@ -115,11 +139,6 @@ struct _disk__type
   winvblock__bool Unmount;
   winvblock__uint32 DiskNumber;
   disk__media media;
-  winvblock__bool STDCALL (
-  *Initialize
-   ) (
-  IN struct _driver__dev_ext * DeviceExtension
-   );
   disk__ops_ptr ops;
    winvblock__uint32 (
   *query_id
@@ -176,6 +195,21 @@ disk__max_xfer_len_decl (
  )
 {
   return disk_ptr->ops->max_xfer_len ( disk_ptr );
+}
+
+__inline
+disk__init_decl (
+  disk__init
+ )
+{
+  disk__type_ptr disk_ptr;
+
+  /*
+   * Establish a pointer into the disk device's extension space
+   */
+  disk_ptr = get_disk_ptr ( dev_ext_ptr );
+
+  return disk_ptr->ops->init ( dev_ext_ptr );
 }
 
 static __inline winvblock__uint32

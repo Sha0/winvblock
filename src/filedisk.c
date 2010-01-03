@@ -121,14 +121,6 @@ filedisk__query_id (
     }
 }
 
-winvblock__bool STDCALL
-filedisk__no_init (
-  IN driver__dev_ext_ptr dev_ext
- )
-{
-  return TRUE;
-}
-
 static disk__ops default_ops;
 
 irp__handler_decl ( filedisk__attach )
@@ -173,7 +165,6 @@ irp__handler_decl ( filedisk__attach )
     return status;
 
   filedisk.file = file;
-  filedisk.disk.Initialize = filedisk__no_init;
   switch ( params->type )
     {
       case 'f':
@@ -223,5 +214,6 @@ irp__handler_decl ( filedisk__attach )
 
 static disk__ops default_ops = {
   io,
-  disk__default_max_xfer_len
+  disk__default_max_xfer_len,
+  disk__default_init
 };

@@ -141,15 +141,8 @@ ramdisk__query_id (
     }
 }
 
-winvblock__bool STDCALL
-ramdisk__no_init (
-  IN driver__dev_ext_ptr dev_ext
- )
-{
-  return TRUE;
-}
-
 disk__ops ramdisk__default_ops = {
   io,
-  disk__default_max_xfer_len
+  disk__default_max_xfer_len,
+  disk__default_init
 };

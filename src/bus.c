@@ -261,7 +261,7 @@ Bus_AddChild (
   /*
    * Determine the disk's geometry differently for AoE/MEMDISK
    */
-  disk_ptr->Initialize ( disk_dev_ext_ptr );
+  disk__init ( disk_dev_ext_ptr );
 
   DeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
   /*

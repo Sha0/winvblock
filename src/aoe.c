@@ -374,9 +374,9 @@ AoE_Stop (
  *
  * Returns TRUE if the disk could be matched, FALSE otherwise.
  */
-winvblock__bool STDCALL
-AoE_SearchDrive (
-  IN driver__dev_ext_ptr DeviceExtension
+static
+disk__init_decl (
+  init
  )
 {
   disk_search_ptr disk_searcher,
@@ -396,8 +396,8 @@ AoE_SearchDrive (
   /*
    * Establish pointers into the disk device's extension space
    */
-  disk_ptr = get_disk_ptr ( DeviceExtension );
-  aoe_disk_ptr = aoe__get_disk_ptr ( DeviceExtension );
+  disk_ptr = get_disk_ptr ( dev_ext_ptr );
+  aoe_disk_ptr = aoe__get_disk_ptr ( dev_ext_ptr );
   if ( !NT_SUCCESS ( AoE_Start (  ) ) )
     {
       DBG ( "AoE startup failure!\n" );
@@ -418,7 +418,7 @@ AoE_SearchDrive (
   /*
    * Initialize the disk search 
    */
-  disk_searcher->DeviceExtension = DeviceExtension;
+  disk_searcher->DeviceExtension = dev_ext_ptr;
   disk_searcher->next = NULL;
   aoe_disk_ptr->search_state = search_state_search_nic;
   KeResetEvent ( &disk_ptr->SearchEvent );
@@ -598,8 +598,7 @@ AoE_SearchDrive (
 	       */
 	      disk_search_walker = AoE_Globals_DiskSearchList;
 	      while ( disk_search_walker
-		      && disk_search_walker->DeviceExtension !=
-		      DeviceExtension )
+		      && disk_search_walker->DeviceExtension != dev_ext_ptr )
 		{
 		  previous_disk_searcher = disk_search_walker;
 		  disk_search_walker = disk_search_walker->next;
@@ -662,7 +661,7 @@ AoE_SearchDrive (
 	}
       RtlZeroMemory ( tag, sizeof ( work_tag ) );
       tag->type = tag_type_search_drive;
-      tag->DeviceExtension = DeviceExtension;
+      tag->DeviceExtension = dev_ext_ptr;
 
       /*
        * Establish our tag's AoE packet 
@@ -1456,7 +1455,8 @@ __attribute__ ( ( __packed__ ) );
 
 disk__ops aoe__default_ops = {
   io,
-  max_xfer_len
+  max_xfer_len,
+  init
 };
 
 void
@@ -1534,7 +1534,6 @@ aoe__process_abft (
 	    AoEBootRecord.ClientMac[2], AoEBootRecord.ClientMac[3],
 	    AoEBootRecord.ClientMac[4], AoEBootRecord.ClientMac[5],
 	    AoEBootRecord.Major, AoEBootRecord.Minor );
-      aoe_disk.disk.Initialize = AoE_SearchDrive;
       RtlCopyMemory ( aoe_disk.ClientMac, AoEBootRecord.ClientMac, 6 );
       RtlFillMemory ( aoe_disk.ServerMac, 6, 0xff );
       aoe_disk.Major = AoEBootRecord.Major;

@@ -54,6 +54,11 @@ disk__max_xfer_len_decl ( disk__default_max_xfer_len )
   return 1024 * 1024;
 }
 
+disk__init_decl ( disk__default_init )
+{
+  return TRUE;
+}
+
 static
 irp__handler_decl (
   power

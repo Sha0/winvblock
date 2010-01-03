@@ -55,9 +55,6 @@ filedisk__get_ptr (
   return ( filedisk__type_ptr ) dev_ext_ptr;
 }
 
-extern winvblock__bool STDCALL filedisk__no_init (
-  IN driver__dev_ext_ptr dev_ext
- );
 extern irp__handler_decl (
   filedisk__attach
  );

@@ -59,9 +59,6 @@ winvblock__def_struct ( aoe__disk_type )
   search_state search_state;
 };
 
-extern winvblock__bool STDCALL AoE_SearchDrive (
-  IN driver__dev_ext_ptr DeviceExtension
- );
 extern disk__ops aoe__default_ops;
 extern winvblock__uint32 aoe__query_id (
   disk__type_ptr disk_ptr,

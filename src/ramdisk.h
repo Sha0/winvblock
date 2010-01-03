@@ -56,8 +56,4 @@ ramdisk__get_ptr (
   return ( ramdisk__type_ptr ) dev_ext_ptr;
 }
 
-extern winvblock__bool STDCALL ramdisk__no_init (
-  IN driver__dev_ext_ptr dev_ext
- );
-
 #endif				/* _ramdisk_h */

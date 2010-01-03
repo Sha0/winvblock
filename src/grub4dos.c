@@ -134,7 +134,6 @@ grub4dos__find (
 	      DBG ( "Skipping non-RAM disk GRUB4DOS mapping\n" );
 	      continue;
 	    }
-	  ramdisk.disk.Initialize = ramdisk__no_init;
 	  /*
 	   * Possible precision loss
 	   */

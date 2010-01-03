@@ -182,7 +182,6 @@ irp__handler_decl (
 	"Major:%d Minor:%d\n", buffer[0], buffer[1], buffer[2], buffer[3],
 	buffer[4], buffer[5], *( winvblock__uint16_ptr ) ( &buffer[6] ),
 	( winvblock__uint8 ) buffer[8] );
-  aoe_disk.disk.Initialize = AoE_SearchDrive;
   RtlCopyMemory ( aoe_disk.ClientMac, buffer, 6 );
   RtlFillMemory ( aoe_disk.ServerMac, 6, 0xff );
   aoe_disk.Major = *( winvblock__uint16_ptr ) ( &buffer[6] );

@@ -90,7 +90,6 @@ check_mbft (
     }
   DBG ( "MEMDISK DiskBuf: 0x%08x\n", mBFT->mdi.diskbuf );
   DBG ( "MEMDISK DiskSize: %d sectors\n", mBFT->mdi.disksize );
-  ramdisk.disk.Initialize = ramdisk__no_init;
   ramdisk.DiskBuf = mBFT->mdi.diskbuf;
   ramdisk.disk.LBADiskSize = ramdisk.DiskSize = mBFT->mdi.disksize;
   if ( mBFT->mdi.driveno == 0xE0 )

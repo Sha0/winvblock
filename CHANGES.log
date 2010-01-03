@@ -1,4 +1,13 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Jan 3 05:53:25 2010 -0500
+
+    [disk] Abstract initialization routine as a disk operation
+    
+    Each disk class implements their own initialization routine,
+    so we formalize this as a disk operation.
+
+commit 657c511c5fc28be7c6601488b68533a9f13e6ca3
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sun Jan 3 05:16:25 2010 -0500
 
     [disk] Abstract max_xfer_len routine as a disk operation
