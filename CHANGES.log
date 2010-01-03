@@ -1,4 +1,10 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat Jan 2 21:41:46 2010 -0500
+
+    [aoe] AOE_DISKSEARCH renamed to disk_search
+
+commit adc10763d66df16277564d1fa7082df726bb3d37
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sat Jan 2 21:16:35 2010 -0500
 
     [aoe] AOE_TAG renamed to work_tag

@@ -142,13 +142,12 @@ winvblock__def_struct ( work_tag )
 };
 
 /** A disk search */
-typedef struct _AOE_DISKSEARCH
+winvblock__def_struct ( disk_search )
 {
   driver__dev_ext_ptr DeviceExtension;
   work_tag_ptr tag;
-  struct _AOE_DISKSEARCH *Next;
-} AOE_DISKSEARCH,
-*PAOE_DISKSEARCH;
+  disk_search_ptr next;
+};
 
 /** Globals */
 static winvblock__bool AoE_Globals_Stop = FALSE;
@@ -157,7 +156,7 @@ static KEVENT AoE_Globals_ThreadSignalEvent;
 static work_tag_ptr AoE_Globals_TagList = NULL;
 static work_tag_ptr AoE_Globals_TagListLast = NULL;
 static work_tag_ptr AoE_Globals_ProbeTag = NULL;
-static PAOE_DISKSEARCH AoE_Globals_DiskSearchList = NULL;
+static disk_search_ptr AoE_Globals_DiskSearchList = NULL;
 static LONG AoE_Globals_OutstandingTags = 0;
 static HANDLE AoE_Globals_ThreadHandle;
 static winvblock__bool AoE_Globals_Started = FALSE;
@@ -278,8 +277,8 @@ AoE_Stop (
  )
 {
   NTSTATUS Status;
-  PAOE_DISKSEARCH DiskSearch,
-   PreviousDiskSearch;
+  disk_search_ptr disk_searcher,
+   previous_disk_searcher;
   work_tag_ptr tag;
   KIRQL Irql;
 
@@ -315,15 +314,15 @@ AoE_Stop (
   /*
    * Free disk searches in the global disk search list 
    */
-  DiskSearch = AoE_Globals_DiskSearchList;
-  while ( DiskSearch != NULL )
+  disk_searcher = AoE_Globals_DiskSearchList;
+  while ( disk_searcher != NULL )
     {
       KeSetEvent ( &
-		   ( get_disk_ptr ( DiskSearch->DeviceExtension )->
+		   ( get_disk_ptr ( disk_searcher->DeviceExtension )->
 		     SearchEvent ), 0, FALSE );
-      PreviousDiskSearch = DiskSearch;
-      DiskSearch = DiskSearch->Next;
-      ExFreePool ( PreviousDiskSearch );
+      previous_disk_searcher = disk_searcher;
+      disk_searcher = disk_searcher->next;
+      ExFreePool ( previous_disk_searcher );
     }
 
   /*
@@ -380,9 +379,9 @@ AoE_SearchDrive (
   IN driver__dev_ext_ptr DeviceExtension
  )
 {
-  PAOE_DISKSEARCH DiskSearch,
-   DiskSearchWalker,
-   PreviousDiskSearch;
+  disk_search_ptr disk_searcher,
+   disk_search_walker,
+   previous_disk_searcher;
   LARGE_INTEGER Timeout,
    CurrentTime;
   work_tag_ptr tag,
@@ -407,20 +406,20 @@ AoE_SearchDrive (
   /*
    * Allocate our disk search 
    */
-  if ( ( DiskSearch =
-	 ( PAOE_DISKSEARCH ) ExAllocatePool ( NonPagedPool,
-					      sizeof ( AOE_DISKSEARCH ) ) ) ==
+  if ( ( disk_searcher =
+	 ( disk_search_ptr ) ExAllocatePool ( NonPagedPool,
+					      sizeof ( disk_search ) ) ) ==
        NULL )
     {
-      DBG ( "Couldn't allocate DiskSearch; bye!\n" );
+      DBG ( "Couldn't allocate for disk_searcher; bye!\n" );
       return FALSE;
     }
 
   /*
    * Initialize the disk search 
    */
-  DiskSearch->DeviceExtension = DeviceExtension;
-  DiskSearch->Next = NULL;
+  disk_searcher->DeviceExtension = DeviceExtension;
+  disk_searcher->next = NULL;
   disk_ptr->SearchState = SearchNIC;
   KeResetEvent ( &disk_ptr->SearchEvent );
 
@@ -434,14 +433,14 @@ AoE_SearchDrive (
    */
   if ( AoE_Globals_DiskSearchList == NULL )
     {
-      AoE_Globals_DiskSearchList = DiskSearch;
+      AoE_Globals_DiskSearchList = disk_searcher;
     }
   else
     {
-      DiskSearchWalker = AoE_Globals_DiskSearchList;
-      while ( DiskSearchWalker->Next )
-	DiskSearchWalker = DiskSearchWalker->Next;
-      DiskSearchWalker->Next = DiskSearch;
+      disk_search_walker = AoE_Globals_DiskSearchList;
+      while ( disk_search_walker->next )
+	disk_search_walker = disk_search_walker->next;
+      disk_search_walker->next = disk_searcher;
     }
 
   /*
@@ -596,30 +595,31 @@ AoE_SearchDrive (
 	      /*
 	       * Find our disk search in the global list of disk searches 
 	       */
-	      DiskSearchWalker = AoE_Globals_DiskSearchList;
-	      while ( DiskSearchWalker
-		      && DiskSearchWalker->DeviceExtension != DeviceExtension )
+	      disk_search_walker = AoE_Globals_DiskSearchList;
+	      while ( disk_search_walker
+		      && disk_search_walker->DeviceExtension !=
+		      DeviceExtension )
 		{
-		  PreviousDiskSearch = DiskSearchWalker;
-		  DiskSearchWalker = DiskSearchWalker->Next;
+		  previous_disk_searcher = disk_search_walker;
+		  disk_search_walker = disk_search_walker->next;
 		}
-	      if ( DiskSearchWalker )
+	      if ( disk_search_walker )
 		{
 		  /*
 		   * We found our disk search.  If it's the first one in
 		   * the list, adjust the list and remove it
 		   */
-		  if ( DiskSearchWalker == AoE_Globals_DiskSearchList )
-		    AoE_Globals_DiskSearchList = DiskSearchWalker->Next;
+		  if ( disk_search_walker == AoE_Globals_DiskSearchList )
+		    AoE_Globals_DiskSearchList = disk_search_walker->next;
 		  else
 		    /*
 		     * Just remove it 
 		     */
-		    PreviousDiskSearch->Next = DiskSearchWalker->Next;
+		    previous_disk_searcher->next = disk_search_walker->next;
 		  /*
 		   * Free our disk search 
 		   */
-		  ExFreePool ( DiskSearchWalker );
+		  ExFreePool ( disk_search_walker );
 		}
 	      else
 		{
