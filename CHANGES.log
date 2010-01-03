@@ -1,4 +1,13 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Jan 3 03:37:48 2010 -0500
+
+    [disk,aoe] Move search state from disk into AoE
+    
+    disk__search_state renamed to search_state.
+    All enum members renamed.
+
+commit c507dedb5429b75f8aad6cf773dd4bc50c294fe8
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sun Jan 3 03:08:59 2010 -0500
 
     [disk] DISK_DISKTYPE renamed to disk__media

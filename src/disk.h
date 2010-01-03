@@ -43,19 +43,6 @@ enum _disk__io_mode
 };
 winvblock__def_enum ( disk__io_mode );
 
-enum _disk__search_state
-{
-  SearchNIC,
-  GetSize,
-  GettingSize,
-  GetGeometry,
-  GettingGeometry,
-  GetMaxSectorsPerPacket,
-  GettingMaxSectorsPerPacket,
-  Done
-};
-winvblock__def_enum ( disk__search_state );
-
 /**
  * I/O Request
  *
@@ -91,7 +78,6 @@ winvblock__def_struct ( disk__type )
   PDEVICE_OBJECT Parent;
   disk__type_ptr next_sibling_ptr;
   KEVENT SearchEvent;
-  disk__search_state SearchState;
   KSPIN_LOCK SpinLock;
   winvblock__bool BootDrive;
   winvblock__bool Unmount;

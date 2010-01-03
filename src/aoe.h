@@ -33,6 +33,19 @@
 #  define ntohs(x) (winvblock__uint16)((((x) << 8) & 0xff00) | \
                                        (((x) >> 8) & 0xff))
 
+enum _search_state
+{
+  search_state_search_nic,
+  search_state_get_size,
+  search_state_getting_size,
+  search_state_get_geometry,
+  search_state_getting_geometry,
+  search_state_get_max_sectors_per_packet,
+  search_state_getting_max_sectors_per_packet,
+  search_state_done
+};
+winvblock__def_enum ( search_state );
+
 winvblock__def_struct ( aoe__disk_type )
 {
   disk__type disk;
@@ -43,6 +56,7 @@ winvblock__def_struct ( aoe__disk_type )
   winvblock__uint32 Minor;
   winvblock__uint32 MaxSectorsPerPacket;
   winvblock__uint32 Timeout;
+  search_state search_state;
 };
 
 extern winvblock__bool STDCALL AoE_SearchDrive (
