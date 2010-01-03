@@ -1,4 +1,13 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun Jan 3 04:25:34 2010 -0500
+
+    [disk] Abstract I/O routine as a disk operation
+    
+    Each disk class implements their own I/O routine, so we
+    formalize this as a disk operation.
+
+commit b4ed63d13354eb63ecb25fac805c2cf5ef45fcf5
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sun Jan 3 03:37:48 2010 -0500
 
     [disk,aoe] Move search state from disk into AoE

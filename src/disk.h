@@ -72,6 +72,11 @@ typedef disk__io_decl (
    ( *disk__io_routine )
  );
 
+winvblock__def_struct ( disk__ops )
+{
+  disk__io_routine io;
+};
+
 winvblock__def_struct ( disk__type )
 {
   driver__dev_ext dev_ext;
@@ -88,7 +93,7 @@ winvblock__def_struct ( disk__type )
    ) (
   IN struct _driver__dev_ext * DeviceExtension
    );
-  disk__io_routine io;
+  disk__ops_ptr ops;
   winvblock__uint32 ( *max_xfer_len ) ( disk__type_ptr disk_ptr );
   winvblock__uint32 ( *query_id ) ( disk__type_ptr disk_ptr,
 				    BUS_QUERY_ID_TYPE query_type,
@@ -131,8 +136,8 @@ disk__io_decl (
    */
   disk_ptr = get_disk_ptr ( dev_ext_ptr );
 
-  return disk_ptr->io ( dev_ext_ptr, mode, start_sector, sector_count, buffer,
-			irp );
+  return disk_ptr->ops->io ( dev_ext_ptr, mode, start_sector, sector_count,
+			     buffer, irp );
 }
 
 static __inline winvblock__uint32

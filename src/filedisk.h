@@ -33,9 +33,6 @@ winvblock__def_struct ( filedisk__type )
   winvblock__uint32 hash;
 };
 
-extern disk__io_decl (
-  filedisk__io
- );
 extern winvblock__uint32 filedisk__max_xfer_len (
   disk__type_ptr disk_ptr
  );

@@ -37,7 +37,10 @@
 #include "filedisk.h"
 #include "debug.h"
 
-disk__io_decl ( filedisk__io )
+static
+disk__io_decl (
+  io
+ )
 {
   disk__type_ptr disk_ptr;
   filedisk__type_ptr filedisk_ptr;
@@ -134,6 +137,8 @@ filedisk__no_init (
   return TRUE;
 }
 
+static disk__ops default_ops;
+
 irp__handler_decl ( filedisk__attach )
 {
   bus__type_ptr bus_ptr;
@@ -209,7 +214,7 @@ irp__handler_decl ( filedisk__attach )
     while ( *path_iterator )
       filedisk.hash += *path_iterator++;
   }
-  filedisk.disk.io = filedisk__io;
+  filedisk.disk.ops = &default_ops;
   filedisk.disk.max_xfer_len = filedisk__max_xfer_len;
   filedisk.disk.query_id = filedisk__query_id;
   filedisk.disk.dev_ext.size = sizeof ( filedisk__type );
@@ -224,3 +229,7 @@ irp__handler_decl ( filedisk__attach )
     }
   return STATUS_SUCCESS;
 }
+
+static disk__ops default_ops = {
+  io
+};

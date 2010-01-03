@@ -33,9 +33,7 @@ winvblock__def_struct ( ramdisk__type )
   winvblock__uint32 DiskSize;
 };
 
-extern disk__io_decl (
-  ramdisk__io
- );
+extern disk__ops ramdisk__default_ops;
 extern winvblock__uint32 ramdisk__max_xfer_len (
   disk__type_ptr disk_ptr
  );

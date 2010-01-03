@@ -111,7 +111,7 @@ check_mbft (
   ramdisk.disk.Heads = mBFT->mdi.heads;
   ramdisk.disk.Sectors = mBFT->mdi.sectors;
   ramdisk.disk.BootDrive = TRUE;
-  ramdisk.disk.io = ramdisk__io;
+  ramdisk.disk.ops = &ramdisk__default_ops;
   ramdisk.disk.max_xfer_len = ramdisk__max_xfer_len;
   ramdisk.disk.query_id = ramdisk__query_id;
   ramdisk.disk.dev_ext.size = sizeof ( ramdisk__type );

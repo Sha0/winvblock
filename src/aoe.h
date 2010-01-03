@@ -62,9 +62,7 @@ winvblock__def_struct ( aoe__disk_type )
 extern winvblock__bool STDCALL AoE_SearchDrive (
   IN driver__dev_ext_ptr DeviceExtension
  );
-extern disk__io_decl (
-  aoe__disk_io
- );
+extern disk__ops aoe__default_ops;
 extern winvblock__uint32 aoe__max_xfer_len (
   disk__type_ptr disk_ptr
  );

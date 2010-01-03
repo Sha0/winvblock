@@ -46,7 +46,10 @@ fast_copy (
   __movsd ( dest, src, count >> 2 );
 }
 
-disk__io_decl ( ramdisk__io )
+static
+disk__io_decl (
+  io
+ )
 {
   PHYSICAL_ADDRESS PhysicalAddress;
   winvblock__uint8_ptr PhysicalMemory;
@@ -153,3 +156,7 @@ ramdisk__no_init (
 {
   return TRUE;
 }
+
+disk__ops ramdisk__default_ops = {
+  io
+};
