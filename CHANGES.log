@@ -1,4 +1,10 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat Jan 2 21:16:35 2010 -0500
+
+    [aoe] AOE_TAG renamed to work_tag
+
+commit 927377c58235c7b0fae6fa903518aa9655defc7c
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sat Jan 2 20:36:07 2010 -0500
 
     [aoe] AOE_REQUEST renamed to io_req
