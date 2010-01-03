@@ -1,4 +1,10 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat Jan 2 19:35:01 2010 -0500
+
+    [aoe] AoE_Thread renamed to thread
+
+commit 378db7ce8fdbcaeccbb3d1f3f162245d7c991195
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sat Jan 2 19:15:05 2010 -0500
 
     [cosmetics] VOID renamed to void

@@ -48,7 +48,7 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject (
  );
 
 /* In this file */
-static void STDCALL AoE_Thread (
+static void STDCALL thread (
   IN void *StartContext
  );
 
@@ -246,7 +246,7 @@ AoE_Start (
   if ( !NT_SUCCESS
        ( Status =
 	 PsCreateSystemThread ( &AoE_Globals_ThreadHandle, THREAD_ALL_ACCESS,
-				&ObjectAttributes, NULL, NULL, AoE_Thread,
+				&ObjectAttributes, NULL, NULL, thread,
 				NULL ) ) )
     return Error ( "PsCreateSystemThread", Status );
 
@@ -1217,7 +1217,7 @@ AoE_ResetProbe (
 }
 
 static void STDCALL
-AoE_Thread (
+thread (
   IN void *StartContext
  )
 {
