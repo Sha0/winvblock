@@ -1,4 +1,54 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Jan 6 01:56:27 2010 -0500
+
+    [driver,bus] Remove re-initialization routine
+    
+    MAJOR LEARNING: A boot driver re-initialization routine is
+    too late to create the bus device and its disks!  Why?
+    If the boot volume was not installed during a previous
+    session, that means it's a new volume.  Never-before-seen
+    volumes are only registered as possible boot volumes at a
+    point before boot driver re-initialization routines are
+    called.
+    
+    As such, our previous re-initialization routine was _only_
+    useful if the expected boot volume on one of the RAM disks
+    was somehow already installed...  It so happens that in
+    testing, I often modify the RAM disk image by using it
+    with QEmu as the virtual machine's hard disk drive.  Thus,
+    the volume gets installed at that time and persists.  The
+    Blue Screen of Death that folks were having was pretty
+    mysterious.  The symptoms involved the Session Manager
+    crashing at a post-0x0000007B time, which was unexpected.
+    
+    The crash was due to an uninstalled volume being installed
+    too late, as mentioned.  So now probe__disks() happens
+    at bus creation time, and bus creation time happens either
+    during DriverEntry (if the user requests) or when the PnP
+    Manager re-establishes a previously installed bus device.
+    Both of these times occur before a boot driver
+    re-initialization routine occurs.
+    
+    An easy way to reproduce the issue was to change the MBR
+    signature on a disk already installed, thus making it a
+    "brand new" disk, with "brand new" volumes on it.
+    
+    This also explains why the Recovery Console will only boot
+    from a WinVBlock RAM disk with the /WINVBLOCK=BUS=1 switch.
+    This switch caused early bus creation _and_ early disk
+    probing.
+
+commit a6740504ce2ddcb4573e4e4fa2ff7b7d46276c51
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Jan 6 01:24:23 2010 -0500
+
+    [debug] Add DEBUGIRPS to file for convenience
+    
+    This means that two changes to debug.h will enable verbose
+    debugging, whenever needed.  Purely for convenience's sake.
+
+commit 6123f08169b1caa48813dbe35b1d389851da5734
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sun Jan 3 06:45:37 2010 -0500
 
     [disk] Minor cosmetic touch-ups

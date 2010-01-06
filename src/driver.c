@@ -219,61 +219,30 @@ DriverEntry (
   DriverObject->DriverUnload = Driver_Unload;
 
   /*
-   * There might be a bus device stored in the registry.  We
-   * give it a chance to be started by the PnP manager.  If we
-   * don't find evidence of a bus device in our re-initialization
-   * function, we'll add a bus device at that time.
+   * We expect that the WinVBlock bus device has already been
+   * installed by using the Add Hardware Wizard and the .INF file.
    * If the user requested early bus creation explicitly in BOOT.INI
    * or TXTSETUP.SIF, oblige them
    */
   make_bus = get_opt ( L"BUS" );
   if ( make_bus )
     {
+      PDEVICE_OBJECT bus_pdo_ptr;
+
       DBG ( "Early bus creation\n" );
-      DriverReinitialize ( DriverObject, NULL, 0 );
-    }
-  else
-    {
-      IoRegisterBootDriverReinitialization ( DriverObject,
-					     ( PDRIVER_REINITIALIZE )
-					     DriverReinitialize, NULL );
-    }
-  return STATUS_SUCCESS;
-}
-
-static NTSTATUS STDCALL
-DriverReinitialize (
-  IN PDRIVER_OBJECT DriverObject,
-  IN void *Context,
-  winvblock__uint32 Count
- )
-{
-  PDEVICE_OBJECT PDODeviceObject = NULL;
-  NTSTATUS Status = STATUS_SUCCESS;
-
-  /*
-   * Did PnP manager start up a previously installed bus?
-   */
-  if ( bus__fdo )
-    goto have_bus;
-
-  /*
-   * No previously installed bus.  Add one
-   */
-  IoReportDetectedDevice ( DriverObject, InterfaceTypeUndefined, -1, -1, NULL,
-			   NULL, FALSE, &PDODeviceObject );
-  if ( !NT_SUCCESS
-       ( Status = Bus_AddDevice ( DriverObject, PDODeviceObject ) ) )
-    {
-      Protocol_Stop (  );
-      AoE_Stop (  );
-      return Error ( "Bus_AddDevice", Status );
+      IoReportDetectedDevice ( DriverObject, InterfaceTypeUndefined, -1, -1,
+			       NULL, NULL, FALSE, &bus_pdo_ptr );
+      if ( !NT_SUCCESS
+	   ( Status = Bus_AddDevice ( DriverObject, bus_pdo_ptr ) ) )
+	{
+	  Protocol_Stop (  );
+	  AoE_Stop (  );
+	  return Error ( "Bus_AddDevice", Status );
+	}
     }
 
-have_bus:
-  probe__disks (  );
   Driver_Globals_Started = TRUE;
-  return Status;
+  return STATUS_SUCCESS;
 }
 
 static NTSTATUS STDCALL

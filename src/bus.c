@@ -460,5 +460,6 @@ Bus_AddDevice (
 #ifdef RIS
   bus_dev_ext_ptr->State = Started;
 #endif
+  probe__disks (  );
   return STATUS_SUCCESS;
 }
