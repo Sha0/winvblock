@@ -1,4 +1,18 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Jan 6 03:37:51 2010 -0500
+
+    [filedisk] Improve device IDs
+    
+    The bus, device type, and location are better now:
+    
+    WinVBlock\FileOpticalDisc\...Hash_FFFFFFFF
+    WinVBlock\FileFloppyDisk\...Hash_FFFFFFFF
+    WinVBlock\FileHardDisk\...Hash_FFFFFFFF
+    
+    where FFFFFFFF is the cheap "hash" for the disk.
+
+commit b59fb2ffa55845730a067ff209d28df6883fea83
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Wed Jan 6 03:20:26 2010 -0500
 
     [aoe] Improve device IDs

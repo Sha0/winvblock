@@ -91,15 +91,24 @@ disk__pnp_id_decl (
   switch ( query_type )
     {
       case BusQueryDeviceID:
-	return swprintf ( buf_512, L"WinVBlock\\FileDisk%08x",
-			  filedisk_ptr->hash ) + 1;
+	return swprintf ( buf_512,
+			  disk_ptr->media ==
+			  disk__media_optical ? L"WinVBlock\\FileOpticalDisc" :
+			  disk_ptr->media ==
+			  disk__media_floppy ? L"WinVBlock\\FileFloppyDisk" :
+			  L"WinVBlock\\FileHardDisk" ) + 1;
       case BusQueryInstanceID:
-	return swprintf ( buf_512, L"FileDisk%08x", filedisk_ptr->hash ) + 1;
+	return swprintf ( buf_512, L"Hash_%08X", filedisk_ptr->hash ) + 1;
       case BusQueryHardwareIDs:
 	{
-	  winvblock__uint32 tmp =
-	    swprintf ( buf_512, L"WinVBlock\\FileDisk%08x",
-		       filedisk_ptr->hash ) + 1;
+	  winvblock__uint32 tmp;
+	  tmp =
+	    swprintf ( buf_512,
+		       disk_ptr->media ==
+		       disk__media_optical ? L"WinVBlock\\FileOpticalDisc" :
+		       disk_ptr->media ==
+		       disk__media_floppy ? L"WinVBlock\\FileFloppyDisk" :
+		       L"WinVBlock\\FileHardDisk" ) + 1;
 	  tmp +=
 	    swprintf ( &buf_512[tmp],
 		       disk_ptr->media ==
