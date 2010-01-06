@@ -76,7 +76,8 @@ Bus_Stop (
       Walker = Next;
     }
   KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
-  RtlInitUnicodeString ( &DosDeviceName, L"\\DosDevices\\WinVBlock" );
+  RtlInitUnicodeString ( &DosDeviceName,
+			 L"\\DosDevices\\" winvblock__literal_w );
   IoDeleteSymbolicLink ( &DosDeviceName );
   bus__fdo = NULL;
 }
@@ -393,8 +394,9 @@ Bus_AddDevice (
   DBG ( "Entry\n" );
   if ( bus__fdo )
     return STATUS_SUCCESS;
-  RtlInitUnicodeString ( &DeviceName, L"\\Device\\WinVBlock" );
-  RtlInitUnicodeString ( &DosDeviceName, L"\\DosDevices\\WinVBlock" );
+  RtlInitUnicodeString ( &DeviceName, L"\\Device\\" winvblock__literal_w );
+  RtlInitUnicodeString ( &DosDeviceName,
+			 L"\\DosDevices\\" winvblock__literal_w );
   new_dev_ext_size =
     sizeof ( bus__type ) + driver__handling_table_size + handling_table_size;
   if ( !NT_SUCCESS

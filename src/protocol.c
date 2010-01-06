@@ -165,7 +165,7 @@ Protocol_Start (
 		      FALSE );
   KeInitializeSpinLock ( &Protocol_Globals_SpinLock );
 
-  RtlInitUnicodeString ( &ProtocolName, L"WinVBlock" );
+  RtlInitUnicodeString ( &ProtocolName, winvblock__literal_w );
   NdisZeroMemory ( &ProtocolCharacteristics,
 		   sizeof ( NDIS_PROTOCOL_CHARACTERISTICS ) );
   ProtocolCharacteristics.MajorNdisVersion = 4;

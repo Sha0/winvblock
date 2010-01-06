@@ -117,7 +117,7 @@ main (
     }
 
   DeviceHandle =
-    CreateFile ( "\\\\.\\WinVBlock", GENERIC_READ | GENERIC_WRITE,
+    CreateFile ( "\\\\.\\" winvblock__literal, GENERIC_READ | GENERIC_WRITE,
 		 FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0,
 		 NULL );
   if ( DeviceHandle == INVALID_HANDLE_VALUE )

@@ -118,7 +118,7 @@ irp__handler_decl ( disk_pnp__query_dev_text )
   switch ( Stack->Parameters.QueryDeviceText.DeviceTextType )
     {
       case DeviceTextDescription:
-	string_length = swprintf ( string, L"WinVBlock Disk" ) + 1;
+	string_length = swprintf ( string, winvblock__literal_w L" Disk" ) + 1;
 	Irp->IoStatus.Information =
 	  ( ULONG_PTR ) ExAllocatePool ( PagedPool,
 					 string_length * sizeof ( WCHAR ) );

@@ -1,4 +1,20 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Jan 6 05:02:24 2010 -0500
+
+    [cosmetics] Replace string literal instances with a macro
+    
+    In our project-common header we now define C preprocessor
+    macros which expand to the string "WinVBlock" in normal
+    and wide versions.  Appropriate replacements committed.
+
+commit 5198b07dd1b578736013d131d7f772f6c8314c5b
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Jan 6 03:41:13 2010 -0500
+
+    [version] Up version to 0.0.1.4
+
+commit 1885de6e4ca331e40dc31e20ff003b2046701ed7
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Wed Jan 6 03:37:51 2010 -0500
 
     [filedisk] Improve device IDs

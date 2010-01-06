@@ -113,10 +113,11 @@ disk__pnp_id_decl (
       case BusQueryDeviceID:
 	return swprintf ( buf_512,
 			  disk_ptr->media ==
-			  disk__media_optical ? L"WinVBlock\\RAMOpticalDisc" :
-			  disk_ptr->media ==
-			  disk__media_floppy ? L"WinVBlock\\RAMFloppyDisk" :
-			  L"WinVBlock\\RAMHardDisk" ) + 1;
+			  disk__media_optical ? winvblock__literal_w
+			  L"\\RAMOpticalDisc" : disk_ptr->media ==
+			  disk__media_floppy ? winvblock__literal_w
+			  L"\\RAMFloppyDisk" : winvblock__literal_w
+			  L"\\RAMHardDisk" ) + 1;
       case BusQueryInstanceID:
 	/*
 	 * "Location" 
@@ -128,10 +129,11 @@ disk__pnp_id_decl (
 	  tmp =
 	    swprintf ( buf_512,
 		       disk_ptr->media ==
-		       disk__media_optical ? L"WinVBlock\\RAMOpticalDisc" :
-		       disk_ptr->media ==
-		       disk__media_floppy ? L"WinVBlock\\RAMFloppyDisk" :
-		       L"WinVBlock\\RAMHardDisk" ) + 1;
+		       disk__media_optical ? winvblock__literal_w
+		       L"\\RAMOpticalDisc" : disk_ptr->media ==
+		       disk__media_floppy ? winvblock__literal_w
+		       L"\\RAMFloppyDisk" : winvblock__literal_w
+		       L"\\RAMHardDisk" ) + 1;
 	  tmp +=
 	    swprintf ( &buf_512[tmp],
 		       disk_ptr->media ==

@@ -610,12 +610,14 @@ Registry_Setup (
 	      for ( i = 0;
 		    i <
 		    ( KeyValueInformation->DataLength -
-		      sizeof ( L"WinVBlock" ) / sizeof ( WCHAR ) ); i++ )
+		      sizeof ( winvblock__literal_w ) / sizeof ( WCHAR ) );
+		    i++ )
 		{
 		  if ( RtlCompareMemory
-		       ( L"WinVBlock",
+		       ( winvblock__literal_w,
 			 &( ( ( PWCHAR ) KeyValueInformation->Data )[i] ),
-			 sizeof ( L"WinVBlock" ) ) == sizeof ( L"WinVBlock" ) )
+			 sizeof ( winvblock__literal_w ) ) ==
+		       sizeof ( winvblock__literal_w ) )
 		    {
 		      Found = TRUE;
 		      break;
@@ -640,7 +642,8 @@ Registry_Setup (
 		{
 		  Updated = TRUE;
 		  NewValueLength =
-		    KeyValueInformation->DataLength + sizeof ( L"WinVBlock" );
+		    KeyValueInformation->DataLength +
+		    sizeof ( winvblock__literal_w );
 		  if ( ( NewValue =
 			 ( PWCHAR ) ExAllocatePool ( NonPagedPool,
 						     NewValueLength ) ) ==
@@ -649,10 +652,10 @@ Registry_Setup (
 		      DBG ( "ExAllocatePool NewValue 2 failed\n" );
 		      goto e2_2;
 		    }
-		  RtlCopyMemory ( NewValue, L"WinVBlock",
-				  sizeof ( L"WinVBlock" ) );
+		  RtlCopyMemory ( NewValue, winvblock__literal_w,
+				  sizeof ( winvblock__literal_w ) );
 		  RtlCopyMemory ( &NewValue
-				  [( sizeof ( L"WinVBlock" ) /
+				  [( sizeof ( winvblock__literal_w ) /
 				     sizeof ( WCHAR ) )],
 				  KeyValueInformation->Data,
 				  KeyValueInformation->DataLength );
@@ -662,7 +665,8 @@ Registry_Setup (
 	  else
 	    {
 	      Updated = TRUE;
-	      NewValueLength = sizeof ( L"WinVBlock" ) + sizeof ( WCHAR );
+	      NewValueLength =
+		sizeof ( winvblock__literal_w ) + sizeof ( WCHAR );
 	      if ( ( NewValue =
 		     ( PWCHAR ) ExAllocatePool ( NonPagedPool,
 						 NewValueLength ) ) == NULL )
@@ -671,8 +675,8 @@ Registry_Setup (
 		  goto e2_1;
 		}
 	      RtlZeroMemory ( NewValue, NewValueLength );
-	      RtlCopyMemory ( NewValue, L"WinVBlock",
-			      sizeof ( L"WinVBlock" ) );
+	      RtlCopyMemory ( NewValue, winvblock__literal_w,
+			      sizeof ( winvblock__literal_w ) );
 	    }
 	  if ( !NT_SUCCESS
 	       ( ZwSetValueKey

@@ -96,15 +96,16 @@ main (
     goto CreateDeviceInfoError;
   if ( !SetupDiSetDeviceRegistryProperty
        ( DeviceInfoSet, &DeviceInfoData, SPDRP_HARDWAREID,
-	 ( LPBYTE ) "WinVBlock\0\0\0",
-	 ( lstrlen ( "WinVBlock\0\0\0" ) + 1 + 1 ) * sizeof ( TCHAR ) ) )
+	 ( LPBYTE ) winvblock__literal "\0\0\0",
+	 ( lstrlen ( winvblock__literal "\0\0\0" ) + 1 +
+	   1 ) * sizeof ( TCHAR ) ) )
     goto SetDeviceRegistryPropertyError;
   if ( !SetupDiCallClassInstaller
        ( DIF_REGISTERDEVICE, DeviceInfoSet, &DeviceInfoData ) )
     goto CallClassInstallerREGISTERDEVICEError;
 
   if ( !UpdateDriverForPlugAndPlayDevices
-       ( 0, "WinVBlock\0\0\0", FullFilePath, INSTALLFLAG_FORCE,
+       ( 0, winvblock__literal "\0\0\0", FullFilePath, INSTALLFLAG_FORCE,
 	 &RebootRequired ) )
     {
       DWORD err = GetLastError (  );

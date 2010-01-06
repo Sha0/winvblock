@@ -27,6 +27,9 @@
  *
  */
 
+#  define winvblock__literal "WinVBlock"
+#  define winvblock__literal_w L"WinVBlock"
+
 /* A common way to define a structure */
 #  define winvblock__def_struct( x ) \
 \

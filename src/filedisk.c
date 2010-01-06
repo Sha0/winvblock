@@ -93,10 +93,11 @@ disk__pnp_id_decl (
       case BusQueryDeviceID:
 	return swprintf ( buf_512,
 			  disk_ptr->media ==
-			  disk__media_optical ? L"WinVBlock\\FileOpticalDisc" :
-			  disk_ptr->media ==
-			  disk__media_floppy ? L"WinVBlock\\FileFloppyDisk" :
-			  L"WinVBlock\\FileHardDisk" ) + 1;
+			  disk__media_optical ? winvblock__literal_w
+			  L"\\FileOpticalDisc" : disk_ptr->media ==
+			  disk__media_floppy ? winvblock__literal_w
+			  L"\\FileFloppyDisk" : winvblock__literal_w
+			  L"\\FileHardDisk" ) + 1;
       case BusQueryInstanceID:
 	return swprintf ( buf_512, L"Hash_%08X", filedisk_ptr->hash ) + 1;
       case BusQueryHardwareIDs:
@@ -105,10 +106,11 @@ disk__pnp_id_decl (
 	  tmp =
 	    swprintf ( buf_512,
 		       disk_ptr->media ==
-		       disk__media_optical ? L"WinVBlock\\FileOpticalDisc" :
-		       disk_ptr->media ==
-		       disk__media_floppy ? L"WinVBlock\\FileFloppyDisk" :
-		       L"WinVBlock\\FileHardDisk" ) + 1;
+		       disk__media_optical ? winvblock__literal_w
+		       L"\\FileOpticalDisc" : disk_ptr->media ==
+		       disk__media_floppy ? winvblock__literal_w
+		       L"\\FileFloppyDisk" : winvblock__literal_w
+		       L"\\FileHardDisk" ) + 1;
 	  tmp +=
 	    swprintf ( &buf_512[tmp],
 		       disk_ptr->media ==
