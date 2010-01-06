@@ -7,16 +7,16 @@ echo Class=SCSIAdapter >> bin/winvblk.inf
 echo ClassGUID={4D36E97B-E325-11CE-BFC1-08002BE10318} >> bin/winvblk.inf
 echo Provider=WinVBlock >> bin/winvblk.inf
 echo CatalogFile=winvblk.cat >> bin/winvblk.inf
-echo DriverVer=01/01/2006,1.0 >> bin/winvblk.inf
+echo DriverVer=01/06/2010,1.0 >> bin/winvblk.inf
 echo. >> bin/winvblk.inf
 echo [Manufacturer] >> bin/winvblk.inf
 echo WinVBlock=WinVBlockDriver,,NTamd64 >> bin/winvblk.inf
 echo.  >> bin/winvblk.inf
 echo [WinVBlockDriver] >> bin/winvblk.inf
-echo "WinVBlock Driver"=WinVBlock,WinVBlock >> bin/winvblk.inf
+echo "WinVBlock Driver"=WinVBlock,Root\WinVBlock, Detected\WinVBlock >> bin/winvblk.inf
 echo. >> bin/winvblk.inf
 echo [WinVBlockDriver.NTamd64] >> bin/winvblk.inf
-echo "WinVBlock Driver"=WinVBlock.NTamd64,WinVBlock >> bin/winvblk.inf
+echo "WinVBlock Driver"=WinVBlock.NTamd64,Root\WinVBlock, Detected\WinVBlock >> bin/winvblk.inf
 echo. >> bin/winvblk.inf
 echo [SourceDisksNames] >> bin/winvblk.inf
 echo 0="Install Disk" >> bin/winvblk.inf

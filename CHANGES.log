@@ -1,4 +1,13 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Jan 6 12:12:16 2010 -0500
+
+    [build] Update hardware installation file
+    
+    Updated the .INF with a more accurate date as well as
+    proper detection for an auto-generated bus device.
+
+commit 3e54153e5a56cafe44cf112f37b19dccfa2cb4ae
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Wed Jan 6 05:02:24 2010 -0500
 
     [cosmetics] Replace string literal instances with a macro
