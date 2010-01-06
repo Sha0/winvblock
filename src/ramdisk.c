@@ -111,15 +111,27 @@ disk__pnp_id_decl (
   switch ( query_type )
     {
       case BusQueryDeviceID:
-	return swprintf ( buf_512, L"WinVBlock\\RAMDisk%08x",
-			  ramdisk_ptr->DiskBuf ) + 1;
+	return swprintf ( buf_512,
+			  disk_ptr->media ==
+			  disk__media_optical ? L"WinVBlock\\RAMOpticalDisc" :
+			  disk_ptr->media ==
+			  disk__media_floppy ? L"WinVBlock\\RAMFloppyDisk" :
+			  L"WinVBlock\\RAMHardDisk" ) + 1;
       case BusQueryInstanceID:
-	return swprintf ( buf_512, L"RAMDisk%08x", ramdisk_ptr->DiskBuf ) + 1;
+	/*
+	 * "Location" 
+	 */
+	return swprintf ( buf_512, L"RAM_at_%08X", ramdisk_ptr->DiskBuf ) + 1;
       case BusQueryHardwareIDs:
 	{
-	  winvblock__uint32 tmp =
-	    swprintf ( buf_512, L"WinVBlock\\RAMDisk%08x",
-		       ramdisk_ptr->DiskBuf ) + 1;
+	  winvblock__uint32 tmp;
+	  tmp =
+	    swprintf ( buf_512,
+		       disk_ptr->media ==
+		       disk__media_optical ? L"WinVBlock\\RAMOpticalDisc" :
+		       disk_ptr->media ==
+		       disk__media_floppy ? L"WinVBlock\\RAMFloppyDisk" :
+		       L"WinVBlock\\RAMHardDisk" ) + 1;
 	  tmp +=
 	    swprintf ( &buf_512[tmp],
 		       disk_ptr->media ==

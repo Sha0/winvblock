@@ -1,4 +1,18 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Jan 6 02:52:39 2010 -0500
+
+    [ramdisk] Improve device IDs
+    
+    The bus, device type, and location are better now:
+    
+    WinVBlock\RAMOpticalDisc\...RAM_at_FFFFFFFF
+    WinVBlock\RAMFloppyDisk\...RAM_at_FFFFFFFF
+    WinVBlock\RAMHardDisk\...RAM_at_FFFFFFFF
+    
+    TODO: A static string table that disks point to
+
+commit 3afe1fddd34f0e0187dca6bb569d9f8353aab07a
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Wed Jan 6 01:56:27 2010 -0500
 
     [driver,bus] Remove re-initialization routine
@@ -37,6 +51,9 @@ Date:   Wed Jan 6 01:56:27 2010 -0500
     from a WinVBlock RAM disk with the /WINVBLOCK=BUS=1 switch.
     This switch caused early bus creation _and_ early disk
     probing.
+    
+    EXTRA NOTE: Including the previous commit in CHANGES.log,
+    which was missed.
 
 commit a6740504ce2ddcb4573e4e4fa2ff7b7d46276c51
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
