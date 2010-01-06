@@ -45,6 +45,9 @@ xDbgPrint ( __FILE__, ( const PCHAR )__FUNCTION__, \
 #    define DBG( ... ) (void)0
 #  endif
 
+/* Define to enable verbose IRP debugging output */
+#  undef DEBUGIRPS
+
 extern NTSTATUS STDCALL xDbgPrint (
   IN PCHAR File,
   IN PCHAR Function,
