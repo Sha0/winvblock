@@ -1,4 +1,16 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Jan 6 03:20:26 2010 -0500
+
+    [aoe] Improve device IDs
+    
+    The bus, device type, and location are better now:
+    
+    WinVBlock\AoEHardDisk\...AoE_at_Shelf_F.Slot_T
+    
+    where F and T are the shelF and sloT numbers, resp.
+
+commit a4fa1e81be532e83ecd65a66edfb6980eb74835f
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Wed Jan 6 02:52:39 2010 -0500
 
     [ramdisk] Improve device IDs

@@ -1408,16 +1408,14 @@ disk__pnp_id_decl (
   switch ( query_type )
     {
       case BusQueryDeviceID:
-	return swprintf ( buf_512, L"WinVBlock\\AoEe%d.%d",
-			  aoe_disk_ptr->Major, aoe_disk_ptr->Minor ) + 1;
+	return swprintf ( buf_512, L"WinVBlock\\AoEHardDisk" ) + 1;
       case BusQueryInstanceID:
-	return swprintf ( buf_512, L"AOEDISK%d.%d", aoe_disk_ptr->Major,
-			  aoe_disk_ptr->Minor ) + 1;
+	return swprintf ( buf_512, L"AoE_at_Shelf_%d.Slot_%d",
+			  aoe_disk_ptr->Major, aoe_disk_ptr->Minor ) + 1;
       case BusQueryHardwareIDs:
 	{
 	  winvblock__uint32 tmp =
-	    swprintf ( buf_512, L"WinVBlock\\AoEe%d.%d", aoe_disk_ptr->Major,
-		       aoe_disk_ptr->Minor ) + 1;
+	    swprintf ( buf_512, L"WinVBlock\\AoEHardDisk" ) + 1;
 	  tmp += swprintf ( &buf_512[tmp], L"GenDisk" ) + 4;
 	  return tmp;
 	}
