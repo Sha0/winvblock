@@ -1,4 +1,13 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Jan 7 01:41:04 2010 -0500
+
+    [disk_dev_ctl] Removable-detection using table
+    
+    The disk's media type is used as an index into a boolean
+    table for whether the disk is removable or not.
+
+commit 467e79c462f4aab1ef553fa12235e8c53b4d0f96
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Thu Jan 7 01:28:07 2010 -0500
 
     [bus] Remove double-ternary operation

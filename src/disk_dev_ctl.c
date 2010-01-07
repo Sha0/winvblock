@@ -95,10 +95,11 @@ irp__handler_decl (
       storage_dev_desc.Size = sizeof ( STORAGE_DEVICE_DESCRIPTOR );
       storage_dev_desc.DeviceType = DIRECT_ACCESS_DEVICE;
       storage_dev_desc.DeviceTypeModifier = 0;
-      if ( disk_ptr->media == disk__media_hard )
-	storage_dev_desc.RemovableMedia = FALSE;
-      else
-	storage_dev_desc.RemovableMedia = TRUE;
+      {
+	static winvblock__bool removable[disk__media_count] =
+	  { TRUE, FALSE, TRUE };
+	storage_dev_desc.RemovableMedia = removable[disk_ptr->media];
+      }
       storage_dev_desc.CommandQueueing = FALSE;
       storage_dev_desc.VendorIdOffset = 0;
       storage_dev_desc.ProductIdOffset = 0;
