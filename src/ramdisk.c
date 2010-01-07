@@ -112,8 +112,6 @@ disk__pnp_id_decl (
     winvblock__literal_w L"\\RAMHardDisk",
     winvblock__literal_w L"\\RAMOpticalDisc"
   };
-  static PWCHAR compat_ids[disk__media_count] =
-    { L"GenSFloppy", L"GenDisk", L"GenCdRom" };
 
   switch ( query_type )
     {
@@ -128,11 +126,12 @@ disk__pnp_id_decl (
 	{
 	  winvblock__uint32 tmp;
 	  tmp = swprintf ( buf_512, hw_ids[disk_ptr->media] ) + 1;
-	  tmp += swprintf ( &buf_512[tmp], compat_ids[disk_ptr->media] ) + 4;
+	  tmp +=
+	    swprintf ( &buf_512[tmp], disk__compat_ids[disk_ptr->media] ) + 4;
 	  return tmp;
 	}
       case BusQueryCompatibleIDs:
-	return swprintf ( buf_512, compat_ids[disk_ptr->media] ) + 4;
+	return swprintf ( buf_512, disk__compat_ids[disk_ptr->media] ) + 4;
       default:
 	return 0;
     }

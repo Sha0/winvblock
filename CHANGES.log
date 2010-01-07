@@ -1,4 +1,13 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Jan 7 02:29:40 2010 -0500
+
+    [disk,filedisk,ramdisk] Move compat_ids into disk module
+    
+    Having the same array in the filedisk and ramdisk modules
+    was redundant.  It's universal and so belongs in disk.c.
+
+commit e157cb6e49cf48c0bdfa1e1d8ad6a6af6b9e8537
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Thu Jan 7 02:24:24 2010 -0500
 
     [ramdisk] Use table for hardware and compatible IDs

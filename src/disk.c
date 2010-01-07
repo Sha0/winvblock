@@ -50,6 +50,8 @@ __divdi3 (
 #endif
 
 winvblock__bool disk__removable[disk__media_count] = { TRUE, FALSE, TRUE };
+PWCHAR disk__compat_ids[disk__media_count] =
+  { L"GenSFloppy", L"GenDisk", L"GenCdRom" };
 
 disk__max_xfer_len_decl ( disk__default_max_xfer_len )
 {
