@@ -87,44 +87,29 @@ disk__pnp_id_decl (
  )
 {
   filedisk__type_ptr filedisk_ptr = filedisk__get_ptr ( &disk_ptr->dev_ext );
+  static PWCHAR hw_ids[disk__media_count] =
+    { winvblock__literal_w L"\\FileFloppyDisk",
+    winvblock__literal_w L"\\FileHardDisk",
+    winvblock__literal_w L"\\FileOpticalDisc"
+  };
+  static PWCHAR compat_ids[disk__media_count] =
+    { L"GenSFloppy", L"GenDisk", L"GenCdRom" };
 
   switch ( query_type )
     {
       case BusQueryDeviceID:
-	return swprintf ( buf_512,
-			  disk_ptr->media ==
-			  disk__media_optical ? winvblock__literal_w
-			  L"\\FileOpticalDisc" : disk_ptr->media ==
-			  disk__media_floppy ? winvblock__literal_w
-			  L"\\FileFloppyDisk" : winvblock__literal_w
-			  L"\\FileHardDisk" ) + 1;
+	return swprintf ( buf_512, hw_ids[disk_ptr->media] ) + 1;
       case BusQueryInstanceID:
 	return swprintf ( buf_512, L"Hash_%08X", filedisk_ptr->hash ) + 1;
       case BusQueryHardwareIDs:
 	{
 	  winvblock__uint32 tmp;
-	  tmp =
-	    swprintf ( buf_512,
-		       disk_ptr->media ==
-		       disk__media_optical ? winvblock__literal_w
-		       L"\\FileOpticalDisc" : disk_ptr->media ==
-		       disk__media_floppy ? winvblock__literal_w
-		       L"\\FileFloppyDisk" : winvblock__literal_w
-		       L"\\FileHardDisk" ) + 1;
-	  tmp +=
-	    swprintf ( &buf_512[tmp],
-		       disk_ptr->media ==
-		       disk__media_optical ? L"GenCdRom" : disk_ptr->media ==
-		       disk__media_floppy ? L"GenSFloppy" : L"GenDisk" ) + 4;
+	  tmp = swprintf ( buf_512, hw_ids[disk_ptr->media] ) + 1;
+	  tmp += swprintf ( &buf_512[tmp], compat_ids[disk_ptr->media] ) + 4;
 	  return tmp;
 	}
       case BusQueryCompatibleIDs:
-	return swprintf ( buf_512,
-			  disk_ptr->media ==
-			  disk__media_optical ? L"GenCdRom" : disk_ptr->media
-			  ==
-			  disk__media_floppy ? L"GenSFloppy" : L"GenDisk" ) +
-	  4;
+	return swprintf ( buf_512, compat_ids[disk_ptr->media] ) + 4;
       default:
 	return 0;
     }

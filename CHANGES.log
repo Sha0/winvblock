@@ -1,4 +1,12 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Jan 7 02:17:18 2010 -0500
+
+    [filedisk] Use table for hardware and compatible IDs
+    
+    Instead of the multiple and redundant ternary operations.
+
+commit 161ba255348361206fb966da7301efef0b8d1a78
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Thu Jan 7 02:00:20 2010 -0500
 
     [disk_scsi] Removable-detection using table
