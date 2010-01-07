@@ -1,4 +1,12 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Jan 7 02:24:24 2010 -0500
+
+    [ramdisk] Use table for hardware and compatible IDs
+    
+    Instead of the multiple and redundant ternary operations.
+
+commit fb1f0d1ea9b1926bdce804cf682e5ff3cef9bb83
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Thu Jan 7 02:17:18 2010 -0500
 
     [filedisk] Use table for hardware and compatible IDs
