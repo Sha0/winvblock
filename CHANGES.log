@@ -1,4 +1,15 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Jan 7 03:08:17 2010 -0500
+
+    [driver] Fix use of un-initialized pointer
+    
+    Big oops.  For auto-generation of a bus device, we
+    use IoReportDetectedDevice().  It expects the final
+    parameter as a PDO pointer.  If it's non-NULL, it is
+    assumed that we already have a PDO, which we don't.
+
+commit 4e72aadc8dea6dbb3eb760437db43d54c7fa3e95
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Thu Jan 7 02:29:40 2010 -0500
 
     [disk,filedisk,ramdisk] Move compat_ids into disk module

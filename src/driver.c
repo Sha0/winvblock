@@ -227,7 +227,7 @@ DriverEntry (
   make_bus = get_opt ( L"BUS" );
   if ( make_bus )
     {
-      PDEVICE_OBJECT bus_pdo_ptr;
+      PDEVICE_OBJECT bus_pdo_ptr = NULL;
 
       DBG ( "Early bus creation\n" );
       IoReportDetectedDevice ( DriverObject, InterfaceTypeUndefined, -1, -1,
