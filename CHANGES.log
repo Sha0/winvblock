@@ -1,4 +1,12 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Jan 7 01:28:07 2010 -0500
+
+    [bus] Remove double-ternary operation
+    
+    Use a table instead, with a disk's media type as index.
+
+commit 799f9c8ee546c2ba688b53f14d0f8e2bb55cfbb0
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Wed Jan 6 12:12:16 2010 -0500
 
     [build] Update hardware installation file

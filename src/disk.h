@@ -32,7 +32,8 @@ enum _disk__media
 {
   disk__media_floppy,
   disk__media_hard,
-  disk__media_optical
+  disk__media_optical,
+  disk__media_count
 };
 winvblock__def_enum ( disk__media );
 
