@@ -1,4 +1,14 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Jan 7 17:59:10 2010 -0500
+
+    [mount] Prefix object manager global namespace for filedisks
+    
+    ZwCreateFile() wants "\??\X:\PATH\FILE" so winvblk.exe will
+    throw "\??\" onto the beginning of the path that they
+    specify, on their behalf.
+
+commit 6155e5fc1a96ddf236482cbcad9e58cc7ae9f552
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Thu Jan 7 09:13:48 2010 -0500
 
     [version] Up version to 0.0.1.5

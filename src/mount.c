@@ -263,6 +263,7 @@ main (
       case CommandAttach:
 	{
 	  mount__filedisk filedisk;
+	  char obj_path_prefix[] = "\\??\\";
 
 	  if ( argc < 6 )
 	    {
@@ -276,8 +277,11 @@ main (
 	  sscanf ( argv[5], "%d", ( int * )&filedisk.heads );
 	  sscanf ( argv[6], "%d", ( int * )&filedisk.sectors );
 	  memcpy ( &InBuffer, &filedisk, sizeof ( mount__filedisk ) );
-	  memcpy ( &InBuffer[sizeof ( mount__filedisk )], argv[2],
-		   strlen ( argv[2] ) + 1 );
+	  memcpy ( &InBuffer[sizeof ( mount__filedisk )], obj_path_prefix,
+		   sizeof ( obj_path_prefix ) );
+	  memcpy ( &InBuffer
+		   [sizeof ( mount__filedisk ) + sizeof ( obj_path_prefix ) -
+		    1], argv[2], strlen ( argv[2] ) + 1 );
 	  if ( !DeviceIoControl
 	       ( DeviceHandle, IOCTL_FILE_ATTACH, InBuffer,
 		 sizeof ( InBuffer ), NULL, 0, &BytesReturned,
