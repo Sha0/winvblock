@@ -1,4 +1,13 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Jan 7 02:00:20 2010 -0500
+
+    [disk_scsi] Removable-detection using table
+    
+    The disk's media type is used as an index into a
+    MEDIA_TYPE table for whether the disk is removable or not.
+
+commit 47117c3b216b3af66c8d18c3d16e7c2f729860e2
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Thu Jan 7 01:52:33 2010 -0500
 
     [disk] Removable-detection using table

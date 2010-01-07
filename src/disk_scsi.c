@@ -304,6 +304,8 @@ scsi_op (
  )
 {
   PMODE_PARAMETER_HEADER mode_param_header;
+  static MEDIA_TYPE media_types[disk__media_count] =
+    { RemovableMedia, FixedMedia, RemovableMedia };
 
   if ( Srb->DataTransferLength < sizeof ( MODE_PARAMETER_HEADER ) )
     {
@@ -313,10 +315,7 @@ scsi_op (
   mode_param_header = ( PMODE_PARAMETER_HEADER ) Srb->DataBuffer;
   RtlZeroMemory ( mode_param_header, Srb->DataTransferLength );
   mode_param_header->ModeDataLength = sizeof ( MODE_PARAMETER_HEADER );
-  if ( disk_ptr->media == disk__media_hard )
-    mode_param_header->MediumType = FixedMedia;
-  else
-    mode_param_header->MediumType = RemovableMedia;
+  mode_param_header->MediumType = media_types[disk_ptr->media];
   mode_param_header->BlockDescriptorLength = 0;
   Srb->DataTransferLength = sizeof ( MODE_PARAMETER_HEADER );
   Irp->IoStatus.Information = sizeof ( MODE_PARAMETER_HEADER );
