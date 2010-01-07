@@ -1,4 +1,16 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Jan 7 01:52:33 2010 -0500
+
+    [disk] Removable-detection using table
+    
+    The disk's media type is used as an index into a boolean
+    table for whether the disk is removable or not.
+    
+    Move the table from the last commit into the disk module,
+    since disk_pnp had similar logic to disk_dev_ctl.
+
+commit 99c9fa4548f538df73dd5ae5f12c1a6d400a73d9
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Thu Jan 7 01:41:04 2010 -0500
 
     [disk_dev_ctl] Removable-detection using table

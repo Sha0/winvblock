@@ -37,6 +37,8 @@ enum _disk__media
 };
 winvblock__def_enum ( disk__media );
 
+extern winvblock__bool disk__removable[disk__media_count];
+
 enum _disk__io_mode
 {
   disk__io_mode_read,

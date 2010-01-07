@@ -49,6 +49,8 @@ __divdi3 (
 }
 #endif
 
+winvblock__bool disk__removable[disk__media_count] = { TRUE, FALSE, TRUE };
+
 disk__max_xfer_len_decl ( disk__default_max_xfer_len )
 {
   return 1024 * 1024;
