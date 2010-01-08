@@ -1,4 +1,16 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 10:08:27 2010 -0500
+
+    [bus,disk] Move some disk device logic
+    
+    Trying to move disk device creation logic out of the bus
+    module and into the disk module.  We now have a disk PDO
+    creation function, disk__create_pdo().
+    
+    Not all disk logic has been moved out yet.
+
+commit e7b1e9db500cfb4aba35122371a290429b67ad84
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Fri Jan 8 01:00:58 2010 -0500
 
     [bus] Remove unused boolean argument for Bus_AddChild

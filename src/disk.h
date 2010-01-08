@@ -178,8 +178,9 @@ struct _disk__type
   winvblock__uint32 SpecialFileCount;
 };
 
-extern irp__handling disk__handling_table[];
-extern size_t disk__handling_table_size;
+extern PDEVICE_OBJECT disk__create_pdo (
+  IN OUT disk__type_ptr disk_ptr
+ );
 
 /*
  * Establish a pointer into the child disk device's extension space
