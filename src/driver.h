@@ -61,6 +61,25 @@ extern PDRIVER_OBJECT driver__obj_ptr;
 winvblock__def_struct ( driver__dev_ext );
 
 /**
+ * Device PDO creation routine
+ *
+ * @v dev_ext_ptr     The device whose PDO should be created
+ */
+#  define driver__dev_create_pdo_decl( x ) \
+\
+PDEVICE_OBJECT STDCALL \
+x ( \
+  IN driver__dev_ext_ptr dev_ext_ptr \
+ )
+/*
+ * Function pointer for a device initialization routine.
+ * 'indent' mangles this, so it looks weird
+ */
+typedef driver__dev_create_pdo_decl (
+   ( *driver__dev_create_pdo_routine )
+ );
+
+/**
  * Device initialization routine
  *
  * @v dev_ext_ptr     The device being initialized
@@ -79,6 +98,12 @@ typedef driver__dev_init_decl (
    ( *driver__dev_init_routine )
  );
 
+winvblock__def_struct ( driver__dev_ops )
+{
+  driver__dev_create_pdo_routine create_pdo;
+  driver__dev_init_routine init;
+};
+
 /* Driver-common device extension detail */
 struct _driver__dev_ext
 {
@@ -92,16 +117,8 @@ struct _driver__dev_ext
   irp__handling_ptr irp_handler_stack_ptr;
   size_t irp_handler_stack_size;
   driver__dev_ext_ptr next_sibling_ptr;
-  driver__dev_init_routine init;
+  driver__dev_ops_ptr ops;
 };
-
-__inline
-driver__dev_init_decl (
-  driver__dev_init
- )
-{
-  return dev_ext_ptr->init ( dev_ext_ptr );
-}
 
 extern void STDCALL Driver_CompletePendingIrp (
   IN PIRP Irp

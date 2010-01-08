@@ -111,8 +111,9 @@ check_mbft (
   ramdisk.disk.Sectors = mBFT->mdi.sectors;
   ramdisk.disk.BootDrive = TRUE;
   ramdisk.disk.ops = &ramdisk__default_ops;
+  ramdisk.disk.dev_ext.ops = &disk__dev_ops;
   ramdisk.disk.dev_ext.size = sizeof ( ramdisk__type );
-  if ( !Bus_AddChild ( bus__fdo, &ramdisk.disk ) )
+  if ( !Bus_AddChild ( bus__fdo, &ramdisk.disk.dev_ext ) )
     {
       DBG ( "Bus_AddChild() failed for MEMDISK\n" );
     }

@@ -162,9 +162,10 @@ grub4dos__find (
 					 ramdisk.disk.Sectors );
 	  ramdisk.disk.BootDrive = TRUE;
 	  ramdisk.disk.ops = &ramdisk__default_ops;
+	  ramdisk.disk.dev_ext.ops = &disk__dev_ops;
 	  ramdisk.disk.dev_ext.size = sizeof ( ramdisk__type );
 	  FoundGrub4DosMapping = TRUE;
-	  if ( !Bus_AddChild ( bus__fdo, &ramdisk.disk ) )
+	  if ( !Bus_AddChild ( bus__fdo, &ramdisk.disk.dev_ext ) )
 	    {
 	      DBG ( "Bus_AddChild() failed for GRUB4DOS\n" );
 	    }

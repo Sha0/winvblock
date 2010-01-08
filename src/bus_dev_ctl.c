@@ -189,8 +189,9 @@ irp__handler_decl (
   aoe_disk.MaxSectorsPerPacket = 1;
   aoe_disk.Timeout = 200000;	/* 20 ms. */
   aoe_disk.disk.ops = &aoe__default_ops;
+  aoe_disk.disk.dev_ext.ops = &disk__dev_ops;
   aoe_disk.disk.dev_ext.size = sizeof ( aoe__disk_type );
-  if ( !Bus_AddChild ( DeviceObject, &aoe_disk.disk ) )
+  if ( !Bus_AddChild ( DeviceObject, &aoe_disk.disk.dev_ext ) )
     {
       DBG ( "Bus_AddChild() failed\n" );
     }

@@ -176,9 +176,8 @@ struct _disk__type
   winvblock__uint32 SpecialFileCount;
 };
 
-extern PDEVICE_OBJECT disk__create_pdo (
-  IN OUT disk__type_ptr disk_ptr
- );
+/* Device operations for disks */
+extern driver__dev_ops disk__dev_ops;
 
 /*
  * Establish a pointer into the child disk device's extension space

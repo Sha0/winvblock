@@ -127,26 +127,26 @@ static irp__handling handling_table[] = {
 /**
  * Create a disk PDO filled with the given disk parameters
  *
- * @v disk_ptr        The disk to add
+ * @v dev_ext_ptr     Populate PDO dev. ext. space from these details
  *
  * Returns a Physical Device Object pointer on success, NULL for failure.
  */
-PDEVICE_OBJECT
-disk__create_pdo (
-  IN OUT disk__type_ptr disk_ptr
+static
+driver__dev_create_pdo_decl (
+  create_pdo
  )
 {
   /**
+   * @v disk_ptr          Used for pointing to disk details
    * @v status            Status of last operation
    * @v dev_obj_ptr       The new node's device object
-   * @v dev_ext_ptr       The new node's device extension
    * @v new_ext_size      The extension space size
    * @v disk_types[]      Floppy, hard disk, optical disc specifics
    * @v characteristics[] Floppy, hard disk, optical disc specifics
    */
+  disk__type_ptr disk_ptr;
   NTSTATUS status;
   PDEVICE_OBJECT dev_obj_ptr;
-  driver__dev_ext_ptr dev_ext_ptr;
   size_t new_ext_size;
   static DEVICE_TYPE disk_types[disk__media_count] =
     { FILE_DEVICE_DISK, FILE_DEVICE_DISK, FILE_DEVICE_CD_ROM };
@@ -156,6 +156,10 @@ disk__create_pdo (
   };
 
   DBG ( "Entry\n" );
+  /*
+   * Point to the disk details provided
+   */
+  disk_ptr = get_disk_ptr ( dev_ext_ptr );
   /*
    * Create the disk device.  Whoever calls us should have set
    * the device extension space size requirement appropriately
@@ -173,6 +177,10 @@ disk__create_pdo (
       Error ( "IoCreateDevice", status );
       return NULL;
     }
+  /*
+   * Re-purpose dev_ext_ptr to point into the PDO's device
+   * extension space.  We have disk_ptr still for original details
+   */
   dev_ext_ptr = dev_obj_ptr->DeviceExtension;
   /*
    * Clear the extension space and establish parameters
@@ -190,7 +198,6 @@ disk__create_pdo (
   dev_ext_ptr->DriverObject = driver__obj_ptr;
   dev_ext_ptr->State = NotStarted;
   dev_ext_ptr->OldState = NotStarted;
-  dev_ext_ptr->init = init;
   dev_ext_ptr->irp_handler_stack_ptr =
     ( irp__handling_ptr ) ( ( winvblock__uint8 * ) dev_ext_ptr +
 			    dev_ext_ptr->size );
@@ -208,7 +215,7 @@ disk__create_pdo (
    */
   dev_ext_ptr->size = new_ext_size;
   /*
-   * Establish pointers into the disk device's extension space
+   * Establish a pointer into the disk device's extension space
    */
   disk_ptr = get_disk_ptr ( dev_ext_ptr );
   KeInitializeEvent ( &disk_ptr->SearchEvent, SynchronizationEvent, FALSE );
@@ -222,3 +229,9 @@ disk__create_pdo (
   dev_obj_ptr->Flags |= DO_POWER_INRUSH;	/* FIXME? */
   return dev_obj_ptr;
 }
+
+/* Device operations for disks */
+driver__dev_ops disk__dev_ops = {
+  create_pdo,
+  init
+};

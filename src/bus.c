@@ -159,28 +159,24 @@ Bus_CleanupTargetList (
  * Add a child node to the bus
  *
  * @v BusDeviceObject The bus to add the node to
- * @v Disk            The disk to add
+ * @v dev_ext_ptr     The details for the child device to add
  *
  * Returns TRUE for success, FALSE for failure
  */
 winvblock__bool STDCALL
 Bus_AddChild (
   IN PDEVICE_OBJECT BusDeviceObject,
-  IN disk__type_ptr Disk
+  IN driver__dev_ext_ptr dev_ext_ptr
  )
 {
   /**
    * @v DeviceObject        The new node's device object
    * @v bus_ptr             A pointer to the bus device's details
-   * @v disk_ptr            A pointer to the disk device's details
-   * @v dev_ext_ptr         A pointer to the disk device's extension
    * @v walker              Walks the child nodes
    */
   PDEVICE_OBJECT DeviceObject;
   bus__type_ptr bus_ptr;
-  disk__type_ptr disk_ptr;
-  driver__dev_ext_ptr dev_ext_ptr,
-   walker;
+  driver__dev_ext_ptr walker;
 
   DBG ( "Entry\n" );
   /*
@@ -190,10 +186,14 @@ Bus_AddChild (
   /*
    * Create the child device
    */
-  DeviceObject = disk__create_pdo ( Disk );
+  DeviceObject = dev_ext_ptr->ops->create_pdo ( dev_ext_ptr );
   if ( !DeviceObject )
     return FALSE;
 
+  /*
+   * Re-purpose dev_ext_ptr to point into the PDO's device
+   * extension space.  We don't need the original details anymore
+   */
   dev_ext_ptr = DeviceObject->DeviceExtension;
   dev_ext_ptr->Parent = BusDeviceObject;
   dev_ext_ptr->next_sibling_ptr = NULL;
@@ -201,7 +201,7 @@ Bus_AddChild (
    * Initialize the device.  For disks, this routine is responsible for
    * determining the disk's geometry appropriately for AoE/RAM/file disks
    */
-  driver__dev_init ( dev_ext_ptr );
+  dev_ext_ptr->ops->init ( dev_ext_ptr );
   DeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
   /*
    * Add the new device's extension to the bus' list of children

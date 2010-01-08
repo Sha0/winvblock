@@ -1537,9 +1537,10 @@ aoe__process_abft (
       aoe_disk.Timeout = 200000;	/* 20 ms. */
       aoe_disk.disk.BootDrive = TRUE;
       aoe_disk.disk.ops = &aoe__default_ops;
+      aoe_disk.disk.dev_ext.ops = &disk__dev_ops;
       aoe_disk.disk.dev_ext.size = sizeof ( aoe__disk_type );
 
-      if ( !Bus_AddChild ( bus__fdo, &aoe_disk.disk ) )
+      if ( !Bus_AddChild ( bus__fdo, &aoe_disk.disk.dev_ext ) )
 	DBG ( "Bus_AddChild() failed for aBFT AoE disk\n" );
       else
 	{

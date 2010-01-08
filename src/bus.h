@@ -82,7 +82,7 @@ struct _disk__type;
 
 extern winvblock__bool STDCALL Bus_AddChild (
   IN PDEVICE_OBJECT BusDeviceObject,
-  IN disk__type_ptr Disk
+  IN driver__dev_ext_ptr dev_ext_ptr
  );
 
 /*
