@@ -989,6 +989,75 @@ disk__io_decl (
   return STATUS_PENDING;
 }
 
+KSPIN_LOCK Bus_Globals_TargetListSpinLock;
+
+static void STDCALL
+add_target (
+  IN winvblock__uint8_ptr ClientMac,
+  IN winvblock__uint8_ptr ServerMac,
+  winvblock__uint16 Major,
+  winvblock__uint8 Minor,
+  LONGLONG LBASize
+ )
+{
+  bus__target_list_ptr Walker,
+   Last;
+  KIRQL Irql;
+
+  KeAcquireSpinLock ( &Bus_Globals_TargetListSpinLock, &Irql );
+  Last = Bus_Globals_TargetList;
+  Walker = Bus_Globals_TargetList;
+  while ( Walker != NULL )
+    {
+      if ( ( RtlCompareMemory ( &Walker->Target.ClientMac, ClientMac, 6 ) ==
+	     6 )
+	   && ( RtlCompareMemory ( &Walker->Target.ServerMac, ServerMac, 6 ) ==
+		6 ) && Walker->Target.Major == Major
+	   && Walker->Target.Minor == Minor )
+	{
+	  if ( Walker->Target.LBASize != LBASize )
+	    {
+	      DBG ( "LBASize changed for e%d.%d " "(%I64u->%I64u)\n", Major,
+		    Minor, Walker->Target.LBASize, LBASize );
+	      Walker->Target.LBASize = LBASize;
+	    }
+	  KeQuerySystemTime ( &Walker->Target.ProbeTime );
+	  KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
+	  return;
+	}
+      Last = Walker;
+      Walker = Walker->next;
+    }
+
+  if ( ( Walker =
+	 ( bus__target_list_ptr ) ExAllocatePool ( NonPagedPool,
+						   sizeof
+						   ( bus__target_list ) ) ) ==
+       NULL )
+    {
+      DBG ( "ExAllocatePool Target\n" );
+      KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
+      return;
+    }
+  Walker->next = NULL;
+  RtlCopyMemory ( Walker->Target.ClientMac, ClientMac, 6 );
+  RtlCopyMemory ( Walker->Target.ServerMac, ServerMac, 6 );
+  Walker->Target.Major = Major;
+  Walker->Target.Minor = Minor;
+  Walker->Target.LBASize = LBASize;
+  KeQuerySystemTime ( &Walker->Target.ProbeTime );
+
+  if ( Last == NULL )
+    {
+      Bus_Globals_TargetList = Walker;
+    }
+  else
+    {
+      Last->next = Walker;
+    }
+  KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
+}
+
 /**
  * Process an AoE reply
  *
@@ -1026,8 +1095,8 @@ AoE_Reply (
   if ( AoE_Globals_ProbeTag->Id == reply->Tag )
     {
       RtlCopyMemory ( &LBASize, &reply->Data[200], sizeof ( LONGLONG ) );
-      Bus_AddTarget ( DestinationMac, SourceMac, ntohs ( reply->Major ),
-		      reply->Minor, LBASize );
+      add_target ( DestinationMac, SourceMac, ntohs ( reply->Major ),
+		   reply->Minor, LBASize );
       return STATUS_SUCCESS;
     }
 
