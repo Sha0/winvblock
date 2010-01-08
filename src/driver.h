@@ -69,6 +69,7 @@ winvblock__def_struct ( driver__dev_ext )
   driver__state OldState;
   irp__handling_ptr irp_handler_stack_ptr;
   size_t irp_handler_stack_size;
+  driver__dev_ext_ptr next_sibling_ptr;
 };
 
 extern void STDCALL Driver_CompletePendingIrp (

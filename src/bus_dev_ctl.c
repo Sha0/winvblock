@@ -119,7 +119,7 @@ irp__handler_decl (
   while ( disk_walker != NULL )
     {
       count++;
-      disk_walker = disk_walker->next_sibling_ptr;
+      disk_walker = ( disk__type_ptr ) disk_walker->dev_ext.next_sibling_ptr;
     }
 
   if ( ( disks =
@@ -153,7 +153,7 @@ irp__handler_decl (
       disks->Disk[count].Minor = aoe_disk_ptr->Minor;
       disks->Disk[count].LBASize = disk_walker->LBADiskSize;
       count++;
-      disk_walker = disk_walker->next_sibling_ptr;
+      disk_walker = ( disk__type_ptr ) disk_walker->dev_ext.next_sibling_ptr;
     }
   RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, disks,
 		  ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
@@ -227,7 +227,7 @@ irp__handler_decl (
 	  && ( disk_walker->DiskNumber != *( winvblock__uint32_ptr ) buffer ) )
     {
       prev_disk_walker = disk_walker;
-      disk_walker = disk_walker->next_sibling_ptr;
+      disk_walker = ( disk__type_ptr ) disk_walker->dev_ext.next_sibling_ptr;
     }
   if ( disk_walker != NULL )
     {
@@ -241,14 +241,15 @@ irp__handler_decl (
       if ( disk_walker == ( disk__type_ptr ) bus_ptr->first_child_ptr )
 	{
 	  bus_ptr->first_child_ptr =
-	    ( winvblock__uint8_ptr ) disk_walker->next_sibling_ptr;
+	    ( winvblock__uint8_ptr ) disk_walker->dev_ext.next_sibling_ptr;
 	}
       else
 	{
-	  prev_disk_walker->next_sibling_ptr = disk_walker->next_sibling_ptr;
+	  prev_disk_walker->dev_ext.next_sibling_ptr =
+	    disk_walker->dev_ext.next_sibling_ptr;
 	}
       disk_walker->Unmount = TRUE;
-      disk_walker->next_sibling_ptr = NULL;
+      disk_walker->dev_ext.next_sibling_ptr = NULL;
       if ( bus_ptr->PhysicalDeviceObject != NULL )
 	IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
 				      BusRelations );

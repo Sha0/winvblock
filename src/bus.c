@@ -175,13 +175,13 @@ Bus_AddChild (
    * @v bus_ptr             A pointer to the bus device's details
    * @v disk_ptr            A pointer to the disk device's details
    * @v dev_ext_ptr         A pointer to the disk device's extension
-   * @v Walker              Walks the child nodes
+   * @v walker              Walks the child nodes
    */
   PDEVICE_OBJECT DeviceObject;
   bus__type_ptr bus_ptr;
-  disk__type_ptr disk_ptr,
-   Walker;
-  driver__dev_ext_ptr dev_ext_ptr;
+  disk__type_ptr disk_ptr;
+  driver__dev_ext_ptr dev_ext_ptr,
+   walker;
 
   DBG ( "Entry\n" );
   /*
@@ -197,11 +197,11 @@ Bus_AddChild (
 
   dev_ext_ptr = DeviceObject->DeviceExtension;
   dev_ext_ptr->Parent = BusDeviceObject;
+  dev_ext_ptr->next_sibling_ptr = NULL;
   /*
    * Get a pointer to the child device's disk
    */
   disk_ptr = get_disk_ptr ( dev_ext_ptr );
-  disk_ptr->next_sibling_ptr = NULL;
   disk_ptr->DiskNumber = InterlockedIncrement ( &Bus_Globals_NextDisk ) - 1;
   /*
    * Determine the disk's geometry differently for AoE/RAM/file disk
@@ -213,14 +213,14 @@ Bus_AddChild (
    */
   if ( bus_ptr->first_child_ptr == NULL )
     {
-      bus_ptr->first_child_ptr = ( winvblock__uint8_ptr ) disk_ptr;
+      bus_ptr->first_child_ptr = ( winvblock__uint8_ptr ) dev_ext_ptr;
     }
   else
     {
-      Walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
-      while ( Walker->next_sibling_ptr != NULL )
-	Walker = Walker->next_sibling_ptr;
-      Walker->next_sibling_ptr = disk_ptr;
+      walker = ( driver__dev_ext_ptr ) bus_ptr->first_child_ptr;
+      while ( walker->next_sibling_ptr != NULL )
+	walker = walker->next_sibling_ptr;
+      walker->next_sibling_ptr = dev_ext_ptr;
     }
   bus_ptr->Children++;
   return TRUE;

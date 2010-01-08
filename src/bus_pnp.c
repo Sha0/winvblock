@@ -95,7 +95,7 @@ irp__handler_decl ( bus_pnp__remove_dev )
   walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
   while ( walker != NULL )
     {
-      next = walker->next_sibling_ptr;
+      next = ( disk__type_ptr ) walker->dev_ext.next_sibling_ptr;
       IoDeleteDevice ( walker->dev_ext.Self );
       walker = next;
     }
@@ -130,7 +130,7 @@ irp__handler_decl ( bus_pnp__query_dev_relations )
   while ( walker != NULL )
     {
       count++;
-      walker = walker->next_sibling_ptr;
+      walker = ( disk__type_ptr ) walker->dev_ext.next_sibling_ptr;
     }
   dev_relations =
     ( PDEVICE_RELATIONS ) ExAllocatePool ( NonPagedPool,
@@ -156,7 +156,7 @@ irp__handler_decl ( bus_pnp__query_dev_relations )
       ObReferenceObject ( walker->dev_ext.Self );
       dev_relations->Objects[count] = walker->dev_ext.Self;
       count++;
-      walker = walker->next_sibling_ptr;
+      walker = ( disk__type_ptr ) walker->dev_ext.next_sibling_ptr;
     }
   Irp->IoStatus.Information = ( ULONG_PTR ) dev_relations;
   status = STATUS_SUCCESS;
