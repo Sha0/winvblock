@@ -41,6 +41,8 @@
 #include "debug.h"
 #include "bus.h"
 
+#define AOEPROTOCOLVER 1
+
 extern NTSTATUS STDCALL ZwWaitForSingleObject (
   IN HANDLE Handle,
   IN winvblock__bool Alertable,

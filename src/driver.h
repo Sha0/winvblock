@@ -38,7 +38,6 @@
  * #define DEBUGALLPROTOCOLCALLS
  */
 
-#  define AOEPROTOCOLVER 1
 #  define POOLSIZE 2048
 
 enum _driver__state
