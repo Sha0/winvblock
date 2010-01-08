@@ -41,6 +41,8 @@
 #include "aoe.h"
 #include "debug.h"
 
+#define AOEPROTOCOLID 0x88a2
+
 /* in this file */
 static void STDCALL Protocol_OpenAdapterComplete (
   IN NDIS_HANDLE ProtocolBindingContext,

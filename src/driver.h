@@ -38,7 +38,6 @@
  * #define DEBUGALLPROTOCOLCALLS
  */
 
-#  define AOEPROTOCOLID 0x88a2
 #  define AOEPROTOCOLVER 1
 #  define POOLSIZE 2048
 
