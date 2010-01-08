@@ -43,7 +43,6 @@
 
 bus__target_list_ptr Bus_Globals_TargetList = NULL;
 KSPIN_LOCK Bus_Globals_TargetListSpinLock;
-static winvblock__uint32 Bus_Globals_NextDisk = 0;
 PDEVICE_OBJECT bus__fdo = NULL;
 
 NTSTATUS STDCALL
@@ -198,11 +197,6 @@ Bus_AddChild (
   dev_ext_ptr = DeviceObject->DeviceExtension;
   dev_ext_ptr->Parent = BusDeviceObject;
   dev_ext_ptr->next_sibling_ptr = NULL;
-  /*
-   * Get a pointer to the child device's disk
-   */
-  disk_ptr = get_disk_ptr ( dev_ext_ptr );
-  disk_ptr->DiskNumber = InterlockedIncrement ( &Bus_Globals_NextDisk ) - 1;
   /*
    * Initialize the device.  For disks, this routine is responsible for
    * determining the disk's geometry appropriately for AoE/RAM/file disks

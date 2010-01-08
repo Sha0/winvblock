@@ -49,6 +49,7 @@ __divdi3 (
 }
 #endif
 
+static winvblock__uint32 next_disk = 0;
 winvblock__bool disk__removable[disk__media_count] = { TRUE, FALSE, TRUE };
 PWCHAR disk__compat_ids[disk__media_count] =
   { L"GenSFloppy", L"GenDisk", L"GenCdRom" };
@@ -213,6 +214,7 @@ disk__create_pdo (
   KeInitializeEvent ( &disk_ptr->SearchEvent, SynchronizationEvent, FALSE );
   KeInitializeSpinLock ( &disk_ptr->SpinLock );
   disk_ptr->Unmount = FALSE;
+  disk_ptr->DiskNumber = InterlockedIncrement ( &next_disk ) - 1;
   /*
    * Some device parameters
    */
