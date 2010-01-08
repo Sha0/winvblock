@@ -58,6 +58,15 @@ disk__max_xfer_len_decl ( disk__default_max_xfer_len )
   return 1024 * 1024;
 }
 
+static
+driver__dev_init_decl (
+  init
+ )
+{
+  disk__type_ptr disk_ptr = get_disk_ptr ( dev_ext_ptr );
+  return disk_ptr->ops->init ( disk_ptr );
+}
+
 disk__init_decl ( disk__default_init )
 {
   return TRUE;
@@ -180,6 +189,7 @@ disk__create_pdo (
   dev_ext_ptr->DriverObject = driver__obj_ptr;
   dev_ext_ptr->State = NotStarted;
   dev_ext_ptr->OldState = NotStarted;
+  dev_ext_ptr->init = init;
   dev_ext_ptr->irp_handler_stack_ptr =
     ( irp__handling_ptr ) ( ( winvblock__uint8 * ) dev_ext_ptr +
 			    dev_ext_ptr->size );

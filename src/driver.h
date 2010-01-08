@@ -57,8 +57,30 @@ extern size_t driver__handling_table_size;
 extern LPWSTR driver__os_load_opts;
 extern PDRIVER_OBJECT driver__obj_ptr;
 
+/* Forward declaration */
+winvblock__def_struct ( driver__dev_ext );
+
+/**
+ * Device initialization routine
+ *
+ * @v dev_ext_ptr     The device being initialized
+ */
+#  define driver__dev_init_decl( x ) \
+\
+winvblock__bool STDCALL \
+x ( \
+  IN driver__dev_ext_ptr dev_ext_ptr \
+ )
+/*
+ * Function pointer for a device initialization routine.
+ * 'indent' mangles this, so it looks weird
+ */
+typedef driver__dev_init_decl (
+   ( *driver__dev_init_routine )
+ );
+
 /* Driver-common device extension detail */
-winvblock__def_struct ( driver__dev_ext )
+struct _driver__dev_ext
 {
   size_t size;
   winvblock__bool IsBus;	/* For debugging */
@@ -70,7 +92,16 @@ winvblock__def_struct ( driver__dev_ext )
   irp__handling_ptr irp_handler_stack_ptr;
   size_t irp_handler_stack_size;
   driver__dev_ext_ptr next_sibling_ptr;
+  driver__dev_init_routine init;
 };
+
+__inline
+driver__dev_init_decl (
+  driver__dev_init
+ )
+{
+  return dev_ext_ptr->init ( dev_ext_ptr );
+}
 
 extern void STDCALL Driver_CompletePendingIrp (
   IN PIRP Irp

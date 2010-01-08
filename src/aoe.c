@@ -392,14 +392,9 @@ disk__init_decl (
    InnerIrql;
   LARGE_INTEGER MaxSectorsPerPacketSendTime;
   winvblock__uint32 MTU;
-  disk__type_ptr disk_ptr;
   aoe__disk_type_ptr aoe_disk_ptr;
 
-  /*
-   * Establish pointers into the disk device's extension space
-   */
-  disk_ptr = get_disk_ptr ( dev_ext_ptr );
-  aoe_disk_ptr = aoe__get_disk_ptr ( dev_ext_ptr );
+  aoe_disk_ptr = aoe__get_disk_ptr ( &disk_ptr->dev_ext );
   if ( !NT_SUCCESS ( AoE_Start (  ) ) )
     {
       DBG ( "AoE startup failure!\n" );
@@ -420,7 +415,7 @@ disk__init_decl (
   /*
    * Initialize the disk search 
    */
-  disk_searcher->DeviceExtension = dev_ext_ptr;
+  disk_searcher->DeviceExtension = &disk_ptr->dev_ext;
   disk_searcher->next = NULL;
   aoe_disk_ptr->search_state = search_state_search_nic;
   KeResetEvent ( &disk_ptr->SearchEvent );
@@ -600,7 +595,8 @@ disk__init_decl (
 	       */
 	      disk_search_walker = AoE_Globals_DiskSearchList;
 	      while ( disk_search_walker
-		      && disk_search_walker->DeviceExtension != dev_ext_ptr )
+		      && disk_search_walker->DeviceExtension !=
+		      &disk_ptr->dev_ext )
 		{
 		  previous_disk_searcher = disk_search_walker;
 		  disk_search_walker = disk_search_walker->next;
@@ -663,7 +659,7 @@ disk__init_decl (
 	}
       RtlZeroMemory ( tag, sizeof ( work_tag ) );
       tag->type = tag_type_search_drive;
-      tag->DeviceExtension = dev_ext_ptr;
+      tag->DeviceExtension = &disk_ptr->dev_ext;
 
       /*
        * Establish our tag's AoE packet 

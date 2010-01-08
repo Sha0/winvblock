@@ -204,9 +204,10 @@ Bus_AddChild (
   disk_ptr = get_disk_ptr ( dev_ext_ptr );
   disk_ptr->DiskNumber = InterlockedIncrement ( &Bus_Globals_NextDisk ) - 1;
   /*
-   * Determine the disk's geometry differently for AoE/RAM/file disk
+   * Initialize the device.  For disks, this routine is responsible for
+   * determining the disk's geometry appropriately for AoE/RAM/file disks
    */
-  disk__init ( &disk_ptr->dev_ext );
+  driver__dev_init ( dev_ext_ptr );
   DeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
   /*
    * Add the new device's extension to the bus' list of children

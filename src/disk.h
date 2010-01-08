@@ -105,13 +105,13 @@ extern disk__max_xfer_len_decl (
 /**
  * Disk initialization routine
  *
- * @v dev_ext_ptr     The disk device being initialized
+ * @v disk_ptr        The disk device being initialized
  */
 #  define disk__init_decl( x ) \
 \
 winvblock__bool STDCALL \
 x ( \
-  IN driver__dev_ext_ptr dev_ext_ptr \
+  IN disk__type_ptr disk_ptr \
  )
 /*
  * Function pointer for a disk initialization routine.
@@ -217,21 +217,6 @@ disk__max_xfer_len_decl (
  )
 {
   return disk_ptr->ops->max_xfer_len ( disk_ptr );
-}
-
-__inline
-disk__init_decl (
-  disk__init
- )
-{
-  disk__type_ptr disk_ptr;
-
-  /*
-   * Establish a pointer into the disk device's extension space
-   */
-  disk_ptr = get_disk_ptr ( dev_ext_ptr );
-
-  return disk_ptr->ops->init ( dev_ext_ptr );
 }
 
 __inline
