@@ -1,4 +1,16 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 00:50:51 2010 -0500
+
+    [driver] Remove unused device extension member
+
+commit 91e0ab598df7c76b9ff2aac303d9904d6743ceed
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Jan 7 19:40:10 2010 -0500
+
+    [driver] Make a global pointer to the driver object
+
+commit 53597c30a6c6df108f3b2fb666755b961f5e3a0d
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Thu Jan 7 17:59:10 2010 -0500
 
     [mount] Prefix object manager global namespace for filedisks
