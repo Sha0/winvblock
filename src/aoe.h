@@ -59,7 +59,15 @@ winvblock__def_struct ( aoe__disk_type )
   search_state search_state;
 };
 
+winvblock__def_struct ( aoe__target_list )
+{
+  MOUNT_TARGET Target;
+  aoe__target_list_ptr next;
+};
+
+extern aoe__target_list_ptr AoE_Globals_TargetList;
 extern disk__ops aoe__default_ops;
+
 extern NTSTATUS STDCALL AoE_Reply (
   IN winvblock__uint8_ptr SourceMac,
   IN winvblock__uint8_ptr DestinationMac,

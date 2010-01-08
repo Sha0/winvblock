@@ -152,6 +152,9 @@ winvblock__def_struct ( disk_search )
 };
 
 /** Globals */
+aoe__target_list_ptr AoE_Globals_TargetList = NULL;
+
+/** Private */
 static winvblock__bool AoE_Globals_Stop = FALSE;
 static KSPIN_LOCK AoE_Globals_SpinLock;
 static KEVENT AoE_Globals_ThreadSignalEvent;
@@ -1005,13 +1008,12 @@ add_target (
   LONGLONG LBASize
  )
 {
-  bus__target_list_ptr Walker,
+  aoe__target_list_ptr Walker,
    Last;
   KIRQL Irql;
 
   KeAcquireSpinLock ( &Bus_Globals_TargetListSpinLock, &Irql );
-  Last = Bus_Globals_TargetList;
-  Walker = Bus_Globals_TargetList;
+  Walker = Last = AoE_Globals_TargetList;
   while ( Walker != NULL )
     {
       if ( ( RtlCompareMemory ( &Walker->Target.ClientMac, ClientMac, 6 ) ==
@@ -1035,9 +1037,9 @@ add_target (
     }
 
   if ( ( Walker =
-	 ( bus__target_list_ptr ) ExAllocatePool ( NonPagedPool,
+	 ( aoe__target_list_ptr ) ExAllocatePool ( NonPagedPool,
 						   sizeof
-						   ( bus__target_list ) ) ) ==
+						   ( aoe__target_list ) ) ) ==
        NULL )
     {
       DBG ( "ExAllocatePool Target\n" );
@@ -1054,7 +1056,7 @@ add_target (
 
   if ( Last == NULL )
     {
-      Bus_Globals_TargetList = Walker;
+      AoE_Globals_TargetList = Walker;
     }
   else
     {

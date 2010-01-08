@@ -46,7 +46,7 @@ irp__handler_decl (
 {
   KIRQL irql;
   winvblock__uint32 count;
-  bus__target_list_ptr target_walker;
+  aoe__target_list_ptr target_walker;
   PMOUNT_TARGETS targets;
 
   DBG ( "Got IOCTL_AOE_SCAN...\n" );
@@ -54,7 +54,7 @@ irp__handler_decl (
   KeAcquireSpinLock ( &Bus_Globals_TargetListSpinLock, &irql );
 
   count = 0;
-  target_walker = Bus_Globals_TargetList;
+  target_walker = AoE_Globals_TargetList;
   while ( target_walker != NULL )
     {
       count++;
@@ -77,7 +77,7 @@ irp__handler_decl (
   targets->Count = count;
 
   count = 0;
-  target_walker = Bus_Globals_TargetList;
+  target_walker = AoE_Globals_TargetList;
   while ( target_walker != NULL )
     {
       RtlCopyMemory ( &targets->Target[count], &target_walker->Target,

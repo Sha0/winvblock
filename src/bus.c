@@ -40,8 +40,8 @@
 #include "debug.h"
 #include "protocol.h"
 #include "probe.h"
+#include "aoe.h"
 
-bus__target_list_ptr Bus_Globals_TargetList = NULL;
 PDEVICE_OBJECT bus__fdo = NULL;
 
 void STDCALL
@@ -50,13 +50,13 @@ Bus_Stop (
  )
 {
   UNICODE_STRING DosDeviceName;
-  bus__target_list_ptr Walker,
+  aoe__target_list_ptr Walker,
    Next;
   KIRQL Irql;
 
   DBG ( "Entry\n" );
   KeAcquireSpinLock ( &Bus_Globals_TargetListSpinLock, &Irql );
-  Walker = Bus_Globals_TargetList;
+  Walker = AoE_Globals_TargetList;
   while ( Walker != NULL )
     {
       Next = Walker->next;
