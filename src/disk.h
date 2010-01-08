@@ -161,7 +161,6 @@ winvblock__def_struct ( disk__ops )
 struct _disk__type
 {
   driver__dev_ext dev_ext;
-  PDEVICE_OBJECT Parent;
   disk__type_ptr next_sibling_ptr;
   KEVENT SearchEvent;
   KSPIN_LOCK SpinLock;

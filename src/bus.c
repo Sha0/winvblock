@@ -174,12 +174,14 @@ Bus_AddChild (
    * @v DeviceObject        The new node's device object
    * @v bus_ptr             A pointer to the bus device's details
    * @v disk_ptr            A pointer to the disk device's details
+   * @v dev_ext_ptr         A pointer to the disk device's extension
    * @v Walker              Walks the child nodes
    */
   PDEVICE_OBJECT DeviceObject;
   bus__type_ptr bus_ptr;
   disk__type_ptr disk_ptr,
    Walker;
+  driver__dev_ext_ptr dev_ext_ptr;
 
   DBG ( "Entry\n" );
   /*
@@ -192,11 +194,13 @@ Bus_AddChild (
   DeviceObject = disk__create_pdo ( Disk );
   if ( !DeviceObject )
     return FALSE;
+
+  dev_ext_ptr = DeviceObject->DeviceExtension;
+  dev_ext_ptr->Parent = BusDeviceObject;
   /*
    * Get a pointer to the child device's disk
    */
-  disk_ptr = get_disk_ptr ( DeviceObject->DeviceExtension );
-  disk_ptr->Parent = BusDeviceObject;
+  disk_ptr = get_disk_ptr ( dev_ext_ptr );
   disk_ptr->next_sibling_ptr = NULL;
   disk_ptr->DiskNumber = InterlockedIncrement ( &Bus_Globals_NextDisk ) - 1;
   /*

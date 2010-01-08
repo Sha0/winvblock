@@ -63,6 +63,7 @@ winvblock__def_struct ( driver__dev_ext )
   size_t size;
   winvblock__bool IsBus;	/* For debugging */
   PDEVICE_OBJECT Self;
+  PDEVICE_OBJECT Parent;
   PDRIVER_OBJECT DriverObject;
   driver__state State;
   driver__state OldState;
