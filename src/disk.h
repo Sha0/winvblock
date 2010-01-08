@@ -24,7 +24,7 @@
 /**
  * @file
  *
- * Disk specifics
+ * Disk device specifics
  *
  */
 

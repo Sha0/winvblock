@@ -22,7 +22,7 @@
 /**
  * @file
  *
- * AoE disk specifics
+ * Disk device specifics
  *
  */
 
