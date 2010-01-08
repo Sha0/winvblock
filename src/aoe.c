@@ -1335,7 +1335,6 @@ thread (
 	  DBG ( "Stopping...\n" );
 	  PsTerminateSystemThread ( STATUS_SUCCESS );
 	}
-      Bus_CleanupTargetList (  );
 
       KeQuerySystemTime ( &CurrentTime );
       /*

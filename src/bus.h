@@ -68,10 +68,6 @@ extern void STDCALL Bus_AddTarget (
   LONGLONG LBASize
  );
 
-extern void Bus_CleanupTargetList (
-  void
- );
-
 extern NTSTATUS STDCALL Bus_GetDeviceCapabilities (
   IN PDEVICE_OBJECT DeviceObject,
   IN PDEVICE_CAPABILITIES DeviceCapabilities

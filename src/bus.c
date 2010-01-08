@@ -80,13 +80,6 @@ Bus_Stop (
   bus__fdo = NULL;
 }
 
-void STDCALL
-Bus_CleanupTargetList (
-  void
- )
-{
-}
-
 /**
  * Add a child node to the bus
  *
