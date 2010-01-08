@@ -68,6 +68,8 @@ static NTSTATUS STDCALL DriverReinitialize (
 static void *Driver_Globals_StateHandle;
 static winvblock__bool Driver_Globals_Started = FALSE;
 
+PDRIVER_OBJECT driver__obj_ptr = NULL;
+
 /* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters */
 LPWSTR driver__os_load_opts = NULL;
 
@@ -168,6 +170,12 @@ DriverEntry (
      */
 
   DBG ( "Entry\n" );
+  if ( driver__obj_ptr )
+    {
+      DBG ( "Re-entry not allowed!\n" );
+      return STATUS_NOT_SUPPORTED;
+    }
+  driver__obj_ptr = DriverObject;
   if ( Driver_Globals_Started )
     return STATUS_SUCCESS;
   Debug_Initialize (  );
