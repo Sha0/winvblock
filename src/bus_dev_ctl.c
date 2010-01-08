@@ -191,9 +191,9 @@ irp__handler_decl (
   aoe_disk.disk.ops = &aoe__default_ops;
   aoe_disk.disk.dev_ext.ops = &disk__dev_ops;
   aoe_disk.disk.dev_ext.size = sizeof ( aoe__disk_type );
-  if ( !Bus_AddChild ( DeviceObject, &aoe_disk.disk.dev_ext ) )
+  if ( !bus__add_child ( DeviceObject, &aoe_disk.disk.dev_ext ) )
     {
-      DBG ( "Bus_AddChild() failed\n" );
+      DBG ( "bus__add_child() failed\n" );
     }
   else
     {

@@ -165,9 +165,9 @@ grub4dos__find (
 	  ramdisk.disk.dev_ext.ops = &disk__dev_ops;
 	  ramdisk.disk.dev_ext.size = sizeof ( ramdisk__type );
 	  FoundGrub4DosMapping = TRUE;
-	  if ( !Bus_AddChild ( bus__fdo, &ramdisk.disk.dev_ext ) )
+	  if ( !bus__add_child ( bus__fdo, &ramdisk.disk.dev_ext ) )
 	    {
-	      DBG ( "Bus_AddChild() failed for GRUB4DOS\n" );
+	      DBG ( "bus__add_child() failed for GRUB4DOS\n" );
 	    }
 	  else if ( bus_ptr->PhysicalDeviceObject != NULL )
 	    {

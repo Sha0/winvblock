@@ -158,23 +158,23 @@ Bus_CleanupTargetList (
 /**
  * Add a child node to the bus
  *
- * @v BusDeviceObject The bus to add the node to
+ * @v bus_dev_obj_ptr The bus to add the node to
  * @v dev_ext_ptr     The details for the child device to add
  *
  * Returns TRUE for success, FALSE for failure
  */
 winvblock__bool STDCALL
-Bus_AddChild (
-  IN PDEVICE_OBJECT BusDeviceObject,
+bus__add_child (
+  IN PDEVICE_OBJECT bus_dev_obj_ptr,
   IN driver__dev_ext_ptr dev_ext_ptr
  )
 {
   /**
-   * @v DeviceObject        The new node's device object
+   * @v dev_obj_ptr         The new node's device object
    * @v bus_ptr             A pointer to the bus device's details
    * @v walker              Walks the child nodes
    */
-  PDEVICE_OBJECT DeviceObject;
+  PDEVICE_OBJECT dev_obj_ptr;
   bus__type_ptr bus_ptr;
   driver__dev_ext_ptr walker;
 
@@ -182,27 +182,27 @@ Bus_AddChild (
   /*
    * Establish a pointer into the bus device's extension space
    */
-  bus_ptr = get_bus_ptr ( BusDeviceObject->DeviceExtension );
+  bus_ptr = get_bus_ptr ( bus_dev_obj_ptr->DeviceExtension );
   /*
    * Create the child device
    */
-  DeviceObject = dev_ext_ptr->ops->create_pdo ( dev_ext_ptr );
-  if ( !DeviceObject )
+  dev_obj_ptr = dev_ext_ptr->ops->create_pdo ( dev_ext_ptr );
+  if ( !dev_obj_ptr )
     return FALSE;
 
   /*
    * Re-purpose dev_ext_ptr to point into the PDO's device
    * extension space.  We don't need the original details anymore
    */
-  dev_ext_ptr = DeviceObject->DeviceExtension;
-  dev_ext_ptr->Parent = BusDeviceObject;
+  dev_ext_ptr = dev_obj_ptr->DeviceExtension;
+  dev_ext_ptr->Parent = bus_dev_obj_ptr;
   dev_ext_ptr->next_sibling_ptr = NULL;
   /*
    * Initialize the device.  For disks, this routine is responsible for
    * determining the disk's geometry appropriately for AoE/RAM/file disks
    */
   dev_ext_ptr->ops->init ( dev_ext_ptr );
-  DeviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
+  dev_obj_ptr->Flags &= ~DO_DEVICE_INITIALIZING;
   /*
    * Add the new device's extension to the bus' list of children
    */

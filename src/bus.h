@@ -80,8 +80,8 @@ extern NTSTATUS STDCALL Bus_GetDeviceCapabilities (
 /* An unfortunate forward declaration.  Definition resolved in disk.h */
 struct _disk__type;
 
-extern winvblock__bool STDCALL Bus_AddChild (
-  IN PDEVICE_OBJECT BusDeviceObject,
+extern winvblock__bool STDCALL bus__add_child (
+  IN PDEVICE_OBJECT bus_dev_obj_ptr,
   IN driver__dev_ext_ptr dev_ext_ptr
  );
 

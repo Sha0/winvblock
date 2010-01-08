@@ -113,9 +113,9 @@ check_mbft (
   ramdisk.disk.ops = &ramdisk__default_ops;
   ramdisk.disk.dev_ext.ops = &disk__dev_ops;
   ramdisk.disk.dev_ext.size = sizeof ( ramdisk__type );
-  if ( !Bus_AddChild ( bus__fdo, &ramdisk.disk.dev_ext ) )
+  if ( !bus__add_child ( bus__fdo, &ramdisk.disk.dev_ext ) )
     {
-      DBG ( "Bus_AddChild() failed for MEMDISK\n" );
+      DBG ( "bus__add_child() failed for MEMDISK\n" );
     }
   else if ( bus_ptr->PhysicalDeviceObject != NULL )
     {

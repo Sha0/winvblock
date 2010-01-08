@@ -1540,8 +1540,8 @@ aoe__process_abft (
       aoe_disk.disk.dev_ext.ops = &disk__dev_ops;
       aoe_disk.disk.dev_ext.size = sizeof ( aoe__disk_type );
 
-      if ( !Bus_AddChild ( bus__fdo, &aoe_disk.disk.dev_ext ) )
-	DBG ( "Bus_AddChild() failed for aBFT AoE disk\n" );
+      if ( !bus__add_child ( bus__fdo, &aoe_disk.disk.dev_ext ) )
+	DBG ( "bus__add_child() failed for aBFT AoE disk\n" );
       else
 	{
 	  if ( bus_ptr->PhysicalDeviceObject != NULL )
