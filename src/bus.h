@@ -60,14 +60,6 @@ extern NTSTATUS STDCALL Bus_AddDevice (
   IN PDEVICE_OBJECT PhysicalDeviceObject
  );
 
-extern void STDCALL Bus_AddTarget (
-  IN winvblock__uint8_ptr ClientMac,
-  IN winvblock__uint8_ptr ServerMac,
-  winvblock__uint16 Major,
-  winvblock__uint8 Minor,
-  LONGLONG LBASize
- );
-
 extern NTSTATUS STDCALL Bus_GetDeviceCapabilities (
   IN PDEVICE_OBJECT DeviceObject,
   IN PDEVICE_CAPABILITIES DeviceCapabilities
