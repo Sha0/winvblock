@@ -192,7 +192,7 @@ irp__handler_decl ( filedisk__attach )
   }
   filedisk.disk.ops = &default_ops;
   filedisk.disk.dev_ext.size = sizeof ( filedisk__type );
-  if ( !Bus_AddChild ( bus__fdo, &filedisk.disk, TRUE ) )
+  if ( !Bus_AddChild ( bus__fdo, &filedisk.disk ) )
     {
       DBG ( "Bus_AddChild() failed for file-backed disk\n" );
     }

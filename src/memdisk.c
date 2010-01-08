@@ -112,7 +112,7 @@ check_mbft (
   ramdisk.disk.BootDrive = TRUE;
   ramdisk.disk.ops = &ramdisk__default_ops;
   ramdisk.disk.dev_ext.size = sizeof ( ramdisk__type );
-  if ( !Bus_AddChild ( bus__fdo, &ramdisk.disk, TRUE ) )
+  if ( !Bus_AddChild ( bus__fdo, &ramdisk.disk ) )
     {
       DBG ( "Bus_AddChild() failed for MEMDISK\n" );
     }

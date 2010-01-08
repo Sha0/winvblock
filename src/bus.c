@@ -161,15 +161,13 @@ Bus_CleanupTargetList (
  *
  * @v BusDeviceObject The bus to add the node to
  * @v Disk            The disk to add
- * @v Boot            Is this a boot device?
  *
  * Returns TRUE for success, FALSE for failure
  */
 winvblock__bool STDCALL
 Bus_AddChild (
   IN PDEVICE_OBJECT BusDeviceObject,
-  IN disk__type_ptr Disk,
-  IN winvblock__bool Boot
+  IN disk__type_ptr Disk
  )
 {
   /**

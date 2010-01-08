@@ -1541,7 +1541,7 @@ aoe__process_abft (
       aoe_disk.disk.ops = &aoe__default_ops;
       aoe_disk.disk.dev_ext.size = sizeof ( aoe__disk_type );
 
-      if ( !Bus_AddChild ( bus__fdo, &aoe_disk.disk, TRUE ) )
+      if ( !Bus_AddChild ( bus__fdo, &aoe_disk.disk ) )
 	DBG ( "Bus_AddChild() failed for aBFT AoE disk\n" );
       else
 	{

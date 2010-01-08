@@ -1,4 +1,10 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 01:00:58 2010 -0500
+
+    [bus] Remove unused boolean argument for Bus_AddChild
+
+commit 3dfee60896a091857ca353150259cc0527a16eb2
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Fri Jan 8 00:50:51 2010 -0500
 
     [driver] Remove unused device extension member
