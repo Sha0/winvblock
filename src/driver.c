@@ -181,8 +181,6 @@ DriverEntry (
   Debug_Initialize (  );
   if ( !NT_SUCCESS ( Status = Registry_Check (  ) ) )
     return Error ( "Registry_Check", Status );
-  if ( !NT_SUCCESS ( Status = Bus_Start (  ) ) )
-    return Error ( "Bus_Start", Status );
 
 		/**
      * TODO: Remove this fun test

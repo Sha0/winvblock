@@ -44,16 +44,6 @@
 bus__target_list_ptr Bus_Globals_TargetList = NULL;
 PDEVICE_OBJECT bus__fdo = NULL;
 
-NTSTATUS STDCALL
-Bus_Start (
-  void
- )
-{
-  DBG ( "Entry\n" );
-  KeInitializeSpinLock ( &Bus_Globals_TargetListSpinLock );
-  return STATUS_SUCCESS;
-}
-
 void STDCALL
 Bus_Stop (
   void

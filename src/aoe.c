@@ -232,6 +232,11 @@ AoE_Start (
   AoE_Globals_ProbeTag->packet_data->Count = 1;
 
   /*
+   * Initialize global target-list spinlock
+   */
+  KeInitializeSpinLock ( &Bus_Globals_TargetListSpinLock );
+
+  /*
    * Initialize global spin-lock and global thread signal event 
    */
   KeInitializeSpinLock ( &AoE_Globals_SpinLock );
