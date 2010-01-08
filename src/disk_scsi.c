@@ -37,8 +37,6 @@
 #include "driver.h"
 #include "disk.h"
 #include "debug.h"
-#include "mount.h"
-#include "aoe.h"
 
 #if _WIN32_WINNT <= 0x0600
 #  if 0				/* FIXME: To build with WINDDK 6001.18001 */

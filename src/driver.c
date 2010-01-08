@@ -34,15 +34,12 @@
 #include "irp.h"
 #include "driver.h"
 #include "disk.h"
-#include "mount.h"
-#include "bus.h"
-#include "debug.h"
 #include "registry.h"
-#include "bus.h"
 #include "protocol.h"
+#include "mount.h"
 #include "aoe.h"
+#include "bus.h"
 #include "debug.h"
-#include "probe.h"
 
 /* in this file */
 static NTSTATUS STDCALL Driver_DispatchNotSupported (

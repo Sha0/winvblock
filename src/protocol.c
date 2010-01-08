@@ -36,9 +36,8 @@
 #include "driver.h"
 #include "disk.h"
 #include "mount.h"
-#include "bus.h"
-#include "protocol.h"
 #include "aoe.h"
+#include "protocol.h"
 #include "debug.h"
 
 #define AOEPROTOCOLID 0x88a2
