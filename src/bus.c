@@ -32,15 +32,11 @@
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
-#include "disk.h"
-#include "mount.h"
 #include "bus.h"
 #include "bus_pnp.h"
 #include "bus_dev_ctl.h"
 #include "debug.h"
-#include "protocol.h"
 #include "probe.h"
-#include "aoe.h"
 
 PDEVICE_OBJECT bus__fdo = NULL;
 
@@ -50,20 +46,8 @@ Bus_Stop (
  )
 {
   UNICODE_STRING DosDeviceName;
-  aoe__target_list_ptr Walker,
-   Next;
-  KIRQL Irql;
 
   DBG ( "Entry\n" );
-  KeAcquireSpinLock ( &AoE_Globals_TargetListSpinLock, &Irql );
-  Walker = AoE_Globals_TargetList;
-  while ( Walker != NULL )
-    {
-      Next = Walker->next;
-      ExFreePool ( Walker );
-      Walker = Next;
-    }
-  KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, Irql );
   RtlInitUnicodeString ( &DosDeviceName,
 			 L"\\DosDevices\\" winvblock__literal_w );
   IoDeleteSymbolicLink ( &DosDeviceName );

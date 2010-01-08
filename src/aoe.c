@@ -39,7 +39,6 @@
 #include "aoe.h"
 #include "protocol.h"
 #include "debug.h"
-#include "bus.h"
 
 #define AOEPROTOCOLVER 1
 
@@ -153,6 +152,7 @@ winvblock__def_struct ( disk_search )
 
 /** Globals */
 aoe__target_list_ptr AoE_Globals_TargetList = NULL;
+KSPIN_LOCK AoE_Globals_TargetListSpinLock;
 
 /** Private */
 static winvblock__bool AoE_Globals_Stop = FALSE;
@@ -290,7 +290,10 @@ AoE_Stop (
   disk_search_ptr disk_searcher,
    previous_disk_searcher;
   work_tag_ptr tag;
-  KIRQL Irql;
+  KIRQL Irql,
+   Irql2;
+  aoe__target_list_ptr Walker,
+   Next;
 
   DBG ( "Entry\n" );
   /*
@@ -315,6 +318,19 @@ AoE_Stop (
 	Error ( "AoE_Stop ZwWaitForSingleObject", Status );
       ZwClose ( AoE_Globals_ThreadHandle );
     }
+
+  /*
+   * Free the target list
+   */
+  KeAcquireSpinLock ( &AoE_Globals_TargetListSpinLock, &Irql2 );
+  Walker = AoE_Globals_TargetList;
+  while ( Walker != NULL )
+    {
+      Next = Walker->next;
+      ExFreePool ( Walker );
+      Walker = Next;
+    }
+  KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, Irql2 );
 
   /*
    * Wait until we have the global spin-lock 
@@ -996,8 +1012,6 @@ disk__io_decl (
   KeSetEvent ( &AoE_Globals_ThreadSignalEvent, 0, FALSE );
   return STATUS_PENDING;
 }
-
-KSPIN_LOCK AoE_Globals_TargetListSpinLock;
 
 static void STDCALL
 add_target (
