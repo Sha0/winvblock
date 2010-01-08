@@ -51,7 +51,7 @@ irp__handler_decl (
 
   DBG ( "Got IOCTL_AOE_SCAN...\n" );
   AoE_Start (  );
-  KeAcquireSpinLock ( &Bus_Globals_TargetListSpinLock, &irql );
+  KeAcquireSpinLock ( &AoE_Globals_TargetListSpinLock, &irql );
 
   count = 0;
   target_walker = AoE_Globals_TargetList;
@@ -96,7 +96,7 @@ irp__handler_decl (
 					     sizeof ( MOUNT_TARGET ) ) ) ) );
   ExFreePool ( targets );
 
-  KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, irql );
+  KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, irql );
   return STATUS_SUCCESS;
 
 }

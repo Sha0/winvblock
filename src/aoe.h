@@ -66,6 +66,7 @@ winvblock__def_struct ( aoe__target_list )
 };
 
 extern aoe__target_list_ptr AoE_Globals_TargetList;
+extern KSPIN_LOCK AoE_Globals_TargetListSpinLock;
 extern disk__ops aoe__default_ops;
 
 extern NTSTATUS STDCALL AoE_Reply (

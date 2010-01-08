@@ -38,8 +38,6 @@ winvblock__def_struct ( bus__type )
   KSPIN_LOCK SpinLock;
 };
 
-extern KSPIN_LOCK Bus_Globals_TargetListSpinLock;
-
 extern void Bus_Stop (
   void
  );

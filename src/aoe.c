@@ -237,7 +237,7 @@ AoE_Start (
   /*
    * Initialize global target-list spinlock
    */
-  KeInitializeSpinLock ( &Bus_Globals_TargetListSpinLock );
+  KeInitializeSpinLock ( &AoE_Globals_TargetListSpinLock );
 
   /*
    * Initialize global spin-lock and global thread signal event 
@@ -997,7 +997,7 @@ disk__io_decl (
   return STATUS_PENDING;
 }
 
-KSPIN_LOCK Bus_Globals_TargetListSpinLock;
+KSPIN_LOCK AoE_Globals_TargetListSpinLock;
 
 static void STDCALL
 add_target (
@@ -1012,7 +1012,7 @@ add_target (
    Last;
   KIRQL Irql;
 
-  KeAcquireSpinLock ( &Bus_Globals_TargetListSpinLock, &Irql );
+  KeAcquireSpinLock ( &AoE_Globals_TargetListSpinLock, &Irql );
   Walker = Last = AoE_Globals_TargetList;
   while ( Walker != NULL )
     {
@@ -1029,7 +1029,7 @@ add_target (
 	      Walker->Target.LBASize = LBASize;
 	    }
 	  KeQuerySystemTime ( &Walker->Target.ProbeTime );
-	  KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
+	  KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, Irql );
 	  return;
 	}
       Last = Walker;
@@ -1043,7 +1043,7 @@ add_target (
        NULL )
     {
       DBG ( "ExAllocatePool Target\n" );
-      KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
+      KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, Irql );
       return;
     }
   Walker->next = NULL;
@@ -1062,7 +1062,7 @@ add_target (
     {
       Last->next = Walker;
     }
-  KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
+  KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, Irql );
 }
 
 /**

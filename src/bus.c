@@ -55,7 +55,7 @@ Bus_Stop (
   KIRQL Irql;
 
   DBG ( "Entry\n" );
-  KeAcquireSpinLock ( &Bus_Globals_TargetListSpinLock, &Irql );
+  KeAcquireSpinLock ( &AoE_Globals_TargetListSpinLock, &Irql );
   Walker = AoE_Globals_TargetList;
   while ( Walker != NULL )
     {
@@ -63,7 +63,7 @@ Bus_Stop (
       ExFreePool ( Walker );
       Walker = Next;
     }
-  KeReleaseSpinLock ( &Bus_Globals_TargetListSpinLock, Irql );
+  KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, Irql );
   RtlInitUnicodeString ( &DosDeviceName,
 			 L"\\DosDevices\\" winvblock__literal_w );
   IoDeleteSymbolicLink ( &DosDeviceName );
