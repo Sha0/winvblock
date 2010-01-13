@@ -81,7 +81,7 @@ irp__handler_decl ( bus_pnp__remove_dev )
 {
   NTSTATUS status;
   bus__type_ptr bus_ptr;
-  disk__type_ptr walker,
+  driver__dev_ext_ptr walker,
    next;
 
   DeviceExtension->OldState = DeviceExtension->State;
@@ -91,11 +91,12 @@ irp__handler_decl ( bus_pnp__remove_dev )
   IoSkipCurrentIrpStackLocation ( Irp );
   bus_ptr = get_bus_ptr ( DeviceExtension );
   status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
-  walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
+  walker = ( driver__dev_ext_ptr ) bus_ptr->first_child_ptr;
   while ( walker != NULL )
     {
-      next = ( disk__type_ptr ) walker->dev_ext.next_sibling_ptr;
-      IoDeleteDevice ( walker->dev_ext.Self );
+      next = ( driver__dev_ext_ptr ) walker->next_sibling_ptr;
+      walker->ops->close ( walker );
+      IoDeleteDevice ( walker->Self );
       walker = next;
     }
   bus_ptr->Children = 0;
