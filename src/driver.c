@@ -158,14 +158,6 @@ DriverEntry (
   int i;
   LPWSTR make_bus;
 
-		/**
-     * TODO: Remove this fun test
-     *
-     * LARGE_INTEGER NapTime;
-     * PWCHAR DisplayStringInternal;
-     * UNICODE_STRING DisplayString;
-     */
-
   DBG ( "Entry\n" );
   if ( driver__obj_ptr )
     {
@@ -178,21 +170,6 @@ DriverEntry (
   Debug_Initialize (  );
   if ( !NT_SUCCESS ( Status = Registry_Check (  ) ) )
     return Error ( "Registry_Check", Status );
-
-		/**
-     * TODO: Remove this fun test
-     *
-     * NapTime.QuadPart = -10000000;
-     * DisplayStringInternal = L"\nHello!\n";
-     * DisplayString.Buffer = DisplayStringInternal;
-     * DisplayString.Length = wcslen ( DisplayStringInternal ) * sizeof ( WCHAR );
-     * DisplayString.MaximumLength = DisplayString.Length + sizeof ( WCHAR );
-     * while ( 1 ) {
-     *     i = 0;
-     *     while ( i < 65535 ) i++;
-     *     ZwDisplayString ( &DisplayString );
-     * }
-     */
 
   Driver_Globals_StateHandle = NULL;
 
