@@ -98,10 +98,30 @@ typedef driver__dev_init_decl (
    ( *driver__dev_init_routine )
  );
 
+/**
+ * Device close routine
+ *
+ * @v dev_ext_ptr     The device being closed
+ */
+#  define driver__dev_close_decl( x ) \
+\
+void STDCALL \
+x ( \
+  IN driver__dev_ext_ptr dev_ext_ptr \
+ )
+/*
+ * Function pointer for a device close routine.
+ * 'indent' mangles this, so it looks weird
+ */
+typedef driver__dev_close_decl (
+   ( *driver__dev_close_routine )
+ );
+
 winvblock__def_struct ( driver__dev_ops )
 {
   driver__dev_create_pdo_routine create_pdo;
   driver__dev_init_routine init;
+  driver__dev_close_routine close;
 };
 
 /* Driver-common device extension detail */

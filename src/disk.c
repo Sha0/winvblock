@@ -73,6 +73,16 @@ disk__init_decl ( disk__default_init )
   return TRUE;
 }
 
+static
+driver__dev_close_decl (
+  close
+ )
+{
+  disk__type_ptr disk_ptr = get_disk_ptr ( dev_ext_ptr );
+  disk_ptr->ops->close ( disk_ptr );
+  return;
+}
+
 disk__close_decl ( disk__default_close )
 {
   return;
@@ -238,5 +248,6 @@ driver__dev_create_pdo_decl (
 /* Device operations for disks */
 driver__dev_ops disk__dev_ops = {
   create_pdo,
-  init
+  init,
+  close
 };
