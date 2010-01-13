@@ -1540,7 +1540,8 @@ disk__ops aoe__default_ops = {
   io,
   max_xfer_len,
   init,
-  query_id
+  query_id,
+  disk__default_close
 };
 
 void

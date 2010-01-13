@@ -150,12 +150,36 @@ typedef disk__pnp_id_decl (
    ( *disk__pnp_id_routine )
  );
 
+/**
+ * Disk close routine
+ *
+ * @v disk_ptr        The disk device being closed
+ */
+#  define disk__close_decl( x ) \
+\
+void STDCALL \
+x ( \
+  IN disk__type_ptr disk_ptr \
+ )
+/*
+ * Function pointer for a disk close routine.
+ * 'indent' mangles this, so it looks weird
+ */
+typedef disk__close_decl (
+   ( *disk__close_routine )
+ );
+
+extern disk__close_decl (
+  disk__default_close
+ );
+
 winvblock__def_struct ( disk__ops )
 {
   disk__io_routine io;
   disk__max_xfer_len_routine max_xfer_len;
   disk__init_routine init;
   disk__pnp_id_routine pnp_id;
+  disk__close_routine close;
 };
 
 struct _disk__type

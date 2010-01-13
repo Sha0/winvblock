@@ -141,5 +141,6 @@ disk__ops ramdisk__default_ops = {
   io,
   disk__default_max_xfer_len,
   disk__default_init,
-  query_id
+  query_id,
+  disk__default_close
 };

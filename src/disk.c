@@ -73,6 +73,11 @@ disk__init_decl ( disk__default_init )
   return TRUE;
 }
 
+disk__close_decl ( disk__default_close )
+{
+  return;
+}
+
 static
 irp__handler_decl (
   power
