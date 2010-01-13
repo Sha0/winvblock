@@ -143,7 +143,7 @@ irp__handler_decl ( filedisk__attach )
 			       OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, NULL,
 			       NULL );
   /*
-   * FIXME: We leak handles! 
+   * Open the file.  The handle is closed by close()
    */
   status =
     ZwCreateFile ( &file, GENERIC_READ | GENERIC_WRITE, &obj_attrs, &io_status,
@@ -205,10 +205,20 @@ irp__handler_decl ( filedisk__attach )
   return STATUS_SUCCESS;
 }
 
+static
+disk__close_decl (
+  close
+ )
+{
+  filedisk__type_ptr filedisk_ptr = filedisk__get_ptr ( &disk_ptr->dev_ext );
+  ZwClose ( filedisk_ptr->file );
+  return;
+}
+
 static disk__ops default_ops = {
   io,
   disk__default_max_xfer_len,
   disk__default_init,
   query_id,
-  disk__default_close
+  close
 };
