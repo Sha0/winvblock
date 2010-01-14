@@ -7,7 +7,7 @@ echo Class=SCSIAdapter >> bin/winvblk.inf
 echo ClassGUID={4D36E97B-E325-11CE-BFC1-08002BE10318} >> bin/winvblk.inf
 echo Provider=WinVBlock >> bin/winvblk.inf
 echo CatalogFile=winvblk.cat >> bin/winvblk.inf
-echo DriverVer=01/06/2010,1.0 >> bin/winvblk.inf
+echo DriverVer=01/14/2010,1.0 >> bin/winvblk.inf
 echo. >> bin/winvblk.inf
 echo [Manufacturer] >> bin/winvblk.inf
 echo WinVBlock=WinVBlockDriver,,NTamd64 >> bin/winvblk.inf

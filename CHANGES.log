@@ -1,4 +1,225 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu Jan 14 14:19:19 2010 -0500
+
+    [version] Up version to 0.0.1.6
+
+commit 240f2467779a9774acc8327d65c7c06bf44fc82b
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Jan 13 16:28:17 2010 -0500
+
+    [driver] Remove old testing comments
+    
+    Some code for outputting text to the initial Windows
+    kernel-mode boot screen was sitting inside a couple of
+    comment blocks.  Now that code is no longer there to
+    potentially confuse anyone.
+
+commit 745d6949d914a8ef98b7b3ebe8a3e4f141092dc1
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Jan 13 15:19:22 2010 -0500
+
+    [filedisk] Close file handle
+    
+    When a file-backed disk is removed, we close the file handle.
+
+commit 6abd22eca85a6898e51ed9706c06e701ea932dc7
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Jan 13 14:46:09 2010 -0500
+
+    [bus_dev_ctl] Do not set boot drive on AoE mount
+
+commit eaf1aa72ff36f49a197bab7e209b251bb342d938
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Jan 13 14:19:31 2010 -0500
+
+    [bus,disk] Call close routine upon device deletion
+    
+    For cleanup purposes.
+
+commit c4712f19d264f6aae9736cf3665df51a2ad94f21
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Jan 13 14:00:05 2010 -0500
+
+    [driver,disk] Add close routine
+    
+    So that devices can be closed/detached/removed/deleted/whatever.
+    
+    Implement a simple redirection in the disk module to redirect
+    a device close call to a disk close call.
+
+commit 035b71dde7cc4122a246a627765b8c5cf69c08b1
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Jan 13 13:55:23 2010 -0500
+
+    [disk] Add close routine
+    
+    A dummy default close routine for disks is implemented.
+
+commit 20822a178d78a90dbec1f7918c1a7b578d8e1d94
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed Jan 13 12:27:35 2010 -0500
+
+    [aoe] Set media type for AoE SAN
+    
+    Now that disk__create_pdo() uses the media type as an
+    index, we need to set this member beforehand.
+
+commit 964f7b81b9d353b61208b9cd79547729aa87c984
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 16:57:01 2010 -0500
+
+    [general] Quick header inclusion audit
+
+commit e6bc51f526c47369033fb665c201f73a2469f776
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 16:40:42 2010 -0500
+
+    [aoe] Move target list cleanup code out of bus module
+
+commit 795b51387c351c503a541a090c41f5a918fbaba5
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 16:28:50 2010 -0500
+
+    [bus] Remove unused forward declaration for disk
+
+commit 5177c3ead3da4812e1703392625c497c0eb681eb
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 16:27:42 2010 -0500
+
+    [aoe] Move target list spin-lock into AoE module
+
+commit cc2666558691cc50470fa1bf8376dfaa2acebddc
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 16:18:24 2010 -0500
+
+    [aoe] Move target list type and global into AoE module
+    
+    Out of the bus module.
+
+commit 47e732f85b3bd4be5c2071b22d2d8a7b00aace7f
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 15:51:14 2010 -0500
+
+    [bus] Remove Bus_Start routine
+    
+    The AoE target-list was initialized in this routine, and
+    that was it.  This initialization has thus been moved to
+    AoE_Start().
+
+commit db2c227cf35ea31ed9b54201494e1bc6d4bd666b
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 15:46:22 2010 -0500
+
+    [bus] Remove Bus_AddTarget declaration from header
+    
+    Forgot to remve this when Bus_AddTarget() was moved into the
+    AoE module as add_target().
+
+commit bb6e0e95c751a09bf53f97027723be52ed4f475f
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 15:37:06 2010 -0500
+
+    [bus] Remove unused Bus_CleanupTargetList function
+
+commit 79eb0801f6d48848331cd93f9e3b03e4d651795a
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 15:33:49 2010 -0500
+
+    [aoe] Move Bus_AddTarget into AoE module
+    
+    And rename it to add_target().  The AoE module was its
+    only consumer.
+
+commit 4e0f77a57ca705dcc8b19fbd362eb810965b813c
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 15:03:32 2010 -0500
+
+    [bus] Bus_AddChild renamed to bus__add_child
+
+commit 90179740c6e999571b0df1bf3ed9147948413423
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 14:43:32 2010 -0500
+
+    [bus] Remove disk details from Bus_AddChild
+    
+    A fair bit of shuffling.  Devices extensions now have
+    a device operations member which is a struct of function
+    pointers; one for device creation and one for device
+    initialization.  This is akin to the disk operations
+    structure found as a member of a disk.
+    
+    Bus_AddChild() is now simply passed a device extension
+    pointer, which points at device extension details to add
+    to the bus.  It will call the particular PDO creation
+    routine provided by whoever populated the device
+    extension.  That routine will return a PDO that will be
+    attached to the bus.  Bus_AddChild() is also still
+    passed a pointer to the bus device object to which the
+    child belongs.
+    
+    The only PDO creation routine at this time is obviously
+    disk__create_pdo(), since we are a virtual SCSI driver!
+    The reason for this bit of abstraction is in case anyone
+    finds the code handy some day as a reference for the
+    bus-and-child model.  This code is not at that stage yet.
+
+commit 1e907947181e5631d775b2c77927193c3bbefecd
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 12:27:16 2010 -0500
+
+    [bus,disk] Move the disk counter into the disk module
+    
+    Seems like a good place for it.
+
+commit 7dcf22cfe22521161673533040a1dde522450b62
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 12:21:37 2010 -0500
+
+    [driver] Introduce device initialization routine
+    
+    Any device on the bus could have an initialization routine, so
+    the device extension now has an init function pointer member.
+    
+    disk__create_pdo() will setup the device extension for disks
+    to redirect to the init function pointer member of the disk's
+    operations structure.
+
+commit 05eb4dee2835966e5a753a019d5e38785a93ef38
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 10:55:56 2010 -0500
+
+    [driver] Move next_sibling_ptr out of disk module
+    
+    It's a property of a device, not really of a disk.
+
+commit 12761466f712be2b2210b711fe00599d8828fe1f
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 10:41:00 2010 -0500
+
+    [driver] Move Parent member out of disk module
+    
+    It's a property of a device, not really of a disk.
+
+commit 2be42b348fc7d8e46e260b8fb5318088c2634b6c
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 10:19:52 2010 -0500
+
+    [driver,aoe] Move AOEPROTOCOLVER define
+
+commit 9dda7435f29ea5f5b28027db860488d55f35ed08
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 10:18:16 2010 -0500
+
+    [driver,protocol] Move AOEPROTOCOLID define
+
+commit 09c540d3a9c614ed62a36fc4ac20a16bf17a943d
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Jan 8 10:14:55 2010 -0500
+
+    [disk] Remove AoE comment
+
+commit 844f90acffe7b509e5b0afcb1fc4bb782e366e78
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Fri Jan 8 10:08:27 2010 -0500
 
     [bus,disk] Move some disk device logic
