@@ -5,8 +5,11 @@ cd src
 pushd .
 call %ddkdir%\bin\setenv.bat %ddkdir% w2k
 popd
-cl /I%CRT_INC_PATH% /DWIN32_LEAN_AND_MEAN mount.c /Fe..\bin\winvblk.exe /link /LIBPATH:%DDK_LIB_DEST%\i386 /LIBPATH:%Lib%\crt\i386 bufferoverflowU.lib
+pushd .
+cd util
+cl /I%CRT_INC_PATH% /DWIN32_LEAN_AND_MEAN mount.c /Fe..\..\bin\winvblk.exe /link /LIBPATH:%DDK_LIB_DEST%\i386 /LIBPATH:%Lib%\crt\i386 bufferoverflowU.lib
 del mount.obj
+popd
 pushd .
 cd loader
 cl /I%CRT_INC_PATH% /DWIN32_LEAN_AND_MEAN loader.c /Fe..\..\bin\loader32.exe /link /LIBPATH:%DDK_LIB_DEST%\i386 /LIBPATH:%Lib%\crt\i386 setupapi.lib bufferoverflowU.lib
