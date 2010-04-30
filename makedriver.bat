@@ -62,22 +62,23 @@ pushd .
 call %ddkdir%\bin\setenv.bat %ddkdir% %arg1% %arg2%
 popd
 
-cd src
+cd src\bus
 echo !INCLUDE $(NTMAKEENV)\makefile.def > makefile
-echo TARGETNAME=%name% > sources
+echo INCLUDES=..\include > sources
+echo TARGETNAME=%name% >> sources
 echo TARGETTYPE=DRIVER >> sources
 echo TARGETPATH=obj >> sources
 echo TARGETLIBS=$(DDK_LIB_PATH)\\ndis.lib >> sources
 echo SOURCES=%c% >> sources
 build
-copy obj%obj%\%arch%\%name%.sys ..\bin >nul
-copy obj%obj%\%arch%\%name%.pdb ..\bin >nul
+copy obj%obj%\%arch%\%name%.sys ..\..\bin >nul
+copy obj%obj%\%arch%\%name%.pdb ..\..\bin >nul
 del makefile
 del sources
 rem del build%obj%.log
 rem del build%obj%.wrn 2>nul
 rem del build%obj%.err 2>nul
 rem rd /s /q obj%obj%
-cd ..
+cd ..\..
 
 :end

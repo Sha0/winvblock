@@ -31,8 +31,8 @@
 #include <Setupapi.h>
 #include <newdev.h>
 
-#include "../winvblock.h"
-#include "../portable.h"
+#include "winvblock.h"
+#include "portable.h"
 
 #define MAX_CLASS_NAME_LEN 64
 

@@ -30,9 +30,9 @@
 #include <winioctl.h>
 #include <stdio.h>
 
-#include "../winvblock.h"
-#include "../portable.h"
-#include "../mount.h"
+#include "winvblock.h"
+#include "portable.h"
+#include "mount.h"
 
 typedef enum
 { CommandScan, CommandShow, CommandMount, CommandUmount, CommandAttach,
