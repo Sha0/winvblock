@@ -1,7 +1,7 @@
 [Project]
 FileName=WinVBlock.dev
 Name=WinVBlock
-UnitCount=42
+UnitCount=43
 PchHead=-1
 PchSource=-1
 Ver=3
@@ -11,7 +11,7 @@ ProfileIndex=0
 Folders=
 
 [Unit1]
-FileName=src\aoe.c
+FileName=src\loader\loader.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -21,17 +21,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit2]
-FileName=src\aoe.h
-CompileCpp=1
-Folder=WinVBlock
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit3]
-FileName=src\bus.c
+FileName=src\util\mount.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -41,7 +31,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit4]
-FileName=src\bus.h
+FileName=src\bus\bus.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -51,7 +41,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit5]
-FileName=src\debug.c
+FileName=src\bus\bus_dev_ctl.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -61,7 +51,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit6]
-FileName=src\debug.h
+FileName=src\bus\bus_pnp.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -71,7 +61,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit8]
-FileName=src\driver.h
+FileName=src\bus\disk.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -81,7 +71,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit9]
-FileName=src\loader.c
+FileName=src\bus\disk_dev_ctl.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -91,7 +81,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit10]
-FileName=src\mdi.h
+FileName=src\bus\disk_pnp.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -101,7 +91,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit11]
-FileName=src\mount.c
+FileName=src\bus\disk_scsi.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -111,7 +101,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit12]
-FileName=src\mount.h
+FileName=src\bus\driver.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -121,7 +111,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit13]
-FileName=src\portable.h
+FileName=src\bus\filedisk.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -131,7 +121,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit14]
-FileName=src\protocol.c
+FileName=src\bus\grub4dos.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -141,7 +131,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit15]
-FileName=src\protocol.h
+FileName=src\bus\memdisk.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -151,7 +141,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit16]
-FileName=src\registry.c
+FileName=src\bus\probe.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -161,7 +151,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit17]
-FileName=src\registry.h
+FileName=src\bus\protocol.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -214,7 +204,7 @@ CustomMakefile=
 IncludeVersionInfo=0
 SupportXPThemes=0
 CompilerSet=0
-compilerType=0
+CompilerType=0
 
 [Profile2]
 ProfileName=MS VC++ 2005
@@ -241,10 +231,10 @@ CustomMakefile=
 IncludeVersionInfo=0
 SupportXPThemes=0
 CompilerSet=1
-compilerType=1
+CompilerType=1
 
 [Unit7]
-FileName=src\driver.c
+FileName=src\bus\debug.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -254,7 +244,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit20]
-FileName=src\probe.h
+FileName=src\include\aoe.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -264,19 +254,19 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit21]
-FileName=src\winvblock.rc
+FileName=src\include\bus.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
-Link=0
+Link=1
 Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
 [Unit18]
-FileName=src\disk.h
+FileName=src\bus\ramdisk.c
 CompileCpp=1
-Folder=
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -284,9 +274,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit23]
-FileName=src\irp.h
+FileName=src\include\bus_pnp.h
 CompileCpp=1
-Folder=
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -294,7 +284,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit22]
-FileName=src\winvblock.h
+FileName=src\include\bus_dev_ctl.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -304,7 +294,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit24]
-FileName=src\bus_pnp.c
+FileName=src\include\debug.h
 Folder=WinVBlock
 Compile=1
 Link=1
@@ -314,7 +304,7 @@ BuildCmd=
 CompileCpp=1
 
 [Unit25]
-FileName=src\bus_pnp.h
+FileName=src\include\disk.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -324,7 +314,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit26]
-FileName=src\bus_dev_ctl.c
+FileName=src\include\disk_dev_ctl.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -334,7 +324,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit27]
-FileName=src\bus_dev_ctl.h
+FileName=src\include\disk_pnp.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -344,7 +334,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit28]
-FileName=src\disk_pnp.c
+FileName=src\include\disk_scsi.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -354,7 +344,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit29]
-FileName=src\disk_pnp.h
+FileName=src\include\driver.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -364,7 +354,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit30]
-FileName=src\disk_dev_ctl.h
+FileName=src\include\filedisk.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -374,7 +364,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit31]
-FileName=src\disk_dev_ctl.c
+FileName=src\include\grub4dos.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -384,7 +374,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit32]
-FileName=src\disk_scsi.c
+FileName=src\include\irp.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -394,7 +384,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit33]
-FileName=src\disk_scsi.h
+FileName=src\include\mdi.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -404,7 +394,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit34]
-FileName=src\disk.c
+FileName=src\include\memdisk.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -414,7 +404,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit35]
-FileName=src\ramdisk.c
+FileName=src\include\mount.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -424,7 +414,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit36]
-FileName=src\ramdisk.h
+FileName=src\include\portable.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -434,7 +424,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit19]
-FileName=src\probe.c
+FileName=src\bus\registry.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -444,7 +434,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit37]
-FileName=src\memdisk.h
+FileName=src\include\probe.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -454,7 +444,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit38]
-FileName=src\memdisk.c
+FileName=src\include\protocol.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -464,7 +454,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit39]
-FileName=src\grub4dos.h
+FileName=src\include\ramdisk.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -474,7 +464,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit40]
-FileName=src\grub4dos.c
+FileName=src\include\registry.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -484,7 +474,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit41]
-FileName=src\filedisk.c
+FileName=src\include\resource.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -494,11 +484,30 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit42]
-FileName=src\filedisk.h
+FileName=src\include\winvblock.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
 Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit3]
+FileName=src\bus\aoe.c
+CompileCpp=1
+Folder=WinVBlock
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit43]
+FileName=src\bus\winvblock.rc
+Folder=WinVBlock
+Compile=1
+Link=0
 Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
