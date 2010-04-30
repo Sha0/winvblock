@@ -38,15 +38,15 @@ bin/winvblk.inf bin/txtsetup.oem: makeinf.bat Makefile
 	touch bin/winvblk.inf
 	touch bin/txtsetup.oem
 
-src/obj/loader32.o: src/loader.c src/portable.h Makefile
-	@mkdir -p src/obj
-	@rm -rf src/obj/loader32.o bin/loader32.exe bin/loader64.exe
-	gcc $(INCLUDES) -c -Wall src/loader.c -o src/obj/loader32.o
+src/loader/obj/loader32.o: src/loader/loader.c src/portable.h Makefile
+	@mkdir -p src/loader/obj
+	@rm -rf src/loader/obj/loader32.o bin/loader32.exe bin/loader64.exe
+	gcc $(INCLUDES) -c -Wall src/loader/loader.c -o src/loader/obj/loader32.o
 
-bin/loader32.exe: src/obj/loader32.o Makefile
+bin/loader32.exe: src/loader/obj/loader32.o Makefile
 	@mkdir -p bin
 	@rm -rf bin/loader32.exe bin/loader64.exe
-	gcc $(INCLUDES) -Wall src/obj/loader32.o -o bin/loader32.exe -lsetupapi
+	gcc $(INCLUDES) -Wall src/loader/obj/loader32.o -o bin/loader32.exe -lsetupapi
 	strip bin/loader32.exe
 
 src/obj/mount.o: src/mount.c src/portable.h src/mount.h Makefile
