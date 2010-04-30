@@ -122,7 +122,7 @@ Compiling:
 To compile this you need either MSYS or the windows 2003 DDK, preferably both.
 Set the path to the DDK in config.bat and run the bat files makefree or makechecked to build everything but aoe.0.
 aoe.0 will not be deleted and is prebuild in the package, so you can get away with only using the DDK.
-To build aoe.0 you need MSYS or a Linux box (type make in the pxe.asm or pxe.c dir in Linux to compile it).
+To build aoe.0 you need MSYS or a Linux box (type make in the src/nbp/pxe.asm or src/nbp/pxe.c dir in Linux to compile it).
 MSYS can also build the driver itself, but only the 32bit version, and it will not generate windbg symbol files.
 Also, the MSYS generated driver has a higher chance of failing, due to compiler bugs.
 When compiling the driver with makefree/makechecked or in MSYS with make, a loader32/64.exe will also be build to quickly install the driver without going through the control panel.

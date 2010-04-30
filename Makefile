@@ -12,7 +12,7 @@ PXESTYLE := asm
 all: bin/aoe.0 bin/loader32.exe bin/wvblk32.sys bin/aoe.exe bin/winvblk.inf bin/txtsetup.oem
 
 clean:
-	@rm -rf src/obj src/pxe.asm/obj src/pxe.c/obj bin
+	@rm -rf src/obj src/nbp/pxe.asm/obj src/nbp/pxe.c/obj bin
 
 dist:
 	@sh -c "unset \`set | cut -f 1 -d \"=\" | egrep -v \"PATH|COMSPEC\"\` 2> /dev/null ; cmd /c makedist.bat"
@@ -25,13 +25,13 @@ checked: bin/winvblk.inf bin/txtsetup.oem $(addprefix src/,$c $h) Makefile
 	@sh -c "unset \`set | cut -f 1 -d \"=\" | egrep -v \"PATH|COMSPEC\"\` 2> /dev/null ; cmd /c makechecked.bat"
 	@touch -r Makefile $(wildcard bin/*.sys)
 
-bin/aoe.0: src/pxe.$(PXESTYLE)/aoe.0 Makefile
+bin/aoe.0: src/nbp/pxe.$(PXESTYLE)/aoe.0 Makefile
 	@mkdir -p bin
-	cp src/pxe.$(PXESTYLE)/aoe.0 bin
+	cp src/nbp/pxe.$(PXESTYLE)/aoe.0 bin
 
-src/pxe.$(PXESTYLE)/aoe.0: $(wildcard src/pxe.$(PXESTYLE)/*.c) $(wildcard src/pxe.$(PXESTYLE)/*.h) $(wildcard src/pxe.$(PXESTYLE)/*.S) src/pxe.$(PXESTYLE)/aoe.ld src/pxe.$(PXESTYLE)/Makefile Makefile
-	rm -rf src/pxe.$(PXESTYLE)/aoe.0
-	make -C src/pxe.$(PXESTYLE)
+src/nbp/pxe.$(PXESTYLE)/aoe.0: $(wildcard src/nbp/pxe.$(PXESTYLE)/*.c) $(wildcard src/nbp/pxe.$(PXESTYLE)/*.h) $(wildcard src/nbp/pxe.$(PXESTYLE)/*.S) src/nbp/pxe.$(PXESTYLE)/aoe.ld src/nbp/pxe.$(PXESTYLE)/Makefile Makefile
+	rm -rf src/nbp/pxe.$(PXESTYLE)/aoe.0
+	make -C src/nbp/pxe.$(PXESTYLE)
 
 bin/winvblk.inf bin/txtsetup.oem: makeinf.bat Makefile
 	@sh -c "unset \`set | cut -f 1 -d \"=\" | egrep -v \"PATH|COMSPEC\"\` 2> /dev/null ; cmd /c makeinf.bat ; exit 0" >/dev/null 2>&1
