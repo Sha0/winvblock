@@ -156,7 +156,7 @@ DriverEntry (
 {
   NTSTATUS Status;
   int i;
-  LPWSTR make_bus;
+  PDEVICE_OBJECT bus_pdo_ptr = NULL;
 
   DBG ( "Entry\n" );
   if ( driver__obj_ptr )
@@ -199,26 +199,15 @@ DriverEntry (
   DriverObject->DriverUnload = Driver_Unload;
 
   /*
-   * We expect that the WinVBlock bus device has already been
-   * installed by using the Add Hardware Wizard and the .INF file.
-   * If the user requested early bus creation explicitly in BOOT.INI
-   * or TXTSETUP.SIF, oblige them
+   * Always create the root-enumerated bus device 
    */
-  make_bus = get_opt ( L"BUS" );
-  if ( make_bus )
+  IoReportDetectedDevice ( DriverObject, InterfaceTypeUndefined, -1, -1, NULL,
+			   NULL, FALSE, &bus_pdo_ptr );
+  if ( !NT_SUCCESS ( Status = Bus_AddDevice ( DriverObject, bus_pdo_ptr ) ) )
     {
-      PDEVICE_OBJECT bus_pdo_ptr = NULL;
-
-      DBG ( "Early bus creation\n" );
-      IoReportDetectedDevice ( DriverObject, InterfaceTypeUndefined, -1, -1,
-			       NULL, NULL, FALSE, &bus_pdo_ptr );
-      if ( !NT_SUCCESS
-	   ( Status = Bus_AddDevice ( DriverObject, bus_pdo_ptr ) ) )
-	{
-	  Protocol_Stop (  );
-	  AoE_Stop (  );
-	  return Error ( "Bus_AddDevice", Status );
-	}
+      Protocol_Stop (  );
+      AoE_Stop (  );
+      return Error ( "Bus_AddDevice", Status );
     }
 
   Driver_Globals_Started = TRUE;
