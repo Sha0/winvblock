@@ -66,15 +66,19 @@ cd src\bus
 echo !INCLUDE $(NTMAKEENV)\makefile.def > makefile
 echo INCLUDES=..\include > sources
 echo TARGETNAME=%name% >> sources
-echo TARGETTYPE=DRIVER >> sources
+echo TARGETTYPE=EXPORT_DRIVER >> sources
 echo TARGETPATH=obj >> sources
 echo TARGETLIBS=$(DDK_LIB_PATH)\\ndis.lib >> sources
 echo SOURCES=%c% >> sources
+echo C_DEFINES=-DPROJECT_BUS=1 >> sources
+echo NAME %name%.sys> %name%.def
 build
 copy obj%obj%\%arch%\%name%.sys ..\..\bin >nul
 copy obj%obj%\%arch%\%name%.pdb ..\..\bin >nul
+copy obj%obj%\%arch%\%name%.lib ..\..\bin >nul
 del makefile
 del sources
+del %name%.def
 rem del build%obj%.log
 rem del build%obj%.wrn 2>nul
 rem del build%obj%.err 2>nul
