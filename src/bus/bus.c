@@ -40,7 +40,7 @@
 
 PDEVICE_OBJECT bus__fdo = NULL;
 
-void STDCALL
+void
 Bus_Stop (
   void
  )
