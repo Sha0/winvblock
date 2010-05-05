@@ -56,12 +56,6 @@ static void STDCALL Driver_Unload (
   IN PDRIVER_OBJECT DriverObject
  );
 
-static NTSTATUS STDCALL DriverReinitialize (
-  IN PDRIVER_OBJECT DriverObject,
-  IN void *Context,
-  winvblock__uint32 Count
- );
-
 static void *Driver_Globals_StateHandle;
 static winvblock__bool Driver_Globals_Started = FALSE;
 
