@@ -53,6 +53,7 @@ winvblock__def_type ( UINT64, winvblock__uint64 );
 winvblock__def_type ( UINT32, winvblock__uint32 );
 winvblock__def_type ( UINT16, winvblock__uint16 );
 winvblock__def_type ( BOOLEAN, winvblock__bool );
+typedef void *winvblock__any_ptr;
 
 /* ExAllocatePool() is deprecated now */
 #  define ExAllocatePool( x, y ) ExAllocatePoolWithTag ( x, y, 'klBV' )
