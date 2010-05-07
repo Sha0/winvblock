@@ -134,8 +134,7 @@ struct _driver__dev_ext
   PDRIVER_OBJECT DriverObject;
   driver__state State;
   driver__state OldState;
-  irp__handling_ptr irp_handler_stack_ptr;
-  size_t irp_handler_stack_size;
+  irp__handler_chain irp_handler_chain;
   driver__dev_ext_ptr next_sibling_ptr;
   driver__dev_ops_ptr ops;
 };

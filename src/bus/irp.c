@@ -156,41 +156,45 @@ irp__new_chain (
 irp__handler_decl ( irp__process )
 {
   NTSTATUS status = STATUS_NOT_SUPPORTED;
-  size_t irp_handler_index;
+  handler_chain_ptr link =
+    ( handler_chain_ptr ) DeviceExtension->irp_handler_chain;
 
-  /*
-   * Determine the device's IRP handler stack size
-   */
-  irp_handler_index = DeviceExtension->irp_handler_stack_size;
-
-  /*
-   * For each entry in the stack, in top-down order
-   */
-  while ( irp_handler_index-- )
+  while ( link != NULL )
     {
-      irp__handling handling;
-      winvblock__bool handles_major,
-       handles_minor;
+      /*
+       * Determine the table's mini IRP handler stack size
+       */
+      int handling_index = link->size / sizeof ( irp__handling );
 
       /*
-       * Get the handling entry
+       * For each entry in the stack, in last-is-first order
        */
-      handling = DeviceExtension->irp_handler_stack_ptr[irp_handler_index];
+      while ( handling_index-- )
+	{
+	  irp__handling handling;
+	  winvblock__bool handles_major,
+	   handles_minor;
 
-      handles_major = ( Stack->MajorFunction == handling.irp_major_func )
-	|| handling.any_major;
-      handles_minor = ( Stack->MinorFunction == handling.irp_minor_func )
-	|| handling.any_minor;
-      if ( handles_major && handles_minor )
-	status =
-	  handling.handler ( DeviceObject, Irp, Stack, DeviceExtension,
-			     completion_ptr );
-      /*
-       * Do not process the IRP any further down the stack
-       */
-      if ( *completion_ptr )
-	break;
+	  /*
+	   * Get the handling entry
+	   */
+	  handling = link->table[handling_index];
+
+	  handles_major = ( Stack->MajorFunction == handling.irp_major_func )
+	    || handling.any_major;
+	  handles_minor = ( Stack->MinorFunction == handling.irp_minor_func )
+	    || handling.any_minor;
+	  if ( handles_major && handles_minor )
+	    status =
+	      handling.handler ( DeviceObject, Irp, Stack, DeviceExtension,
+				 completion_ptr );
+	  /*
+	   * Do not process the IRP any further down the stack
+	   */
+	  if ( *completion_ptr )
+	    break;
+	}
+      link = link->next;
     }
-
   return status;
 }

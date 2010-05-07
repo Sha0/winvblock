@@ -222,7 +222,6 @@ Bus_AddDevice (
   NTSTATUS Status;
   UNICODE_STRING DeviceName,
    DosDeviceName;
-  size_t new_dev_ext_size;
   driver__dev_ext_ptr bus_dev_ext_ptr;
   bus__type_ptr bus_ptr;
 
@@ -232,43 +231,41 @@ Bus_AddDevice (
   RtlInitUnicodeString ( &DeviceName, L"\\Device\\" winvblock__literal_w );
   RtlInitUnicodeString ( &DosDeviceName,
 			 L"\\DosDevices\\" winvblock__literal_w );
-  new_dev_ext_size =
-    sizeof ( bus__type ) + driver__handling_table_size +
-    sizeof ( handling_table );
-  if ( !NT_SUCCESS
-       ( Status =
-	 IoCreateDevice ( DriverObject, new_dev_ext_size, &DeviceName,
-			  FILE_DEVICE_CONTROLLER, FILE_DEVICE_SECURE_OPEN,
-			  FALSE, &bus__fdo ) ) )
+  Status =
+    IoCreateDevice ( DriverObject, sizeof ( bus__type ), &DeviceName,
+		     FILE_DEVICE_CONTROLLER, FILE_DEVICE_SECURE_OPEN, FALSE,
+		     &bus__fdo );
+  if ( !NT_SUCCESS ( Status ) )
     {
       return Error ( "Bus_AddDevice IoCreateDevice", Status );
     }
-  if ( !NT_SUCCESS
-       ( Status = IoCreateSymbolicLink ( &DosDeviceName, &DeviceName ) ) )
+  Status = IoCreateSymbolicLink ( &DosDeviceName, &DeviceName );
+  if ( !NT_SUCCESS ( Status ) )
     {
       IoDeleteDevice ( bus__fdo );
       return Error ( "Bus_AddDevice IoCreateSymbolicLink", Status );
     }
 
+  /*
+   * Set some default parameters for a bus
+   */
   bus_dev_ext_ptr = ( driver__dev_ext_ptr ) bus__fdo->DeviceExtension;
-  RtlZeroMemory ( bus_dev_ext_ptr, new_dev_ext_size );
+  RtlZeroMemory ( bus_dev_ext_ptr, sizeof ( bus__type ) );
   bus_dev_ext_ptr->IsBus = TRUE;
   bus_dev_ext_ptr->size = sizeof ( bus__type );
   bus_dev_ext_ptr->DriverObject = DriverObject;
   bus_dev_ext_ptr->Self = bus__fdo;
   bus_dev_ext_ptr->State = NotStarted;
   bus_dev_ext_ptr->OldState = NotStarted;
-  bus_dev_ext_ptr->irp_handler_stack_ptr =
-    ( irp__handling_ptr ) ( ( winvblock__uint8 * ) bus_dev_ext_ptr +
-			    sizeof ( bus__type ) );
-  RtlCopyMemory ( bus_dev_ext_ptr->irp_handler_stack_ptr,
-		  driver__handling_table, driver__handling_table_size );
-  RtlCopyMemory ( ( winvblock__uint8 * ) bus_dev_ext_ptr->
-		  irp_handler_stack_ptr + driver__handling_table_size,
-		  handling_table, sizeof ( handling_table ) );
-  bus_dev_ext_ptr->irp_handler_stack_size =
-    ( driver__handling_table_size +
-      sizeof ( handling_table ) ) / sizeof ( irp__handling );
+  /*
+   * Register the default driver IRP handling table
+   */
+  irp__reg_table_s ( &bus_dev_ext_ptr->irp_handler_chain,
+		     driver__handling_table, driver__handling_table_size );
+  /*
+   * Register the default bus IRP handling table
+   */
+  irp__reg_table ( &bus_dev_ext_ptr->irp_handler_chain, handling_table );
   /*
    * Establish a pointer into the bus device's extension space
    */
@@ -284,9 +281,9 @@ Bus_AddDevice (
    */
   if ( PhysicalDeviceObject != NULL )
     {
-      if ( ( bus_ptr->LowerDeviceObject =
-	     IoAttachDeviceToDeviceStack ( bus__fdo,
-					   PhysicalDeviceObject ) ) == NULL )
+      bus_ptr->LowerDeviceObject =
+	IoAttachDeviceToDeviceStack ( bus__fdo, PhysicalDeviceObject );
+      if ( bus_ptr->LowerDeviceObject == NULL )
 	{
 	  IoDeleteDevice ( bus__fdo );
 	  bus__fdo = NULL;
