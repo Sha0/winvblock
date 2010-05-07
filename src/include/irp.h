@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  * For WinAoE contact information, see http://winaoe.org/
@@ -57,5 +57,47 @@ winvblock__def_struct ( irp__handling )
   winvblock__bool any_minor;
   irp__handler handler;
 };
+
+winvblock__def_type ( winvblock__any_ptr, irp__handler_chain );
+
+/**
+ * Register an IRP handling table with a chain (with table size)
+ *
+ * @v chain_ptr Pointer to IRP handler chain to attach a table to
+ * @v table     Table to add
+ * @v size      Size of the table to add, in bytes
+ * @ret         FALSE for failure, TRUE for success
+ */
+extern winvblock__lib_func winvblock__bool irp__reg_table_s (
+  IN OUT irp__handler_chain_ptr chain_ptr,
+  IN irp__handling_ptr table,
+  IN size_t size
+ );
+
+/**
+ * Register an IRP handling table with a chain
+ *
+ * @v chain_ptr Pointer to IRP handler chain to attach a table to
+ * @v table     Table to add
+ * @ret         FALSE for failure, TRUE for success
+ */
+#  define irp__reg_table( chain_ptr, table ) \
+  irp__reg_table_s ( chain_ptr, table, sizeof ( table ) )
+
+/**
+ * Un-register an IRP handling table from a chain
+ *
+ * @v chain_ptr Pointer to IRP handler chain to remove table from
+ * @v table     Table to remove
+ * @ret         FALSE for failure, TRUE for success
+ */
+winvblock__lib_func winvblock__bool irp__new_chain (
+  IN OUT irp__handler_chain_ptr chain_ptr,
+  IN irp__handling_ptr table
+ );
+
+extern irp__handler_decl (
+  irp__process
+ );
 
 #endif				/* _irp_h */

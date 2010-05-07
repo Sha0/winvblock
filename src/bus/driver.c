@@ -294,44 +294,8 @@ Driver_Dispatch (
       return STATUS_NO_SUCH_DEVICE;
     }
 
-  /*
-   * Mini IRP handling strategy
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~
-   */
-
-  /*
-   * Determine the device's IRP handler stack size 
-   */
-  irp_handler_index = DeviceExtension->irp_handler_stack_size;
-
-  /*
-   * For each entry in the stack, in top-down order 
-   */
-  while ( irp_handler_index-- )
-    {
-      irp__handling handling;
-      winvblock__bool handles_major,
-       handles_minor;
-
-      /*
-       * Get the handling entry 
-       */
-      handling = DeviceExtension->irp_handler_stack_ptr[irp_handler_index];
-
-      handles_major = ( Stack->MajorFunction == handling.irp_major_func )
-	|| handling.any_major;
-      handles_minor = ( Stack->MinorFunction == handling.irp_minor_func )
-	|| handling.any_minor;
-      if ( handles_major && handles_minor )
-	status =
-	  handling.handler ( DeviceObject, Irp, Stack, DeviceExtension,
-			     &completion );
-      /*
-       * Do not process the IRP any further down the stack 
-       */
-      if ( completion )
-	break;
-    }
+  status =
+    irp__process ( DeviceObject, Irp, Stack, DeviceExtension, &completion );
 
 #ifdef DEBUGIRPS
   if ( status != STATUS_PENDING )
