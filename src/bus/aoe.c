@@ -1585,7 +1585,7 @@ __attribute__ ( ( __packed__ ) );
 #  pragma pack()
 #endif
 
-disk__ops aoe__default_ops = {
+static disk__ops aoe__default_ops = {
   io,
   max_xfer_len,
   init,
