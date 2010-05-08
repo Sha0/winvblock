@@ -204,7 +204,7 @@ static winvblock__bool AoE_Globals_Started = FALSE;
  * Establish a pointer into the AoE disk device's extension space
  */
 __inline aoe_disk_type_ptr STDCALL
-aoe__get_disk_ptr (
+get_aoe_disk_ptr (
   driver__dev_ext_ptr dev_ext_ptr
  )
 {
@@ -468,7 +468,7 @@ disk__init_decl (
   winvblock__uint32 MTU;
   aoe_disk_type_ptr aoe_disk_ptr;
 
-  aoe_disk_ptr = aoe__get_disk_ptr ( &disk_ptr->dev_ext );
+  aoe_disk_ptr = get_aoe_disk_ptr ( &disk_ptr->dev_ext );
   if ( !NT_SUCCESS ( AoE_Start (  ) ) )
     {
       DBG ( "AoE startup failure!\n" );
@@ -848,7 +848,7 @@ disk__io_decl (
    * Establish pointers into the disk device's extension space
    */
   disk_ptr = get_disk_ptr ( dev_ext_ptr );
-  aoe_disk_ptr = aoe__get_disk_ptr ( dev_ext_ptr );
+  aoe_disk_ptr = get_aoe_disk_ptr ( dev_ext_ptr );
 
   if ( AoE_Globals_Stop )
     {
@@ -1224,7 +1224,7 @@ AoE_Reply (
    * Establish pointers into the disk device's extension space
    */
   disk_ptr = get_disk_ptr ( tag->DeviceExtension );
-  aoe_disk_ptr = aoe__get_disk_ptr ( tag->DeviceExtension );
+  aoe_disk_ptr = get_aoe_disk_ptr ( tag->DeviceExtension );
 
   /*
    * If our tag was a discovery request, note the server 
@@ -1454,7 +1454,7 @@ thread (
 	   * Establish pointers into the disk device's extension space
 	   */
 	  disk_ptr = get_disk_ptr ( tag->DeviceExtension );
-	  aoe_disk_ptr = aoe__get_disk_ptr ( tag->DeviceExtension );
+	  aoe_disk_ptr = get_aoe_disk_ptr ( tag->DeviceExtension );
 
 	  RequestTimeout = aoe_disk_ptr->Timeout;
 	  if ( tag->Id == 0 )
@@ -1529,7 +1529,7 @@ disk__max_xfer_len_decl (
   max_xfer_len
  )
 {
-  aoe_disk_type_ptr aoe_disk_ptr = aoe__get_disk_ptr ( &disk_ptr->dev_ext );
+  aoe_disk_type_ptr aoe_disk_ptr = get_aoe_disk_ptr ( &disk_ptr->dev_ext );
 
   return disk_ptr->SectorSize * aoe_disk_ptr->MaxSectorsPerPacket;
 }
@@ -1539,7 +1539,7 @@ disk__pnp_id_decl (
   query_id
  )
 {
-  aoe_disk_type_ptr aoe_disk_ptr = aoe__get_disk_ptr ( &disk_ptr->dev_ext );
+  aoe_disk_type_ptr aoe_disk_ptr = get_aoe_disk_ptr ( &disk_ptr->dev_ext );
 
   switch ( query_type )
     {
@@ -1811,7 +1811,7 @@ irp__handler_decl (
   while ( disk_walker != NULL )
     {
       aoe_disk_type_ptr aoe_disk_ptr =
-	aoe__get_disk_ptr ( &disk_walker->dev_ext );
+	get_aoe_disk_ptr ( &disk_walker->dev_ext );
 
       disks->Disk[count].Disk = disk_walker->DiskNumber;
       RtlCopyMemory ( &disks->Disk[count].ClientMac, &aoe_disk_ptr->ClientMac,
