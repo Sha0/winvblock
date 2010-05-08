@@ -1583,7 +1583,7 @@ __attribute__ ( ( __packed__ ) );
 #  pragma pack()
 #endif
 
-static disk__ops aoe__default_ops = {
+static disk__ops default_ops = {
   io,
   max_xfer_len,
   init,
@@ -1674,7 +1674,7 @@ aoe__process_abft (
       aoe_disk.Timeout = 200000;	/* 20 ms. */
       aoe_disk.disk.BootDrive = TRUE;
       aoe_disk.disk.media = disk__media_hard;
-      aoe_disk.disk.ops = &aoe__default_ops;
+      aoe_disk.disk.ops = &default_ops;
       aoe_disk.disk.dev_ext.ops = &disk__dev_ops;
       aoe_disk.disk.dev_ext.size = sizeof ( aoe_disk_type );
 
@@ -1858,7 +1858,7 @@ irp__handler_decl (
   aoe_disk.Timeout = 200000;	/* 20 ms. */
   aoe_disk.disk.BootDrive = FALSE;
   aoe_disk.disk.media = disk__media_hard;
-  aoe_disk.disk.ops = &aoe__default_ops;
+  aoe_disk.disk.ops = &default_ops;
   aoe_disk.disk.dev_ext.ops = &disk__dev_ops;
   aoe_disk.disk.dev_ext.size = sizeof ( aoe_disk_type );
   if ( !bus__add_child ( DeviceObject, &aoe_disk.disk.dev_ext ) )
