@@ -36,14 +36,6 @@
 #  define ntohs(x) (winvblock__uint16)((((x) << 8) & 0xff00) | \
                                        (((x) >> 8) & 0xff))
 
-winvblock__def_struct ( aoe__target_list )
-{
-  aoe_ioctl__mount_target Target;
-  aoe__target_list_ptr next;
-};
-
-extern aoe__target_list_ptr AoE_Globals_TargetList;
-extern KSPIN_LOCK AoE_Globals_TargetListSpinLock;
 extern disk__ops aoe__default_ops;
 
 extern NTSTATUS STDCALL AoE_Reply (

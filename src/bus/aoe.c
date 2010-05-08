@@ -178,8 +178,14 @@ winvblock__def_struct ( aoe_disk_type )
   search_state search_state;
 };
 
+winvblock__def_struct ( target_list )
+{
+  aoe_ioctl__mount_target Target;
+  target_list_ptr next;
+};
+
 /** Globals */
-aoe__target_list_ptr AoE_Globals_TargetList = NULL;
+target_list_ptr AoE_Globals_TargetList = NULL;
 KSPIN_LOCK AoE_Globals_TargetListSpinLock;
 
 /** Private */
@@ -336,7 +342,7 @@ AoE_Stop (
   work_tag_ptr tag;
   KIRQL Irql,
    Irql2;
-  aoe__target_list_ptr Walker,
+  target_list_ptr Walker,
    Next;
 
   DBG ( "Entry\n" );
@@ -1066,7 +1072,7 @@ add_target (
   LONGLONG LBASize
  )
 {
-  aoe__target_list_ptr Walker,
+  target_list_ptr Walker,
    Last;
   KIRQL Irql;
 
@@ -1095,9 +1101,8 @@ add_target (
     }
 
   if ( ( Walker =
-	 ( aoe__target_list_ptr ) ExAllocatePool ( NonPagedPool,
-						   sizeof
-						   ( aoe__target_list ) ) ) ==
+	 ( target_list_ptr ) ExAllocatePool ( NonPagedPool,
+					      sizeof ( target_list ) ) ) ==
        NULL )
     {
       DBG ( "ExAllocatePool Target\n" );
@@ -1699,7 +1704,7 @@ irp__handler_decl (
 {
   KIRQL irql;
   winvblock__uint32 count;
-  aoe__target_list_ptr target_walker;
+  target_list_ptr target_walker;
   aoe_ioctl__mount_targets_ptr targets;
 
   DBG ( "Got IOCTL_AOE_SCAN...\n" );
