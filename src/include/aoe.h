@@ -45,9 +45,6 @@ extern NTSTATUS STDCALL aoe__reply (
 extern void aoe__reset_probe (
   void
  );
-extern NTSTATUS AoE_Start (
-  void
- );
 extern void AoE_Stop (
   void
  );

@@ -219,8 +219,8 @@ get_aoe_disk_ptr (
  *
  * @ret Status		Return status code
  */
-NTSTATUS
-AoE_Start (
+static NTSTATUS
+start (
   void
  )
 {
@@ -467,7 +467,7 @@ disk__init_decl (
   aoe_disk_type_ptr aoe_disk_ptr;
 
   aoe_disk_ptr = get_aoe_disk_ptr ( &disk_ptr->dev_ext );
-  if ( !NT_SUCCESS ( AoE_Start (  ) ) )
+  if ( !NT_SUCCESS ( start (  ) ) )
     {
       DBG ( "AoE startup failure!\n" );
       return FALSE;
@@ -1706,7 +1706,7 @@ irp__handler_decl (
   aoe_ioctl__mount_targets_ptr targets;
 
   DBG ( "Got IOCTL_AOE_SCAN...\n" );
-  AoE_Start (  );
+  start (  );
   KeAcquireSpinLock ( &AoE_Globals_TargetListSpinLock, &irql );
 
   count = 0;
