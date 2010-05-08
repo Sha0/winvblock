@@ -1355,7 +1355,7 @@ aoe__reply (
 }
 
 void
-AoE_ResetProbe (
+aoe__reset_probe (
   void
  )
 {

@@ -813,7 +813,7 @@ Protocol_BindAdapter (
     }
   KeReleaseSpinLock ( &Protocol_Globals_SpinLock, Irql );
 
-  AoE_ResetProbe (  );
+  aoe__reset_probe (  );
   *StatusOut = NDIS_STATUS_SUCCESS;
 }
 
