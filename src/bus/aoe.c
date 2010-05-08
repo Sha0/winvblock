@@ -151,6 +151,20 @@ winvblock__def_struct ( disk_search )
   disk_search_ptr next;
 };
 
+/** The AoE disk type */
+winvblock__def_struct ( aoe_disk_type )
+{
+  disk__type disk;
+  winvblock__uint32 MTU;
+  winvblock__uint8 ClientMac[6];
+  winvblock__uint8 ServerMac[6];
+  winvblock__uint32 Major;
+  winvblock__uint32 Minor;
+  winvblock__uint32 MaxSectorsPerPacket;
+  winvblock__uint32 Timeout;
+  search_state search_state;
+};
+
 /** Globals */
 aoe__target_list_ptr AoE_Globals_TargetList = NULL;
 KSPIN_LOCK AoE_Globals_TargetListSpinLock;
@@ -166,6 +180,22 @@ static disk_search_ptr AoE_Globals_DiskSearchList = NULL;
 static LONG AoE_Globals_OutstandingTags = 0;
 static HANDLE AoE_Globals_ThreadHandle;
 static winvblock__bool AoE_Globals_Started = FALSE;
+
+/*
+ * Establish a pointer into the AoE disk device's extension space
+ */
+__inline aoe_disk_type_ptr STDCALL
+aoe__get_disk_ptr (
+  driver__dev_ext_ptr dev_ext_ptr
+ )
+{
+  /*
+   * Since the device extension is the first member of the disk
+   * member of an AoE disk, and the disk structure is itself the
+   * first member of an AoE disk structure, a simple cast will suffice
+   */
+  return ( aoe_disk_type_ptr ) dev_ext_ptr;
+}
 
 /**
  * Start AoE operations
@@ -417,7 +447,7 @@ disk__init_decl (
    InnerIrql;
   LARGE_INTEGER MaxSectorsPerPacketSendTime;
   winvblock__uint32 MTU;
-  aoe__disk_type_ptr aoe_disk_ptr;
+  aoe_disk_type_ptr aoe_disk_ptr;
 
   aoe_disk_ptr = aoe__get_disk_ptr ( &disk_ptr->dev_ext );
   if ( !NT_SUCCESS ( AoE_Start (  ) ) )
@@ -793,7 +823,7 @@ disk__io_decl (
   PHYSICAL_ADDRESS PhysicalAddress;
   winvblock__uint8_ptr PhysicalMemory;
   disk__type_ptr disk_ptr;
-  aoe__disk_type_ptr aoe_disk_ptr;
+  aoe_disk_type_ptr aoe_disk_ptr;
 
   /*
    * Establish pointers into the disk device's extension space
@@ -1103,7 +1133,7 @@ AoE_Reply (
   winvblock__bool Found = FALSE;
   LARGE_INTEGER CurrentTime;
   disk__type_ptr disk_ptr;
-  aoe__disk_type_ptr aoe_disk_ptr;
+  aoe_disk_type_ptr aoe_disk_ptr;
 
   /*
    * Discard non-responses 
@@ -1334,7 +1364,7 @@ thread (
   winvblock__uint32 Fails = 0;
   winvblock__uint32 RequestTimeout = 0;
   disk__type_ptr disk_ptr;
-  aoe__disk_type_ptr aoe_disk_ptr;
+  aoe_disk_type_ptr aoe_disk_ptr;
 
   DBG ( "Entry\n" );
   ReportTime.QuadPart = 0LL;
@@ -1481,7 +1511,7 @@ disk__max_xfer_len_decl (
   max_xfer_len
  )
 {
-  aoe__disk_type_ptr aoe_disk_ptr = aoe__get_disk_ptr ( &disk_ptr->dev_ext );
+  aoe_disk_type_ptr aoe_disk_ptr = aoe__get_disk_ptr ( &disk_ptr->dev_ext );
 
   return disk_ptr->SectorSize * aoe_disk_ptr->MaxSectorsPerPacket;
 }
@@ -1491,7 +1521,7 @@ disk__pnp_id_decl (
   query_id
  )
 {
-  aoe__disk_type_ptr aoe_disk_ptr = aoe__get_disk_ptr ( &disk_ptr->dev_ext );
+  aoe_disk_type_ptr aoe_disk_ptr = aoe__get_disk_ptr ( &disk_ptr->dev_ext );
 
   switch ( query_type )
     {
@@ -1557,7 +1587,7 @@ aoe__process_abft (
    i;
   winvblock__bool FoundAbft = FALSE;
   abft AoEBootRecord;
-  aoe__disk_type aoe_disk;
+  aoe_disk_type aoe_disk;
   bus__type_ptr bus_ptr;
 
   /*
@@ -1630,7 +1660,7 @@ aoe__process_abft (
       aoe_disk.disk.media = disk__media_hard;
       aoe_disk.disk.ops = &aoe__default_ops;
       aoe_disk.disk.dev_ext.ops = &disk__dev_ops;
-      aoe_disk.disk.dev_ext.size = sizeof ( aoe__disk_type );
+      aoe_disk.disk.dev_ext.size = sizeof ( aoe_disk_type );
 
       if ( !bus__add_child ( bus__fdo, &aoe_disk.disk.dev_ext ) )
 	DBG ( "bus__add_child() failed for aBFT AoE disk\n" );
@@ -1762,7 +1792,7 @@ irp__handler_decl (
   disk_walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
   while ( disk_walker != NULL )
     {
-      aoe__disk_type_ptr aoe_disk_ptr =
+      aoe_disk_type_ptr aoe_disk_ptr =
 	aoe__get_disk_ptr ( &disk_walker->dev_ext );
 
       disks->Disk[count].Disk = disk_walker->DiskNumber;
@@ -1797,7 +1827,7 @@ irp__handler_decl (
  )
 {
   winvblock__uint8_ptr buffer = Irp->AssociatedIrp.SystemBuffer;
-  aoe__disk_type aoe_disk;
+  aoe_disk_type aoe_disk;
   bus__type_ptr bus_ptr;
 
   DBG ( "Got IOCTL_AOE_MOUNT for client: %02x:%02x:%02x:%02x:%02x:%02x "
@@ -1814,7 +1844,7 @@ irp__handler_decl (
   aoe_disk.disk.media = disk__media_hard;
   aoe_disk.disk.ops = &aoe__default_ops;
   aoe_disk.disk.dev_ext.ops = &disk__dev_ops;
-  aoe_disk.disk.dev_ext.size = sizeof ( aoe__disk_type );
+  aoe_disk.disk.dev_ext.size = sizeof ( aoe_disk_type );
   if ( !bus__add_child ( DeviceObject, &aoe_disk.disk.dev_ext ) )
     {
       DBG ( "bus__add_child() failed\n" );
