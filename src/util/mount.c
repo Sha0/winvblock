@@ -33,6 +33,7 @@
 #include "winvblock.h"
 #include "portable.h"
 #include "mount.h"
+#include "aoe_ioctl.h"
 
 typedef enum
 { CommandScan, CommandShow, CommandMount, CommandUmount, CommandAttach,

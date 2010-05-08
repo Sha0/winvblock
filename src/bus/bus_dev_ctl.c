@@ -34,6 +34,7 @@
 #include "driver.h"
 #include "disk.h"
 #include "mount.h"
+#include "aoe_ioctl.h"
 #include "bus.h"
 #include "debug.h"
 #include "aoe.h"

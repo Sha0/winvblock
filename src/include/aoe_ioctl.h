@@ -1,6 +1,6 @@
 /**
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
- * Portions copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * For WinAoE contact information, see http://winaoe.org/
  *
  * This file is part of WinVBlock, derived from WinAoE.
@@ -18,73 +18,43 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _MOUNT_H
-#  define _MOUNT_H
+#ifndef _AOE_IOCTL_H
+#  define _AOE_IOCTL_H
 
 /**
  * @file
  *
- * Mount command and device control code header
+ * AoE IOCTL specifics
  *
  */
 
-#  define IOCTL_FILE_ATTACH             \
+#  define IOCTL_AOE_SCAN                \
   CTL_CODE(                             \
     FILE_DEVICE_CONTROLLER,             \
-    0x804,                              \
+    0x800,                              \
     METHOD_BUFFERED,                    \
     FILE_READ_DATA | FILE_WRITE_DATA    \
     )
-#  define IOCTL_FILE_DETACH             \
+#  define IOCTL_AOE_SHOW                \
   CTL_CODE(                             \
     FILE_DEVICE_CONTROLLER,             \
-    0x805,                              \
+    0x801,                              \
+    METHOD_BUFFERED,                    \
+    FILE_READ_DATA | FILE_WRITE_DATA    \
+    )
+#  define IOCTL_AOE_MOUNT               \
+  CTL_CODE(                             \
+    FILE_DEVICE_CONTROLLER,             \
+    0x802,                              \
+    METHOD_BUFFERED,                    \
+    FILE_READ_DATA | FILE_WRITE_DATA    \
+    )
+#  define IOCTL_AOE_UMOUNT              \
+  CTL_CODE(                             \
+    FILE_DEVICE_CONTROLLER,             \
+    0x803,                              \
     METHOD_BUFFERED,                    \
     FILE_READ_DATA | FILE_WRITE_DATA    \
     )
 
-typedef struct _MOUNT_TARGET
-{
-  winvblock__uint8 ClientMac[6];
-  winvblock__uint8 ServerMac[6];
-  winvblock__uint32 Major;
-  winvblock__uint32 Minor;
-  LONGLONG LBASize;
-  LARGE_INTEGER ProbeTime;
-} MOUNT_TARGET,
-*PMOUNT_TARGET;
-
-typedef struct _MOUNT_TARGETS
-{
-  winvblock__uint32 Count;
-  MOUNT_TARGET Target[];
-} MOUNT_TARGETS,
-*PMOUNT_TARGETS;
-
-typedef struct _MOUNT_DISK
-{
-  winvblock__uint32 Disk;
-  winvblock__uint8 ClientMac[6];
-  winvblock__uint8 ServerMac[6];
-  winvblock__uint32 Major;
-  winvblock__uint32 Minor;
-  LONGLONG LBASize;
-} MOUNT_DISK,
-*PMOUNT_DISK;
-
-typedef struct _MOUNT_DISKS
-{
-  winvblock__uint32 Count;
-  MOUNT_DISK Disk[];
-} MOUNT_DISKS,
-*PMOUNT_DISKS;
-
-winvblock__def_struct ( mount__filedisk )
-{
-  char type;
-  int cylinders;
-  int heads;
-  int sectors;
-};
-
-#endif				/* _MOUNT_H */
+#endif				/* _AOE_IOCTL_H */
