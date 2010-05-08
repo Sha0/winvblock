@@ -1648,3 +1648,215 @@ aoe__process_abft (
       DBG ( "No aBFT found\n" );
     }
 }
+
+static
+irp__handler_decl (
+  scan
+ )
+{
+  KIRQL irql;
+  winvblock__uint32 count;
+  aoe__target_list_ptr target_walker;
+  aoe_ioctl__mount_targets_ptr targets;
+
+  DBG ( "Got IOCTL_AOE_SCAN...\n" );
+  AoE_Start (  );
+  KeAcquireSpinLock ( &AoE_Globals_TargetListSpinLock, &irql );
+
+  count = 0;
+  target_walker = AoE_Globals_TargetList;
+  while ( target_walker != NULL )
+    {
+      count++;
+      target_walker = target_walker->next;
+    }
+
+  targets =
+    ( aoe_ioctl__mount_targets_ptr ) ExAllocatePool ( NonPagedPool,
+						      sizeof
+						      ( aoe_ioctl__mount_targets )
+						      +
+						      ( count *
+							sizeof
+							( aoe_ioctl__mount_target ) ) );
+  if ( targets == NULL )
+    {
+      DBG ( "ExAllocatePool targets\n" );
+      Irp->IoStatus.Information = 0;
+      return STATUS_INSUFFICIENT_RESOURCES;
+    }
+  Irp->IoStatus.Information =
+    sizeof ( aoe_ioctl__mount_targets ) +
+    ( count * sizeof ( aoe_ioctl__mount_target ) );
+  targets->Count = count;
+
+  count = 0;
+  target_walker = AoE_Globals_TargetList;
+  while ( target_walker != NULL )
+    {
+      RtlCopyMemory ( &targets->Target[count], &target_walker->Target,
+		      sizeof ( aoe_ioctl__mount_target ) );
+      count++;
+      target_walker = target_walker->next;
+    }
+  RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, targets,
+		  ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
+		    ( sizeof ( aoe_ioctl__mount_targets ) +
+		      ( count *
+			sizeof ( aoe_ioctl__mount_target ) ) ) ?
+		    Stack->Parameters.DeviceIoControl.
+		    OutputBufferLength : ( sizeof ( aoe_ioctl__mount_targets )
+					   +
+					   ( count *
+					     sizeof
+					     ( aoe_ioctl__mount_target ) ) ) ) );
+  ExFreePool ( targets );
+
+  KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, irql );
+  *completion_ptr = TRUE;
+  return STATUS_SUCCESS;
+
+}
+
+static
+irp__handler_decl (
+  show
+ )
+{
+  winvblock__uint32 count;
+  disk__type_ptr disk_walker;
+  bus__type_ptr bus_ptr;
+  aoe_ioctl__mount_disks_ptr disks;
+
+  DBG ( "Got IOCTL_AOE_SHOW...\n" );
+
+  bus_ptr = get_bus_ptr ( DeviceExtension );
+  disk_walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
+  count = 0;
+  while ( disk_walker != NULL )
+    {
+      count++;
+      disk_walker = ( disk__type_ptr ) disk_walker->dev_ext.next_sibling_ptr;
+    }
+
+  if ( ( disks =
+	 ( aoe_ioctl__mount_disks_ptr ) ExAllocatePool ( NonPagedPool,
+							 sizeof
+							 ( aoe_ioctl__mount_disks )
+							 +
+							 ( count *
+							   sizeof
+							   ( aoe_ioctl__mount_disk ) ) ) )
+       == NULL )
+    {
+      DBG ( "ExAllocatePool disks\n" );
+      Irp->IoStatus.Information = 0;
+      return STATUS_INSUFFICIENT_RESOURCES;
+    }
+  Irp->IoStatus.Information =
+    sizeof ( aoe_ioctl__mount_disks ) +
+    ( count * sizeof ( aoe_ioctl__mount_disk ) );
+  disks->Count = count;
+
+  count = 0;
+  disk_walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
+  while ( disk_walker != NULL )
+    {
+      aoe__disk_type_ptr aoe_disk_ptr =
+	aoe__get_disk_ptr ( &disk_walker->dev_ext );
+
+      disks->Disk[count].Disk = disk_walker->DiskNumber;
+      RtlCopyMemory ( &disks->Disk[count].ClientMac, &aoe_disk_ptr->ClientMac,
+		      6 );
+      RtlCopyMemory ( &disks->Disk[count].ServerMac, &aoe_disk_ptr->ServerMac,
+		      6 );
+      disks->Disk[count].Major = aoe_disk_ptr->Major;
+      disks->Disk[count].Minor = aoe_disk_ptr->Minor;
+      disks->Disk[count].LBASize = disk_walker->LBADiskSize;
+      count++;
+      disk_walker = ( disk__type_ptr ) disk_walker->dev_ext.next_sibling_ptr;
+    }
+  RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, disks,
+		  ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
+		    ( sizeof ( aoe_ioctl__mount_disks ) +
+		      ( count *
+			sizeof ( aoe_ioctl__mount_disk ) ) ) ?
+		    Stack->Parameters.DeviceIoControl.
+		    OutputBufferLength : ( sizeof ( aoe_ioctl__mount_disks ) +
+					   ( count *
+					     sizeof
+					     ( aoe_ioctl__mount_disk ) ) ) ) );
+  ExFreePool ( disks );
+  *completion_ptr = TRUE;
+  return STATUS_SUCCESS;
+}
+
+static
+irp__handler_decl (
+  mount
+ )
+{
+  winvblock__uint8_ptr buffer = Irp->AssociatedIrp.SystemBuffer;
+  aoe__disk_type aoe_disk;
+  bus__type_ptr bus_ptr;
+
+  DBG ( "Got IOCTL_AOE_MOUNT for client: %02x:%02x:%02x:%02x:%02x:%02x "
+	"Major:%d Minor:%d\n", buffer[0], buffer[1], buffer[2], buffer[3],
+	buffer[4], buffer[5], *( winvblock__uint16_ptr ) ( &buffer[6] ),
+	( winvblock__uint8 ) buffer[8] );
+  RtlCopyMemory ( aoe_disk.ClientMac, buffer, 6 );
+  RtlFillMemory ( aoe_disk.ServerMac, 6, 0xff );
+  aoe_disk.Major = *( winvblock__uint16_ptr ) ( &buffer[6] );
+  aoe_disk.Minor = ( winvblock__uint8 ) buffer[8];
+  aoe_disk.MaxSectorsPerPacket = 1;
+  aoe_disk.Timeout = 200000;	/* 20 ms. */
+  aoe_disk.disk.BootDrive = FALSE;
+  aoe_disk.disk.media = disk__media_hard;
+  aoe_disk.disk.ops = &aoe__default_ops;
+  aoe_disk.disk.dev_ext.ops = &disk__dev_ops;
+  aoe_disk.disk.dev_ext.size = sizeof ( aoe__disk_type );
+  if ( !bus__add_child ( DeviceObject, &aoe_disk.disk.dev_ext ) )
+    {
+      DBG ( "bus__add_child() failed\n" );
+    }
+  else
+    {
+      bus_ptr = get_bus_ptr ( DeviceExtension );
+      if ( bus_ptr->PhysicalDeviceObject != NULL )
+	{
+
+	  IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
+					BusRelations );
+	}
+    }
+  Irp->IoStatus.Information = 0;
+  *completion_ptr = TRUE;
+  return STATUS_SUCCESS;
+}
+
+irp__handler_decl ( aoe__bus_dev_ctl_dispatch )
+{
+  NTSTATUS status = STATUS_NOT_SUPPORTED;
+
+  switch ( Stack->Parameters.DeviceIoControl.IoControlCode )
+    {
+      case IOCTL_AOE_SCAN:
+	status =
+	  scan ( DeviceObject, Irp, Stack, DeviceExtension, completion_ptr );
+	break;
+      case IOCTL_AOE_SHOW:
+	status =
+	  show ( DeviceObject, Irp, Stack, DeviceExtension, completion_ptr );
+	break;
+      case IOCTL_AOE_MOUNT:
+	status =
+	  mount ( DeviceObject, Irp, Stack, DeviceExtension, completion_ptr );
+	break;
+      case IOCTL_AOE_UMOUNT:
+	Stack->Parameters.DeviceIoControl.IoControlCode = IOCTL_FILE_DETACH;
+	break;
+    }
+  if ( *completion_ptr )
+    IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+  return status;
+}

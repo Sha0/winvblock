@@ -57,4 +57,36 @@
     FILE_READ_DATA | FILE_WRITE_DATA    \
     )
 
+winvblock__def_struct ( aoe_ioctl__mount_target )
+{
+  winvblock__uint8 ClientMac[6];
+  winvblock__uint8 ServerMac[6];
+  winvblock__uint32 Major;
+  winvblock__uint32 Minor;
+  LONGLONG LBASize;
+  LARGE_INTEGER ProbeTime;
+};
+
+winvblock__def_struct ( aoe_ioctl__mount_targets )
+{
+  winvblock__uint32 Count;
+  aoe_ioctl__mount_target Target[];
+};
+
+winvblock__def_struct ( aoe_ioctl__mount_disk )
+{
+  winvblock__uint32 Disk;
+  winvblock__uint8 ClientMac[6];
+  winvblock__uint8 ServerMac[6];
+  winvblock__uint32 Major;
+  winvblock__uint32 Minor;
+  LONGLONG LBASize;
+};
+
+winvblock__def_struct ( aoe_ioctl__mount_disks )
+{
+  winvblock__uint32 Count;
+  aoe_ioctl__mount_disk Disk[];
+};
+
 #endif				/* _AOE_IOCTL_H */

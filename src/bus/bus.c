@@ -38,6 +38,11 @@
 #include "debug.h"
 #include "probe.h"
 
+/* Temporarily here so it can be in the mini IRP handling table */
+extern irp__handler_decl (
+  aoe__bus_dev_ctl_dispatch
+ );
+
 PDEVICE_OBJECT bus__fdo = NULL;
 
 void
@@ -153,6 +158,8 @@ static irp__handling handling_table[] = {
   {IRP_MJ_POWER, 0, FALSE, TRUE, power}
   ,
   {IRP_MJ_DEVICE_CONTROL, 0, FALSE, TRUE, bus_dev_ctl__dispatch}
+  ,
+  {IRP_MJ_DEVICE_CONTROL, 0, FALSE, TRUE, aoe__bus_dev_ctl_dispatch}
   ,
   {IRP_MJ_PNP, 0, FALSE, TRUE, bus_pnp__simple}
   ,

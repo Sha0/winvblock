@@ -28,6 +28,9 @@
  *
  */
 
+/* TODO: Remove this inclusion when the time is right */
+#  include "aoe_ioctl.h"
+
 #  define htons(x) (winvblock__uint16)((((x) << 8) & 0xff00) | \
                                        (((x) >> 8) & 0xff))
 #  define ntohs(x) (winvblock__uint16)((((x) << 8) & 0xff00) | \
@@ -61,7 +64,7 @@ winvblock__def_struct ( aoe__disk_type )
 
 winvblock__def_struct ( aoe__target_list )
 {
-  MOUNT_TARGET Target;
+  aoe_ioctl__mount_target Target;
   aoe__target_list_ptr next;
 };
 

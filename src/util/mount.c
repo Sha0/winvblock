@@ -70,8 +70,8 @@ main (
   HANDLE DeviceHandle;
   winvblock__uint8 InBuffer[sizeof ( mount__filedisk ) + 1024];
   winvblock__uint8 String[256];
-  PMOUNT_TARGETS Targets;
-  PMOUNT_DISKS Disks;
+  aoe_ioctl__mount_targets_ptr Targets;
+  aoe_ioctl__mount_disks_ptr Disks;
   winvblock__uint8 Mac[6];
   DWORD BytesReturned;
   winvblock__uint32 Major,
@@ -131,9 +131,9 @@ main (
     {
       case CommandScan:
 	if ( ( Targets =
-	       ( PMOUNT_TARGETS ) malloc ( sizeof ( MOUNT_TARGETS ) +
-					   ( 32 *
-					     sizeof ( MOUNT_TARGET ) ) ) ) ==
+	       ( aoe_ioctl__mount_targets_ptr )
+	       malloc ( sizeof ( aoe_ioctl__mount_targets ) +
+			( 32 * sizeof ( aoe_ioctl__mount_target ) ) ) ) ==
 	     NULL )
 	  {
 	    printf ( "Out of memory\n" );
@@ -141,8 +141,9 @@ main (
 	  }
 	if ( !DeviceIoControl
 	     ( DeviceHandle, IOCTL_AOE_SCAN, NULL, 0, Targets,
-	       ( sizeof ( MOUNT_TARGETS ) + ( 32 * sizeof ( MOUNT_TARGET ) ) ),
-	       &BytesReturned, ( LPOVERLAPPED ) NULL ) )
+	       ( sizeof ( aoe_ioctl__mount_targets ) +
+		 ( 32 * sizeof ( aoe_ioctl__mount_target ) ) ), &BytesReturned,
+	       ( LPOVERLAPPED ) NULL ) )
 	  {
 	    printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
 	    free ( Targets );
@@ -184,17 +185,18 @@ main (
 	break;
       case CommandShow:
 	if ( ( Disks =
-	       ( PMOUNT_DISKS ) malloc ( sizeof ( MOUNT_DISKS ) +
-					 ( 32 * sizeof ( MOUNT_DISK ) ) ) ) ==
-	     NULL )
+	       ( aoe_ioctl__mount_disks_ptr )
+	       malloc ( sizeof ( aoe_ioctl__mount_disks ) +
+			( 32 * sizeof ( aoe_ioctl__mount_disk ) ) ) ) == NULL )
 	  {
 	    printf ( "Out of memory\n" );
 	    break;
 	  }
 	if ( !DeviceIoControl
 	     ( DeviceHandle, IOCTL_AOE_SHOW, NULL, 0, Disks,
-	       ( sizeof ( MOUNT_DISKS ) + ( 32 * sizeof ( MOUNT_DISK ) ) ),
-	       &BytesReturned, ( LPOVERLAPPED ) NULL ) )
+	       ( sizeof ( aoe_ioctl__mount_disks ) +
+		 ( 32 * sizeof ( aoe_ioctl__mount_disk ) ) ), &BytesReturned,
+	       ( LPOVERLAPPED ) NULL ) )
 	  {
 	    printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
 	    free ( Disks );
