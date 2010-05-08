@@ -28,20 +28,72 @@
  *
  */
 
-/* TODO: Remove this inclusion when the time is right */
-#  include "aoe_ioctl.h"
+#  define htons(x) \
+  (winvblock__uint16)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
+#  define ntohs(x) \
+  (winvblock__uint16)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
 
-#  define htons(x) (winvblock__uint16)((((x) << 8) & 0xff00) | \
-                                       (((x) >> 8) & 0xff))
-#  define ntohs(x) (winvblock__uint16)((((x) << 8) & 0xff00) | \
-                                       (((x) >> 8) & 0xff))
+#  define IOCTL_AOE_SCAN                \
+  CTL_CODE(                             \
+    FILE_DEVICE_CONTROLLER,             \
+    0x800,                              \
+    METHOD_BUFFERED,                    \
+    FILE_READ_DATA | FILE_WRITE_DATA    \
+    )
+#  define IOCTL_AOE_SHOW                \
+  CTL_CODE(                             \
+    FILE_DEVICE_CONTROLLER,             \
+    0x801,                              \
+    METHOD_BUFFERED,                    \
+    FILE_READ_DATA | FILE_WRITE_DATA    \
+    )
+#  define IOCTL_AOE_MOUNT               \
+  CTL_CODE(                             \
+    FILE_DEVICE_CONTROLLER,             \
+    0x802,                              \
+    METHOD_BUFFERED,                    \
+    FILE_READ_DATA | FILE_WRITE_DATA    \
+    )
+#  define IOCTL_AOE_UMOUNT              \
+  CTL_CODE(                             \
+    FILE_DEVICE_CONTROLLER,             \
+    0x803,                              \
+    METHOD_BUFFERED,                    \
+    FILE_READ_DATA | FILE_WRITE_DATA    \
+    )
 
-extern NTSTATUS STDCALL aoe__reply (
-  IN winvblock__uint8_ptr SourceMac,
-  IN winvblock__uint8_ptr DestinationMac,
-  IN winvblock__uint8_ptr Data,
-  IN winvblock__uint32 DataSize
- );
+winvblock__def_struct ( aoe__mount_target )
+{
+  winvblock__uint8 ClientMac[6];
+  winvblock__uint8 ServerMac[6];
+  winvblock__uint32 Major;
+  winvblock__uint32 Minor;
+  LONGLONG LBASize;
+  LARGE_INTEGER ProbeTime;
+};
+
+winvblock__def_struct ( aoe__mount_targets )
+{
+  winvblock__uint32 Count;
+  aoe__mount_target Target[];
+};
+
+winvblock__def_struct ( aoe__mount_disk )
+{
+  winvblock__uint32 Disk;
+  winvblock__uint8 ClientMac[6];
+  winvblock__uint8 ServerMac[6];
+  winvblock__uint32 Major;
+  winvblock__uint32 Minor;
+  LONGLONG LBASize;
+};
+
+winvblock__def_struct ( aoe__mount_disks )
+{
+  winvblock__uint32 Count;
+  aoe__mount_disk Disk[];
+};
+
 extern void aoe__reset_probe (
   void
  );

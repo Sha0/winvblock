@@ -42,7 +42,15 @@
 
 #define AOEPROTOCOLID 0x88a2
 
-/* in this file */
+/** From AoE module */
+extern NTSTATUS STDCALL aoe__reply (
+  IN winvblock__uint8_ptr SourceMac,
+  IN winvblock__uint8_ptr DestinationMac,
+  IN winvblock__uint8_ptr Data,
+  IN winvblock__uint32 DataSize
+ );
+
+/** In this file */
 static void STDCALL Protocol_OpenAdapterComplete (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN NDIS_STATUS Status,

@@ -35,7 +35,6 @@
 #include "driver.h"
 #include "disk.h"
 #include "mount.h"
-#include "aoe_ioctl.h"
 #include "bus.h"
 #include "aoe.h"
 #include "protocol.h"
@@ -180,7 +179,7 @@ winvblock__def_struct ( aoe_disk_type )
 
 winvblock__def_struct ( target_list )
 {
-  aoe_ioctl__mount_target Target;
+  aoe__mount_target Target;
   target_list_ptr next;
 };
 
@@ -1703,7 +1702,7 @@ irp__handler_decl (
   KIRQL irql;
   winvblock__uint32 count;
   target_list_ptr target_walker;
-  aoe_ioctl__mount_targets_ptr targets;
+  aoe__mount_targets_ptr targets;
 
   DBG ( "Got IOCTL_AOE_SCAN...\n" );
   start (  );
@@ -1718,13 +1717,11 @@ irp__handler_decl (
     }
 
   targets =
-    ( aoe_ioctl__mount_targets_ptr ) ExAllocatePool ( NonPagedPool,
-						      sizeof
-						      ( aoe_ioctl__mount_targets )
-						      +
-						      ( count *
-							sizeof
-							( aoe_ioctl__mount_target ) ) );
+    ( aoe__mount_targets_ptr ) ExAllocatePool ( NonPagedPool,
+						sizeof ( aoe__mount_targets ) +
+						( count *
+						  sizeof
+						  ( aoe__mount_target ) ) );
   if ( targets == NULL )
     {
       DBG ( "ExAllocatePool targets\n" );
@@ -1732,8 +1729,7 @@ irp__handler_decl (
       return STATUS_INSUFFICIENT_RESOURCES;
     }
   Irp->IoStatus.Information =
-    sizeof ( aoe_ioctl__mount_targets ) +
-    ( count * sizeof ( aoe_ioctl__mount_target ) );
+    sizeof ( aoe__mount_targets ) + ( count * sizeof ( aoe__mount_target ) );
   targets->Count = count;
 
   count = 0;
@@ -1741,21 +1737,20 @@ irp__handler_decl (
   while ( target_walker != NULL )
     {
       RtlCopyMemory ( &targets->Target[count], &target_walker->Target,
-		      sizeof ( aoe_ioctl__mount_target ) );
+		      sizeof ( aoe__mount_target ) );
       count++;
       target_walker = target_walker->next;
     }
   RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, targets,
 		  ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-		    ( sizeof ( aoe_ioctl__mount_targets ) +
+		    ( sizeof ( aoe__mount_targets ) +
 		      ( count *
-			sizeof ( aoe_ioctl__mount_target ) ) ) ?
-		    Stack->Parameters.DeviceIoControl.
-		    OutputBufferLength : ( sizeof ( aoe_ioctl__mount_targets )
-					   +
+			sizeof ( aoe__mount_target ) ) ) ? Stack->
+		    Parameters.DeviceIoControl.
+		    OutputBufferLength : ( sizeof ( aoe__mount_targets ) +
 					   ( count *
 					     sizeof
-					     ( aoe_ioctl__mount_target ) ) ) ) );
+					     ( aoe__mount_target ) ) ) ) );
   ExFreePool ( targets );
 
   KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, irql );
@@ -1772,7 +1767,7 @@ irp__handler_decl (
   winvblock__uint32 count;
   disk__type_ptr disk_walker;
   bus__type_ptr bus_ptr;
-  aoe_ioctl__mount_disks_ptr disks;
+  aoe__mount_disks_ptr disks;
 
   DBG ( "Got IOCTL_AOE_SHOW...\n" );
 
@@ -1786,13 +1781,12 @@ irp__handler_decl (
     }
 
   if ( ( disks =
-	 ( aoe_ioctl__mount_disks_ptr ) ExAllocatePool ( NonPagedPool,
-							 sizeof
-							 ( aoe_ioctl__mount_disks )
-							 +
-							 ( count *
-							   sizeof
-							   ( aoe_ioctl__mount_disk ) ) ) )
+	 ( aoe__mount_disks_ptr ) ExAllocatePool ( NonPagedPool,
+						   sizeof ( aoe__mount_disks )
+						   +
+						   ( count *
+						     sizeof
+						     ( aoe__mount_disk ) ) ) )
        == NULL )
     {
       DBG ( "ExAllocatePool disks\n" );
@@ -1800,8 +1794,7 @@ irp__handler_decl (
       return STATUS_INSUFFICIENT_RESOURCES;
     }
   Irp->IoStatus.Information =
-    sizeof ( aoe_ioctl__mount_disks ) +
-    ( count * sizeof ( aoe_ioctl__mount_disk ) );
+    sizeof ( aoe__mount_disks ) + ( count * sizeof ( aoe__mount_disk ) );
   disks->Count = count;
 
   count = 0;
@@ -1824,14 +1817,14 @@ irp__handler_decl (
     }
   RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, disks,
 		  ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-		    ( sizeof ( aoe_ioctl__mount_disks ) +
+		    ( sizeof ( aoe__mount_disks ) +
 		      ( count *
-			sizeof ( aoe_ioctl__mount_disk ) ) ) ?
-		    Stack->Parameters.DeviceIoControl.
-		    OutputBufferLength : ( sizeof ( aoe_ioctl__mount_disks ) +
+			sizeof ( aoe__mount_disk ) ) ) ? Stack->
+		    Parameters.DeviceIoControl.
+		    OutputBufferLength : ( sizeof ( aoe__mount_disks ) +
 					   ( count *
 					     sizeof
-					     ( aoe_ioctl__mount_disk ) ) ) ) );
+					     ( aoe__mount_disk ) ) ) ) );
   ExFreePool ( disks );
   *completion_ptr = TRUE;
   return STATUS_SUCCESS;

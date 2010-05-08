@@ -33,7 +33,7 @@
 #include "winvblock.h"
 #include "portable.h"
 #include "mount.h"
-#include "aoe_ioctl.h"
+#include "aoe.h"
 
 typedef enum
 { CommandScan, CommandShow, CommandMount, CommandUmount, CommandAttach,
@@ -70,8 +70,8 @@ main (
   HANDLE DeviceHandle;
   winvblock__uint8 InBuffer[sizeof ( mount__filedisk ) + 1024];
   winvblock__uint8 String[256];
-  aoe_ioctl__mount_targets_ptr Targets;
-  aoe_ioctl__mount_disks_ptr Disks;
+  aoe__mount_targets_ptr Targets;
+  aoe__mount_disks_ptr Disks;
   winvblock__uint8 Mac[6];
   DWORD BytesReturned;
   winvblock__uint32 Major,
@@ -131,18 +131,17 @@ main (
     {
       case CommandScan:
 	if ( ( Targets =
-	       ( aoe_ioctl__mount_targets_ptr )
-	       malloc ( sizeof ( aoe_ioctl__mount_targets ) +
-			( 32 * sizeof ( aoe_ioctl__mount_target ) ) ) ) ==
-	     NULL )
+	       ( aoe__mount_targets_ptr )
+	       malloc ( sizeof ( aoe__mount_targets ) +
+			( 32 * sizeof ( aoe__mount_target ) ) ) ) == NULL )
 	  {
 	    printf ( "Out of memory\n" );
 	    break;
 	  }
 	if ( !DeviceIoControl
 	     ( DeviceHandle, IOCTL_AOE_SCAN, NULL, 0, Targets,
-	       ( sizeof ( aoe_ioctl__mount_targets ) +
-		 ( 32 * sizeof ( aoe_ioctl__mount_target ) ) ), &BytesReturned,
+	       ( sizeof ( aoe__mount_targets ) +
+		 ( 32 * sizeof ( aoe__mount_target ) ) ), &BytesReturned,
 	       ( LPOVERLAPPED ) NULL ) )
 	  {
 	    printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
@@ -185,17 +184,19 @@ main (
 	break;
       case CommandShow:
 	if ( ( Disks =
-	       ( aoe_ioctl__mount_disks_ptr )
-	       malloc ( sizeof ( aoe_ioctl__mount_disks ) +
-			( 32 * sizeof ( aoe_ioctl__mount_disk ) ) ) ) == NULL )
+	       ( aoe__mount_disks_ptr ) malloc ( sizeof ( aoe__mount_disks ) +
+						 ( 32 *
+						   sizeof
+						   ( aoe__mount_disk ) ) ) ) ==
+	     NULL )
 	  {
 	    printf ( "Out of memory\n" );
 	    break;
 	  }
 	if ( !DeviceIoControl
 	     ( DeviceHandle, IOCTL_AOE_SHOW, NULL, 0, Disks,
-	       ( sizeof ( aoe_ioctl__mount_disks ) +
-		 ( 32 * sizeof ( aoe_ioctl__mount_disk ) ) ), &BytesReturned,
+	       ( sizeof ( aoe__mount_disks ) +
+		 ( 32 * sizeof ( aoe__mount_disk ) ) ), &BytesReturned,
 	       ( LPOVERLAPPED ) NULL ) )
 	  {
 	    printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );

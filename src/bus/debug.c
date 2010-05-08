@@ -40,7 +40,7 @@
 #include "driver.h"
 #include "disk.h"
 #include "mount.h"
-#include "aoe_ioctl.h"
+#include "aoe.h"
 #include "debug.h"
 
 extern int sprintf (
