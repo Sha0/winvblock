@@ -435,7 +435,7 @@ Protocol_TransferDataComplete (
       DBG ( "Header (back) Buffer == NULL\n" );
     }
   if ( Header != NULL && Data != NULL )
-    AoE_Reply ( Header->SourceMac, Header->DestinationMac, Data, DataSize );
+    aoe__reply ( Header->SourceMac, Header->DestinationMac, Data, DataSize );
   if ( Header != NULL )
     ExFreePool ( Header );
   if ( Data != NULL )
@@ -508,8 +508,8 @@ Protocol_Receive (
 
   if ( LookaheadBufferSize == PacketSize )
     {
-      AoE_Reply ( Header->SourceMac, Header->DestinationMac, LookAheadBuffer,
-		  PacketSize );
+      aoe__reply ( Header->SourceMac, Header->DestinationMac, LookAheadBuffer,
+		   PacketSize );
       return NDIS_STATUS_SUCCESS;
     }
 

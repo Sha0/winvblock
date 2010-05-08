@@ -36,7 +36,7 @@
 #  define ntohs(x) (winvblock__uint16)((((x) << 8) & 0xff00) | \
                                        (((x) >> 8) & 0xff))
 
-extern NTSTATUS STDCALL AoE_Reply (
+extern NTSTATUS STDCALL aoe__reply (
   IN winvblock__uint8_ptr SourceMac,
   IN winvblock__uint8_ptr DestinationMac,
   IN winvblock__uint8_ptr Data,

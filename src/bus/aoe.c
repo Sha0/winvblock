@@ -1135,7 +1135,7 @@ add_target (
  * @v DataSize        The AoE packet's size
  */
 NTSTATUS STDCALL
-AoE_Reply (
+aoe__reply (
   IN winvblock__uint8_ptr SourceMac,
   IN winvblock__uint8_ptr DestinationMac,
   IN winvblock__uint8_ptr Data,
