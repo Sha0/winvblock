@@ -151,6 +151,19 @@ winvblock__def_struct ( disk_search )
   disk_search_ptr next;
 };
 
+enum _search_state
+{
+  search_state_search_nic,
+  search_state_get_size,
+  search_state_getting_size,
+  search_state_get_geometry,
+  search_state_getting_geometry,
+  search_state_get_max_sectors_per_packet,
+  search_state_getting_max_sectors_per_packet,
+  search_state_done
+};
+winvblock__def_enum ( search_state );
+
 /** The AoE disk type */
 winvblock__def_struct ( aoe_disk_type )
 {
