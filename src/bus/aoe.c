@@ -184,11 +184,9 @@ winvblock__def_struct ( target_list )
   target_list_ptr next;
 };
 
-/** Globals */
-target_list_ptr AoE_Globals_TargetList = NULL;
-KSPIN_LOCK AoE_Globals_TargetListSpinLock;
-
-/** Private */
+/** Private globals */
+static target_list_ptr AoE_Globals_TargetList = NULL;
+static KSPIN_LOCK AoE_Globals_TargetListSpinLock;
 static winvblock__bool AoE_Globals_Stop = FALSE;
 static KSPIN_LOCK AoE_Globals_SpinLock;
 static KEVENT AoE_Globals_ThreadSignalEvent;
