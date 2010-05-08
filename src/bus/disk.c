@@ -209,6 +209,7 @@ driver__dev_create_pdo_decl (
   dev_ext_ptr->DriverObject = driver__obj_ptr;
   dev_ext_ptr->State = NotStarted;
   dev_ext_ptr->OldState = NotStarted;
+  dev_ext_ptr->irp_handler_chain = NULL;
   /*
    * Register the default driver IRP handling table
    */
