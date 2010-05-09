@@ -322,6 +322,7 @@ start (
     }
 
   AoE_Globals_Started = TRUE;
+  DBG ( "Exit\n" );
   return Status;
 }
 
@@ -438,6 +439,7 @@ AoE_Stop (
    */
   KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
   AoE_Globals_Started = FALSE;
+  DBG ( "Exit\n" );
 }
 
 /**
@@ -1519,6 +1521,7 @@ thread (
 	}
       KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
     }
+  DBG ( "Exit\n" );
 }
 
 static

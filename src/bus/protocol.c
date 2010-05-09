@@ -203,6 +203,7 @@ Protocol_Start (
     DBG ( "Protocol startup failure!\n" );
   else
     Protocol_Globals_Started = TRUE;
+  DBG ( "Exit\n" );
   return Status;
 }
 
@@ -224,6 +225,7 @@ Protocol_Stop (
     KeWaitForSingleObject ( &Protocol_Globals_StopEvent, Executive, KernelMode,
 			    FALSE, NULL );
   Protocol_Globals_Started = FALSE;
+  DBG ( "Exit\n" );
 }
 
 winvblock__bool STDCALL
@@ -348,6 +350,9 @@ Protocol_Send (
   NdisSend ( &Status, Context->BindingHandle, Packet );
   if ( Status != NDIS_STATUS_PENDING )
     Protocol_SendComplete ( Context, Packet, Status );
+#if defined(DEBUGALLPROTOCOLCALLS)
+  DBG ( "Exit\n" );
+#endif
   return TRUE;
 }
 
@@ -578,6 +583,9 @@ Protocol_Receive (
   if ( Status != NDIS_STATUS_PENDING )
     Protocol_TransferDataComplete ( ProtocolBindingContext, Packet, Status,
 				    BytesTransferred );
+#if defined(DEBUGALLPROTOCOLCALLS)
+  DBG ( "Exit\n" );
+#endif
   return Status;
 }
 
@@ -588,6 +596,9 @@ Protocol_ReceiveComplete (
 {
 #ifdef DEBUGALLPROTOCOLCALLS
   DBG ( "Entry\n" );
+#endif
+#if defined(DEBUGALLPROTOCOLCALLS)
+  DBG ( "Exit\n" );
 #endif
 }
 
@@ -612,6 +623,9 @@ Protocol_StatusComplete (
 {
 #if defined(DEBUGMOSTPROTOCOLCALLS) || defined(DEBUGALLPROTOCOLCALLS)
   DBG ( "Entry\n" );
+#endif
+#if defined(DEBUGALLPROTOCOLCALLS)
+  DBG ( "Exit\n" );
 #endif
 }
 
@@ -823,6 +837,9 @@ Protocol_BindAdapter (
 
   aoe__reset_probe (  );
   *StatusOut = NDIS_STATUS_SUCCESS;
+#if defined(DEBUGMOSTPROTOCOLCALLS) || defined(DEBUGALLPROTOCOLCALLS)
+  DBG ( "Exit\n" );
+#endif
 }
 
 static void STDCALL
@@ -872,6 +889,9 @@ Protocol_UnbindAdapter (
   if ( Protocol_Globals_BindingContextList == NULL )
     KeSetEvent ( &Protocol_Globals_StopEvent, 0, FALSE );
   *StatusOut = NDIS_STATUS_SUCCESS;
+#if defined(DEBUGMOSTPROTOCOLCALLS) || defined(DEBUGALLPROTOCOLCALLS)
+  DBG ( "Exit\n" );
+#endif
 }
 
 static NDIS_STATUS STDCALL

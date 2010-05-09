@@ -57,6 +57,7 @@ Bus_Stop (
 			 L"\\DosDevices\\" winvblock__literal_w );
   IoDeleteSymbolicLink ( &DosDeviceName );
   bus__fdo = NULL;
+  DBG ( "Exit\n" );
 }
 
 /**
@@ -122,6 +123,7 @@ bus__add_child (
       walker->next_sibling_ptr = dev_ext_ptr;
     }
   bus_ptr->Children++;
+  DBG ( "Exit\n" );
   return TRUE;
 }
 
@@ -303,5 +305,6 @@ Bus_AddDevice (
   bus_dev_ext_ptr->State = Started;
 #endif
   probe__disks (  );
+  DBG ( "Exit\n" );
   return STATUS_SUCCESS;
 }

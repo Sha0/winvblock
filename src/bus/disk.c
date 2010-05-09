@@ -232,6 +232,7 @@ driver__dev_create_pdo_decl (
    */
   dev_obj_ptr->Flags |= DO_DIRECT_IO;	/* FIXME? */
   dev_obj_ptr->Flags |= DO_POWER_INRUSH;	/* FIXME? */
+  DBG ( "Exit\n" );
   return dev_obj_ptr;
 }
 

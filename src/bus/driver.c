@@ -205,6 +205,7 @@ DriverEntry (
     }
 
   Driver_Globals_Started = TRUE;
+  DBG ( "Exit\n" );
   return STATUS_SUCCESS;
 }
 
