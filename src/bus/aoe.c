@@ -1257,18 +1257,20 @@ aoe__reply (
 	  {
 	    case search_state_getting_size:
 	      /*
-	       * The reply tells us the disk size 
+	       * The reply tells us the disk size
 	       */
 	      RtlCopyMemory ( &disk_ptr->LBADiskSize, &reply->Data[200],
 			      sizeof ( LONGLONG ) );
 	      /*
-	       * Next we are concerned with the disk geometry 
+	       * Next we are concerned with the disk geometry
 	       */
 	      aoe_disk_ptr->search_state = search_state_get_geometry;
 	      break;
 	    case search_state_getting_geometry:
 	      /*
-	       * FIXME: use real values from partition table 
+	       * FIXME: use real values from partition table.
+	       * We used to truncate a fractional end cylinder, but
+	       * now leave it be in the hopes everyone uses LBA
 	       */
 	      disk_ptr->SectorSize = 512;
 	      disk_ptr->Heads = 255;
@@ -1276,10 +1278,8 @@ aoe__reply (
 	      disk_ptr->Cylinders =
 		disk_ptr->LBADiskSize / ( disk_ptr->Heads *
 					  disk_ptr->Sectors );
-	      disk_ptr->LBADiskSize =
-		disk_ptr->Cylinders * disk_ptr->Heads * disk_ptr->Sectors;
 	      /*
-	       * Next we are concerned with the maximum sectors per packet 
+	       * Next we are concerned with the maximum sectors per packet
 	       */
 	      aoe_disk_ptr->search_state =
 		search_state_get_max_sectors_per_packet;
