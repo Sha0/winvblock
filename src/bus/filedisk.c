@@ -118,7 +118,6 @@ static disk__ops default_ops;
 
 irp__handler_decl ( filedisk__attach )
 {
-  bus__type_ptr bus_ptr;
   ANSI_STRING file_path1;
   winvblock__uint8_ptr buf = Irp->AssociatedIrp.SystemBuffer;
   mount__filedisk_ptr params = ( mount__filedisk_ptr ) buf;
@@ -128,11 +127,6 @@ irp__handler_decl ( filedisk__attach )
   HANDLE file = NULL;
   IO_STATUS_BLOCK io_status;
   filedisk__type filedisk = { 0 };
-
-  /*
-   * Establish a pointer into the bus device's extension space
-   */
-  bus_ptr = get_bus_ptr ( ( driver__dev_ext_ptr ) bus__fdo->DeviceExtension );
 
   RtlInitAnsiString ( &file_path1,
 		      ( char * )&buf[sizeof ( mount__filedisk )] );
@@ -193,15 +187,7 @@ irp__handler_decl ( filedisk__attach )
   filedisk.disk.ops = &default_ops;
   filedisk.disk.dev_ext.ops = &disk__dev_ops;
   filedisk.disk.dev_ext.size = sizeof ( filedisk__type );
-  if ( !bus__add_child ( bus__fdo, &filedisk.disk.dev_ext ) )
-    {
-      DBG ( "bus__add_child() failed for file-backed disk\n" );
-    }
-  else if ( bus_ptr->PhysicalDeviceObject != NULL )
-    {
-      IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
-				    BusRelations );
-    }
+  bus__add_child ( &filedisk.disk.dev_ext );
   return STATUS_SUCCESS;
 }
 

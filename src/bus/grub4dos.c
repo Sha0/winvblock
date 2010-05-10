@@ -71,12 +71,6 @@ grub4dos__find (
   winvblock__uint32 i = 8;
   winvblock__bool FoundGrub4DosMapping = FALSE;
   ramdisk__type ramdisk = { 0 };
-  bus__type_ptr bus_ptr;
-
-  /*
-   * Establish a pointer into the bus device's extension space
-   */
-  bus_ptr = get_bus_ptr ( ( driver__dev_ext_ptr ) bus__fdo->DeviceExtension );
 
   /*
    * Find a GRUB4DOS memory-mapped disk.  Start by looking at the
@@ -164,15 +158,7 @@ grub4dos__find (
 	  ramdisk.disk.dev_ext.ops = &disk__dev_ops;
 	  ramdisk.disk.dev_ext.size = sizeof ( ramdisk__type );
 	  FoundGrub4DosMapping = TRUE;
-	  if ( !bus__add_child ( bus__fdo, &ramdisk.disk.dev_ext ) )
-	    {
-	      DBG ( "bus__add_child() failed for GRUB4DOS\n" );
-	    }
-	  else if ( bus_ptr->PhysicalDeviceObject != NULL )
-	    {
-	      IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
-					    BusRelations );
-	    }
+	  bus__add_child ( &ramdisk.disk.dev_ext );
 	}
       InterruptVector = &SafeMbrHookPtr->PrevHook;
     }

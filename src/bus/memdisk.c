@@ -49,12 +49,6 @@ check_mbft (
   winvblock__uint8 Checksum = 0;
   safe_mbr_hook_ptr AssociatedHook;
   ramdisk__type ramdisk = { 0 };
-  bus__type_ptr bus_ptr;
-
-  /*
-   * Establish a pointer into the bus device's extension space
-   */
-  bus_ptr = get_bus_ptr ( ( driver__dev_ext_ptr ) bus__fdo->DeviceExtension );
 
   if ( Offset >= 0x100000 )
     {
@@ -112,15 +106,7 @@ check_mbft (
   ramdisk.disk.ops = &ramdisk__default_ops;
   ramdisk.disk.dev_ext.ops = &disk__dev_ops;
   ramdisk.disk.dev_ext.size = sizeof ( ramdisk__type );
-  if ( !bus__add_child ( bus__fdo, &ramdisk.disk.dev_ext ) )
-    {
-      DBG ( "bus__add_child() failed for MEMDISK\n" );
-    }
-  else if ( bus_ptr->PhysicalDeviceObject != NULL )
-    {
-      IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
-				    BusRelations );
-    }
+  bus__add_child ( &ramdisk.disk.dev_ext );
   AssociatedHook->Flags = 1;
   return TRUE;
 }

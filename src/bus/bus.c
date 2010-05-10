@@ -43,7 +43,7 @@ extern irp__handler_decl (
   aoe__bus_dev_ctl_dispatch
  );
 
-PDEVICE_OBJECT bus__fdo = NULL;
+PDEVICE_OBJECT bus_fdo = NULL;
 
 void
 Bus_Stop (
@@ -56,21 +56,19 @@ Bus_Stop (
   RtlInitUnicodeString ( &DosDeviceName,
 			 L"\\DosDevices\\" winvblock__literal_w );
   IoDeleteSymbolicLink ( &DosDeviceName );
-  bus__fdo = NULL;
+  bus_fdo = NULL;
   DBG ( "Exit\n" );
 }
 
 /**
  * Add a child node to the bus
  *
- * @v bus_dev_obj_ptr The bus to add the node to
  * @v dev_ext_ptr     The details for the child device to add
  *
  * Returns TRUE for success, FALSE for failure
  */
-winvblock__bool STDCALL
+winvblock__lib_func winvblock__bool STDCALL
 bus__add_child (
-  IN PDEVICE_OBJECT bus_dev_obj_ptr,
   IN driver__dev_ext_ptr dev_ext_ptr
  )
 {
@@ -87,20 +85,28 @@ bus__add_child (
   /*
    * Establish a pointer into the bus device's extension space
    */
-  bus_ptr = get_bus_ptr ( bus_dev_obj_ptr->DeviceExtension );
+  if ( !bus_fdo )
+    {
+      DBG ( "No bus device!\n" );
+      return FALSE;
+    }
+  bus_ptr = get_bus_ptr ( bus_fdo->DeviceExtension );
   /*
    * Create the child device
    */
   dev_obj_ptr = dev_ext_ptr->ops->create_pdo ( dev_ext_ptr );
   if ( !dev_obj_ptr )
-    return FALSE;
+    {
+      DBG ( "bus__add_child() failed!\n" );
+      return FALSE;
+    }
 
   /*
    * Re-purpose dev_ext_ptr to point into the PDO's device
    * extension space.  We don't need the original details anymore
    */
   dev_ext_ptr = dev_obj_ptr->DeviceExtension;
-  dev_ext_ptr->Parent = bus_dev_obj_ptr;
+  dev_ext_ptr->Parent = bus_fdo;
   dev_ext_ptr->next_sibling_ptr = NULL;
   /*
    * Initialize the device.  For disks, this routine is responsible for
@@ -123,6 +129,11 @@ bus__add_child (
       walker->next_sibling_ptr = dev_ext_ptr;
     }
   bus_ptr->Children++;
+  if ( bus_ptr->PhysicalDeviceObject != NULL )
+    {
+      IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
+				    BusRelations );
+    }
   DBG ( "Exit\n" );
   return TRUE;
 }
@@ -235,7 +246,7 @@ Bus_AddDevice (
   bus__type_ptr bus_ptr;
 
   DBG ( "Entry\n" );
-  if ( bus__fdo )
+  if ( bus_fdo )
     return STATUS_SUCCESS;
   RtlInitUnicodeString ( &DeviceName, L"\\Device\\" winvblock__literal_w );
   RtlInitUnicodeString ( &DosDeviceName,
@@ -243,7 +254,7 @@ Bus_AddDevice (
   Status =
     IoCreateDevice ( DriverObject, sizeof ( bus__type ), &DeviceName,
 		     FILE_DEVICE_CONTROLLER, FILE_DEVICE_SECURE_OPEN, FALSE,
-		     &bus__fdo );
+		     &bus_fdo );
   if ( !NT_SUCCESS ( Status ) )
     {
       return Error ( "Bus_AddDevice IoCreateDevice", Status );
@@ -251,19 +262,19 @@ Bus_AddDevice (
   Status = IoCreateSymbolicLink ( &DosDeviceName, &DeviceName );
   if ( !NT_SUCCESS ( Status ) )
     {
-      IoDeleteDevice ( bus__fdo );
+      IoDeleteDevice ( bus_fdo );
       return Error ( "Bus_AddDevice IoCreateSymbolicLink", Status );
     }
 
   /*
    * Set some default parameters for a bus
    */
-  bus_dev_ext_ptr = ( driver__dev_ext_ptr ) bus__fdo->DeviceExtension;
+  bus_dev_ext_ptr = ( driver__dev_ext_ptr ) bus_fdo->DeviceExtension;
   RtlZeroMemory ( bus_dev_ext_ptr, sizeof ( bus__type ) );
   bus_dev_ext_ptr->IsBus = TRUE;
   bus_dev_ext_ptr->size = sizeof ( bus__type );
   bus_dev_ext_ptr->DriverObject = DriverObject;
-  bus_dev_ext_ptr->Self = bus__fdo;
+  bus_dev_ext_ptr->Self = bus_fdo;
   bus_dev_ext_ptr->State = NotStarted;
   bus_dev_ext_ptr->OldState = NotStarted;
   /*
@@ -283,24 +294,24 @@ Bus_AddDevice (
   bus_ptr->Children = 0;
   bus_ptr->first_child_ptr = NULL;
   KeInitializeSpinLock ( &bus_ptr->SpinLock );
-  bus__fdo->Flags |= DO_DIRECT_IO;	/* FIXME? */
-  bus__fdo->Flags |= DO_POWER_INRUSH;	/* FIXME? */
+  bus_fdo->Flags |= DO_DIRECT_IO;	/* FIXME? */
+  bus_fdo->Flags |= DO_POWER_INRUSH;	/* FIXME? */
   /*
    * Add the bus to the device tree
    */
   if ( PhysicalDeviceObject != NULL )
     {
       bus_ptr->LowerDeviceObject =
-	IoAttachDeviceToDeviceStack ( bus__fdo, PhysicalDeviceObject );
+	IoAttachDeviceToDeviceStack ( bus_fdo, PhysicalDeviceObject );
       if ( bus_ptr->LowerDeviceObject == NULL )
 	{
-	  IoDeleteDevice ( bus__fdo );
-	  bus__fdo = NULL;
+	  IoDeleteDevice ( bus_fdo );
+	  bus_fdo = NULL;
 	  return Error ( "AddDevice IoAttachDeviceToDeviceStack",
 			 STATUS_NO_SUCH_DEVICE );
 	}
     }
-  bus__fdo->Flags &= ~DO_DEVICE_INITIALIZING;
+  bus_fdo->Flags &= ~DO_DEVICE_INITIALIZING;
 #ifdef RIS
   bus_dev_ext_ptr->State = Started;
 #endif

@@ -2081,12 +2081,7 @@ aoe__process_abft (
   winvblock__bool FoundAbft = FALSE;
   abft AoEBootRecord;
   aoe_disk_type aoe_disk;
-  bus__type_ptr bus_ptr;
 
-  /*
-   * Establish a pointer into the bus device's extension space
-   */
-  bus_ptr = get_bus_ptr ( ( driver__dev_ext_ptr ) bus__fdo->DeviceExtension );
   /*
    * Find aBFT
    */
@@ -2154,17 +2149,7 @@ aoe__process_abft (
       aoe_disk.disk.ops = &default_ops;
       aoe_disk.disk.dev_ext.ops = &disk__dev_ops;
       aoe_disk.disk.dev_ext.size = sizeof ( aoe_disk_type );
-
-      if ( !bus__add_child ( bus__fdo, &aoe_disk.disk.dev_ext ) )
-	DBG ( "bus__add_child() failed for aBFT AoE disk\n" );
-      else
-	{
-	  if ( bus_ptr->PhysicalDeviceObject != NULL )
-	    {
-	      IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
-					    BusRelations );
-	    }
-	}
+      bus__add_child ( &aoe_disk.disk.dev_ext );
     }
   else
     {
@@ -2315,7 +2300,6 @@ irp__handler_decl (
 {
   winvblock__uint8_ptr buffer = Irp->AssociatedIrp.SystemBuffer;
   aoe_disk_type aoe_disk;
-  bus__type_ptr bus_ptr;
 
   DBG ( "Got IOCTL_AOE_MOUNT for client: %02x:%02x:%02x:%02x:%02x:%02x "
 	"Major:%d Minor:%d\n", buffer[0], buffer[1], buffer[2], buffer[3],
@@ -2332,20 +2316,7 @@ irp__handler_decl (
   aoe_disk.disk.ops = &default_ops;
   aoe_disk.disk.dev_ext.ops = &disk__dev_ops;
   aoe_disk.disk.dev_ext.size = sizeof ( aoe_disk_type );
-  if ( !bus__add_child ( DeviceObject, &aoe_disk.disk.dev_ext ) )
-    {
-      DBG ( "bus__add_child() failed\n" );
-    }
-  else
-    {
-      bus_ptr = get_bus_ptr ( DeviceExtension );
-      if ( bus_ptr->PhysicalDeviceObject != NULL )
-	{
-
-	  IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
-					BusRelations );
-	}
-    }
+  bus__add_child ( &aoe_disk.disk.dev_ext );
   Irp->IoStatus.Information = 0;
   *completion_ptr = TRUE;
   return STATUS_SUCCESS;

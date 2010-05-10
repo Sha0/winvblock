@@ -52,8 +52,14 @@ extern NTSTATUS STDCALL Bus_GetDeviceCapabilities (
   IN PDEVICE_CAPABILITIES DeviceCapabilities
  );
 
-extern winvblock__bool STDCALL bus__add_child (
-  IN PDEVICE_OBJECT bus_dev_obj_ptr,
+/**
+ * Add a child node to the bus
+ *
+ * @v dev_ext_ptr     The details for the child device to add
+ *
+ * Returns TRUE for success, FALSE for failure
+ */
+extern winvblock__lib_func winvblock__bool STDCALL bus__add_child (
   IN driver__dev_ext_ptr dev_ext_ptr
  );
 
@@ -71,7 +77,5 @@ get_bus_ptr (
    */
   return ( bus__type_ptr ) dev_ext_ptr;
 }
-
-extern PDEVICE_OBJECT bus__fdo;
 
 #endif				/* _BUS_H */
