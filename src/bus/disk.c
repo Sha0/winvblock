@@ -242,3 +242,11 @@ driver__dev_ops disk__dev_ops = {
   init,
   close
 };
+
+winvblock__lib_func driver__dev_ops_ptr
+disk__get_ops (
+  void
+ )
+{
+  return &disk__dev_ops;
+}

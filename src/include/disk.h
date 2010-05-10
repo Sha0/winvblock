@@ -202,6 +202,9 @@ struct _disk__type
 
 /* Device operations for disks */
 extern driver__dev_ops disk__dev_ops;
+extern winvblock__lib_func driver__dev_ops_ptr disk__get_ops (
+  void
+ );
 
 /*
  * Establish a pointer into the child disk device's extension space.

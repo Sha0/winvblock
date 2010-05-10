@@ -2176,7 +2176,7 @@ aoe__process_abft (
       aoe_disk.disk.BootDrive = TRUE;
       aoe_disk.disk.media = disk__media_hard;
       aoe_disk.disk.ops = &default_ops;
-      aoe_disk.disk.dev_ext.ops = &disk__dev_ops;
+      aoe_disk.disk.dev_ext.ops = disk__get_ops (  );
       aoe_disk.disk.dev_ext.size = sizeof ( aoe_disk_type );
       bus__add_child ( &aoe_disk.disk.dev_ext );
     }
@@ -2343,7 +2343,7 @@ irp__handler_decl (
   aoe_disk.disk.BootDrive = FALSE;
   aoe_disk.disk.media = disk__media_hard;
   aoe_disk.disk.ops = &default_ops;
-  aoe_disk.disk.dev_ext.ops = &disk__dev_ops;
+  aoe_disk.disk.dev_ext.ops = disk__get_ops (  );
   aoe_disk.disk.dev_ext.size = sizeof ( aoe_disk_type );
   bus__add_child ( &aoe_disk.disk.dev_ext );
   Irp->IoStatus.Information = 0;
