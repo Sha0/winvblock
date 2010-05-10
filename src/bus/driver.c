@@ -164,8 +164,6 @@ DriverEntry (
   Debug_Initialize (  );
   if ( !NT_SUCCESS ( Status = registry__note_os_load_opts ( &os_load_opts ) ) )
     return Error ( "registry__note_os_load_opts", Status );
-  if ( !NT_SUCCESS ( Status = Registry_Check (  ) ) )
-    return Error ( "Registry_Check", Status );
 
   Driver_Globals_StateHandle = NULL;
 

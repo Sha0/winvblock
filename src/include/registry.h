@@ -28,10 +28,6 @@
  *
  */
 
-extern NTSTATUS Registry_Check (
-  void
- );
-
 /**
  * Note BOOT.INI-style OsLoadOptions from registry
  *
