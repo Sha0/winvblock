@@ -319,3 +319,21 @@ Bus_AddDevice (
   DBG ( "Exit\n" );
   return STATUS_SUCCESS;
 }
+
+/**
+ * Get a pointer to the bus device's extension space
+ *
+ * @ret         A pointer to the bus device's extension space, or NULL
+ */
+winvblock__lib_func bus__type_ptr STDCALL
+bus__dev (
+  void
+ )
+{
+  if ( !bus_fdo )
+    {
+      DBG ( "No bus device!\n" );
+      return NULL;
+    }
+  return get_bus_ptr ( bus_fdo->DeviceExtension );
+}

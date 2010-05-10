@@ -111,7 +111,7 @@ irp__reg_table_s (
  * @ret         FALSE for failure, TRUE for success
  */
 winvblock__lib_func winvblock__bool
-irp__new_chain (
+irp__unreg_table (
   IN OUT irp__handler_chain_ptr chain_ptr,
   IN irp__handling_ptr table
  )

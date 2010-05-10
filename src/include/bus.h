@@ -63,6 +63,15 @@ extern winvblock__lib_func winvblock__bool STDCALL bus__add_child (
   IN driver__dev_ext_ptr dev_ext_ptr
  );
 
+/**
+ * Get a pointer to the bus device's extension space
+ *
+ * @ret         A pointer to the bus device's extension space, or NULL
+ */
+extern winvblock__lib_func bus__type_ptr STDCALL bus__dev (
+  void
+ );
+
 /*
  * Establish a pointer into the bus device's extension space.
  * Since the device extension is the first member of a bus

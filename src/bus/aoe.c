@@ -53,6 +53,7 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject (
 static void STDCALL thread (
   IN void *StartContext
  );
+irp__handler_decl ( aoe__bus_dev_ctl_dispatch );
 
 /** Tag types */
 enum _tag_type
@@ -197,6 +198,13 @@ static disk_search_ptr AoE_Globals_DiskSearchList = NULL;
 static LONG AoE_Globals_OutstandingTags = 0;
 static HANDLE AoE_Globals_ThreadHandle;
 static winvblock__bool AoE_Globals_Started = FALSE;
+
+static irp__handling handling_table[] = {
+  /*
+   * Major, minor, any major?, any minor?, handler
+   */
+  {IRP_MJ_DEVICE_CONTROL, 0, FALSE, TRUE, aoe__bus_dev_ctl_dispatch}
+};
 
 /*
  * Establish a pointer into the AoE disk device's extension space.
@@ -789,6 +797,17 @@ start (
       KeSetEvent ( &AoE_Globals_ThreadSignalEvent, 0, FALSE );
     }
 
+  {
+    bus__type_ptr bus_ptr = bus__dev (  );
+    if ( !bus_ptr )
+      {
+	DBG ( "Unable to register for IOCTLs!\n" );
+      }
+    else
+      {
+	irp__reg_table ( &bus_ptr->dev_ext.irp_handler_chain, handling_table );
+      }
+  }
   AoE_Globals_Started = TRUE;
   DBG ( "Exit\n" );
   return Status;
@@ -906,6 +925,18 @@ AoE_Stop (
    * Release the global spin-lock 
    */
   KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
+  {
+    bus__type_ptr bus_ptr = bus__dev (  );
+    if ( !bus_ptr )
+      {
+	DBG ( "Unable to un-register IOCTLs!\n" );
+      }
+    else
+      {
+	irp__unreg_table ( &bus_ptr->dev_ext.irp_handler_chain,
+			   handling_table );
+      }
+  }
   AoE_Globals_Started = FALSE;
   DBG ( "Exit\n" );
 }
