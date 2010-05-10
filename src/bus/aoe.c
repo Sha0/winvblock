@@ -2084,12 +2084,17 @@ __attribute__ ( ( __packed__ ) );
 #  pragma pack()
 #endif
 
+disk__close_decl ( close )
+{
+  return;
+}
+
 static disk__ops default_ops = {
   io,
   max_xfer_len,
   init,
   query_id,
-  disk__default_close
+  close
 };
 
 void
