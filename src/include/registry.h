@@ -33,6 +33,18 @@ extern NTSTATUS Registry_Check (
  );
 
 /**
+ * Note BOOT.INI-style OsLoadOptions from registry
+ *
+ * @v w_str_ptr         Pointer to pointer to wide-char string to hold options
+ * @ret ntstatus	NT status
+ *
+ * The caller must eventually free the wide-char string.
+ */
+extern NTSTATUS registry__note_os_load_opts (
+  LPWSTR * w_str_ptr
+ );
+
+/**
  * Open registry key
  *
  * @v reg_key_name  Registry key name

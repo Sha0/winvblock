@@ -62,7 +62,7 @@ static winvblock__bool Driver_Globals_Started = FALSE;
 PDRIVER_OBJECT driver__obj_ptr = NULL;
 
 /* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters */
-LPWSTR driver__os_load_opts = NULL;
+LPWSTR os_load_opts = NULL;
 
 static LPWSTR STDCALL
 get_opt (
@@ -81,13 +81,13 @@ get_opt (
   size_t opt_name_len,
    opt_name_len_bytes;
 
-  if ( !driver__os_load_opts || !opt_name )
+  if ( !os_load_opts || !opt_name )
     return NULL;
 
   /*
    * Find /WINVBLOCK= options
    */
-  our_opts = driver__os_load_opts;
+  our_opts = os_load_opts;
   while ( *our_opts != L'\0' )
     {
       if ( RtlCompareMemory ( our_opts, our_sig, our_sig_len_bytes ) !=
@@ -162,6 +162,8 @@ DriverEntry (
   if ( Driver_Globals_Started )
     return STATUS_SUCCESS;
   Debug_Initialize (  );
+  if ( !NT_SUCCESS ( Status = registry__note_os_load_opts ( &os_load_opts ) ) )
+    return Error ( "registry__note_os_load_opts", Status );
   if ( !NT_SUCCESS ( Status = Registry_Check (  ) ) )
     return Error ( "Registry_Check", Status );
 
@@ -316,6 +318,7 @@ Driver_Unload (
   Protocol_Stop (  );
   AoE_Stop (  );
   Bus_Stop (  );
+  ExFreePool ( os_load_opts );
   Driver_Globals_Started = FALSE;
   DBG ( "Done\n" );
 }

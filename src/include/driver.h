@@ -54,7 +54,6 @@ winvblock__def_enum ( driver__state );
 
 extern irp__handling driver__handling_table[];
 extern size_t driver__handling_table_size;
-extern LPWSTR driver__os_load_opts;
 extern PDRIVER_OBJECT driver__obj_ptr;
 
 /* Forward declaration */

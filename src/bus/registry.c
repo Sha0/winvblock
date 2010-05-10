@@ -337,13 +337,14 @@ registry__store_dword (
 /**
  * Note BOOT.INI-style OsLoadOptions from registry
  *
+ * @v w_str_ptr         Pointer to pointer to wide-char string to hold options
  * @ret ntstatus	NT status
  *
- * Somewhere we must eventually free Registry_Globals_OsLoadOptions.
+ * The caller must eventually free the wide-char string.
  */
-static NTSTATUS
-Registry_NoteOsLoadOptions (
-  void
+NTSTATUS
+registry__note_os_load_opts (
+  LPWSTR * w_str_ptr
  )
 {
   NTSTATUS status;
@@ -363,16 +364,12 @@ Registry_NoteOsLoadOptions (
    * Put the SystemStartOptions value into a global 
    */
   status =
-    registry__fetch_sz ( control_key, L"SystemStartOptions",
-			 &driver__os_load_opts );
+    registry__fetch_sz ( control_key, L"SystemStartOptions", w_str_ptr );
   if ( !NT_SUCCESS ( status ) )
     goto err_fetchsz;
 
-  DBG ( "OsLoadOptions: %S\n", driver__os_load_opts );
+  DBG ( "OsLoadOptions: %S\n", *w_str_ptr );
 
-  /*
-   * We do not free this global 
-   */
 err_fetchsz:
 
   registry__close_key ( control_key );
@@ -855,6 +852,5 @@ Registry_Check (
     {
       DBG ( "Registry updated\n" );
     }
-  Registry_NoteOsLoadOptions (  );
   return STATUS_SUCCESS;
 }
