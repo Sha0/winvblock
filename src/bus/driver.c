@@ -335,7 +335,7 @@ Driver_CompletePendingIrp (
 /*
  * Note the exception to the function naming convention
  */
-NTSTATUS STDCALL
+winvblock__lib_func NTSTATUS STDCALL
 Error (
   IN PCHAR Message,
   IN NTSTATUS Status

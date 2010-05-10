@@ -144,7 +144,7 @@ extern void STDCALL Driver_CompletePendingIrp (
 /*
  * Note the exception to the function naming convention
  */
-extern NTSTATUS STDCALL Error (
+extern winvblock__lib_func NTSTATUS STDCALL Error (
   IN PCHAR Message,
   IN NTSTATUS Status
  );
