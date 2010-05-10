@@ -43,8 +43,8 @@
  * @v reg_key       Registry key to fill in
  * @ret ntstatus    NT status
  */
-static NTSTATUS
-Registry_KeyOpen (
+winvblock__lib_func NTSTATUS
+registry__open_key (
   LPCWSTR reg_key_name,
   PHANDLE reg_key
  )
@@ -72,8 +72,8 @@ Registry_KeyOpen (
  *
  * @v reg_key   Registry key
  */
-static void
-Registry_KeyClose (
+winvblock__lib_func void
+registry__close_key (
   HANDLE reg_key
  )
 {
@@ -91,8 +91,8 @@ Registry_KeyClose (
  * The caller must eventually free the allocated key value information
  * block.
  */
-static NTSTATUS
-Registry_FetchKVI (
+winvblock__lib_func NTSTATUS
+registry__fetch_kvi (
   HANDLE reg_key,
   LPCWSTR value_name,
   PKEY_VALUE_PARTIAL_INFORMATION * kvi
@@ -158,8 +158,8 @@ err_zwqueryvaluekey_len:
  *
  * The caller must eventually free the allocated value.
  */
-static NTSTATUS
-Registry_FetchSZ (
+winvblock__lib_func NTSTATUS
+registry__fetch_sz (
   HANDLE reg_key,
   LPCWSTR value_name,
   LPWSTR * value
@@ -172,7 +172,7 @@ Registry_FetchSZ (
   /*
    * Fetch key value information 
    */
-  status = Registry_FetchKVI ( reg_key, value_name, &kvi );
+  status = registry__fetch_kvi ( reg_key, value_name, &kvi );
   if ( !NT_SUCCESS ( status ) )
     goto err_fetchkvi;
 
@@ -206,8 +206,8 @@ err_fetchkvi:
  *
  * The caller must eventually free the allocated values.
  */
-static NTSTATUS
-Registry_FetchMultiSZ (
+winvblock__lib_func NTSTATUS
+registry__fetch_multi_sz (
   HANDLE reg_key,
   LPCWSTR value_name,
   LPWSTR ** values
@@ -223,7 +223,7 @@ Registry_FetchMultiSZ (
   /*
    * Fetch key value information 
    */
-  status = Registry_FetchKVI ( reg_key, value_name, &kvi );
+  status = registry__fetch_kvi ( reg_key, value_name, &kvi );
   if ( !NT_SUCCESS ( status ) )
     goto err_fetchkvi;
 
@@ -278,8 +278,8 @@ err_fetchkvi:
  * @v value       String value to store
  * @ret ntstatus  NT status
  */
-static NTSTATUS
-Registry_StoreSZ (
+winvblock__lib_func NTSTATUS
+registry__store_sz (
   HANDLE reg_key,
   LPCWSTR value_name,
   LPWSTR value
@@ -311,8 +311,8 @@ Registry_StoreSZ (
  * @v value       String value to store, or NULL
  * @ret ntstatus  NT status
  */
-static NTSTATUS
-Registry_StoreDWord (
+winvblock__lib_func NTSTATUS
+registry__store_dword (
   HANDLE reg_key,
   LPCWSTR value_name,
   winvblock__uint32 value
@@ -353,7 +353,7 @@ Registry_NoteOsLoadOptions (
    * Open the Control key 
    */
   status =
-    Registry_KeyOpen
+    registry__open_key
     ( L"\\Registry\\Machine\\SYSTEM\\CurrentControlSet\\Control\\",
       &control_key );
   if ( !NT_SUCCESS ( status ) )
@@ -363,8 +363,8 @@ Registry_NoteOsLoadOptions (
    * Put the SystemStartOptions value into a global 
    */
   status =
-    Registry_FetchSZ ( control_key, L"SystemStartOptions",
-		       &driver__os_load_opts );
+    registry__fetch_sz ( control_key, L"SystemStartOptions",
+			 &driver__os_load_opts );
   if ( !NT_SUCCESS ( status ) )
     goto err_fetchsz;
 
@@ -375,7 +375,7 @@ Registry_NoteOsLoadOptions (
    */
 err_fetchsz:
 
-  Registry_KeyClose ( control_key );
+  registry__close_key ( control_key );
 err_keyopen:
 
   return status;
@@ -431,10 +431,10 @@ Registry_Setup (
    * Open the network adapter class key 
    */
   status =
-    Registry_KeyOpen ( ( L"\\Registry\\Machine\\SYSTEM\\"
-			 L"CurrentControlSet\\Control\\Class\\"
-			 L"{4D36E972-E325-11CE-BFC1-08002BE10318}\\" ),
-		       &NetworkClassKeyHandle );
+    registry__open_key ( ( L"\\Registry\\Machine\\SYSTEM\\"
+			   L"CurrentControlSet\\Control\\Class\\"
+			   L"{4D36E972-E325-11CE-BFC1-08002BE10318}\\" ),
+			 &NetworkClassKeyHandle );
   if ( !NT_SUCCESS ( status ) )
     goto err_keyopennetworkclass;
 
@@ -460,7 +460,7 @@ Registry_Setup (
 	{
 	  DBG ( "ExAllocatePool KeyData failed\n" );
 	  goto e0_1;
-	  Registry_KeyClose ( NetworkClassKeyHandle );
+	  registry__close_key ( NetworkClassKeyHandle );
 	}
       if ( !
 	   ( NT_SUCCESS
@@ -793,7 +793,7 @@ Registry_Setup (
       ExFreePool ( KeyInformation );
       SubkeyIndex++;
     }
-  Registry_KeyClose ( NetworkClassKeyHandle );
+  registry__close_key ( NetworkClassKeyHandle );
   *status_out = STATUS_SUCCESS;
   return Updated;
 
@@ -832,7 +832,7 @@ e0_2:
   ExFreePool ( KeyInformation );
 e0_1:
 
-  Registry_KeyClose ( NetworkClassKeyHandle );
+  registry__close_key ( NetworkClassKeyHandle );
 err_keyopennetworkclass:
 
   *status_out = STATUS_UNSUCCESSFUL;

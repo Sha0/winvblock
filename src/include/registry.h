@@ -32,4 +32,102 @@ extern NTSTATUS Registry_Check (
   void
  );
 
+/**
+ * Open registry key
+ *
+ * @v reg_key_name  Registry key name
+ * @v reg_key       Registry key to fill in
+ * @ret ntstatus    NT status
+ */
+extern winvblock__lib_func NTSTATUS registry__open_key (
+  LPCWSTR reg_key_name,
+  PHANDLE reg_key
+ );
+
+/**
+ * Close registry key
+ *
+ * @v reg_key   Registry key
+ */
+extern winvblock__lib_func void registry__close_key (
+  HANDLE reg_key
+ );
+
+/**
+ * Fetch registry key value information
+ *
+ * @v reg_key     Registry key
+ * @v value_name  Registry value name
+ * @v kvi         Key value information block to allocate and fill in
+ * @ret ntstatus  NT status
+ *
+ * The caller must eventually free the allocated key value information
+ * block.
+ */
+extern winvblock__lib_func NTSTATUS registry__fetch_kvi (
+  HANDLE reg_key,
+  LPCWSTR value_name,
+  PKEY_VALUE_PARTIAL_INFORMATION * kvi
+ );
+
+/**
+ * Fetch registry string value
+ *
+ * @v reg_key     Registry key
+ * @v value_name  Registry value name
+ * @v value       String value to allocate and fill in
+ * @ret ntstatus  NT status
+ *
+ * The caller must eventually free the allocated value.
+ */
+extern winvblock__lib_func NTSTATUS registry__fetch_sz (
+  HANDLE reg_key,
+  LPCWSTR value_name,
+  LPWSTR * value
+ );
+
+/**
+ * Fetch registry multiple-string value
+ *
+ * @v reg_key     Registry key
+ * @v value_name  Registry value name
+ * @v values      Array of string values to allocate and fill in
+ * @ret ntstatus  NT status
+ *
+ * The caller must eventually free the allocated values.
+ */
+extern winvblock__lib_func NTSTATUS registry__fetch_multi_sz (
+  HANDLE reg_key,
+  LPCWSTR value_name,
+  LPWSTR ** values
+ );
+
+/**
+ * Store registry string value
+ *
+ * @v reg_key     Registry key
+ * @v value_name  Registry value name
+ * @v value       String value to store
+ * @ret ntstatus  NT status
+ */
+extern winvblock__lib_func NTSTATUS registry__store_sz (
+  HANDLE reg_key,
+  LPCWSTR value_name,
+  LPWSTR value
+ );
+
+/**
+ * Store registry dword value
+ *
+ * @v reg_key     Registry key
+ * @v value_name  Registry value name
+ * @v value       String value to store, or NULL
+ * @ret ntstatus  NT status
+ */
+extern winvblock__lib_func NTSTATUS registry__store_dword (
+  HANDLE reg_key,
+  LPCWSTR value_name,
+  winvblock__uint32 value
+ );
+
 #endif				/* _REGISTRY_H */
