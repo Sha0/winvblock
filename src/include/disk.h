@@ -204,19 +204,12 @@ struct _disk__type
 extern driver__dev_ops disk__dev_ops;
 
 /*
- * Establish a pointer into the child disk device's extension space
+ * Establish a pointer into the child disk device's extension space.
+ * Since the device extension is the first member of a disk
+ * structure, a simple cast will suffice
  */
-__inline disk__type_ptr STDCALL
-get_disk_ptr (
-  driver__dev_ext_ptr dev_ext_ptr
- )
-{
-  /*
-   * Since the device extension is the first member of a disk
-   * structure, a simple cast will suffice
-   */
-  return ( disk__type_ptr ) dev_ext_ptr;
-}
+#  define get_disk_ptr( dev_ext_ptr ) \
+  ( ( disk__type_ptr ) dev_ext_ptr )
 
 __inline
 disk__io_decl (

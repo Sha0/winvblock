@@ -199,20 +199,13 @@ static HANDLE AoE_Globals_ThreadHandle;
 static winvblock__bool AoE_Globals_Started = FALSE;
 
 /*
- * Establish a pointer into the AoE disk device's extension space
+ * Establish a pointer into the AoE disk device's extension space.
+ * Since the device extension is the first member of the disk
+ * member of an AoE disk, and the disk structure is itself the
+ * first member of an AoE disk structure, a simple cast will suffice
  */
-__inline aoe_disk_type_ptr STDCALL
-get_aoe_disk_ptr (
-  driver__dev_ext_ptr dev_ext_ptr
- )
-{
-  /*
-   * Since the device extension is the first member of the disk
-   * member of an AoE disk, and the disk structure is itself the
-   * first member of an AoE disk structure, a simple cast will suffice
-   */
-  return ( aoe_disk_type_ptr ) dev_ext_ptr;
-}
+#define get_aoe_disk_ptr( dev_ext_ptr ) \
+  ( ( aoe_disk_type_ptr ) dev_ext_ptr )
 
 static winvblock__bool STDCALL
 setup_reg (

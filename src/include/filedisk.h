@@ -34,20 +34,13 @@ winvblock__def_struct ( filedisk__type )
 };
 
 /*
- * Establish a pointer into the file-backed disk device's extension space
+ * Establish a pointer into the file-backed disk device's extension space.
+ * Since the device extension is the first member of the disk
+ * member of a file-backed disk, and the disk structure is itself the
+ * first member of a file-backed disk structure, a simple cast will suffice
  */
-__inline filedisk__type_ptr STDCALL
-filedisk__get_ptr (
-  driver__dev_ext_ptr dev_ext_ptr
- )
-{
-  /*
-   * Since the device extension is the first member of the disk
-   * member of a file-backed disk, and the disk structure is itself the
-   * first member of a file-backed disk structure, a simple cast will suffice
-   */
-  return ( filedisk__type_ptr ) dev_ext_ptr;
-}
+#  define filedisk__get_ptr( dev_ext_ptr ) \
+  ( ( filedisk__type_ptr ) dev_ext_ptr )
 
 extern irp__handler_decl (
   filedisk__attach
