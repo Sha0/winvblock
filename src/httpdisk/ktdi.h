@@ -14,16 +14,76 @@
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-NTSTATUS tdi_open_transport_address(PUNICODE_STRING devName, ULONG addr, USHORT port, BOOLEAN shared, PHANDLE addressHandle, PFILE_OBJECT *addressFileObject);
-NTSTATUS tdi_open_connection_endpoint(PUNICODE_STRING devName, PVOID connectionContext, BOOLEAN shared, PHANDLE connectionHandle, PFILE_OBJECT *connectionFileObject);
-NTSTATUS tdi_set_event_handler(PFILE_OBJECT addressFileObject, LONG eventType, PVOID eventHandler, PVOID eventContext);
-NTSTATUS tdi_unset_event_handler(PFILE_OBJECT addressFileObject, LONG eventType);
-NTSTATUS tdi_associate_address(PFILE_OBJECT connectionFileObject, HANDLE addressHandle);
-NTSTATUS tdi_disassociate_address(PFILE_OBJECT connectionFileObject);
-NTSTATUS tdi_connect(PFILE_OBJECT connectionFileObject, ULONG addr, USHORT port);
-NTSTATUS tdi_disconnect(PFILE_OBJECT connectionFileObject, ULONG flags);
-NTSTATUS tdi_send_dgram(PFILE_OBJECT addressFileObject, ULONG addr, USHORT port, const char *buf, int len);
-NTSTATUS tdi_recv_dgram(PFILE_OBJECT addressFileObject, PULONG addr, PUSHORT port, char *buf, int len, ULONG flags);
-NTSTATUS tdi_send_stream(PFILE_OBJECT connectionFileObject, const char *buf, int len, ULONG flags);
-NTSTATUS tdi_recv_stream(PFILE_OBJECT connectionFileObject, char *buf, int len, ULONG flags);
-NTSTATUS tdi_query_address(PFILE_OBJECT addressFileObject, PULONG addr, PUSHORT port);
+NTSTATUS tdi_open_transport_address (
+  PUNICODE_STRING devName,
+  ULONG addr,
+  USHORT port,
+  BOOLEAN shared,
+  PHANDLE addressHandle,
+  PFILE_OBJECT * addressFileObject
+ );
+NTSTATUS tdi_open_connection_endpoint (
+  PUNICODE_STRING devName,
+  PVOID connectionContext,
+  BOOLEAN shared,
+  PHANDLE connectionHandle,
+  PFILE_OBJECT * connectionFileObject
+ );
+NTSTATUS tdi_set_event_handler (
+  PFILE_OBJECT addressFileObject,
+  LONG eventType,
+  PVOID eventHandler,
+  PVOID eventContext
+ );
+NTSTATUS tdi_unset_event_handler (
+  PFILE_OBJECT addressFileObject,
+  LONG eventType
+ );
+NTSTATUS tdi_associate_address (
+  PFILE_OBJECT connectionFileObject,
+  HANDLE addressHandle
+ );
+NTSTATUS tdi_disassociate_address (
+  PFILE_OBJECT connectionFileObject
+ );
+NTSTATUS tdi_connect (
+  PFILE_OBJECT connectionFileObject,
+  ULONG addr,
+  USHORT port
+ );
+NTSTATUS tdi_disconnect (
+  PFILE_OBJECT connectionFileObject,
+  ULONG flags
+ );
+NTSTATUS tdi_send_dgram (
+  PFILE_OBJECT addressFileObject,
+  ULONG addr,
+  USHORT port,
+  const char *buf,
+  int len
+ );
+NTSTATUS tdi_recv_dgram (
+  PFILE_OBJECT addressFileObject,
+  PULONG addr,
+  PUSHORT port,
+  char *buf,
+  int len,
+  ULONG flags
+ );
+NTSTATUS tdi_send_stream (
+  PFILE_OBJECT connectionFileObject,
+  const char *buf,
+  int len,
+  ULONG flags
+ );
+NTSTATUS tdi_recv_stream (
+  PFILE_OBJECT connectionFileObject,
+  char *buf,
+  int len,
+  ULONG flags
+ );
+NTSTATUS tdi_query_address (
+  PFILE_OBJECT addressFileObject,
+  PULONG addr,
+  PUSHORT port
+ );

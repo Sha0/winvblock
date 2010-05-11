@@ -19,511 +19,600 @@
 #include "ktdi.h"
 #include "ksocket.h"
 
-typedef struct _STREAM_SOCKET {
-    HANDLE              connectionHandle;
-    PFILE_OBJECT        connectionFileObject;
-    KEVENT              disconnectEvent;
-} STREAM_SOCKET, *PSTREAM_SOCKET;
-
-typedef struct _SOCKET {
-    int                 type;
-    BOOLEAN             isBound;
-    BOOLEAN             isConnected;
-    BOOLEAN             isListening;
-    BOOLEAN             isShuttingdown;
-    BOOLEAN             isShared;
-    HANDLE              addressHandle;
-    PFILE_OBJECT        addressFileObject;
-    PSTREAM_SOCKET      streamSocket;
-    struct sockaddr     peer;
-} SOCKET, *PSOCKET;
-
-NTSTATUS event_disconnect(PVOID TdiEventContext, CONNECTION_CONTEXT ConnectionContext, LONG DisconnectDataLength,
-                          PVOID DisconnectData, LONG DisconnectInformationLength, PVOID DisconnectInformation,
-                          ULONG DisconnectFlags)
+typedef struct _STREAM_SOCKET
 {
-    PSOCKET s = (PSOCKET) TdiEventContext;
-    PSTREAM_SOCKET streamSocket = (PSTREAM_SOCKET) ConnectionContext;
-    KeSetEvent(&streamSocket->disconnectEvent, 0, FALSE);
-    return STATUS_SUCCESS;
+  HANDLE connectionHandle;
+  PFILE_OBJECT connectionFileObject;
+  KEVENT disconnectEvent;
+} STREAM_SOCKET,
+*PSTREAM_SOCKET;
+
+typedef struct _SOCKET
+{
+  int type;
+  BOOLEAN isBound;
+  BOOLEAN isConnected;
+  BOOLEAN isListening;
+  BOOLEAN isShuttingdown;
+  BOOLEAN isShared;
+  HANDLE addressHandle;
+  PFILE_OBJECT addressFileObject;
+  PSTREAM_SOCKET streamSocket;
+  struct sockaddr peer;
+} SOCKET,
+*PSOCKET;
+
+NTSTATUS
+event_disconnect (
+  PVOID TdiEventContext,
+  CONNECTION_CONTEXT ConnectionContext,
+  LONG DisconnectDataLength,
+  PVOID DisconnectData,
+  LONG DisconnectInformationLength,
+  PVOID DisconnectInformation,
+  ULONG DisconnectFlags
+ )
+{
+  PSOCKET s = ( PSOCKET ) TdiEventContext;
+  PSTREAM_SOCKET streamSocket = ( PSTREAM_SOCKET ) ConnectionContext;
+  KeSetEvent ( &streamSocket->disconnectEvent, 0, FALSE );
+  return STATUS_SUCCESS;
 }
 
-int __cdecl accept(int socket, struct sockaddr *addr, int *addrlen)
+int __cdecl
+accept (
+  int socket,
+  struct sockaddr *addr,
+  int *addrlen
+ )
 {
-    return -1;
+  return -1;
 }
 
-int __cdecl bind(int socket, const struct sockaddr *addr, int addrlen)
+int __cdecl
+bind (
+  int socket,
+  const struct sockaddr *addr,
+  int addrlen
+ )
 {
-    PSOCKET s = (PSOCKET) -socket;
-    const struct sockaddr_in* localAddr = (const struct sockaddr_in*) addr;
-    UNICODE_STRING devName;
-    NTSTATUS status;
+  PSOCKET s = ( PSOCKET ) - socket;
+  const struct sockaddr_in *localAddr = ( const struct sockaddr_in * )addr;
+  UNICODE_STRING devName;
+  NTSTATUS status;
 
-    if (s->isBound || addr == NULL || addrlen < sizeof(struct sockaddr_in))
+  if ( s->isBound || addr == NULL || addrlen < sizeof ( struct sockaddr_in ) )
     {
-        return -1;
+      return -1;
     }
 
-    if (s->type == SOCK_DGRAM)
+  if ( s->type == SOCK_DGRAM )
     {
-        RtlInitUnicodeString(&devName, L"\\Device\\Udp");
+      RtlInitUnicodeString ( &devName, L"\\Device\\Udp" );
     }
-    else if (s->type == SOCK_STREAM)
+  else if ( s->type == SOCK_STREAM )
     {
-        RtlInitUnicodeString(&devName, L"\\Device\\Tcp");
+      RtlInitUnicodeString ( &devName, L"\\Device\\Tcp" );
     }
-    else
+  else
     {
-        return -1;
-    }
-
-    status = tdi_open_transport_address(
-        &devName,
-        localAddr->sin_addr.s_addr,
-        localAddr->sin_port,
-        s->isShared,
-        &s->addressHandle,
-        &s->addressFileObject
-        );
-
-    if (!NT_SUCCESS(status))
-    {
-        s->addressFileObject = NULL;
-        s->addressHandle = (HANDLE) -1;
-        return status;
+      return -1;
     }
 
-    if (s->type == SOCK_STREAM)
+  status =
+    tdi_open_transport_address ( &devName, localAddr->sin_addr.s_addr,
+				 localAddr->sin_port, s->isShared,
+				 &s->addressHandle, &s->addressFileObject );
+
+  if ( !NT_SUCCESS ( status ) )
     {
-        tdi_set_event_handler(s->addressFileObject, TDI_EVENT_DISCONNECT, event_disconnect, s);
+      s->addressFileObject = NULL;
+      s->addressHandle = ( HANDLE ) - 1;
+      return status;
     }
 
-    s->isBound = TRUE;
+  if ( s->type == SOCK_STREAM )
+    {
+      tdi_set_event_handler ( s->addressFileObject, TDI_EVENT_DISCONNECT,
+			      event_disconnect, s );
+    }
 
-    return 0;
+  s->isBound = TRUE;
+
+  return 0;
 }
 
-int __cdecl close(int socket)
+int __cdecl
+close (
+  int socket
+ )
 {
-    PSOCKET s = (PSOCKET) -socket;
+  PSOCKET s = ( PSOCKET ) - socket;
 
-    if (s->isBound)
+  if ( s->isBound )
     {
-        if (s->type == SOCK_STREAM && s->streamSocket)
-        {
-            if (s->isConnected)
-            {
-                if (!s->isShuttingdown)
-                {
-                    tdi_disconnect(s->streamSocket->connectionFileObject, TDI_DISCONNECT_RELEASE);
-                }
-                //KeWaitForSingleObject(&s->streamSocket->disconnectEvent, Executive, KernelMode, FALSE, NULL);
-            }
-            if (s->streamSocket->connectionFileObject)
-            {
-                tdi_disassociate_address(s->streamSocket->connectionFileObject);
-                ObDereferenceObject(s->streamSocket->connectionFileObject);
-            }
-            if (s->streamSocket->connectionHandle != (HANDLE) -1)
-            {
-                ZwClose(s->streamSocket->connectionHandle);
-            }
-            ExFreePool(s->streamSocket);
-        }
+      if ( s->type == SOCK_STREAM && s->streamSocket )
+	{
+	  if ( s->isConnected )
+	    {
+	      if ( !s->isShuttingdown )
+		{
+		  tdi_disconnect ( s->streamSocket->connectionFileObject,
+				   TDI_DISCONNECT_RELEASE );
+		}
+	      //KeWaitForSingleObject(&s->streamSocket->disconnectEvent, Executive, KernelMode, FALSE, NULL);
+	    }
+	  if ( s->streamSocket->connectionFileObject )
+	    {
+	      tdi_disassociate_address ( s->
+					 streamSocket->connectionFileObject );
+	      ObDereferenceObject ( s->streamSocket->connectionFileObject );
+	    }
+	  if ( s->streamSocket->connectionHandle != ( HANDLE ) - 1 )
+	    {
+	      ZwClose ( s->streamSocket->connectionHandle );
+	    }
+	  ExFreePool ( s->streamSocket );
+	}
 
-        if (s->type == SOCK_DGRAM || s->type == SOCK_STREAM)
-        {
-            ObDereferenceObject(s->addressFileObject);
-            if (s->addressHandle != (HANDLE) -1)
-            {
-                ZwClose(s->addressHandle);
-            }
-        }
+      if ( s->type == SOCK_DGRAM || s->type == SOCK_STREAM )
+	{
+	  ObDereferenceObject ( s->addressFileObject );
+	  if ( s->addressHandle != ( HANDLE ) - 1 )
+	    {
+	      ZwClose ( s->addressHandle );
+	    }
+	}
     }
 
-    ExFreePool(s);
+  ExFreePool ( s );
 
-    return 0;
+  return 0;
 }
 
-int __cdecl connect(int socket, const struct sockaddr *addr, int addrlen)
+int __cdecl
+connect (
+  int socket,
+  const struct sockaddr *addr,
+  int addrlen
+ )
 {
-    PSOCKET s = (PSOCKET) -socket;
-    const struct sockaddr_in* remoteAddr = (const struct sockaddr_in*) addr;
-    UNICODE_STRING devName;
-    NTSTATUS status;
+  PSOCKET s = ( PSOCKET ) - socket;
+  const struct sockaddr_in *remoteAddr = ( const struct sockaddr_in * )addr;
+  UNICODE_STRING devName;
+  NTSTATUS status;
 
-    if (addr == NULL || addrlen < sizeof(struct sockaddr_in))
+  if ( addr == NULL || addrlen < sizeof ( struct sockaddr_in ) )
     {
-        return -1;
+      return -1;
     }
 
-    if (!s->isBound)
+  if ( !s->isBound )
     {
-        struct sockaddr_in localAddr;
+      struct sockaddr_in localAddr;
 
-        localAddr.sin_family = AF_INET;
-        localAddr.sin_port = 0;
-        localAddr.sin_addr.s_addr = INADDR_ANY;
+      localAddr.sin_family = AF_INET;
+      localAddr.sin_port = 0;
+      localAddr.sin_addr.s_addr = INADDR_ANY;
 
-        status = bind(socket, (struct sockaddr*) &localAddr, sizeof(localAddr));
+      status =
+	bind ( socket, ( struct sockaddr * )&localAddr, sizeof ( localAddr ) );
 
-        if (!NT_SUCCESS(status))
-        {
-            return status;
-        }
+      if ( !NT_SUCCESS ( status ) )
+	{
+	  return status;
+	}
     }
 
-    if (s->type == SOCK_STREAM)
+  if ( s->type == SOCK_STREAM )
     {
-        if (s->isConnected || s->isListening)
-        {
-            return -1;
-        }
+      if ( s->isConnected || s->isListening )
+	{
+	  return -1;
+	}
 
-        if (!s->streamSocket)
-        {
-            s->streamSocket = (PSTREAM_SOCKET) ExAllocatePool(NonPagedPool, sizeof(STREAM_SOCKET));
+      if ( !s->streamSocket )
+	{
+	  s->streamSocket =
+	    ( PSTREAM_SOCKET ) ExAllocatePool ( NonPagedPool,
+						sizeof ( STREAM_SOCKET ) );
 
-            if (!s->streamSocket)
-            {
-                return STATUS_INSUFFICIENT_RESOURCES;
-            }
+	  if ( !s->streamSocket )
+	    {
+	      return STATUS_INSUFFICIENT_RESOURCES;
+	    }
 
-            RtlZeroMemory(s->streamSocket, sizeof(STREAM_SOCKET));
-            s->streamSocket->connectionHandle = (HANDLE) -1;
-            KeInitializeEvent(&s->streamSocket->disconnectEvent, NotificationEvent, FALSE);
-        }
+	  RtlZeroMemory ( s->streamSocket, sizeof ( STREAM_SOCKET ) );
+	  s->streamSocket->connectionHandle = ( HANDLE ) - 1;
+	  KeInitializeEvent ( &s->streamSocket->disconnectEvent,
+			      NotificationEvent, FALSE );
+	}
 
-        RtlInitUnicodeString(&devName, L"\\Device\\Tcp");
+      RtlInitUnicodeString ( &devName, L"\\Device\\Tcp" );
 
-        status = tdi_open_connection_endpoint(
-            &devName,
-            s->streamSocket,
-            s->isShared,
-            &s->streamSocket->connectionHandle,
-            &s->streamSocket->connectionFileObject
-            );
+      status =
+	tdi_open_connection_endpoint ( &devName, s->streamSocket, s->isShared,
+				       &s->streamSocket->connectionHandle,
+				       &s->
+				       streamSocket->connectionFileObject );
 
-        if (!NT_SUCCESS(status))
-        {
-            s->streamSocket->connectionFileObject = NULL;
-            s->streamSocket->connectionHandle = (HANDLE) -1;
-            return status;
-        }
+      if ( !NT_SUCCESS ( status ) )
+	{
+	  s->streamSocket->connectionFileObject = NULL;
+	  s->streamSocket->connectionHandle = ( HANDLE ) - 1;
+	  return status;
+	}
 
-        status = tdi_associate_address(s->streamSocket->connectionFileObject, s->addressHandle);
+      status =
+	tdi_associate_address ( s->streamSocket->connectionFileObject,
+				s->addressHandle );
 
-        if (!NT_SUCCESS(status))
-        {
-            ObDereferenceObject(s->streamSocket->connectionFileObject);
-            s->streamSocket->connectionFileObject = NULL;
-            ZwClose(s->streamSocket->connectionHandle);
-            s->streamSocket->connectionHandle = (HANDLE) -1;
-            return status;
-        }
+      if ( !NT_SUCCESS ( status ) )
+	{
+	  ObDereferenceObject ( s->streamSocket->connectionFileObject );
+	  s->streamSocket->connectionFileObject = NULL;
+	  ZwClose ( s->streamSocket->connectionHandle );
+	  s->streamSocket->connectionHandle = ( HANDLE ) - 1;
+	  return status;
+	}
 
-        status = tdi_connect(
-            s->streamSocket->connectionFileObject,
-            remoteAddr->sin_addr.s_addr,
-            remoteAddr->sin_port
-            );
+      status =
+	tdi_connect ( s->streamSocket->connectionFileObject,
+		      remoteAddr->sin_addr.s_addr, remoteAddr->sin_port );
 
-        if (!NT_SUCCESS(status))
-        {
-            tdi_disassociate_address(s->streamSocket->connectionFileObject);
-            ObDereferenceObject(s->streamSocket->connectionFileObject);
-            s->streamSocket->connectionFileObject = NULL;
-            ZwClose(s->streamSocket->connectionHandle);
-            s->streamSocket->connectionHandle = (HANDLE) -1;
-            return status;
-        }
-        else
-        {
-            s->peer = *addr;
-            s->isConnected = TRUE;
-            return 0;
-        }
+      if ( !NT_SUCCESS ( status ) )
+	{
+	  tdi_disassociate_address ( s->streamSocket->connectionFileObject );
+	  ObDereferenceObject ( s->streamSocket->connectionFileObject );
+	  s->streamSocket->connectionFileObject = NULL;
+	  ZwClose ( s->streamSocket->connectionHandle );
+	  s->streamSocket->connectionHandle = ( HANDLE ) - 1;
+	  return status;
+	}
+      else
+	{
+	  s->peer = *addr;
+	  s->isConnected = TRUE;
+	  return 0;
+	}
     }
-    else if (s->type == SOCK_DGRAM)
+  else if ( s->type == SOCK_DGRAM )
     {
-        s->peer = *addr;
-        if (remoteAddr->sin_addr.s_addr == 0 && remoteAddr->sin_port == 0)
-        {
-            s->isConnected = FALSE;
-        }
-        else
-        {
-            s->isConnected = TRUE;
-        }
-        return 0;
+      s->peer = *addr;
+      if ( remoteAddr->sin_addr.s_addr == 0 && remoteAddr->sin_port == 0 )
+	{
+	  s->isConnected = FALSE;
+	}
+      else
+	{
+	  s->isConnected = TRUE;
+	}
+      return 0;
     }
-    else
+  else
     {
-        return -1;
-    }
-}
-
-int __cdecl getpeername(int socket, struct sockaddr *addr, int *addrlen)
-{
-    PSOCKET s = (PSOCKET) -socket;
-
-    if (!s->isConnected || addr == NULL || addrlen == NULL || *addrlen < sizeof(struct sockaddr_in))
-    {
-        return -1;
-    }
-
-    *addr = s->peer;
-    *addrlen = sizeof(s->peer);
-
-    return 0;
-}
-
-int __cdecl getsockname(int socket, struct sockaddr *addr, int *addrlen)
-{
-    PSOCKET s = (PSOCKET) -socket;
-    struct sockaddr_in* localAddr = (struct sockaddr_in*) addr;
-
-    if (!s->isBound || addr == NULL || addrlen == NULL || *addrlen < sizeof(struct sockaddr_in))
-    {
-        return -1;
-    }
-
-    if (s->type == SOCK_DGRAM)
-    {
-        *addrlen = sizeof(struct sockaddr_in);
-
-        return tdi_query_address(
-            s->addressFileObject,
-            &localAddr->sin_addr.s_addr,
-            &localAddr->sin_port
-            );
-    }
-    else if (s->type == SOCK_STREAM)
-    {
-        *addrlen = sizeof(struct sockaddr_in);
-
-        return tdi_query_address(
-            s->streamSocket && s->streamSocket->connectionFileObject ? s->streamSocket->connectionFileObject : s->addressFileObject,
-            &localAddr->sin_addr.s_addr,
-            &localAddr->sin_port
-            );
-    }
-    else
-    {
-        return -1;
+      return -1;
     }
 }
 
-int __cdecl getsockopt(int socket, int level, int optname, char *optval, int *optlen)
+int __cdecl
+getpeername (
+  int socket,
+  struct sockaddr *addr,
+  int *addrlen
+ )
 {
-    return -1;
+  PSOCKET s = ( PSOCKET ) - socket;
+
+  if ( !s->isConnected || addr == NULL || addrlen == NULL
+       || *addrlen < sizeof ( struct sockaddr_in ) )
+    {
+      return -1;
+    }
+
+  *addr = s->peer;
+  *addrlen = sizeof ( s->peer );
+
+  return 0;
 }
 
-int __cdecl listen(int socket, int backlog)
+int __cdecl
+getsockname (
+  int socket,
+  struct sockaddr *addr,
+  int *addrlen
+ )
 {
-    return -1;
-}
+  PSOCKET s = ( PSOCKET ) - socket;
+  struct sockaddr_in *localAddr = ( struct sockaddr_in * )addr;
 
-int __cdecl recv(int socket, char *buf, int len, int flags)
-{
-    PSOCKET s = (PSOCKET) -socket;
-
-    if (s->type == SOCK_DGRAM)
+  if ( !s->isBound || addr == NULL || addrlen == NULL
+       || *addrlen < sizeof ( struct sockaddr_in ) )
     {
-        return recvfrom(socket, buf, len, flags, 0, 0);
+      return -1;
     }
-    else if (s->type == SOCK_STREAM)
-    {
-        if (!s->isConnected)
-        {
-            return -1;
-        }
 
-        return tdi_recv_stream(
-            s->streamSocket->connectionFileObject,
-            buf,
-            len,
-            flags == MSG_OOB ? TDI_RECEIVE_EXPEDITED : TDI_RECEIVE_NORMAL
-            );
+  if ( s->type == SOCK_DGRAM )
+    {
+      *addrlen = sizeof ( struct sockaddr_in );
+
+      return tdi_query_address ( s->addressFileObject,
+				 &localAddr->sin_addr.s_addr,
+				 &localAddr->sin_port );
     }
-    else
+  else if ( s->type == SOCK_STREAM )
     {
-        return -1;
+      *addrlen = sizeof ( struct sockaddr_in );
+
+      return tdi_query_address ( s->streamSocket
+				 && s->streamSocket->
+				 connectionFileObject ? s->streamSocket->
+				 connectionFileObject : s->addressFileObject,
+				 &localAddr->sin_addr.s_addr,
+				 &localAddr->sin_port );
     }
-}
-
-int __cdecl recvfrom(int socket, char *buf, int len, int flags, struct sockaddr *addr, int *addrlen)
-{
-    PSOCKET s = (PSOCKET) -socket;
-    struct sockaddr_in* returnAddr = (struct sockaddr_in*) addr;
-
-    if (s->type == SOCK_STREAM)
+  else
     {
-        return recv(socket, buf, len, flags);
-    }
-    else if (s->type == SOCK_DGRAM)
-    {
-        u_long* sin_addr = 0;
-        u_short* sin_port = 0;
-
-        if (!s->isBound)
-        {
-            return -1;
-        }
-
-        if (addr != NULL && addrlen != NULL && *addrlen >= sizeof(struct sockaddr_in))
-        {
-            sin_addr = &returnAddr->sin_addr.s_addr;
-            sin_port = &returnAddr->sin_port;
-            *addrlen = sizeof(struct sockaddr_in);
-        }
-
-        return tdi_recv_dgram(
-            s->addressFileObject,
-            sin_addr,
-            sin_port,
-            buf,
-            len,
-            TDI_RECEIVE_NORMAL
-            );
-    }
-    else
-    {
-        return -1;
+      return -1;
     }
 }
 
-int __cdecl select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, const struct timeval *timeout)
+int __cdecl
+getsockopt (
+  int socket,
+  int level,
+  int optname,
+  char *optval,
+  int *optlen
+ )
 {
-    return -1;
+  return -1;
 }
 
-int __cdecl send(int socket, const char *buf, int len, int flags)
+int __cdecl
+listen (
+  int socket,
+  int backlog
+ )
 {
-    PSOCKET s = (PSOCKET) -socket;
-
-    if (!s->isConnected)
-    {
-        return -1;
-    }
-
-    if (s->type == SOCK_DGRAM)
-    {
-        return sendto(socket, buf, len, flags, &s->peer, sizeof(s->peer));
-    }
-    else if (s->type == SOCK_STREAM)
-    {
-        return tdi_send_stream(
-            s->streamSocket->connectionFileObject,
-            buf,
-            len,
-            flags == MSG_OOB ? TDI_SEND_EXPEDITED : 0
-            );
-    }
-    else
-    {
-        return -1;
-    }
+  return -1;
 }
 
-int __cdecl sendto(int socket, const char *buf, int len, int flags, const struct sockaddr *addr, int addrlen)
+int __cdecl
+recv (
+  int socket,
+  char *buf,
+  int len,
+  int flags
+ )
 {
-    PSOCKET s = (PSOCKET) -socket;
-    const struct sockaddr_in* remoteAddr = (const struct sockaddr_in*) addr;
+  PSOCKET s = ( PSOCKET ) - socket;
 
-    if (s->type == SOCK_STREAM)
+  if ( s->type == SOCK_DGRAM )
     {
-        return send(socket, buf, len, flags);
+      return recvfrom ( socket, buf, len, flags, 0, 0 );
     }
-    else if (s->type == SOCK_DGRAM)
+  else if ( s->type == SOCK_STREAM )
     {
-        if (addr == NULL || addrlen < sizeof(struct sockaddr_in))
-        {
-            return -1;
-        }
+      if ( !s->isConnected )
+	{
+	  return -1;
+	}
 
-        if (!s->isBound)
-        {
-            struct sockaddr_in localAddr;
-            NTSTATUS status;
-
-            localAddr.sin_family = AF_INET;
-            localAddr.sin_port = 0;
-            localAddr.sin_addr.s_addr = INADDR_ANY;
-
-            status = bind(socket, (struct sockaddr*) &localAddr, sizeof(localAddr));
-
-            if (!NT_SUCCESS(status))
-            {
-                return status;
-            }
-        }
-
-        return tdi_send_dgram(
-            s->addressFileObject,
-            remoteAddr->sin_addr.s_addr,
-            remoteAddr->sin_port,
-            buf,
-            len
-            );
+      return tdi_recv_stream ( s->streamSocket->connectionFileObject, buf, len,
+			       flags ==
+			       MSG_OOB ? TDI_RECEIVE_EXPEDITED :
+			       TDI_RECEIVE_NORMAL );
     }
-    else
+  else
     {
-        return -1;
+      return -1;
     }
 }
 
-int __cdecl setsockopt(int socket, int level, int optname, const char *optval, int optlen)
+int __cdecl
+recvfrom (
+  int socket,
+  char *buf,
+  int len,
+  int flags,
+  struct sockaddr *addr,
+  int *addrlen
+ )
 {
-    return -1;
+  PSOCKET s = ( PSOCKET ) - socket;
+  struct sockaddr_in *returnAddr = ( struct sockaddr_in * )addr;
+
+  if ( s->type == SOCK_STREAM )
+    {
+      return recv ( socket, buf, len, flags );
+    }
+  else if ( s->type == SOCK_DGRAM )
+    {
+      u_long *sin_addr = 0;
+      u_short *sin_port = 0;
+
+      if ( !s->isBound )
+	{
+	  return -1;
+	}
+
+      if ( addr != NULL && addrlen != NULL
+	   && *addrlen >= sizeof ( struct sockaddr_in ) )
+	{
+	  sin_addr = &returnAddr->sin_addr.s_addr;
+	  sin_port = &returnAddr->sin_port;
+	  *addrlen = sizeof ( struct sockaddr_in );
+	}
+
+      return tdi_recv_dgram ( s->addressFileObject, sin_addr, sin_port, buf,
+			      len, TDI_RECEIVE_NORMAL );
+    }
+  else
+    {
+      return -1;
+    }
 }
 
-int __cdecl shutdown(int socket, int how)
+int __cdecl
+select (
+  int nfds,
+  fd_set * readfds,
+  fd_set * writefds,
+  fd_set * exceptfds,
+  const struct timeval *timeout
+ )
 {
-    PSOCKET s = (PSOCKET) -socket;
+  return -1;
+}
 
-    if (!s->isConnected)
+int __cdecl
+send (
+  int socket,
+  const char *buf,
+  int len,
+  int flags
+ )
+{
+  PSOCKET s = ( PSOCKET ) - socket;
+
+  if ( !s->isConnected )
     {
-        return -1;
+      return -1;
     }
 
-    if (s->type == SOCK_STREAM)
+  if ( s->type == SOCK_DGRAM )
     {
-        s->isShuttingdown = TRUE;
-        return tdi_disconnect(s->streamSocket->connectionFileObject, TDI_DISCONNECT_RELEASE);
+      return sendto ( socket, buf, len, flags, &s->peer, sizeof ( s->peer ) );
     }
-    else
+  else if ( s->type == SOCK_STREAM )
     {
-        return -1;
+      return tdi_send_stream ( s->streamSocket->connectionFileObject, buf, len,
+			       flags == MSG_OOB ? TDI_SEND_EXPEDITED : 0 );
+    }
+  else
+    {
+      return -1;
     }
 }
 
-int __cdecl socket(int af, int type, int protocol)
+int __cdecl
+sendto (
+  int socket,
+  const char *buf,
+  int len,
+  int flags,
+  const struct sockaddr *addr,
+  int addrlen
+ )
 {
-    PSOCKET s;
+  PSOCKET s = ( PSOCKET ) - socket;
+  const struct sockaddr_in *remoteAddr = ( const struct sockaddr_in * )addr;
 
-    if (af != AF_INET ||
-       (type != SOCK_DGRAM && type != SOCK_STREAM) ||
-       (type == SOCK_DGRAM && protocol != IPPROTO_UDP && protocol != 0) ||
-       (type == SOCK_STREAM && protocol != IPPROTO_TCP && protocol != 0)
-       )
+  if ( s->type == SOCK_STREAM )
     {
-        return STATUS_INVALID_PARAMETER;
+      return send ( socket, buf, len, flags );
+    }
+  else if ( s->type == SOCK_DGRAM )
+    {
+      if ( addr == NULL || addrlen < sizeof ( struct sockaddr_in ) )
+	{
+	  return -1;
+	}
+
+      if ( !s->isBound )
+	{
+	  struct sockaddr_in localAddr;
+	  NTSTATUS status;
+
+	  localAddr.sin_family = AF_INET;
+	  localAddr.sin_port = 0;
+	  localAddr.sin_addr.s_addr = INADDR_ANY;
+
+	  status =
+	    bind ( socket, ( struct sockaddr * )&localAddr,
+		   sizeof ( localAddr ) );
+
+	  if ( !NT_SUCCESS ( status ) )
+	    {
+	      return status;
+	    }
+	}
+
+      return tdi_send_dgram ( s->addressFileObject,
+			      remoteAddr->sin_addr.s_addr,
+			      remoteAddr->sin_port, buf, len );
+    }
+  else
+    {
+      return -1;
+    }
+}
+
+int __cdecl
+setsockopt (
+  int socket,
+  int level,
+  int optname,
+  const char *optval,
+  int optlen
+ )
+{
+  return -1;
+}
+
+int __cdecl
+shutdown (
+  int socket,
+  int how
+ )
+{
+  PSOCKET s = ( PSOCKET ) - socket;
+
+  if ( !s->isConnected )
+    {
+      return -1;
     }
 
-    s = (PSOCKET) ExAllocatePool(NonPagedPool, sizeof(SOCKET));
-
-    if (!s)
+  if ( s->type == SOCK_STREAM )
     {
-        return STATUS_INSUFFICIENT_RESOURCES;
+      s->isShuttingdown = TRUE;
+      return tdi_disconnect ( s->streamSocket->connectionFileObject,
+			      TDI_DISCONNECT_RELEASE );
+    }
+  else
+    {
+      return -1;
+    }
+}
+
+int __cdecl
+socket (
+  int af,
+  int type,
+  int protocol
+ )
+{
+  PSOCKET s;
+
+  if ( af != AF_INET || ( type != SOCK_DGRAM && type != SOCK_STREAM )
+       || ( type == SOCK_DGRAM && protocol != IPPROTO_UDP && protocol != 0 )
+       || ( type == SOCK_STREAM && protocol != IPPROTO_TCP && protocol != 0 ) )
+    {
+      return STATUS_INVALID_PARAMETER;
     }
 
-    RtlZeroMemory(s, sizeof(SOCKET));
+  s = ( PSOCKET ) ExAllocatePool ( NonPagedPool, sizeof ( SOCKET ) );
 
-    s->type = type;
-    s->addressHandle = (HANDLE) -1;
+  if ( !s )
+    {
+      return STATUS_INSUFFICIENT_RESOURCES;
+    }
 
-    return -(int)s;
+  RtlZeroMemory ( s, sizeof ( SOCKET ) );
+
+  s->type = type;
+  s->addressHandle = ( HANDLE ) - 1;
+
+  return -( int )s;
 }
