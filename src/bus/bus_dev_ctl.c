@@ -36,7 +36,6 @@
 #include "mount.h"
 #include "bus.h"
 #include "debug.h"
-#include "aoe.h"
 #include "filedisk.h"
 
 static

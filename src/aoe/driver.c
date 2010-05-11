@@ -54,6 +54,12 @@ static void STDCALL thread (
   IN void *StartContext
  );
 irp__handler_decl ( aoe__bus_dev_ctl_dispatch );
+static void process_abft (
+  void
+ );
+static void STDCALL unload (
+  IN PDRIVER_OBJECT DriverObject
+ );
 
 /** Tag types */
 enum _tag_type
@@ -682,9 +688,10 @@ err_keyopennetworkclass:
  *
  * @ret Status		Return status code
  */
-static NTSTATUS
-start (
-  void
+NTSTATUS STDCALL
+DriverEntry (
+  IN PDRIVER_OBJECT DriverObject,
+  IN PUNICODE_STRING RegistryPath
  )
 {
   NTSTATUS Status;
@@ -808,7 +815,8 @@ start (
 	irp__reg_table ( &bus_ptr->dev_ext.irp_handler_chain, handling_table );
       }
   }
-  aoe__process_abft (  );
+  DriverObject->DriverUnload = unload;
+  process_abft (  );
   AoE_Globals_Started = TRUE;
   DBG ( "Exit\n" );
   return Status;
@@ -817,9 +825,9 @@ start (
 /**
  * Stop AoE operations
  */
-void
-AoE_Stop (
-  void
+static void STDCALL
+unload (
+  IN PDRIVER_OBJECT DriverObject
  )
 {
   NTSTATUS Status;
@@ -972,11 +980,6 @@ disk__init_decl (
   aoe_disk_type_ptr aoe_disk_ptr;
 
   aoe_disk_ptr = get_aoe_disk_ptr ( &disk_ptr->dev_ext );
-  if ( !NT_SUCCESS ( start (  ) ) )
-    {
-      DBG ( "AoE startup failure!\n" );
-      return FALSE;
-    }
   /*
    * Allocate our disk search 
    */
@@ -2102,8 +2105,8 @@ static disk__ops default_ops = {
   close
 };
 
-void
-aoe__process_abft (
+static void
+process_abft (
   void
  )
 {
@@ -2202,7 +2205,6 @@ irp__handler_decl (
   aoe__mount_targets_ptr targets;
 
   DBG ( "Got IOCTL_AOE_SCAN...\n" );
-  start (  );
   KeAcquireSpinLock ( &AoE_Globals_TargetListSpinLock, &irql );
 
   count = 0;

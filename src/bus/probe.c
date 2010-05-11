@@ -37,7 +37,6 @@
 #include "bus.h"
 #include "debug.h"
 #include "bus.h"
-#include "aoe.h"
 #include "ramdisk.h"
 #include "memdisk.h"
 #include "grub4dos.h"
@@ -78,9 +77,6 @@ probe__disks (
   void
  )
 {
-#ifndef SPLIT_AOE
-  aoe__process_abft (  );
-#endif
   memdisk__find (  );
   grub4dos__find (  );
 }

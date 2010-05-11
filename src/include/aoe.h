@@ -97,11 +97,5 @@ winvblock__def_struct ( aoe__mount_disks )
 extern void aoe__reset_probe (
   void
  );
-extern void AoE_Stop (
-  void
- );
-extern void aoe__process_abft (
-  void
- );
 
 #endif				/* _AOE_H */
