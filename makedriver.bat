@@ -70,7 +70,7 @@ echo TARGETTYPE=EXPORT_DRIVER >> sources
 echo TARGETPATH=obj >> sources
 echo TARGETLIBS=$(DDK_LIB_PATH)\\ndis.lib >> sources
 echo SOURCES=%c% >> sources
-echo C_DEFINES=-DPROJECT_BUS=1 >> sources
+echo C_DEFINES=-DPROJECT_BUS=1 -DSPLIT_AOE=1>> sources
 echo NAME %name%.sys> %name%.def
 build
 copy obj%obj%\%arch%\%name%.sys ..\..\bin >nul

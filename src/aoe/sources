@@ -1,0 +1,7 @@
+INCLUDES=..\include
+TARGETNAME=aoe32
+TARGETTYPE=DRIVER
+TARGETPATH=obj
+TARGETLIBS=$(DDK_LIB_PATH)\\ndis.lib ..\\..\\bin\\wvblk32.lib
+SOURCES=driver.c protocol.c
+C_DEFINES=-DPROJECT_AOE=1
