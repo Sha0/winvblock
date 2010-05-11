@@ -103,7 +103,7 @@ static PCHAR STDCALL Debug_SCSIOPString (
   IN winvblock__uint8 OperationCode
  );
 
-NTSTATUS STDCALL
+winvblock__lib_func NTSTATUS STDCALL
 xDbgPrint (
   IN PCHAR File,
   IN PCHAR Function,

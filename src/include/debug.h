@@ -48,7 +48,7 @@ xDbgPrint ( __FILE__, ( const PCHAR )__FUNCTION__, \
 /* Define to enable verbose IRP debugging output */
 #  undef DEBUGIRPS
 
-extern NTSTATUS STDCALL xDbgPrint (
+extern winvblock__lib_func NTSTATUS STDCALL xDbgPrint (
   IN PCHAR File,
   IN PCHAR Function,
   IN winvblock__uint32 Line
