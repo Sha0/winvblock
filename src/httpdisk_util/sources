@@ -1,0 +1,7 @@
+TARGETNAME=httpdisk
+TARGETPATH=obj
+TARGETTYPE=PROGRAM
+UMTYPE=console
+INCLUDES=..\sys\inc
+TARGETLIBS=$(SDK_LIB_PATH)\ws2_32.lib
+SOURCES=httpdisk.c httpdisk.rc

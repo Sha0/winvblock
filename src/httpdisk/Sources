@@ -1,0 +1,6 @@
+TARGETNAME=httpdisk
+TARGETPATH=..\obj
+TARGETTYPE=DRIVER
+TARGETLIBS=$(SDK_LIB_PATH)\libcntpr.lib
+INCLUDES=..\inc;$(DDK_INC_PATH);$(BASEDIR)\src\network\inc
+SOURCES=ksocket.c ktdi.c httpdisk.c httpdisk.rc
