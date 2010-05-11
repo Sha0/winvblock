@@ -138,7 +138,7 @@ struct _driver__dev_ext
   driver__dev_ops_ptr ops;
 };
 
-extern void STDCALL Driver_CompletePendingIrp (
+extern winvblock__lib_func void STDCALL Driver_CompletePendingIrp (
   IN PIRP Irp
  );
 /*

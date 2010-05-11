@@ -321,7 +321,7 @@ Driver_Unload (
   DBG ( "Done\n" );
 }
 
-void STDCALL
+winvblock__lib_func void STDCALL
 Driver_CompletePendingIrp (
   IN PIRP Irp
  )
