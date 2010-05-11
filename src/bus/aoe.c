@@ -808,6 +808,7 @@ start (
 	irp__reg_table ( &bus_ptr->dev_ext.irp_handler_chain, handling_table );
       }
   }
+  aoe__process_abft (  );
   AoE_Globals_Started = TRUE;
   DBG ( "Exit\n" );
   return Status;
@@ -836,6 +837,10 @@ AoE_Stop (
    */
   if ( !AoE_Globals_Started )
     return;
+  /*
+   * Stop the AoE protocol
+   */
+  Protocol_Stop (  );
   /*
    * If we're not already shutting down, signal the event 
    */

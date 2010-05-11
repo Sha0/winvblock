@@ -35,7 +35,6 @@
 #include "driver.h"
 #include "disk.h"
 #include "registry.h"
-#include "protocol.h"
 #include "mount.h"
 #include "aoe.h"
 #include "bus.h"
@@ -199,8 +198,9 @@ DriverEntry (
 			   NULL, FALSE, &bus_pdo_ptr );
   if ( !NT_SUCCESS ( Status = Bus_AddDevice ( DriverObject, bus_pdo_ptr ) ) )
     {
-      Protocol_Stop (  );
+#ifndef SPLIT_AOE
       AoE_Stop (  );
+#endif
       return Error ( "Bus_AddDevice", Status );
     }
 
@@ -313,8 +313,9 @@ Driver_Unload (
 {
   if ( Driver_Globals_StateHandle != NULL )
     PoUnregisterSystemState ( Driver_Globals_StateHandle );
-  Protocol_Stop (  );
+#ifndef SPLIT_AOE
   AoE_Stop (  );
+#endif
   Bus_Stop (  );
   ExFreePool ( os_load_opts );
   Driver_Globals_Started = FALSE;

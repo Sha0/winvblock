@@ -38,10 +38,12 @@
 #include "debug.h"
 #include "probe.h"
 
+#ifndef SPLIT_AOE
 /* Temporarily here so it can be in the mini IRP handling table */
 extern irp__handler_decl (
   aoe__bus_dev_ctl_dispatch
  );
+#endif
 
 PDEVICE_OBJECT bus_fdo = NULL;
 
@@ -172,8 +174,10 @@ static irp__handling handling_table[] = {
   ,
   {IRP_MJ_DEVICE_CONTROL, 0, FALSE, TRUE, bus_dev_ctl__dispatch}
   ,
+#ifndef SPLIT_AOE
   {IRP_MJ_DEVICE_CONTROL, 0, FALSE, TRUE, aoe__bus_dev_ctl_dispatch}
   ,
+#endif
   {IRP_MJ_PNP, 0, FALSE, TRUE, bus_pnp__simple}
   ,
   {IRP_MJ_PNP, IRP_MN_START_DEVICE, FALSE, FALSE, bus_pnp__start_dev}

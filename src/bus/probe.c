@@ -78,7 +78,9 @@ probe__disks (
   void
  )
 {
+#ifndef SPLIT_AOE
   aoe__process_abft (  );
+#endif
   memdisk__find (  );
   grub4dos__find (  );
 }
