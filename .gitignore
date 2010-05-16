@@ -4,3 +4,9 @@ bin
 obj
 sizes.txt
 WinVBlock.layout
+*~
+*.err
+*.log
+*.wrn
+objchk*
+objfre*
