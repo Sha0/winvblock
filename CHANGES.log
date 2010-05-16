@@ -1,4 +1,587 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun May 16 17:23:51 2010 -0400
+
+    [version] Up version to 0.0.1.7
+    
+    This version sees a couple of changes:
+    
+    - AoE has been split off as a separate driver that depends
+    on the WinVBlock bus driver.  This removes the bus driver's
+    dependency on NDIS.SYS.  You can boot from an AoE disk still,
+    but pay attention to the service load order; you want NDIS to
+    load first, then your NIC's driver, then WinVBlock, then AoE.
+    
+    - Geometry detection has been added for file-backed disks, so
+    you can hopefully do:
+    
+      winvblk attach c:\foo.hdd h 0 0 0
+    
+    and get the right geometry.
+    
+    - We now always create a root-enumerated bus device.  There's
+    no longer a need to add the /WINVBLOCK=BUS=1 option to the
+    BOOT.INI or TXTSETUP.SIF files.
+
+commit 908b420c949dc11e0a9318fd7643ee7a5c649227
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun May 16 17:19:37 2010 -0400
+
+    [aoe] Add files to support 64-bit compilation
+    
+    As in, AMD64/x64...  Not Itanium/IA-64.
+
+commit e1b6cf336cdb93323302fe1afcdae1782a36bfe5
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun May 16 17:17:45 2010 -0400
+
+    [project] Add to git ignore file
+    
+    Ignore warning, error, log files.  Ignore object
+    directories.
+
+commit 5200bee416645443b0ee672263d9bc30fa0ed365
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun May 16 15:18:38 2010 -0400
+
+    [bus/disk,bus/filedisk] Add geometry detection
+    
+    Now you can specify something like:
+    
+      winvblk attach c:\foo.hdd h 0 0 0
+    
+    and geometry detection will be attempted when the first
+    sector of the disk is accessed.  We use some of the logic
+    from H. Peter Anvin's MEMDISK to look at FAT and MBR
+    params.
+
+commit 2549ed2921c3d63e38a609da89acb16101fdd0c9
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 23:41:12 2010 -0400
+
+    [httpdisk] Apply WinVBlock-as-usual indentation
+
+commit c108b940d666d462e0cbb30356fbe25f63ee1f36
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 23:38:24 2010 -0400
+
+    [httpdisk] Dos2Unix source files
+
+commit 1fb699648a5bc32fc40de044ce70fb427cb8eddc
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 23:32:34 2010 -0400
+
+    [httpdisk] Support compilation under DDK 6001.18001
+    
+    A couple of changes so that HTTPDisk and its mounting
+    utility compile under the Windows Driver Development Kit
+    version 6001.18001, which is what I've been using for
+    WinVBlock.
+
+commit 6d26bad9697bd83101172cbb525d26ddb40a905c
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 22:54:49 2010 -0400
+
+    [httpdisk] Initial population into WinVBlock repository
+    
+    The extremely nice work of Bo Brantén found at:
+    
+    http://www.acc.umu.se/~bosse/
+    
+    includes HTTPDisk, a read-only HTTP SAN driver, of sorts.
+    
+    He has very kindly provided permission for its incorporation
+    into WinVBlock.  It will be developed to be a "feature
+    driver", just as AoE is a "feature driver".
+    
+    Please note that HTTPDisk is GPLv2 or any later version.
+
+commit 1037e1e1bf67392404c63f535ab22dc267499025
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 22:05:58 2010 -0400
+
+    [project] Split AoE off, part 3
+    
+    At last, the unfortunately monolithic AoE module can be
+    separated from the bus, RAM disk and file-backed disk
+    code.  This is the final part of the estimated 3 commits.
+    
+    Now that AoE is its own driver, but dependent on WinVBlock,
+    we have to consider the service load order in a booted-from
+    scenario.
+    
+    I've re-ordered HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\
+    Control\ServiceGroupOrder\ : List : REG_MULTI_SZ as follows:
+    
+    ...
+    System Bus Extender
+    * NDIS Wrapper
+    * NDIS
+    SCSI miniport
+    ...
+    
+    Instead of:
+    
+    ...
+    System Bus Extender
+    SCSI miniport
+    ...
+    Streams Drivers
+    * NDIS Wrapper
+    COM Infrastructure
+    ...
+    PNP_TDI
+    * NDIS
+    TDI
+    ...
+    
+    And I use the following Group values for the two drivers:
+    
+    ...\Services\WinVBlock : Group : REG_SZ : SCSI miniport
+    ...\Services\AoE : Group : REG_SZ : SCSI Class
+    
+    And of course as usual, you will want your NIC driver set
+    to boot-start.  Loading should thus be ordered as follows:
+    
+    NDIS
+    NIC driver
+    WinVBlock
+    AoE
+
+commit 0e3582a09583afc01260f7d1ddaf3ee6d22050d1
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 21:40:43 2010 -0400
+
+    [project] Split AoE off, part 2
+    
+    At last, the unfortunately monolithic AoE module can be
+    separated from the bus, RAM disk and file-backed disk
+    code.  This is part 2 of an estimated 3 commits.  Do not
+    expect AoE to work until the third commit.
+
+commit 3df7614b527e16a04b54907812c8aca7344bb42d
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 21:33:11 2010 -0400
+
+    [project] Split AoE off, part 1
+    
+    At last, the unfortunately monolithic AoE module can be
+    separated from the bus, RAM disk and file-backed disk
+    code.  This is part 1 of an estimated 3 commits.  Do not
+    expect AoE to work until the third commit.
+
+commit 171f46360ac507ad261c21006c8ab3af5fa5a0f9
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 20:13:00 2010 -0400
+
+    [debug] Export xDbgPrint
+    
+    Because AoE (and every other module) uses it.
+
+commit 7726ae5bc2d49c992ebd2ade36cd51efb100bd34
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 20:09:34 2010 -0400
+
+    [driver] Export Driver_CompletePendingIrp
+    
+    Because AoE uses it. *sigh*  I'm in a hurry to finish this
+    split so that AoE can be its own driver.
+
+commit 5b532480e2edb02e237242bd044e0bb62e78c5a6
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 15:26:16 2010 -0400
+
+    [disk] Export disk device operations
+    
+    Because AoE uses them.
+
+commit 785957d74fae19dedea8ac37debe383246906f1a
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 15:17:52 2010 -0400
+
+    [aoe] Implement a disk close routine
+    
+    To avoid referencing the disk__default_close() function in
+    the disk module.
+
+commit 4209907fabccc3e26e7146671f4cf428949fcb42
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 15:11:24 2010 -0400
+
+    [driver] Export Error function
+    
+    Because AoE uses it.
+
+commit 281a67e2a8e75c825aa110982b1592f198e3b850
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 15:02:58 2010 -0400
+
+    [bus,aoe,irp] AoE mini IRP handling in AoE module
+    
+    The bus module pretty well needs to expose the bus device to
+    other drivers so that they can register their mini IRP
+    handling tables with it.  bus__dev() now yields the FDO.
+    
+    The un-register function was mis-named in the IRP module.
+    
+    We are now registering the AoE IOCTL handling twice, but
+    this is not a big deal.  When AoE is finally split off,
+    the bus module will no longer register anything AoE-related.
+
+commit 356ee317a0a8c9eb0e85fe1edffe9a9853643b99
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 14:13:57 2010 -0400
+
+    [project] Change get_XXX_ptr to preprocessor macro
+    
+    I don't think the inline specifier was working anyway.
+
+commit 7feecadb08d7f09fb745ac1b68090ef3656db8e6
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 13:57:18 2010 -0400
+
+    [bus] bus__add_child only uses the single bus
+    
+    The bus__add_child() function has been modified to simply
+    use the only bus device we allow, rather than taking an
+    argument.  Also, we invalidate the bus relations instead
+    of the caller.
+
+commit dc26e3d56f44ae23c8f9d1523b7d9ce9cc853a87
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 13:18:01 2010 -0400
+
+    [registry,aoe] Move AoE Registry setup into AoE module
+    
+    AoE needs to register its protocol with NDIS and also does
+    some Registry manipulation.  This logic has been moved from
+    the Registry module into the AoE module (which is getting
+    quite monolithic now).  This is still towards splitting AoE
+    into its own driver.
+
+commit 819355c4ba81c161345489c7c8568e32155a5f2f
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 12:40:32 2010 -0400
+
+    [registry] Change Registry_NoteOsLoadOptions function
+    
+    Renamed to registry__note_os_load_opts().  Now takes an
+    argument instead of storing directly to a global in the
+    driver module.
+    
+    We also free this from the driver module at driver unload
+    time, as well.
+
+commit 5ffbd67823df15e624c55790e8f5744b6b11832f
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 12:12:53 2010 -0400
+
+    [registry] Export handy functions by Michael Brown
+    
+    AoE will want to do some Registry manipulation once it has
+    been split from WinVBlock, so we might as well export some
+    functions it (or other future drivers) could make use of.
+
+commit b05c54be05c1c881d9ae482db41a26780c414230
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 10 11:54:06 2010 -0400
+
+    [aoe] Do not truncate fractional end cylinder
+    
+    Ran into problems with AoE to a disk image with geometry
+    constrained to QEmu's expectations.  We used to truncate
+    a fractional end cylinder for the disk, but this has been
+    changed with the hopes that most disk consumers will use
+    LBA.
+    
+    We should really address the FIXME and use geometry from
+    the MBR.
+
+commit 481bdb089027a722eac1f514bbb5c75ea3a7bf15
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun May 9 18:39:36 2010 -0400
+
+    [project] Match Entry messages with Exit messages
+    
+    Simply output messages when functions return via the
+    "usual" or expected path, so we can track entry and exit.
+
+commit 0a40d1be143310c2dce11d05f1598457b175267f
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat May 8 16:12:55 2010 -0400
+
+    [aoe_ioctl] Merge header into AoE header
+    
+    Also moved a single extern function declaration needed
+    by the AoE protocol module right into the protocol
+    module itself, thus avoiding complications for the
+    user-space "mount" utility having to know about the DDK.
+
+commit 13ed736ced14a4cd339b491a29d8cbb8452aa23c
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat May 8 15:59:59 2010 -0400
+
+    [aoe] Make AoE_Start private
+    
+    Renamed to start().  Only the AoE module uses it.
+
+commit 6701e254d2fc02c1c7850a728f6b9b0ead3843ce
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat May 8 15:56:28 2010 -0400
+
+    [aoe] Rename AoE_ResetProbe to aoe__reset_probe
+    
+    Used by the AoE protocol module, too.
+
+commit b1a3cc9a7fb8de3fce5c6e4887455ac413a926e8
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat May 8 15:54:19 2010 -0400
+
+    [aoe] Rename AoE_Reply to aoe__reply
+    
+    Used by the AoE protocol module, too.
+
+commit 4525af4ffb801aee5895f480b204cebed2fb78ce
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat May 8 15:50:12 2010 -0400
+
+    [aoe] Make AoE disk operations private
+    
+    An amendment to commit
+    818ebaaf58fcfbad04c7760ca4db1edfb4d146f1
+
+commit 02d2e86e21d7ae3dbf078a18bd511cf30bdf0860
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat May 8 15:46:51 2010 -0400
+
+    [aoe] Make aoe__target_list private
+    
+    An amendment to commit
+    793f876c1aa0dddff0d9b2f402ed105e0f7a89b5
+
+commit 818ebaaf58fcfbad04c7760ca4db1edfb4d146f1
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat May 8 15:42:59 2010 -0400
+
+    [aoe] Make AoE disk operations private
+
+commit 71d0b1eb484ca68804541148f9ca39e34cf1650d
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat May 8 15:40:35 2010 -0400
+
+    [aoe] Rename aoe__get_disk_ptr to get_aoe_disk_ptr
+    
+    Since it's entirely within the AoE module now.
+
+commit 793f876c1aa0dddff0d9b2f402ed105e0f7a89b5
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat May 8 15:38:39 2010 -0400
+
+    [aoe] Make aoe__target_list private
+    
+    Only AoE functions need to know the AoE target_list
+    type now.
+
+commit 2e84efe9b7747ee0b4f184d5cc575a699936b116
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat May 8 15:30:42 2010 -0400
+
+    [aoe] Make AoE search_state private
+    
+    Only AoE functions need to know about the search_state
+    enumeration now.
+
+commit 30d11d5b622caa47a6d57470e6964032ed20f611
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat May 8 15:27:51 2010 -0400
+
+    [aoe] Make aoe__disk_type private
+    
+    Only AoE functions need to know about this type now.
+
+commit 5110aec0e75bdce0d0f3b3a2100a9ad64cf9244e
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat May 8 13:53:05 2010 -0400
+
+    [bus/bus_dev_ctl,bus/aoe] Move AoE IOCTLs into AoE module
+    
+    Still in the process of splitting AoE off, we move AoE-
+    specific IOCTL handling into the AoE module.
+
+commit bb0cc2d79dfbfbc8ac90f8815653f3e867819ec1
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sat May 8 12:35:20 2010 -0400
+
+    [bus/disk] Fix uninitialized mini IRP handling table chain
+    
+    Before registering a mini IRP handling table with a device,
+    we should really make sure the chain of tables is empty.
+    Oops.
+
+commit 4ce836b52af4afb5bc39e82f108f9e46ba8bd76e
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri May 7 20:37:19 2010 -0400
+
+    [mount,aoe] Move AoE IOCTLs into their own file
+    
+    Starting to split AoE from the rest.
+
+commit 0f090193e606d935165ae8ba4428a52d15939948
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri May 7 17:33:43 2010 -0400
+
+    [irp] Use mini IRP handling chain
+    
+    When an IRP dispatch comes in, we special-case a power
+    IRP, or pass the IRP along to irp__process().
+    
+    irp__process() will walk each table of IRP handlings
+    in the device's chain of registered tables, looking for
+    an IRP handling that matches the IRP major and minor
+    codes.  This is roughly similar to the PDO stacked
+    beneath multiple FDOs approach, but just a little less
+    complex and with perhaps less memory and management
+    overhead.
+    
+    A feature (provided by a driver) can register handled
+    IRP types on a device, then WinVBlock should use that
+    feature's functions to process the IRP.  I hope WinVBlock
+    can call functions in another driver in this way. :)
+    
+    So now when a bus or disk device is created, the default
+    driver IRP handling table is registered as well as the
+    device-specific handling table (bus or disk).  We used
+    to manually build a large table with these tables copied
+    into it, but not anymore.
+
+commit c6ca22ad43a0db18c807bb5dcc5e48ccffff3fd2
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri May 7 10:53:21 2010 -0400
+
+    [irp] Move mini IRP handling into its own module
+    
+    We introduce bus/irp.c for the miniature IRP handling logic.
+    
+    We also introduce code for an IRP handling table chain.  The
+    goal of such a chain is to allow IRP handlings to be
+    dynamically added and removed for a device.  An example use
+    would be for the AoE system to register IOCTL handling with
+    the WinVBlock bus device, so that the bus processes the
+    IOCTLs.  If the AoE system is unloaded, it should be able to
+    un-register the handling of these IOCTLs.
+    
+    Currently, the IRP handling table chain is not used, but
+    this will change in a future commit.
+
+commit 5e000d42647f5afb63a2c74061f7199d157c164e
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu May 6 19:54:07 2010 -0400
+
+    [headers] Introduce generic pointer type
+    
+    We include winvblock__any_ptr to represent a void *.
+
+commit 2c9dc5bd3ec4e100fe0e583758500e1982e9170f
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed May 5 19:15:10 2010 -0400
+
+    [bus/bus] Remove STDCALL for argless func
+    
+    Bus_Stop() takes no arguments, so it doesn't need the
+    STDCALL specifier.
+
+commit ba1d96bbb2254e9f9a9ff5ee59172e1fff167c98
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Wed May 5 19:12:34 2010 -0400
+
+    [bus/driver] Remove reinitialization declaration
+    
+    Should have been removed in commit
+    3afe1fddd34f0e0187dca6bb569d9f8353aab07a
+
+commit 32a89e9dd90e58b98b48a124d6e3760ec706440c
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue May 4 18:43:14 2010 -0400
+
+    [build] Build bus driver to provide exports
+    
+    Using the helpful information at this web page[1], we
+    now compile to provide a .LIB so that other drivers
+    can link against it and use functions that we might
+    choose to export.
+    
+    Export functions by beginning with winvblock__lib_func
+    in the declaration.
+    
+    [1] http://www.wd-3.com/archive/KernelDlls.htm
+        Tim Roberts
+
+commit 3f338d2b7296009a8fd5714837da328b4f15bb29
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 3 14:57:31 2010 -0400
+
+    [bus/driver] Always create the root-enumerated bus dev
+    
+    Instead of requiring the user to specify a BOOT.INI/TXTSETUP.SIF
+    /WINVBLOCK=BUS=1 option, we will simply always provide a root-
+    enumerated bus device.  It's probably less complicated that way.
+
+commit 4e3103dec6b4e6d753f92bca5c9831fb2040c608
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Apr 30 19:10:11 2010 -0400
+
+    [devel] Update wxDev-C++ project file
+    
+    Should reflect directory & file shuffling
+
+commit a9408bd55b72c40de677ddc4ee9c3471178b5ccd
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Apr 30 19:03:07 2010 -0400
+
+    [build] Move majority of code into bus subdir
+    
+    The plan is to split AoE functionality off into its own driver,
+    to avoid WinVBlock's dependency on NDIS for those users who
+    do not require or desire the AoE feature.
+    
+    Similarly, future features with dependencies can have their own
+    directories and their own .SYS drivers.
+    
+    For now, all driver code including AoE has been moved into bus/,
+    but AoE will eventually come out of there.
+    
+    A strategy needs to be determined to allow for the single bus
+    device to accept features in a modular fashion, and to route
+    applicable feature-wide control signals to each feature's driver.
+    
+    For example, the WinVBlock bus (an "HDD controller" of sorts) can
+    support certain virtual disk types natively.  When an AoE driver
+    starts, it could look for the bus and register itself as a
+    feature if the bus is found.  Thenceforth, a user-land utility
+    could request an AoE-attach of the WinVBlock bus, who could forward
+    that request on to the AoE driver.
+
+commit c07f380b83d69643dbb01a9c68a32dd49e175511
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Apr 30 17:26:12 2010 -0400
+
+    [build] Move userland utility into subdir
+
+commit bdd8c75f0dbe3bcda2fff3a3fad548bad77030e0
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Apr 30 17:16:05 2010 -0400
+
+    [build] Move driver loader into subdir
+
+commit 5143a3b691e6e11c559d32635efddf3002572f38
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri Apr 30 16:15:48 2010 -0400
+
+    [build] Move PXE NBP sources into nbp subdir
+    
+    It's time to re-organize the project's directory structure.
+
+commit 41d3e4ac4ae6099115d64f57c4b325a788d977bd
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Thu Jan 14 14:19:19 2010 -0500
 
     [version] Up version to 0.0.1.6
