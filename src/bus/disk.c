@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -249,4 +249,197 @@ disk__get_ops (
  )
 {
   return &disk__dev_ops;
+}
+
+/* An MBR C/H/S address and ways to access its components */
+typedef winvblock__uint8 chs[3];
+
+#define     chs_head( chs ) chs[0]
+#define   chs_sector( chs ) ( chs[1] & 0x3F )
+#define chs_cyl_high( chs ) ( ( ( winvblock__uint16 ) ( chs[1] & 0xC0 ) ) << 2 )
+#define  chs_cyl_low( chs ) ( ( winvblock__uint16 ) chs[2] )
+#define chs_cylinder( chs ) ( chs_cyl_high ( chs ) | chs_cyl_low ( chs ) )
+
+/*
+ * fat_extra and fat_super taken from syslinux/memdisk/setup.c by
+ * H. Peter Anvin.  Licensed under the terms of the GNU General Public
+ * License version 2 or later.
+ */
+#ifdef _MSC_VER
+#  pragma pack(1)
+#endif
+winvblock__def_struct ( fat_extra )
+{
+  winvblock__uint8 bs_drvnum;
+  winvblock__uint8 bs_resv1;
+  winvblock__uint8 bs_bootsig;
+  winvblock__uint32 bs_volid;
+  char bs_vollab[11];
+  char bs_filsystype[8];
+} __attribute__ ( ( packed ) );
+
+winvblock__def_struct ( fat_super )
+{
+  winvblock__uint8 bs_jmpboot[3];
+  char bs_oemname[8];
+  winvblock__uint16 bpb_bytspersec;
+  winvblock__uint8 bpb_secperclus;
+  winvblock__uint16 bpb_rsvdseccnt;
+  winvblock__uint8 bpb_numfats;
+  winvblock__uint16 bpb_rootentcnt;
+  winvblock__uint16 bpb_totsec16;
+  winvblock__uint8 bpb_media;
+  winvblock__uint16 bpb_fatsz16;
+  winvblock__uint16 bpb_secpertrk;
+  winvblock__uint16 bpb_numheads;
+  winvblock__uint32 bpb_hiddsec;
+  winvblock__uint32 bpb_totsec32;
+  union
+  {
+    struct
+    {
+      fat_extra extra;
+    } fat16;
+    struct
+    {
+      winvblock__uint32 bpb_fatsz32;
+      winvblock__uint16 bpb_extflags;
+      winvblock__uint16 bpb_fsver;
+      winvblock__uint32 bpb_rootclus;
+      winvblock__uint16 bpb_fsinfo;
+      winvblock__uint16 bpb_bkbootsec;
+      char bpb_reserved[12];
+      /*
+       * Clever, eh?  Same fields, different offset... 
+       */
+      fat_extra extra;
+    } fat32 __attribute__ ( ( packed ) );
+  } x;
+} __attribute__ ( ( __packed__ ) );
+
+winvblock__def_struct ( mbr )
+{
+  winvblock__uint8 code[440];
+  winvblock__uint32 disk_sig;
+  winvblock__uint16 pad;
+  struct
+  {
+    winvblock__uint8 status;
+    chs chs_start;
+    winvblock__uint8 type;
+    chs chs_end;
+    winvblock__uint32 lba_start;
+    winvblock__uint32 lba_count;
+  } partition[4] __attribute__ ( ( packed ) );
+  winvblock__uint16 mbr_sig;
+} __attribute__ ( ( __packed__ ) );
+
+#ifdef _MSC_VER
+#  pragma pack()
+#endif
+
+/**
+ * Attempt to guess a disk's geometry
+ *
+ * @v boot_sect_ptr     The MBR or VBR with possible geometry clues
+ * @v disk_ptr          The disk to set the geometry for
+ */
+winvblock__lib_func void
+disk__guess_geometry (
+  IN disk__boot_sect_ptr boot_sect_ptr,
+  IN OUT disk__type_ptr disk_ptr
+ )
+{
+  winvblock__uint16 heads = 0,
+    sects_per_track = 0,
+    cylinders;
+  mbr_ptr as_mbr;
+
+  if ( ( boot_sect_ptr == NULL ) || ( disk_ptr == NULL ) )
+    return;
+
+  /*
+   * FAT superblock geometry checking taken from syslinux/memdisk/setup.c by
+   * H. Peter Anvin.  Licensed under the terms of the GNU General Public
+   * License version 2 or later.
+   */
+  {
+    /*
+     * Look for a FAT superblock and if we find something that looks
+     * enough like one, use geometry from that.  This takes care of
+     * megafloppy images and unpartitioned hard disks. 
+     */
+    fat_extra_ptr extra = NULL;
+    fat_super_ptr fs = ( fat_super_ptr ) boot_sect_ptr;
+
+    if ( ( fs->bpb_media == 0xf0 || fs->bpb_media >= 0xf8 )
+	 && ( fs->bs_jmpboot[0] == 0xe9 || fs->bs_jmpboot[0] == 0xeb )
+	 && fs->bpb_bytspersec == 512 && fs->bpb_numheads >= 1
+	 && fs->bpb_numheads <= 256 && fs->bpb_secpertrk >= 1
+	 && fs->bpb_secpertrk <= 63 )
+      {
+	extra = fs->bpb_fatsz16 ? &fs->x.fat16.extra : &fs->x.fat32.extra;
+	if ( !
+	     ( extra->bs_bootsig == 0x29 && extra->bs_filsystype[0] == 'F'
+	       && extra->bs_filsystype[1] == 'A'
+	       && extra->bs_filsystype[2] == 'T' ) )
+	  extra = NULL;
+      }
+    if ( extra )
+      {
+	heads = fs->bpb_numheads;
+	sects_per_track = fs->bpb_secpertrk;
+      }
+  }
+  /*
+   * If we couldn't parse a FAT superblock, try checking MBR params.
+   * Logic derived from syslinux/memdisk/setup.c by H. Peter Anvin
+   */
+  as_mbr = ( mbr_ptr ) boot_sect_ptr;
+  if ( ( heads == 0 ) && ( sects_per_track == 0 )
+       && ( as_mbr->mbr_sig == 0xAA55 ) )
+    {
+      int i;
+      for ( i = 0; i < 4; i++ )
+	{
+	  if ( !( as_mbr->partition[i].status & 0x7f )
+	       && as_mbr->partition[i].type )
+	    {
+	      winvblock__uint8 h,
+	       s;
+
+	      h = chs_head ( as_mbr->partition[i].chs_start ) + 1;
+	      s = chs_sector ( as_mbr->partition[i].chs_start );
+
+	      if ( heads < h )
+		heads = h;
+	      if ( sects_per_track < s )
+		sects_per_track = s;
+
+	      h = chs_head ( as_mbr->partition[i].chs_end ) + 1;
+	      s = chs_sector ( as_mbr->partition[i].chs_end );
+
+	      if ( heads < h )
+		heads = h;
+	      if ( sects_per_track < s )
+		sects_per_track = s;
+	    }
+	}
+    }
+  /*
+   * If we were unable to guess, use some hopeful defaults
+   */
+  if ( !heads )
+    heads = 255;
+  if ( !sects_per_track )
+    sects_per_track = 63;
+  /*
+   * Set params that are not already filled
+   */
+  if ( !disk_ptr->Heads )
+    disk_ptr->Heads = heads;
+  if ( !disk_ptr->Sectors )
+    disk_ptr->Sectors = sects_per_track;
+  if ( !disk_ptr->Cylinders )
+    disk_ptr->Cylinders = disk_ptr->LBADiskSize / ( heads * sects_per_track );
 }

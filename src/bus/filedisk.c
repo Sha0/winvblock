@@ -75,6 +75,8 @@ disk__io_decl (
     status =
       ZwReadFile ( filedisk_ptr->file, NULL, NULL, NULL, &io_status, buffer,
 		   sector_count * disk_ptr->SectorSize, &offset, NULL );
+  if ( !start_sector )
+    disk__guess_geometry ( buffer, disk_ptr );
   irp->IoStatus.Information = sector_count * disk_ptr->SectorSize;
   irp->IoStatus.Status = status;
   IoCompleteRequest ( irp, IO_NO_INCREMENT );
@@ -126,6 +128,7 @@ irp__handler_decl ( filedisk__attach )
   NTSTATUS status;
   HANDLE file = NULL;
   IO_STATUS_BLOCK io_status;
+  FILE_STANDARD_INFORMATION info;
   filedisk__type filedisk = { 0 };
 
   RtlInitAnsiString ( &file_path1,
@@ -152,6 +155,7 @@ irp__handler_decl ( filedisk__attach )
     return status;
 
   filedisk.file = file;
+
   switch ( params->type )
     {
       case 'f':
@@ -168,11 +172,22 @@ irp__handler_decl ( filedisk__attach )
 	break;
     }
   DBG ( "File-backed disk is type: %d\n", filedisk.disk.media );
+  /*
+   * Determine the disk's size
+   */
+  status =
+    ZwQueryInformationFile ( file, &io_status, &info, sizeof ( info ),
+			     FileStandardInformation );
+  if ( !NT_SUCCESS ( status ) )
+    {
+      ZwClose ( file );
+      return status;
+    }
+  filedisk.disk.LBADiskSize =
+    info.EndOfFile.QuadPart / filedisk.disk.SectorSize;
   filedisk.disk.Cylinders = params->cylinders;
   filedisk.disk.Heads = params->heads;
   filedisk.disk.Sectors = params->sectors;
-  filedisk.disk.LBADiskSize =
-    params->cylinders * params->heads * params->sectors;
   /*
    * A really stupid "hash".  RtlHashUnicodeString() would have been
    * good, but is only available >= Windows XP

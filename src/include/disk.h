@@ -37,6 +37,8 @@ enum _disk__media
 };
 winvblock__def_enum ( disk__media );
 
+typedef char disk__boot_sect_ptr[512];
+
 extern winvblock__bool disk__removable[disk__media_count];
 extern PWCHAR disk__compat_ids[disk__media_count];
 
@@ -245,5 +247,16 @@ disk__pnp_id_decl (
 {
   return disk_ptr->ops->pnp_id ( disk_ptr, query_type, buf_512 );
 }
+
+/**
+ * Attempt to guess a disk's geometry
+ *
+ * @v boot_sect_ptr     The MBR or VBR with possible geometry clues
+ * @v disk_ptr          The disk to set the geometry for
+ */
+winvblock__lib_func void disk__guess_geometry (
+  IN disk__boot_sect_ptr boot_sect_ptr,
+  IN OUT disk__type_ptr disk_ptr
+ );
 
 #endif				/* _disk_h */
