@@ -1,14 +1,14 @@
 [Project]
 FileName=WinVBlock.dev
 Name=WinVBlock
-UnitCount=43
+UnitCount=52
 PchHead=-1
 PchSource=-1
 Ver=3
 IsCpp=1
 ProfilesCount=2
 ProfileIndex=0
-Folders=
+Folders=AoE,HTTPDisk,HTTPDisk_Util
 
 [Unit1]
 FileName=src\loader\loader.c
@@ -31,16 +31,6 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit4]
-FileName=src\bus\bus.c
-CompileCpp=1
-Folder=WinVBlock
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit5]
 FileName=src\bus\bus_dev_ctl.c
 CompileCpp=1
 Folder=WinVBlock
@@ -50,7 +40,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit6]
+[Unit5]
 FileName=src\bus\bus_pnp.c
 CompileCpp=1
 Folder=WinVBlock
@@ -60,8 +50,8 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit8]
-FileName=src\bus\disk.c
+[Unit6]
+FileName=src\bus\debug.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -70,7 +60,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit9]
+[Unit8]
 FileName=src\bus\disk_dev_ctl.c
 CompileCpp=1
 Folder=WinVBlock
@@ -80,7 +70,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit10]
+[Unit9]
 FileName=src\bus\disk_pnp.c
 CompileCpp=1
 Folder=WinVBlock
@@ -90,7 +80,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit11]
+[Unit10]
 FileName=src\bus\disk_scsi.c
 CompileCpp=1
 Folder=WinVBlock
@@ -100,7 +90,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit12]
+[Unit11]
 FileName=src\bus\driver.c
 CompileCpp=1
 Folder=WinVBlock
@@ -110,7 +100,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit13]
+[Unit12]
 FileName=src\bus\filedisk.c
 CompileCpp=1
 Folder=WinVBlock
@@ -120,7 +110,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit14]
+[Unit13]
 FileName=src\bus\grub4dos.c
 CompileCpp=1
 Folder=WinVBlock
@@ -130,7 +120,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit15]
+[Unit14]
 FileName=src\bus\memdisk.c
 CompileCpp=1
 Folder=WinVBlock
@@ -140,7 +130,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit16]
+[Unit15]
 FileName=src\bus\probe.c
 CompileCpp=1
 Folder=WinVBlock
@@ -151,7 +141,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit17]
-FileName=src\bus\protocol.c
+FileName=src\bus\registry.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -234,7 +224,7 @@ CompilerSet=1
 CompilerType=1
 
 [Unit7]
-FileName=src\bus\debug.c
+FileName=src\bus\disk.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -244,46 +234,6 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit20]
-FileName=src\include\aoe.h
-CompileCpp=1
-Folder=WinVBlock
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit21]
-FileName=src\include\bus.h
-CompileCpp=1
-Folder=WinVBlock
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit18]
-FileName=src\bus\ramdisk.c
-CompileCpp=1
-Folder=WinVBlock
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit23]
-FileName=src\include\bus_pnp.h
-CompileCpp=1
-Folder=WinVBlock
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit22]
 FileName=src\include\bus_dev_ctl.h
 CompileCpp=1
 Folder=WinVBlock
@@ -293,17 +243,27 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit24]
-FileName=src\include\debug.h
+[Unit21]
+FileName=src\include\bus_pnp.h
+CompileCpp=1
 Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
-CompileCpp=1
 
-[Unit25]
+[Unit18]
+FileName=src\include\aoe.h
+CompileCpp=1
+Folder=WinVBlock
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit23]
 FileName=src\include\disk.h
 CompileCpp=1
 Folder=WinVBlock
@@ -313,8 +273,8 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit26]
-FileName=src\include\disk_dev_ctl.h
+[Unit22]
+FileName=src\include\debug.h
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -323,7 +283,17 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit27]
+[Unit24]
+FileName=src\include\disk_dev_ctl.h
+Folder=WinVBlock
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+CompileCpp=1
+
+[Unit25]
 FileName=src\include\disk_pnp.h
 CompileCpp=1
 Folder=WinVBlock
@@ -333,7 +303,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit28]
+[Unit26]
 FileName=src\include\disk_scsi.h
 CompileCpp=1
 Folder=WinVBlock
@@ -343,7 +313,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit29]
+[Unit27]
 FileName=src\include\driver.h
 CompileCpp=1
 Folder=WinVBlock
@@ -353,7 +323,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit30]
+[Unit28]
 FileName=src\include\filedisk.h
 CompileCpp=1
 Folder=WinVBlock
@@ -363,7 +333,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit31]
+[Unit29]
 FileName=src\include\grub4dos.h
 CompileCpp=1
 Folder=WinVBlock
@@ -373,7 +343,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit32]
+[Unit30]
 FileName=src\include\irp.h
 CompileCpp=1
 Folder=WinVBlock
@@ -383,7 +353,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit33]
+[Unit31]
 FileName=src\include\mdi.h
 CompileCpp=1
 Folder=WinVBlock
@@ -393,7 +363,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit34]
+[Unit32]
 FileName=src\include\memdisk.h
 CompileCpp=1
 Folder=WinVBlock
@@ -403,7 +373,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit35]
+[Unit33]
 FileName=src\include\mount.h
 CompileCpp=1
 Folder=WinVBlock
@@ -413,7 +383,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit36]
+[Unit34]
 FileName=src\include\portable.h
 CompileCpp=1
 Folder=WinVBlock
@@ -423,17 +393,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit19]
-FileName=src\bus\registry.c
-CompileCpp=1
-Folder=WinVBlock
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit37]
+[Unit35]
 FileName=src\include\probe.h
 CompileCpp=1
 Folder=WinVBlock
@@ -443,7 +403,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit38]
+[Unit36]
 FileName=src\include\protocol.h
 CompileCpp=1
 Folder=WinVBlock
@@ -453,7 +413,17 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit39]
+[Unit19]
+FileName=src\include\bus.h
+CompileCpp=1
+Folder=WinVBlock
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit37]
 FileName=src\include\ramdisk.h
 CompileCpp=1
 Folder=WinVBlock
@@ -463,7 +433,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit40]
+[Unit38]
 FileName=src\include\registry.h
 CompileCpp=1
 Folder=WinVBlock
@@ -473,7 +443,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit41]
+[Unit39]
 FileName=src\include\resource.h
 CompileCpp=1
 Folder=WinVBlock
@@ -483,7 +453,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit42]
+[Unit40]
 FileName=src\include\winvblock.h
 CompileCpp=1
 Folder=WinVBlock
@@ -493,8 +463,58 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
+[Unit41]
+FileName=src\bus\winvblock.rc
+CompileCpp=1
+Folder=WinVBlock
+Compile=1
+Link=0
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit42]
+FileName=src\aoe\driver.c
+CompileCpp=1
+Folder=AoE
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit43]
+FileName=src\bus\irp.c
+Folder=WinVBlock
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+CompileCpp=1
+
+[Unit44]
+FileName=src\aoe\protocol.c
+CompileCpp=1
+Folder=AoE
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit45]
+FileName=src\httpdisk\ktdi.h
+CompileCpp=1
+Folder=HTTPDisk
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
 [Unit3]
-FileName=src\bus\aoe.c
+FileName=src\bus\bus.c
 CompileCpp=1
 Folder=WinVBlock
 Compile=1
@@ -503,11 +523,80 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit43]
-FileName=src\bus\winvblock.rc
+[Unit16]
+FileName=src\bus\ramdisk.c
+CompileCpp=1
 Folder=WinVBlock
 Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit46]
+FileName=src\httpdisk\httpdisk.c
+CompileCpp=1
+Folder=HTTPDisk
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit47]
+FileName=src\httpdisk\httpdisk.rc
+Folder=HTTPDisk
+Compile=1
 Link=0
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit48]
+FileName=src\httpdisk\ksocket.c
+CompileCpp=1
+Folder=HTTPDisk
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit49]
+FileName=src\httpdisk\ksocket.h
+CompileCpp=1
+Folder=HTTPDisk
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit50]
+FileName=src\httpdisk\ktdi.c
+CompileCpp=1
+Folder=HTTPDisk
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit51]
+FileName=src\httpdisk_util\httpdisk.rc
+Folder=HTTPDisk_Util
+Compile=1
+Link=0
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit52]
+FileName=src\httpdisk_util\httpdisk.c
+CompileCpp=1
+Folder=HTTPDisk_Util
+Compile=1
+Link=1
 Priority=1000
 OverrideBuildCmd=0
 BuildCmd=

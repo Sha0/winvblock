@@ -10,3 +10,6 @@ WinVBlock.layout
 *.wrn
 objchk*
 objfre*
+makefile
+sources
+*.def

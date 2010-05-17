@@ -23,8 +23,8 @@ if "%2" == "32" set arg2=w2k
 if "%2" == "64" set arg2=wnet amd64
 if "%2" == "32" set arch=i386
 if "%2" == "64" set arch=amd64
-if "%2" == "32" set name=wvblk32
-if "%2" == "64" set name=wvblk64
+if "%2" == "32" set bits=32
+if "%2" == "64" set bits=64
 if "%2" == "32" set obj=%obj%_w2k_x86
 if "%2" == "64" set obj=%obj%_wnet_amd64
 goto run
@@ -34,8 +34,8 @@ if "%1" == "32" set arg2=w2k
 if "%1" == "64" set arg2=wnet amd64
 if "%1" == "32" set arch=i386
 if "%1" == "64" set arch=amd64
-if "%1" == "32" set name=wvblk32
-if "%1" == "64" set name=wvblk64
+if "%1" == "32" set bits=32
+if "%1" == "64" set bits=64
 if "%1" == "32" set obj=w2k_x86
 if "%1" == "64" set obj=wnet_amd64
 if "%2" == "f" goto next_2_ok
@@ -62,27 +62,14 @@ pushd .
 call %ddkdir%\bin\setenv.bat %ddkdir% %arg1% %arg2%
 popd
 
-cd src\bus
-echo !INCLUDE $(NTMAKEENV)\makefile.def > makefile
-echo INCLUDES=..\include > sources
-echo TARGETNAME=%name% >> sources
-echo TARGETTYPE=EXPORT_DRIVER >> sources
-echo TARGETPATH=obj >> sources
-echo TARGETLIBS=$(DDK_LIB_PATH)\\ndis.lib >> sources
-echo SOURCES=%c% >> sources
-echo C_DEFINES=-DPROJECT_BUS=1 >> sources
-echo NAME %name%.sys> %name%.def
-build
-copy obj%obj%\%arch%\%name%.sys ..\..\bin >nul
-copy obj%obj%\%arch%\%name%.pdb ..\..\bin >nul
-copy obj%obj%\%arch%\%name%.lib ..\..\bin >nul
-del makefile
-del sources
-del %name%.def
-rem del build%obj%.log
-rem del build%obj%.wrn 2>nul
-rem del build%obj%.err 2>nul
-rem rd /s /q obj%obj%
-cd ..\..
+rem Build order is important here
+set sys=winvblock aoe
+
+for /d %%a in (%sys%) do (
+  pushd .
+  cd src\%%a
+  call makedriver.bat
+  popd
+  )
 
 :end
