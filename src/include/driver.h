@@ -62,7 +62,7 @@ winvblock__def_struct ( device__type );
 /**
  * Device PDO creation routine
  *
- * @v dev_ext_ptr     The device whose PDO should be created
+ * @v dev_ptr           The device whose PDO should be created
  */
 #  define driver__dev_create_pdo_decl( x ) \
 \

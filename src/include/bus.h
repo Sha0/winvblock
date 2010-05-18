@@ -30,7 +30,7 @@
 
 winvblock__def_struct ( bus__type )
 {
-  device__type dev_ext;
+  device__type device;
   PDEVICE_OBJECT LowerDeviceObject;
   PDEVICE_OBJECT PhysicalDeviceObject;
   winvblock__uint32 Children;

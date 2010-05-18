@@ -106,7 +106,7 @@ disk__pnp_id_decl (
   query_id
  )
 {
-  ramdisk__type_ptr ramdisk_ptr = ramdisk__get_ptr ( &disk_ptr->dev_ext );
+  ramdisk__type_ptr ramdisk_ptr = ramdisk__get_ptr ( &disk_ptr->device );
   static PWCHAR hw_ids[disk__media_count] =
     { winvblock__literal_w L"\\RAMFloppyDisk",
     winvblock__literal_w L"\\RAMHardDisk",

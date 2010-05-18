@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -56,7 +56,7 @@ irp__handler_decl (
 	  && ( disk_walker->DiskNumber != *( winvblock__uint32_ptr ) buffer ) )
     {
       prev_disk_walker = disk_walker;
-      disk_walker = ( disk__type_ptr ) disk_walker->dev_ext.next_sibling_ptr;
+      disk_walker = ( disk__type_ptr ) disk_walker->device.next_sibling_ptr;
     }
   if ( disk_walker != NULL )
     {
@@ -70,15 +70,15 @@ irp__handler_decl (
       if ( disk_walker == ( disk__type_ptr ) bus_ptr->first_child_ptr )
 	{
 	  bus_ptr->first_child_ptr =
-	    ( winvblock__uint8_ptr ) disk_walker->dev_ext.next_sibling_ptr;
+	    ( winvblock__uint8_ptr ) disk_walker->device.next_sibling_ptr;
 	}
       else
 	{
-	  prev_disk_walker->dev_ext.next_sibling_ptr =
-	    disk_walker->dev_ext.next_sibling_ptr;
+	  prev_disk_walker->device.next_sibling_ptr =
+	    disk_walker->device.next_sibling_ptr;
 	}
       disk_walker->Unmount = TRUE;
-      disk_walker->dev_ext.next_sibling_ptr = NULL;
+      disk_walker->device.next_sibling_ptr = NULL;
       if ( bus_ptr->PhysicalDeviceObject != NULL )
 	IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
 				      BusRelations );

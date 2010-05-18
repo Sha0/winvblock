@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -155,10 +155,10 @@ grub4dos__find (
 					 ramdisk.disk.Sectors );
 	  ramdisk.disk.BootDrive = TRUE;
 	  ramdisk.disk.ops = &ramdisk__default_ops;
-	  ramdisk.disk.dev_ext.ops = &disk__dev_ops;
-	  ramdisk.disk.dev_ext.size = sizeof ( ramdisk__type );
+	  ramdisk.disk.device.ops = &disk__dev_ops;
+	  ramdisk.disk.device.size = sizeof ( ramdisk__type );
 	  FoundGrub4DosMapping = TRUE;
-	  bus__add_child ( &ramdisk.disk.dev_ext );
+	  bus__add_child ( &ramdisk.disk.device );
 	}
       InterruptVector = &SafeMbrHookPtr->PrevHook;
     }

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -104,9 +104,9 @@ check_mbft (
   ramdisk.disk.Sectors = mBFT->mdi.sectors;
   ramdisk.disk.BootDrive = TRUE;
   ramdisk.disk.ops = &ramdisk__default_ops;
-  ramdisk.disk.dev_ext.ops = &disk__dev_ops;
-  ramdisk.disk.dev_ext.size = sizeof ( ramdisk__type );
-  bus__add_child ( &ramdisk.disk.dev_ext );
+  ramdisk.disk.device.ops = &disk__dev_ops;
+  ramdisk.disk.device.size = sizeof ( ramdisk__type );
+  bus__add_child ( &ramdisk.disk.device );
   AssociatedHook->Flags = 1;
   return TRUE;
 }

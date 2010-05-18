@@ -132,7 +132,7 @@ irp__handler_decl ( bus_pnp__query_dev_relations )
   while ( walker != NULL )
     {
       count++;
-      walker = ( disk__type_ptr ) walker->dev_ext.next_sibling_ptr;
+      walker = ( disk__type_ptr ) walker->device.next_sibling_ptr;
     }
   dev_relations =
     ( PDEVICE_RELATIONS ) ExAllocatePool ( NonPagedPool,
@@ -155,10 +155,10 @@ irp__handler_decl ( bus_pnp__query_dev_relations )
   walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
   while ( walker != NULL )
     {
-      ObReferenceObject ( walker->dev_ext.Self );
-      dev_relations->Objects[count] = walker->dev_ext.Self;
+      ObReferenceObject ( walker->device.Self );
+      dev_relations->Objects[count] = walker->device.Self;
       count++;
-      walker = ( disk__type_ptr ) walker->dev_ext.next_sibling_ptr;
+      walker = ( disk__type_ptr ) walker->device.next_sibling_ptr;
     }
   Irp->IoStatus.Information = ( ULONG_PTR ) dev_relations;
   status = STATUS_SUCCESS;

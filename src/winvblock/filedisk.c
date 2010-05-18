@@ -88,7 +88,7 @@ disk__pnp_id_decl (
   query_id
  )
 {
-  filedisk__type_ptr filedisk_ptr = filedisk__get_ptr ( &disk_ptr->dev_ext );
+  filedisk__type_ptr filedisk_ptr = filedisk__get_ptr ( &disk_ptr->device );
   static PWCHAR hw_ids[disk__media_count] =
     { winvblock__literal_w L"\\FileFloppyDisk",
     winvblock__literal_w L"\\FileHardDisk",
@@ -200,9 +200,9 @@ irp__handler_decl ( filedisk__attach )
       filedisk.hash += *path_iterator++;
   }
   filedisk.disk.ops = &default_ops;
-  filedisk.disk.dev_ext.ops = &disk__dev_ops;
-  filedisk.disk.dev_ext.size = sizeof ( filedisk__type );
-  bus__add_child ( &filedisk.disk.dev_ext );
+  filedisk.disk.device.ops = &disk__dev_ops;
+  filedisk.disk.device.size = sizeof ( filedisk__type );
+  bus__add_child ( &filedisk.disk.device );
   return STATUS_SUCCESS;
 }
 
@@ -211,7 +211,7 @@ disk__close_decl (
   close
  )
 {
-  filedisk__type_ptr filedisk_ptr = filedisk__get_ptr ( &disk_ptr->dev_ext );
+  filedisk__type_ptr filedisk_ptr = filedisk__get_ptr ( &disk_ptr->device );
   ZwClose ( filedisk_ptr->file );
   return;
 }

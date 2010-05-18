@@ -812,7 +812,7 @@ DriverEntry (
       }
     else
       {
-	irp__reg_table ( &bus_ptr->dev_ext.irp_handler_chain, handling_table );
+	irp__reg_table ( &bus_ptr->device.irp_handler_chain, handling_table );
       }
   }
   DriverObject->DriverUnload = unload;
@@ -946,7 +946,7 @@ unload (
       }
     else
       {
-	irp__unreg_table ( &bus_ptr->dev_ext.irp_handler_chain,
+	irp__unreg_table ( &bus_ptr->device.irp_handler_chain,
 			   handling_table );
       }
   }
@@ -979,7 +979,7 @@ disk__init_decl (
   winvblock__uint32 MTU;
   aoe_disk_type_ptr aoe_disk_ptr;
 
-  aoe_disk_ptr = get_aoe_disk_ptr ( &disk_ptr->dev_ext );
+  aoe_disk_ptr = get_aoe_disk_ptr ( &disk_ptr->device );
   /*
    * Allocate our disk search 
    */
@@ -995,7 +995,7 @@ disk__init_decl (
   /*
    * Initialize the disk search 
    */
-  disk_searcher->DeviceExtension = &disk_ptr->dev_ext;
+  disk_searcher->DeviceExtension = &disk_ptr->device;
   disk_searcher->next = NULL;
   aoe_disk_ptr->search_state = search_state_search_nic;
   KeResetEvent ( &disk_ptr->SearchEvent );
@@ -1176,7 +1176,7 @@ disk__init_decl (
 	      disk_search_walker = AoE_Globals_DiskSearchList;
 	      while ( disk_search_walker
 		      && disk_search_walker->DeviceExtension !=
-		      &disk_ptr->dev_ext )
+		      &disk_ptr->device )
 		{
 		  previous_disk_searcher = disk_search_walker;
 		  disk_search_walker = disk_search_walker->next;
@@ -1239,7 +1239,7 @@ disk__init_decl (
 	}
       RtlZeroMemory ( tag, sizeof ( work_tag ) );
       tag->type = tag_type_search_drive;
-      tag->DeviceExtension = &disk_ptr->dev_ext;
+      tag->DeviceExtension = &disk_ptr->device;
 
       /*
        * Establish our tag's AoE packet 
@@ -2036,7 +2036,7 @@ disk__max_xfer_len_decl (
   max_xfer_len
  )
 {
-  aoe_disk_type_ptr aoe_disk_ptr = get_aoe_disk_ptr ( &disk_ptr->dev_ext );
+  aoe_disk_type_ptr aoe_disk_ptr = get_aoe_disk_ptr ( &disk_ptr->device );
 
   return disk_ptr->SectorSize * aoe_disk_ptr->MaxSectorsPerPacket;
 }
@@ -2046,7 +2046,7 @@ disk__pnp_id_decl (
   query_id
  )
 {
-  aoe_disk_type_ptr aoe_disk_ptr = get_aoe_disk_ptr ( &disk_ptr->dev_ext );
+  aoe_disk_type_ptr aoe_disk_ptr = get_aoe_disk_ptr ( &disk_ptr->device );
 
   switch ( query_type )
     {
@@ -2184,9 +2184,9 @@ process_abft (
       aoe_disk.disk.BootDrive = TRUE;
       aoe_disk.disk.media = disk__media_hard;
       aoe_disk.disk.ops = &default_ops;
-      aoe_disk.disk.dev_ext.ops = disk__get_ops (  );
-      aoe_disk.disk.dev_ext.size = sizeof ( aoe_disk_type );
-      bus__add_child ( &aoe_disk.disk.dev_ext );
+      aoe_disk.disk.device.ops = disk__get_ops (  );
+      aoe_disk.disk.device.size = sizeof ( aoe_disk_type );
+      bus__add_child ( &aoe_disk.disk.device );
     }
   else
     {
@@ -2276,7 +2276,7 @@ irp__handler_decl (
   while ( disk_walker != NULL )
     {
       count++;
-      disk_walker = ( disk__type_ptr ) disk_walker->dev_ext.next_sibling_ptr;
+      disk_walker = ( disk__type_ptr ) disk_walker->device.next_sibling_ptr;
     }
 
   if ( ( disks =
@@ -2301,7 +2301,7 @@ irp__handler_decl (
   while ( disk_walker != NULL )
     {
       aoe_disk_type_ptr aoe_disk_ptr =
-	get_aoe_disk_ptr ( &disk_walker->dev_ext );
+	get_aoe_disk_ptr ( &disk_walker->device );
 
       disks->Disk[count].Disk = disk_walker->DiskNumber;
       RtlCopyMemory ( &disks->Disk[count].ClientMac, &aoe_disk_ptr->ClientMac,
@@ -2312,7 +2312,7 @@ irp__handler_decl (
       disks->Disk[count].Minor = aoe_disk_ptr->Minor;
       disks->Disk[count].LBASize = disk_walker->LBADiskSize;
       count++;
-      disk_walker = ( disk__type_ptr ) disk_walker->dev_ext.next_sibling_ptr;
+      disk_walker = ( disk__type_ptr ) disk_walker->device.next_sibling_ptr;
     }
   RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, disks,
 		  ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
@@ -2350,9 +2350,9 @@ irp__handler_decl (
   aoe_disk.disk.BootDrive = FALSE;
   aoe_disk.disk.media = disk__media_hard;
   aoe_disk.disk.ops = &default_ops;
-  aoe_disk.disk.dev_ext.ops = disk__get_ops (  );
-  aoe_disk.disk.dev_ext.size = sizeof ( aoe_disk_type );
-  bus__add_child ( &aoe_disk.disk.dev_ext );
+  aoe_disk.disk.device.ops = disk__get_ops (  );
+  aoe_disk.disk.device.size = sizeof ( aoe_disk_type );
+  bus__add_child ( &aoe_disk.disk.device );
   Irp->IoStatus.Information = 0;
   *completion_ptr = TRUE;
   return STATUS_SUCCESS;

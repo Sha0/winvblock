@@ -186,7 +186,7 @@ winvblock__def_struct ( disk__ops )
 
 struct _disk__type
 {
-  device__type dev_ext;
+  device__type device;
   KEVENT SearchEvent;
   KSPIN_LOCK SpinLock;
   winvblock__bool BootDrive;
