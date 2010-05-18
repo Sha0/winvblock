@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -63,7 +63,7 @@ Bus_Stop (
  */
 winvblock__lib_func winvblock__bool STDCALL
 bus__add_child (
-  IN driver__dev_ext_ptr dev_ext_ptr
+  IN device__type_ptr dev_ext_ptr
  )
 {
   /**
@@ -73,7 +73,7 @@ bus__add_child (
    */
   PDEVICE_OBJECT dev_obj_ptr;
   bus__type_ptr bus_ptr;
-  driver__dev_ext_ptr walker;
+  device__type_ptr walker;
 
   DBG ( "Entry\n" );
   /*
@@ -117,7 +117,7 @@ bus__add_child (
     }
   else
     {
-      walker = ( driver__dev_ext_ptr ) bus_ptr->first_child_ptr;
+      walker = ( device__type_ptr ) bus_ptr->first_child_ptr;
       while ( walker->next_sibling_ptr != NULL )
 	walker = walker->next_sibling_ptr;
       walker->next_sibling_ptr = dev_ext_ptr;
@@ -234,7 +234,7 @@ Bus_AddDevice (
   NTSTATUS Status;
   UNICODE_STRING DeviceName,
    DosDeviceName;
-  driver__dev_ext_ptr bus_dev_ext_ptr;
+  device__type_ptr bus_dev_ext_ptr;
   bus__type_ptr bus_ptr;
 
   DBG ( "Entry\n" );
@@ -261,7 +261,7 @@ Bus_AddDevice (
   /*
    * Set some default parameters for a bus
    */
-  bus_dev_ext_ptr = ( driver__dev_ext_ptr ) bus_fdo->DeviceExtension;
+  bus_dev_ext_ptr = ( device__type_ptr ) bus_fdo->DeviceExtension;
   RtlZeroMemory ( bus_dev_ext_ptr, sizeof ( bus__type ) );
   bus_dev_ext_ptr->IsBus = TRUE;
   bus_dev_ext_ptr->size = sizeof ( bus__type );

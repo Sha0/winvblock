@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -66,7 +66,7 @@ winvblock__def_struct ( disk__type );
 \
 NTSTATUS \
 x ( \
-  IN driver__dev_ext_ptr dev_ext_ptr, \
+  IN device__type_ptr dev_ext_ptr, \
   IN disk__io_mode mode, \
   IN LONGLONG start_sector, \
   IN winvblock__uint32 sector_count, \
@@ -186,7 +186,7 @@ winvblock__def_struct ( disk__ops )
 
 struct _disk__type
 {
-  driver__dev_ext dev_ext;
+  device__type dev_ext;
   KEVENT SearchEvent;
   KSPIN_LOCK SpinLock;
   winvblock__bool BootDrive;

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -137,7 +137,7 @@ winvblock__def_struct ( io_req )
 winvblock__def_struct ( work_tag )
 {
   tag_type type;
-  driver__dev_ext_ptr DeviceExtension;
+  device__type_ptr DeviceExtension;
   io_req_ptr request_ptr;
   winvblock__uint32 Id;
   packet_ptr packet_data;
@@ -153,7 +153,7 @@ winvblock__def_struct ( work_tag )
 /** A disk search */
 winvblock__def_struct ( disk_search )
 {
-  driver__dev_ext_ptr DeviceExtension;
+  device__type_ptr DeviceExtension;
   work_tag_ptr tag;
   disk_search_ptr next;
 };

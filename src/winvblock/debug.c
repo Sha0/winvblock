@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -233,8 +233,8 @@ Debug_DecodeIrp (
   IN PCHAR DebugMessage
  )
 {
-  driver__dev_ext_ptr DeviceExtension =
-    ( driver__dev_ext_ptr ) DeviceObject->DeviceExtension;
+  device__type_ptr DeviceExtension =
+    ( device__type_ptr ) DeviceObject->DeviceExtension;
   PIO_STACK_LOCATION Stack = IoGetCurrentIrpStackLocation ( Irp );
   PSCSI_REQUEST_BLOCK Srb;
   PCDB Cdb;

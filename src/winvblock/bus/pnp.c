@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -82,7 +82,7 @@ irp__handler_decl ( bus_pnp__remove_dev )
 {
   NTSTATUS status;
   bus__type_ptr bus_ptr;
-  driver__dev_ext_ptr walker,
+  device__type_ptr walker,
    next;
 
   DeviceExtension->OldState = DeviceExtension->State;
@@ -92,10 +92,10 @@ irp__handler_decl ( bus_pnp__remove_dev )
   IoSkipCurrentIrpStackLocation ( Irp );
   bus_ptr = get_bus_ptr ( DeviceExtension );
   status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
-  walker = ( driver__dev_ext_ptr ) bus_ptr->first_child_ptr;
+  walker = ( device__type_ptr ) bus_ptr->first_child_ptr;
   while ( walker != NULL )
     {
-      next = ( driver__dev_ext_ptr ) walker->next_sibling_ptr;
+      next = ( device__type_ptr ) walker->next_sibling_ptr;
       walker->ops->close ( walker );
       IoDeleteDevice ( walker->Self );
       walker = next;

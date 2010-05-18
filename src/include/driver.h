@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -57,7 +57,7 @@ extern size_t driver__handling_table_size;
 extern PDRIVER_OBJECT driver__obj_ptr;
 
 /* Forward declaration */
-winvblock__def_struct ( driver__dev_ext );
+winvblock__def_struct ( device__type );
 
 /**
  * Device PDO creation routine
@@ -68,7 +68,7 @@ winvblock__def_struct ( driver__dev_ext );
 \
 PDEVICE_OBJECT STDCALL \
 x ( \
-  IN driver__dev_ext_ptr dev_ext_ptr \
+  IN device__type_ptr dev_ext_ptr \
  )
 /*
  * Function pointer for a device initialization routine.
@@ -87,7 +87,7 @@ typedef driver__dev_create_pdo_decl (
 \
 winvblock__bool STDCALL \
 x ( \
-  IN driver__dev_ext_ptr dev_ext_ptr \
+  IN device__type_ptr dev_ext_ptr \
  )
 /*
  * Function pointer for a device initialization routine.
@@ -106,7 +106,7 @@ typedef driver__dev_init_decl (
 \
 void STDCALL \
 x ( \
-  IN driver__dev_ext_ptr dev_ext_ptr \
+  IN device__type_ptr dev_ext_ptr \
  )
 /*
  * Function pointer for a device close routine.
@@ -124,7 +124,7 @@ winvblock__def_struct ( driver__dev_ops )
 };
 
 /* Driver-common device extension detail */
-struct _driver__dev_ext
+struct _device__type
 {
   size_t size;
   winvblock__bool IsBus;	/* For debugging */
@@ -134,7 +134,7 @@ struct _driver__dev_ext
   driver__state State;
   driver__state OldState;
   irp__handler_chain irp_handler_chain;
-  driver__dev_ext_ptr next_sibling_ptr;
+  device__type_ptr next_sibling_ptr;
   driver__dev_ops_ptr ops;
 };
 

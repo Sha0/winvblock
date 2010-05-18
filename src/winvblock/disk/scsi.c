@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -117,7 +117,7 @@ typedef struct _DISK_CDB16
 \
 NTSTATUS STDCALL \
 x ( \
-  IN struct _driver__dev_ext *DeviceExtension, \
+  IN struct _device__type *DeviceExtension, \
   IN PIRP Irp, \
   IN disk__type_ptr disk_ptr, \
   IN PSCSI_REQUEST_BLOCK Srb, \

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -265,7 +265,7 @@ Driver_Dispatch (
 {
   NTSTATUS status;
   PIO_STACK_LOCATION Stack;
-  driver__dev_ext_ptr DeviceExtension;
+  device__type_ptr DeviceExtension;
   size_t irp_handler_index;
   winvblock__bool completion = FALSE;
 
@@ -273,7 +273,7 @@ Driver_Dispatch (
   Debug_IrpStart ( DeviceObject, Irp );
 #endif
   Stack = IoGetCurrentIrpStackLocation ( Irp );
-  DeviceExtension = ( driver__dev_ext_ptr ) DeviceObject->DeviceExtension;
+  DeviceExtension = ( device__type_ptr ) DeviceObject->DeviceExtension;
 
   /*
    * We handle IRP_MJ_POWER as an exception 

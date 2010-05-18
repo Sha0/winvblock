@@ -28,7 +28,7 @@
  */
 
 /* An unfortunate forward declaration.  Definition resolved in driver.h */
-struct _driver__dev_ext;
+struct _device__type;
 
 /* We have lots of these, so offer a convenience macro for declarations */
 #  define irp__handler_decl( x ) \
@@ -38,7 +38,7 @@ x ( \
   IN PDEVICE_OBJECT DeviceObject, \
   IN PIRP Irp, \
   IN PIO_STACK_LOCATION Stack, \
-  IN struct _driver__dev_ext *DeviceExtension, \
+  IN struct _device__type *DeviceExtension, \
   OUT winvblock__bool_ptr completion_ptr \
  )
 /*
