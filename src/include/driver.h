@@ -68,7 +68,7 @@ winvblock__def_struct ( device__type );
 \
 PDEVICE_OBJECT STDCALL \
 x ( \
-  IN device__type_ptr dev_ext_ptr \
+  IN device__type_ptr dev_ptr \
  )
 /*
  * Function pointer for a device initialization routine.
@@ -81,13 +81,13 @@ typedef driver__dev_create_pdo_decl (
 /**
  * Device initialization routine
  *
- * @v dev_ext_ptr     The device being initialized
+ * @v dev_ptr           The device being initialized
  */
 #  define driver__dev_init_decl( x ) \
 \
 winvblock__bool STDCALL \
 x ( \
-  IN device__type_ptr dev_ext_ptr \
+  IN device__type_ptr dev_ptr \
  )
 /*
  * Function pointer for a device initialization routine.
@@ -100,13 +100,13 @@ typedef driver__dev_init_decl (
 /**
  * Device close routine
  *
- * @v dev_ext_ptr     The device being closed
+ * @v dev_ptr           The device being closed
  */
 #  define driver__dev_close_decl( x ) \
 \
 void STDCALL \
 x ( \
-  IN device__type_ptr dev_ext_ptr \
+  IN device__type_ptr dev_ptr \
  )
 /*
  * Function pointer for a device close routine.

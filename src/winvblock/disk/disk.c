@@ -64,7 +64,7 @@ driver__dev_init_decl (
   init
  )
 {
-  disk__type_ptr disk_ptr = get_disk_ptr ( dev_ext_ptr );
+  disk__type_ptr disk_ptr = get_disk_ptr ( dev_ptr );
   return disk_ptr->ops->init ( disk_ptr );
 }
 
@@ -78,7 +78,7 @@ driver__dev_close_decl (
   close
  )
 {
-  disk__type_ptr disk_ptr = get_disk_ptr ( dev_ext_ptr );
+  disk__type_ptr disk_ptr = get_disk_ptr ( dev_ptr );
   disk_ptr->ops->close ( disk_ptr );
   return;
 }
@@ -142,7 +142,7 @@ static irp__handling handling_table[] = {
 /**
  * Create a disk PDO filled with the given disk parameters
  *
- * @v dev_ext_ptr     Populate PDO dev. ext. space from these details
+ * @v dev_ptr           Populate PDO dev. ext. space from these details
  *
  * Returns a Physical Device Object pointer on success, NULL for failure.
  */
@@ -173,7 +173,7 @@ driver__dev_create_pdo_decl (
   /*
    * Point to the disk details provided
    */
-  disk_ptr = get_disk_ptr ( dev_ext_ptr );
+  disk_ptr = get_disk_ptr ( dev_ptr );
   /*
    * Create the disk device.  Whoever calls us should have set
    * the device extension space size requirement appropriately
@@ -189,40 +189,40 @@ driver__dev_create_pdo_decl (
       return NULL;
     }
   /*
-   * Re-purpose dev_ext_ptr to point into the PDO's device
+   * Re-purpose dev_ptr to point into the PDO's device
    * extension space.  We have disk_ptr still for original details
    */
-  dev_ext_ptr = dev_obj_ptr->DeviceExtension;
+  dev_ptr = dev_obj_ptr->DeviceExtension;
   /*
    * Clear the extension space and establish parameters
    */
-  RtlZeroMemory ( dev_ext_ptr, disk_ptr->dev_ext.size );
+  RtlZeroMemory ( dev_ptr, disk_ptr->dev_ext.size );
   /*
    * Copy the provided disk parameters into the disk extension space
    */
-  RtlCopyMemory ( dev_ext_ptr, &disk_ptr->dev_ext, disk_ptr->dev_ext.size );
+  RtlCopyMemory ( dev_ptr, &disk_ptr->dev_ext, disk_ptr->dev_ext.size );
   /*
    * Universal disk properties the caller needn't bother with
    */
-  dev_ext_ptr->IsBus = FALSE;
-  dev_ext_ptr->Self = dev_obj_ptr;
-  dev_ext_ptr->DriverObject = driver__obj_ptr;
-  dev_ext_ptr->State = NotStarted;
-  dev_ext_ptr->OldState = NotStarted;
-  dev_ext_ptr->irp_handler_chain = NULL;
+  dev_ptr->IsBus = FALSE;
+  dev_ptr->Self = dev_obj_ptr;
+  dev_ptr->DriverObject = driver__obj_ptr;
+  dev_ptr->State = NotStarted;
+  dev_ptr->OldState = NotStarted;
+  dev_ptr->irp_handler_chain = NULL;
   /*
    * Register the default driver IRP handling table
    */
-  irp__reg_table_s ( &dev_ext_ptr->irp_handler_chain, driver__handling_table,
+  irp__reg_table_s ( &dev_ptr->irp_handler_chain, driver__handling_table,
 		     driver__handling_table_size );
   /*
    * Register the default disk IRP handling table
    */
-  irp__reg_table ( &dev_ext_ptr->irp_handler_chain, handling_table );
+  irp__reg_table ( &dev_ptr->irp_handler_chain, handling_table );
   /*
-   * Establish a pointer into the disk device's extension space
+   * Establish a pointer to the disk
    */
-  disk_ptr = get_disk_ptr ( dev_ext_ptr );
+  disk_ptr = get_disk_ptr ( dev_ptr );
   KeInitializeEvent ( &disk_ptr->SearchEvent, SynchronizationEvent, FALSE );
   KeInitializeSpinLock ( &disk_ptr->SpinLock );
   disk_ptr->Unmount = FALSE;

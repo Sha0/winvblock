@@ -213,13 +213,13 @@ static irp__handling handling_table[] = {
 };
 
 /*
- * Establish a pointer into the AoE disk device's extension space.
+ * Establish a pointer to the AoE disk.
  * Since the device extension is the first member of the disk
  * member of an AoE disk, and the disk structure is itself the
  * first member of an AoE disk structure, a simple cast will suffice
  */
-#define get_aoe_disk_ptr( dev_ext_ptr ) \
-  ( ( aoe_disk_type_ptr ) dev_ext_ptr )
+#define get_aoe_disk_ptr( dev_ptr ) \
+  ( ( aoe_disk_type_ptr ) dev_ptr )
 
 static winvblock__bool STDCALL
 setup_reg (
@@ -1351,10 +1351,10 @@ disk__io_decl (
   aoe_disk_type_ptr aoe_disk_ptr;
 
   /*
-   * Establish pointers into the disk device's extension space
+   * Establish pointers to the disk and AoE disk
    */
-  disk_ptr = get_disk_ptr ( dev_ext_ptr );
-  aoe_disk_ptr = get_aoe_disk_ptr ( dev_ext_ptr );
+  disk_ptr = get_disk_ptr ( dev_ptr );
+  aoe_disk_ptr = get_aoe_disk_ptr ( dev_ptr );
 
   if ( AoE_Globals_Stop )
     {
@@ -1441,7 +1441,7 @@ disk__io_decl (
       RtlZeroMemory ( tag, sizeof ( work_tag ) );
       tag->type = tag_type_io;
       tag->request_ptr = request_ptr;
-      tag->DeviceExtension = dev_ext_ptr;
+      tag->DeviceExtension = dev_ptr;
       request_ptr->TagCount++;
       tag->Id = 0;
       tag->BufferOffset = i * disk_ptr->SectorSize;
@@ -1727,7 +1727,7 @@ aoe__reply (
   KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
 
   /*
-   * Establish pointers into the disk device's extension space
+   * Establish pointers to the disk device and AoE disk
    */
   disk_ptr = get_disk_ptr ( tag->DeviceExtension );
   aoe_disk_ptr = get_aoe_disk_ptr ( tag->DeviceExtension );
@@ -1957,7 +1957,7 @@ thread (
       while ( tag != NULL )
 	{
 	  /*
-	   * Establish pointers into the disk device's extension space
+	   * Establish pointers to the disk and AoE disk
 	   */
 	  disk_ptr = get_disk_ptr ( tag->DeviceExtension );
 	  aoe_disk_ptr = get_aoe_disk_ptr ( tag->DeviceExtension );

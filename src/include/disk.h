@@ -55,18 +55,18 @@ winvblock__def_struct ( disk__type );
 /**
  * I/O Request
  *
- * @v dev_ext_ptr     The device extension space
- * @v mode            Read / write mode
- * @v start_sector    First sector for request
- * @v sector_count    Number of sectors to work with
- * @v buffer          Buffer to read / write sectors to / from
- * @v irp             Interrupt request packet for this request
+ * @v dev_ptr           The device extension space
+ * @v mode              Read / write mode
+ * @v start_sector      First sector for request
+ * @v sector_count      Number of sectors to work with
+ * @v buffer            Buffer to read / write sectors to / from
+ * @v irp               Interrupt request packet for this request
  */
 #  define disk__io_decl( x ) \
 \
 NTSTATUS \
 x ( \
-  IN device__type_ptr dev_ext_ptr, \
+  IN device__type_ptr dev_ptr, \
   IN disk__io_mode mode, \
   IN LONGLONG start_sector, \
   IN winvblock__uint32 sector_count, \
@@ -209,12 +209,12 @@ extern winvblock__lib_func driver__dev_ops_ptr disk__get_ops (
  );
 
 /*
- * Establish a pointer into the child disk device's extension space.
+ * Establish a pointer to the child disk.
  * Since the device extension is the first member of a disk
  * structure, a simple cast will suffice
  */
-#  define get_disk_ptr( dev_ext_ptr ) \
-  ( ( disk__type_ptr ) dev_ext_ptr )
+#  define get_disk_ptr( dev_ptr ) \
+  ( ( disk__type_ptr ) dev_ptr )
 
 __inline
 disk__io_decl (
@@ -224,12 +224,12 @@ disk__io_decl (
   disk__type_ptr disk_ptr;
 
   /*
-   * Establish a pointer into the disk device's extension space
+   * Establish a pointer to the disk
    */
-  disk_ptr = get_disk_ptr ( dev_ext_ptr );
+  disk_ptr = get_disk_ptr ( dev_ptr );
 
-  return disk_ptr->ops->io ( dev_ext_ptr, mode, start_sector, sector_count,
-			     buffer, irp );
+  return disk_ptr->ops->io ( dev_ptr, mode, start_sector, sector_count, buffer,
+			     irp );
 }
 
 __inline

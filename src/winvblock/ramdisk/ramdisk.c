@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -57,10 +57,10 @@ disk__io_decl (
   ramdisk__type_ptr ramdisk_ptr;
 
   /*
-   * Establish pointers into the disk device's extension space
+   * Establish pointers to the disk and RAM disk
    */
-  disk_ptr = get_disk_ptr ( dev_ext_ptr );
-  ramdisk_ptr = ramdisk__get_ptr ( dev_ext_ptr );
+  disk_ptr = get_disk_ptr ( dev_ptr );
+  ramdisk_ptr = ramdisk__get_ptr ( dev_ptr );
 
   if ( sector_count < 1 )
     {

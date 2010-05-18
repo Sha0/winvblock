@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -49,10 +49,10 @@ disk__io_decl (
   IO_STATUS_BLOCK io_status;
 
   /*
-   * Establish pointers into the disk device's extension space
+   * Establish pointers to the disk and filedisk
    */
-  disk_ptr = get_disk_ptr ( dev_ext_ptr );
-  filedisk_ptr = filedisk__get_ptr ( dev_ext_ptr );
+  disk_ptr = get_disk_ptr ( dev_ptr );
+  filedisk_ptr = filedisk__get_ptr ( dev_ptr );
 
   if ( sector_count < 1 )
     {

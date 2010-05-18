@@ -55,12 +55,12 @@ extern NTSTATUS STDCALL Bus_GetDeviceCapabilities (
 /**
  * Add a child node to the bus
  *
- * @v dev_ext_ptr     The details for the child device to add
+ * @v dev_ptr           The details for the child device to add
  *
  * Returns TRUE for success, FALSE for failure
  */
 extern winvblock__lib_func winvblock__bool STDCALL bus__add_child (
-  IN device__type_ptr dev_ext_ptr
+  IN device__type_ptr dev_ptr
  );
 
 /**
@@ -73,11 +73,11 @@ extern winvblock__lib_func bus__type_ptr STDCALL bus__dev (
  );
 
 /*
- * Establish a pointer into the bus device's extension space.
+ * Establish a pointer to the bus.
  * Since the device extension is the first member of a bus
  * structure, a simple cast will suffice
  */
-#  define get_bus_ptr( dev_ext_ptr ) \
-  ( ( bus__type_ptr ) dev_ext_ptr )
+#  define get_bus_ptr( dev_ptr ) \
+  ( ( bus__type_ptr ) dev_ptr )
 
 #endif				/* _BUS_H */

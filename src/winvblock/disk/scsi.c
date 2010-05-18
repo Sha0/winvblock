@@ -357,7 +357,7 @@ irp__handler_decl ( disk_scsi__dispatch )
   winvblock__bool completion = FALSE;
 
   /*
-   * Establish a pointer into the disk device's extension space
+   * Establish a pointer to the disk
    */
   disk_ptr = get_disk_ptr ( DeviceExtension );
 

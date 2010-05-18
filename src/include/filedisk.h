@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -34,13 +34,13 @@ winvblock__def_struct ( filedisk__type )
 };
 
 /*
- * Establish a pointer into the file-backed disk device's extension space.
+ * Establish a pointer to the file-backed disk.
  * Since the device extension is the first member of the disk
  * member of a file-backed disk, and the disk structure is itself the
  * first member of a file-backed disk structure, a simple cast will suffice
  */
-#  define filedisk__get_ptr( dev_ext_ptr ) \
-  ( ( filedisk__type_ptr ) dev_ext_ptr )
+#  define filedisk__get_ptr( dev_ptr ) \
+  ( ( filedisk__type_ptr ) dev_ptr )
 
 extern irp__handler_decl (
   filedisk__attach

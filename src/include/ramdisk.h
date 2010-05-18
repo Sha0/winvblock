@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -36,12 +36,12 @@ winvblock__def_struct ( ramdisk__type )
 extern disk__ops ramdisk__default_ops;
 
 /*
- * Establish a pointer into the RAM disk device's extension space.
+ * Establish a pointer to the RAM disk.
  * Since the device extension is the first member of the disk
  * member of an AoE disk, and the disk structure is itself the
  * first member of an AoE disk structure, a simple cast will suffice
  */
-#  define ramdisk__get_ptr( dev_ext_ptr ) \
-  ( ( ramdisk__type_ptr ) dev_ext_ptr )
+#  define ramdisk__get_ptr( dev_ptr ) \
+  ( ( ramdisk__type_ptr ) dev_ptr )
 
 #endif				/* _ramdisk_h */

@@ -57,13 +57,13 @@ Bus_Stop (
 /**
  * Add a child node to the bus
  *
- * @v dev_ext_ptr     The details for the child device to add
+ * @v dev_ptr           The details for the child device to add
  *
  * Returns TRUE for success, FALSE for failure
  */
 winvblock__lib_func winvblock__bool STDCALL
 bus__add_child (
-  IN device__type_ptr dev_ext_ptr
+  IN device__type_ptr dev_ptr
  )
 {
   /**
@@ -76,19 +76,19 @@ bus__add_child (
   device__type_ptr walker;
 
   DBG ( "Entry\n" );
-  /*
-   * Establish a pointer into the bus device's extension space
-   */
   if ( !bus_fdo )
     {
       DBG ( "No bus device!\n" );
       return FALSE;
     }
+  /*
+   * Establish a pointer to the bus
+   */
   bus_ptr = get_bus_ptr ( bus_fdo->DeviceExtension );
   /*
    * Create the child device
    */
-  dev_obj_ptr = dev_ext_ptr->ops->create_pdo ( dev_ext_ptr );
+  dev_obj_ptr = dev_ptr->ops->create_pdo ( dev_ptr );
   if ( !dev_obj_ptr )
     {
       DBG ( "bus__add_child() failed!\n" );
@@ -96,31 +96,31 @@ bus__add_child (
     }
 
   /*
-   * Re-purpose dev_ext_ptr to point into the PDO's device
+   * Re-purpose dev_ptr to point into the PDO's device
    * extension space.  We don't need the original details anymore
    */
-  dev_ext_ptr = dev_obj_ptr->DeviceExtension;
-  dev_ext_ptr->Parent = bus_fdo;
-  dev_ext_ptr->next_sibling_ptr = NULL;
+  dev_ptr = dev_obj_ptr->DeviceExtension;
+  dev_ptr->Parent = bus_fdo;
+  dev_ptr->next_sibling_ptr = NULL;
   /*
    * Initialize the device.  For disks, this routine is responsible for
    * determining the disk's geometry appropriately for AoE/RAM/file disks
    */
-  dev_ext_ptr->ops->init ( dev_ext_ptr );
+  dev_ptr->ops->init ( dev_ptr );
   dev_obj_ptr->Flags &= ~DO_DEVICE_INITIALIZING;
   /*
    * Add the new device's extension to the bus' list of children
    */
   if ( bus_ptr->first_child_ptr == NULL )
     {
-      bus_ptr->first_child_ptr = ( winvblock__uint8_ptr ) dev_ext_ptr;
+      bus_ptr->first_child_ptr = ( winvblock__uint8_ptr ) dev_ptr;
     }
   else
     {
       walker = ( device__type_ptr ) bus_ptr->first_child_ptr;
       while ( walker->next_sibling_ptr != NULL )
 	walker = walker->next_sibling_ptr;
-      walker->next_sibling_ptr = dev_ext_ptr;
+      walker->next_sibling_ptr = dev_ptr;
     }
   bus_ptr->Children++;
   if ( bus_ptr->PhysicalDeviceObject != NULL )
@@ -234,7 +234,7 @@ Bus_AddDevice (
   NTSTATUS Status;
   UNICODE_STRING DeviceName,
    DosDeviceName;
-  device__type_ptr bus_dev_ext_ptr;
+  device__type_ptr bus_dev_ptr;
   bus__type_ptr bus_ptr;
 
   DBG ( "Entry\n" );
@@ -261,27 +261,27 @@ Bus_AddDevice (
   /*
    * Set some default parameters for a bus
    */
-  bus_dev_ext_ptr = ( device__type_ptr ) bus_fdo->DeviceExtension;
-  RtlZeroMemory ( bus_dev_ext_ptr, sizeof ( bus__type ) );
-  bus_dev_ext_ptr->IsBus = TRUE;
-  bus_dev_ext_ptr->size = sizeof ( bus__type );
-  bus_dev_ext_ptr->DriverObject = DriverObject;
-  bus_dev_ext_ptr->Self = bus_fdo;
-  bus_dev_ext_ptr->State = NotStarted;
-  bus_dev_ext_ptr->OldState = NotStarted;
+  bus_dev_ptr = ( device__type_ptr ) bus_fdo->DeviceExtension;
+  RtlZeroMemory ( bus_dev_ptr, sizeof ( bus__type ) );
+  bus_dev_ptr->IsBus = TRUE;
+  bus_dev_ptr->size = sizeof ( bus__type );
+  bus_dev_ptr->DriverObject = DriverObject;
+  bus_dev_ptr->Self = bus_fdo;
+  bus_dev_ptr->State = NotStarted;
+  bus_dev_ptr->OldState = NotStarted;
   /*
    * Register the default driver IRP handling table
    */
-  irp__reg_table_s ( &bus_dev_ext_ptr->irp_handler_chain,
-		     driver__handling_table, driver__handling_table_size );
+  irp__reg_table_s ( &bus_dev_ptr->irp_handler_chain, driver__handling_table,
+		     driver__handling_table_size );
   /*
    * Register the default bus IRP handling table
    */
-  irp__reg_table ( &bus_dev_ext_ptr->irp_handler_chain, handling_table );
+  irp__reg_table ( &bus_dev_ptr->irp_handler_chain, handling_table );
   /*
-   * Establish a pointer into the bus device's extension space
+   * Establish a pointer to the bus
    */
-  bus_ptr = get_bus_ptr ( bus_dev_ext_ptr );
+  bus_ptr = get_bus_ptr ( bus_dev_ptr );
   bus_ptr->PhysicalDeviceObject = PhysicalDeviceObject;
   bus_ptr->Children = 0;
   bus_ptr->first_child_ptr = NULL;
@@ -305,7 +305,7 @@ Bus_AddDevice (
     }
   bus_fdo->Flags &= ~DO_DEVICE_INITIALIZING;
 #ifdef RIS
-  bus_dev_ext_ptr->State = Started;
+  bus_dev_ptr->State = Started;
 #endif
   DBG ( "Exit\n" );
   return STATUS_SUCCESS;
