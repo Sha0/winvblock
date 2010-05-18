@@ -32,6 +32,7 @@
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
+#include "device.h"
 #include "disk.h"
 #include "disk_pnp.h"
 #include "disk_dev_ctl.h"
@@ -60,7 +61,7 @@ disk__max_xfer_len_decl ( disk__default_max_xfer_len )
 }
 
 static
-driver__dev_init_decl (
+device__init_decl (
   init
  )
 {
@@ -74,7 +75,7 @@ disk__init_decl ( disk__default_init )
 }
 
 static
-driver__dev_close_decl (
+device__close_decl (
   close
  )
 {
@@ -147,7 +148,7 @@ static irp__handling handling_table[] = {
  * Returns a Physical Device Object pointer on success, NULL for failure.
  */
 static
-driver__dev_create_pdo_decl (
+device__create_pdo_decl (
   create_pdo
  )
 {
@@ -237,13 +238,13 @@ driver__dev_create_pdo_decl (
 }
 
 /* Device operations for disks */
-driver__dev_ops disk__dev_ops = {
+device__ops disk__dev_ops = {
   create_pdo,
   init,
   close
 };
 
-winvblock__lib_func driver__dev_ops_ptr
+winvblock__lib_func device__ops_ptr
 disk__get_ops (
   void
  )

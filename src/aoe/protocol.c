@@ -34,6 +34,7 @@
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
+#include "device.h"
 #include "disk.h"
 #include "mount.h"
 #include "aoe.h"

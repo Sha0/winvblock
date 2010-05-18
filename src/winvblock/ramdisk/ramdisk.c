@@ -31,6 +31,7 @@
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
+#include "device.h"
 #include "disk.h"
 #include "ramdisk.h"
 #include "debug.h"

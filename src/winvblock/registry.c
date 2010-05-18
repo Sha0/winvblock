@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright (C) 2008, Michael Brown <mbrown@fensystems.co.uk>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
