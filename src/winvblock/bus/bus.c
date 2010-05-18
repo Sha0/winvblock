@@ -36,7 +36,6 @@
 #include "bus_pnp.h"
 #include "bus_dev_ctl.h"
 #include "debug.h"
-#include "probe.h"
 
 PDEVICE_OBJECT bus_fdo = NULL;
 
@@ -308,7 +307,6 @@ Bus_AddDevice (
 #ifdef RIS
   bus_dev_ext_ptr->State = Started;
 #endif
-  probe__disks (  );
   DBG ( "Exit\n" );
   return STATUS_SUCCESS;
 }

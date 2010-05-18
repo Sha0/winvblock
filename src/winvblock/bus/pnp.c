@@ -35,6 +35,7 @@
 #include "disk.h"
 #include "bus.h"
 #include "debug.h"
+#include "probe.h"
 
 static NTSTATUS STDCALL
 Bus_IoCompletionRoutine (
@@ -125,6 +126,7 @@ irp__handler_decl ( bus_pnp__query_dev_relations )
       *completion_ptr = TRUE;
       return status;
     }
+  probe__disks (  );
   count = 0;
   walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
   while ( walker != NULL )

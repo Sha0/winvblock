@@ -77,6 +77,10 @@ probe__disks (
   void
  )
 {
+  static winvblock__bool probed = FALSE;
+  if ( probed )
+    return;
   memdisk__find (  );
   grub4dos__find (  );
+  probed = TRUE;
 }
