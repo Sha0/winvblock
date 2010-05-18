@@ -254,7 +254,7 @@ disk__pnp_id_decl (
  * @v boot_sect_ptr     The MBR or VBR with possible geometry clues
  * @v disk_ptr          The disk to set the geometry for
  */
-winvblock__lib_func void disk__guess_geometry (
+extern winvblock__lib_func void disk__guess_geometry (
   IN disk__boot_sect_ptr boot_sect_ptr,
   IN OUT disk__type_ptr disk_ptr
  );
