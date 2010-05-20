@@ -171,7 +171,10 @@ DriverEntry (
     {
       DBG ( "Could not set system state to ES_CONTINUOUS!!\n" );
     }
-
+  /*
+   * Initialize various modules
+   */
+  device__init (  );		/* TODO: Check for error */
   /*
    * Set up IRP MajorFunction function table for devices
    * this driver handles

@@ -102,6 +102,29 @@ typedef device__close_decl (
    ( *device__close_routine )
  );
 
+/**
+ * Initialize the global, device-common environment
+ *
+ * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
+ */
+extern STDCALL NTSTATUS device__init (
+  void
+ );
+
+/**
+ * Create a new device
+ *
+ * @ret dev_ptr         The address of a new device, or NULL for failure
+ *
+ * This function should not be confused with a PDO creation routine, which is
+ * actually implemented for each device type.  This routine will allocate a
+ * device__type, track it in a global list, as well as populate the device
+ * with default values.
+ */
+extern winvblock__lib_func STDCALL device__type_ptr device__create (
+  void
+ );
+
 winvblock__def_struct ( device__ops )
 {
   device__create_pdo_routine create_pdo;
@@ -122,6 +145,7 @@ struct _device__type
   irp__handler_chain irp_handler_chain;
   device__type_ptr next_sibling_ptr;
   device__ops_ptr ops;
+  LIST_ENTRY tracking;
 };
 
 #endif				/* _device_h */

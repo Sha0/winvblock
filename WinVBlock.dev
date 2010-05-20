@@ -1,7 +1,7 @@
 [Project]
 FileName=WinVBlock.dev
 Name=WinVBlock
-UnitCount=54
+UnitCount=55
 PchHead=-1
 PchSource=-1
 Ver=3
@@ -614,6 +614,16 @@ BuildCmd=
 FileName=src\include\device.h
 CompileCpp=1
 Folder=Include
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit55]
+FileName=src\winvblock\device.c
+CompileCpp=1
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000

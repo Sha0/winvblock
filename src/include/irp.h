@@ -27,7 +27,7 @@
  *
  */
 
-/* An unfortunate forward declaration.  Definition resolved in driver.h */
+/* An unfortunate forward declaration.  Definition resolved in device.h */
 struct _device__type;
 
 /* We have lots of these, so offer a convenience macro for declarations */
