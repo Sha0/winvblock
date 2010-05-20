@@ -147,9 +147,8 @@ DriverEntry (
   IN PUNICODE_STRING RegistryPath
  )
 {
-  NTSTATUS Status;
+  NTSTATUS status;
   int i;
-  PDEVICE_OBJECT bus_pdo_ptr = NULL;
 
   DBG ( "Entry\n" );
   if ( driver__obj_ptr )
@@ -161,8 +160,9 @@ DriverEntry (
   if ( Driver_Globals_Started )
     return STATUS_SUCCESS;
   Debug_Initialize (  );
-  if ( !NT_SUCCESS ( Status = registry__note_os_load_opts ( &os_load_opts ) ) )
-    return Error ( "registry__note_os_load_opts", Status );
+  status = registry__note_os_load_opts ( &os_load_opts );
+  if ( !NT_SUCCESS ( status ) )
+    return Error ( "registry__note_os_load_opts", status );
 
   Driver_Globals_StateHandle = NULL;
 
@@ -171,10 +171,6 @@ DriverEntry (
     {
       DBG ( "Could not set system state to ES_CONTINUOUS!!\n" );
     }
-  /*
-   * Initialize various modules
-   */
-  device__init (  );		/* TODO: Check for error */
   /*
    * Set up IRP MajorFunction function table for devices
    * this driver handles
@@ -189,20 +185,14 @@ DriverEntry (
   DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = Driver_Dispatch;
   DriverObject->MajorFunction[IRP_MJ_SCSI] = Driver_Dispatch;
   /*
-   * Other functions this driver handles
+   * Set the driver Unload callback
    */
-  DriverObject->DriverExtension->AddDevice = Bus_AddDevice;
   DriverObject->DriverUnload = Driver_Unload;
-
   /*
-   * Always create the root-enumerated bus device 
+   * Initialize various modules
    */
-  IoReportDetectedDevice ( DriverObject, InterfaceTypeUndefined, -1, -1, NULL,
-			   NULL, FALSE, &bus_pdo_ptr );
-  if ( !NT_SUCCESS ( Status = Bus_AddDevice ( DriverObject, bus_pdo_ptr ) ) )
-    {
-      return Error ( "Bus_AddDevice", Status );
-    }
+  device__init (  );		/* TODO: Check for error */
+  bus__init (  );		/* TODO: Check for error */
 
   Driver_Globals_Started = TRUE;
   DBG ( "Exit\n" );
@@ -313,7 +303,7 @@ Driver_Unload (
 {
   if ( Driver_Globals_StateHandle != NULL )
     PoUnregisterSystemState ( Driver_Globals_StateHandle );
-  Bus_Stop (  );
+  bus__finalize (  );
   ExFreePool ( os_load_opts );
   Driver_Globals_Started = FALSE;
   DBG ( "Done\n" );

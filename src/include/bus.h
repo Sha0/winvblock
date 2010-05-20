@@ -36,20 +36,42 @@ winvblock__def_struct ( bus__type )
   winvblock__uint32 Children;
   winvblock__uint8_ptr first_child_ptr;
   KSPIN_LOCK SpinLock;
+  LIST_ENTRY tracking;
 };
-
-extern void Bus_Stop (
-  void
- );
-
-extern NTSTATUS STDCALL Bus_AddDevice (
-  IN PDRIVER_OBJECT DriverObject,
-  IN PDEVICE_OBJECT PhysicalDeviceObject
- );
 
 extern NTSTATUS STDCALL Bus_GetDeviceCapabilities (
   IN PDEVICE_OBJECT DeviceObject,
   IN PDEVICE_CAPABILITIES DeviceCapabilities
+ );
+
+/**
+ * Initialize the global, bus-common environment
+ *
+ * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
+ */
+extern STDCALL NTSTATUS bus__init (
+  void
+ );
+
+/**
+ * Tear down the global, bus-common environment
+ */
+extern void bus__finalize (
+  void
+ );
+
+/**
+ * Create a new bus
+ *
+ * @ret bus_ptr         The address of a new bus, or NULL for failure
+ *
+ * This function should not be confused with a PDO creation routine, which is
+ * actually implemented for each device type.  This routine will allocate a
+ * bus__type, track it in a global list, as well as populate the bus
+ * with default values.
+ */
+extern winvblock__lib_func STDCALL bus__type_ptr bus__create (
+  void
  );
 
 /**

@@ -49,6 +49,7 @@ winvblock__def_struct ( device__type );
  * Device PDO creation routine
  *
  * @v dev_ptr           The device whose PDO should be created
+ * @ret pdo_ptr         Points to the new PDO, or is NULL upon failure
  */
 #  define device__create_pdo_decl( x ) \
 \

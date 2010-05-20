@@ -38,10 +38,15 @@
 #include "bus_dev_ctl.h"
 #include "debug.h"
 
-PDEVICE_OBJECT bus_fdo = NULL;
+static PDEVICE_OBJECT bus_fdo = NULL;
+static LIST_ENTRY bus_list;
+static KSPIN_LOCK bus_list_lock;
 
+/**
+ * Tear down the global, bus-common environment
+ */
 void
-Bus_Stop (
+bus__finalize (
   void
  )
 {
@@ -226,8 +231,8 @@ Bus_GetDeviceCapabilities (
   return status;
 }
 
-NTSTATUS STDCALL
-Bus_AddDevice (
+static NTSTATUS STDCALL
+attach_fdo (
   IN PDRIVER_OBJECT DriverObject,
   IN PDEVICE_OBJECT PhysicalDeviceObject
  )
@@ -309,6 +314,116 @@ Bus_AddDevice (
   bus_dev_ptr->State = Started;
 #endif
   DBG ( "Exit\n" );
+  return STATUS_SUCCESS;
+}
+
+/**
+ * Create a new bus
+ *
+ * @ret bus_ptr         The address of a new bus, or NULL for failure
+ *
+ * See the header file for additional details
+ */
+winvblock__lib_func STDCALL bus__type_ptr
+bus__create (
+  void
+ )
+{
+  bus__type_ptr bus_ptr;
+
+  /*
+   * Bus devices might be used for booting and should
+   * not be allocated from a paged memory pool
+   */
+  bus_ptr = ExAllocatePool ( NonPagedPool, sizeof ( device__type ) );
+  if ( bus_ptr == NULL )
+    goto err_nomem;
+  RtlZeroMemory ( bus_ptr, sizeof ( bus__type ) );
+  /*
+   * Track the new device in our global list
+   */
+  ExInterlockedInsertTailList ( &bus_list, &bus_ptr->tracking,
+				&bus_list_lock );
+  /*
+   * TODO: Populate non-zero device defaults
+   */
+  /*
+   * TODO: Register the default driver IRP handling table
+   */
+
+err_nomem:
+
+  return bus_ptr;
+}
+
+/**
+ * Create a bus PDO
+ *
+ * @v dev_ptr           Populate PDO dev. ext. space from these details
+ * @ret pdo_ptr         Points to the new PDO, or is NULL upon failure
+ *
+ * Returns a Physical Device Object pointer on success, NULL for failure.
+ */
+static
+device__create_pdo_decl (
+  create_pdo
+ )
+{
+  PDEVICE_OBJECT pdo_ptr = NULL;
+  NTSTATUS status;
+
+  /*
+   * Always create the root-enumerated bus device 
+   */
+  IoReportDetectedDevice ( driver__obj_ptr, InterfaceTypeUndefined, -1, -1,
+			   NULL, NULL, FALSE, &pdo_ptr );
+  if ( pdo_ptr == NULL )
+    {
+      DBG ( "IoReportDetectedDevice() went wrong!\n" );
+      return NULL;
+    }
+  /*
+   * Attach FDO to PDO *sigh*
+   */
+  status = attach_fdo ( driver__obj_ptr, pdo_ptr );
+  if ( !NT_SUCCESS ( status ) )
+    {
+      DBG ( "Bus_AddDevice() went wrong!\n" );
+      goto err_add_dev;
+    }
+  return pdo_ptr;
+
+err_add_dev:
+
+  IoDeleteDevice ( pdo_ptr );
+  return NULL;
+}
+
+/**
+ * Initialize the global, bus-common environment
+ *
+ * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
+ */
+extern STDCALL NTSTATUS
+bus__init (
+  void
+ )
+{
+  /*
+   * Initialize the global list of devices
+   */
+  InitializeListHead ( &bus_list );
+  KeInitializeSpinLock ( &bus_list_lock );
+  /*
+   * We handle AddDevice call-backs for the driver
+   */
+  driver__obj_ptr->DriverExtension->AddDevice = attach_fdo;
+  /*
+   * Establish the boot bus (required for booting from a WinVBlock disk)
+   */
+  if ( create_pdo ( NULL ) == NULL )	/* TODO: Pass a bus */
+    return STATUS_UNSUCCESSFUL;
+
   return STATUS_SUCCESS;
 }
 

@@ -144,6 +144,7 @@ static irp__handling handling_table[] = {
  * Create a disk PDO filled with the given disk parameters
  *
  * @v dev_ptr           Populate PDO dev. ext. space from these details
+ * @ret dev_obj_ptr     Points to the new PDO, or is NULL upon failure
  *
  * Returns a Physical Device Object pointer on success, NULL for failure.
  */
