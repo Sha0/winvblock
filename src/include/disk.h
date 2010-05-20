@@ -204,8 +204,9 @@ struct _disk__type
 
 /* Device operations for disks */
 extern device__ops disk__dev_ops;
-extern winvblock__lib_func device__ops_ptr disk__get_ops (
-  void
+/* Copy default disk device operations into a device */
+winvblock__lib_func void disk__put_dev_ops (
+  device__type_ptr dev
  );
 
 /*

@@ -89,7 +89,7 @@ bus__add_child (
   /*
    * Create the child device
    */
-  dev_obj_ptr = dev_ptr->ops->create_pdo ( dev_ptr );
+  dev_obj_ptr = dev_ptr->ops.create_pdo ( dev_ptr );
   if ( !dev_obj_ptr )
     {
       DBG ( "bus__add_child() failed!\n" );
@@ -107,7 +107,7 @@ bus__add_child (
    * Initialize the device.  For disks, this routine is responsible for
    * determining the disk's geometry appropriately for AoE/RAM/file disks
    */
-  dev_ptr->ops->init ( dev_ptr );
+  dev_ptr->ops.init ( dev_ptr );
   dev_obj_ptr->Flags &= ~DO_DEVICE_INITIALIZING;
   /*
    * Add the new device's extension to the bus' list of children

@@ -144,7 +144,7 @@ struct _device__type
   device__state OldState;
   irp__handler_chain irp_handler_chain;
   device__type_ptr next_sibling_ptr;
-  device__ops_ptr ops;
+  device__ops ops;
   LIST_ENTRY tracking;
 };
 

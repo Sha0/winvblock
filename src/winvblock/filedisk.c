@@ -201,7 +201,7 @@ irp__handler_decl ( filedisk__attach )
       filedisk.hash += *path_iterator++;
   }
   filedisk.disk.ops = &default_ops;
-  filedisk.disk.device.ops = &disk__dev_ops;
+  disk__put_dev_ops ( &filedisk.disk.device );
   filedisk.disk.device.size = sizeof ( filedisk__type );
   bus__add_child ( &filedisk.disk.device );
   return STATUS_SUCCESS;

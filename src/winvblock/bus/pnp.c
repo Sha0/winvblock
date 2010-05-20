@@ -97,7 +97,7 @@ irp__handler_decl ( bus_pnp__remove_dev )
   while ( walker != NULL )
     {
       next = ( device__type_ptr ) walker->next_sibling_ptr;
-      walker->ops->close ( walker );
+      walker->ops.close ( walker );
       IoDeleteDevice ( walker->Self );
       walker = next;
     }

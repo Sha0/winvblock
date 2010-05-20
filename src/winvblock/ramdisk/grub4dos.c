@@ -156,7 +156,7 @@ grub4dos__find (
 					 ramdisk.disk.Sectors );
 	  ramdisk.disk.BootDrive = TRUE;
 	  ramdisk.disk.ops = &ramdisk__default_ops;
-	  ramdisk.disk.device.ops = &disk__dev_ops;
+	  disk__put_dev_ops ( &ramdisk.disk.device );
 	  ramdisk.disk.device.size = sizeof ( ramdisk__type );
 	  FoundGrub4DosMapping = TRUE;
 	  bus__add_child ( &ramdisk.disk.device );

@@ -244,12 +244,13 @@ device__ops disk__dev_ops = {
   close
 };
 
-winvblock__lib_func device__ops_ptr
-disk__get_ops (
-  void
+/* Copy default disk device operations into a device */
+winvblock__lib_func void
+disk__put_dev_ops (
+  device__type_ptr dev
  )
 {
-  return &disk__dev_ops;
+  RtlCopyMemory ( &dev->ops, &disk__dev_ops, sizeof ( device__ops ) );
 }
 
 /* An MBR C/H/S address and ways to access its components */

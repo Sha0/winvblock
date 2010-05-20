@@ -358,7 +358,7 @@ irp__handler_decl ( disk_pnp__simple )
 	DeviceExtension->State = NotStarted;
 	if ( disk_ptr->Unmount )
 	  {
-	    DeviceExtension->ops->close ( DeviceExtension );
+	    DeviceExtension->ops.close ( DeviceExtension );
 	    IoDeleteDevice ( DeviceExtension->Self );
 	    status = STATUS_NO_SUCH_DEVICE;
 	  }

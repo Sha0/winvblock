@@ -105,7 +105,7 @@ check_mbft (
   ramdisk.disk.Sectors = mBFT->mdi.sectors;
   ramdisk.disk.BootDrive = TRUE;
   ramdisk.disk.ops = &ramdisk__default_ops;
-  ramdisk.disk.device.ops = &disk__dev_ops;
+  disk__put_dev_ops ( &ramdisk.disk.device );
   ramdisk.disk.device.size = sizeof ( ramdisk__type );
   bus__add_child ( &ramdisk.disk.device );
   AssociatedHook->Flags = 1;
