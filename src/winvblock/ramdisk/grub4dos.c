@@ -159,7 +159,7 @@ grub4dos__find (
 	  disk__put_dev_ops ( &ramdisk.disk.device );
 	  ramdisk.disk.device.size = sizeof ( ramdisk__type );
 	  FoundGrub4DosMapping = TRUE;
-	  bus__add_child ( &ramdisk.disk.device );
+	  bus__add_child ( bus__boot (  ), &ramdisk.disk.device );
 	}
       InterruptVector = &SafeMbrHookPtr->PrevHook;
     }

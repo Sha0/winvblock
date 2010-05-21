@@ -203,7 +203,7 @@ irp__handler_decl ( filedisk__attach )
   filedisk.disk.ops = &default_ops;
   disk__put_dev_ops ( &filedisk.disk.device );
   filedisk.disk.device.size = sizeof ( filedisk__type );
-  bus__add_child ( &filedisk.disk.device );
+  bus__add_child ( bus__boot (  ), &filedisk.disk.device );
   return STATUS_SUCCESS;
 }
 

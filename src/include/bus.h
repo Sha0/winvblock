@@ -79,11 +79,13 @@ extern winvblock__lib_func bus__type_ptr bus__create (
 /**
  * Add a child node to the bus
  *
- * @v dev_ptr           The details for the child device to add
+ * @v bus_ptr           Points to the bus receiving the child
+ * @v dev_ptr           Points to the child device to add
  *
  * Returns TRUE for success, FALSE for failure
  */
 extern winvblock__lib_func winvblock__bool STDCALL bus__add_child (
+  IN OUT bus__type_ptr bus_ptr,
   IN device__type_ptr dev_ptr
  );
 

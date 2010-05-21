@@ -107,7 +107,7 @@ check_mbft (
   ramdisk.disk.ops = &ramdisk__default_ops;
   disk__put_dev_ops ( &ramdisk.disk.device );
   ramdisk.disk.device.size = sizeof ( ramdisk__type );
-  bus__add_child ( &ramdisk.disk.device );
+  bus__add_child ( bus__boot (  ), &ramdisk.disk.device );
   AssociatedHook->Flags = 1;
   return TRUE;
 }

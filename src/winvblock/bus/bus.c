@@ -67,12 +67,14 @@ bus__finalize (
 /**
  * Add a child node to the bus
  *
- * @v dev_ptr           The details for the child device to add
+ * @v bus_ptr           Points to the bus receiving the child
+ * @v dev_ptr           Points to the child device to add
  *
  * Returns TRUE for success, FALSE for failure
  */
 winvblock__lib_func winvblock__bool STDCALL
 bus__add_child (
+  IN OUT bus__type_ptr bus_ptr,
   IN device__type_ptr dev_ptr
  )
 {
@@ -82,19 +84,14 @@ bus__add_child (
    * @v walker              Walks the child nodes
    */
   PDEVICE_OBJECT dev_obj_ptr;
-  bus__type_ptr bus_ptr;
   device__type_ptr walker;
 
   DBG ( "Entry\n" );
-  if ( !boot_bus_fdo )
+  if ( ( bus_ptr == NULL ) || ( dev_ptr == NULL ) )
     {
-      DBG ( "No bus device!\n" );
+      DBG ( "No bus or no device!\n" );
       return FALSE;
     }
-  /*
-   * Establish a pointer to the bus
-   */
-  bus_ptr = get_bus_ptr ( boot_bus_fdo->DeviceExtension );
   /*
    * Create the child device
    */
@@ -110,7 +107,7 @@ bus__add_child (
    * extension space.  We don't need the original details anymore
    */
   dev_ptr = dev_obj_ptr->DeviceExtension;
-  dev_ptr->Parent = boot_bus_fdo;
+  dev_ptr->Parent = bus_ptr->device.Self;
   dev_ptr->next_sibling_ptr = NULL;
   /*
    * Initialize the device.  For disks, this routine is responsible for
