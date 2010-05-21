@@ -30,7 +30,7 @@
 
 winvblock__def_struct ( bus__type )
 {
-  device__type device;
+  device__type_ptr device;
   PDEVICE_OBJECT LowerDeviceObject;
   PDEVICE_OBJECT PhysicalDeviceObject;
   winvblock__uint32 Children;
@@ -39,6 +39,9 @@ winvblock__def_struct ( bus__type )
   LIST_ENTRY tracking;
   winvblock__any_ptr ext;
   device__free_routine prev_free;
+  UNICODE_STRING dev_name;
+  UNICODE_STRING dos_dev_name;
+  winvblock__bool named;
 };
 
 extern NTSTATUS STDCALL Bus_GetDeviceCapabilities (
@@ -99,11 +102,10 @@ extern winvblock__lib_func bus__type_ptr bus__boot (
  );
 
 /*
- * Establish a pointer to the bus.
- * Since the device extension is the first member of a bus
- * structure, a simple cast will suffice
+ * Yield a pointer to the bus.  Whoa
  */
-#  define get_bus_ptr( dev_ptr ) \
-  ( ( bus__type_ptr ) dev_ptr )
+#  define bus__get_ptr( dev_ext )                                       \
+  ( ( bus__type_ptr )                                                   \
+    ( ( ( device__type_ptr* ) dev_ext )[0]->TODO_temp_measure->ext ) )
 
 #endif				/* _bus_h */

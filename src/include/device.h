@@ -172,6 +172,7 @@ winvblock__def_struct ( device__ops )
 /* Details common to all devices this driver works with */
 struct _device__type
 {
+  device__type_ptr TODO_temp_measure;
   size_t size;
   winvblock__bool IsBus;	/* For debugging */
   PDEVICE_OBJECT Self;

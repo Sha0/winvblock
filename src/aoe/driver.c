@@ -813,7 +813,7 @@ DriverEntry (
       }
     else
       {
-	irp__reg_table ( &bus_ptr->device.irp_handler_chain, handling_table );
+	irp__reg_table ( &bus_ptr->device->irp_handler_chain, handling_table );
       }
   }
   DriverObject->DriverUnload = unload;
@@ -947,7 +947,7 @@ unload (
       }
     else
       {
-	irp__unreg_table ( &bus_ptr->device.irp_handler_chain,
+	irp__unreg_table ( &bus_ptr->device->irp_handler_chain,
 			   handling_table );
       }
   }
@@ -2271,7 +2271,7 @@ irp__handler_decl (
 
   DBG ( "Got IOCTL_AOE_SHOW...\n" );
 
-  bus_ptr = get_bus_ptr ( DeviceExtension );
+  bus_ptr = bus__get_ptr ( DeviceExtension );
   disk_walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
   count = 0;
   while ( disk_walker != NULL )

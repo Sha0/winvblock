@@ -50,7 +50,7 @@ irp__handler_decl (
   bus__type_ptr bus_ptr;
 
   DBG ( "Request to detach disk: %d\n", *( winvblock__uint32_ptr ) buffer );
-  bus_ptr = get_bus_ptr ( DeviceExtension );
+  bus_ptr = bus__get_ptr ( DeviceExtension );
   disk_walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
   prev_disk_walker = disk_walker;
   while ( ( disk_walker != NULL )

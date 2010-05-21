@@ -256,7 +256,7 @@ irp__handler_decl ( disk_pnp__query_capabilities )
       goto ret_path;
     }
   disk_ptr = get_disk_ptr ( DeviceExtension );
-  bus_ptr = get_bus_ptr ( DeviceExtension->Parent->DeviceExtension );
+  bus_ptr = bus__get_ptr ( DeviceExtension->Parent->DeviceExtension );
   status =
     Bus_GetDeviceCapabilities ( bus_ptr->LowerDeviceObject,
 				&ParentDeviceCapabilities );

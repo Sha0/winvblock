@@ -157,8 +157,17 @@ irp__unreg_table (
 irp__handler_decl ( irp__process )
 {
   NTSTATUS status = STATUS_NOT_SUPPORTED;
-  handler_chain_ptr link =
-    ( handler_chain_ptr ) DeviceExtension->irp_handler_chain;
+  handler_chain_ptr link;
+
+  /*
+   * Temporary work-around while a bus FDO's DeviceExtension is actually
+   * a pointer to a bus pointer, but other devices' PDO's DeviceExtensions
+   * are pointers to the device structures.  Ugh
+   */
+  if ( DeviceExtension->TODO_temp_measure )
+    DeviceExtension = DeviceExtension->TODO_temp_measure;
+
+  link = ( handler_chain_ptr ) DeviceExtension->irp_handler_chain;
 
   while ( link != NULL )
     {

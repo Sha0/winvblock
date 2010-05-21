@@ -41,9 +41,12 @@
 static PDEVICE_OBJECT boot_bus_fdo = NULL;
 static LIST_ENTRY bus_list;
 static KSPIN_LOCK bus_list_lock;
-/* Forward declaration */
+/* Forward declarations */
 static device__free_decl (
   free_bus
+ );
+static device__create_pdo_decl (
+  create_pdo
  );
 
 /**
@@ -107,7 +110,7 @@ bus__add_child (
    * extension space.  We don't need the original details anymore
    */
   dev_ptr = dev_obj_ptr->DeviceExtension;
-  dev_ptr->Parent = bus_ptr->device.Self;
+  dev_ptr->Parent = bus_ptr->device->Self;
   dev_ptr->next_sibling_ptr = NULL;
   /*
    * Initialize the device.  For disks, this routine is responsible for
@@ -144,7 +147,7 @@ irp__handler_decl (
   sys_ctl
  )
 {
-  bus__type_ptr bus_ptr = get_bus_ptr ( DeviceExtension );
+  bus__type_ptr bus_ptr = bus__get_ptr ( DeviceExtension );
   DBG ( "...\n" );
   IoSkipCurrentIrpStackLocation ( Irp );
   *completion_ptr = TRUE;
@@ -156,7 +159,7 @@ irp__handler_decl (
   power
  )
 {
-  bus__type_ptr bus_ptr = get_bus_ptr ( DeviceExtension );
+  bus__type_ptr bus_ptr = bus__get_ptr ( DeviceExtension );
   PoStartNextPowerIrp ( Irp );
   IoSkipCurrentIrpStackLocation ( Irp );
   *completion_ptr = TRUE;
@@ -238,81 +241,90 @@ attach_fdo (
   IN PDEVICE_OBJECT PhysicalDeviceObject
  )
 {
-  NTSTATUS Status;
-  UNICODE_STRING DeviceName,
-   DosDeviceName;
-  device__type_ptr bus_dev_ptr;
+  PLIST_ENTRY walker;
   bus__type_ptr bus_ptr;
+  NTSTATUS status;
+  PUNICODE_STRING dev_name = NULL;
+  PDEVICE_OBJECT fdo = NULL;
+  device__type_ptr dev_ptr;
 
   DBG ( "Entry\n" );
-  if ( boot_bus_fdo )
-    return STATUS_SUCCESS;
-  RtlInitUnicodeString ( &DeviceName, L"\\Device\\" winvblock__literal_w );
-  RtlInitUnicodeString ( &DosDeviceName,
-			 L"\\DosDevices\\" winvblock__literal_w );
-  Status =
-    IoCreateDevice ( DriverObject, sizeof ( bus__type ), &DeviceName,
-		     FILE_DEVICE_CONTROLLER, FILE_DEVICE_SECURE_OPEN, FALSE,
-		     &boot_bus_fdo );
-  if ( !NT_SUCCESS ( Status ) )
+  /*
+   * Search for the associated bus
+   */
+  walker = bus_list.Flink;
+  while ( walker != &bus_list )
     {
-      return Error ( "IoCreateDevice", Status );
+      bus_ptr = CONTAINING_RECORD ( walker, bus__type, tracking );
+      if ( bus_ptr->PhysicalDeviceObject == PhysicalDeviceObject )
+	break;
+      walker = walker->Flink;
     }
-  Status = IoCreateSymbolicLink ( &DosDeviceName, &DeviceName );
-  if ( !NT_SUCCESS ( Status ) )
+  /*
+   * If we get back to the list head, we need to create a bus
+   */
+  if ( walker == &bus_list )
     {
-      IoDeleteDevice ( boot_bus_fdo );
-      return Error ( "IoCreateSymbolicLink", Status );
+      DBG ( "No bus->PDO association.  Creating a new bus\n" );
+      bus_ptr = bus__create (  );
+      if ( bus_ptr == NULL )
+	return Error ( "Could not create a bus!\n",
+		       STATUS_INSUFFICIENT_RESOURCES );
+    }
+  /*
+   * This bus might have an associated name
+   */
+  if ( bus_ptr->named )
+    dev_name = &bus_ptr->dev_name;
+
+  status =
+    IoCreateDevice ( DriverObject, sizeof ( device__type_ptr ), dev_name,
+		     FILE_DEVICE_CONTROLLER, FILE_DEVICE_SECURE_OPEN, FALSE,
+		     &fdo );
+  if ( !NT_SUCCESS ( status ) )
+    {
+      return Error ( "IoCreateDevice", status );
+    }
+  /*
+   * DosDevice symlink
+   */
+  if ( bus_ptr->named )
+    status =
+      IoCreateSymbolicLink ( &bus_ptr->dos_dev_name, &bus_ptr->dev_name );
+  if ( !NT_SUCCESS ( status ) )
+    {
+      IoDeleteDevice ( fdo );
+      return Error ( "IoCreateSymbolicLink", status );
     }
 
   /*
-   * Set some default parameters for a bus
+   * Set associations for the bus, device, FDO, PDO
    */
-  bus_dev_ptr = ( device__type_ptr ) boot_bus_fdo->DeviceExtension;
-  RtlZeroMemory ( bus_dev_ptr, sizeof ( bus__type ) );
-  bus_dev_ptr->IsBus = TRUE;
-  bus_dev_ptr->size = sizeof ( bus__type );
-  bus_dev_ptr->DriverObject = DriverObject;
-  bus_dev_ptr->Self = boot_bus_fdo;
-  bus_dev_ptr->State = NotStarted;
-  bus_dev_ptr->OldState = NotStarted;
-  /*
-   * Register the default driver IRP handling table
-   */
-  irp__reg_table_s ( &bus_dev_ptr->irp_handler_chain, driver__handling_table,
-		     driver__handling_table_size );
-  /*
-   * Register the default bus IRP handling table
-   */
-  irp__reg_table ( &bus_dev_ptr->irp_handler_chain, handling_table );
-  /*
-   * Establish a pointer to the bus
-   */
-  bus_ptr = get_bus_ptr ( bus_dev_ptr );
+  dev_ptr = bus_ptr->device;
+  *( ( device__type_ptr * ) fdo->DeviceExtension ) = dev_ptr;	/* Careful */
+  dev_ptr->DriverObject = DriverObject;
+  dev_ptr->Self = fdo;
+
   bus_ptr->PhysicalDeviceObject = PhysicalDeviceObject;
-  bus_ptr->Children = 0;
-  bus_ptr->first_child_ptr = NULL;
-  KeInitializeSpinLock ( &bus_ptr->SpinLock );
-  boot_bus_fdo->Flags |= DO_DIRECT_IO;	/* FIXME? */
-  boot_bus_fdo->Flags |= DO_POWER_INRUSH;	/* FIXME? */
+  fdo->Flags |= DO_DIRECT_IO;	/* FIXME? */
+  fdo->Flags |= DO_POWER_INRUSH;	/* FIXME? */
   /*
    * Add the bus to the device tree
    */
   if ( PhysicalDeviceObject != NULL )
     {
       bus_ptr->LowerDeviceObject =
-	IoAttachDeviceToDeviceStack ( boot_bus_fdo, PhysicalDeviceObject );
+	IoAttachDeviceToDeviceStack ( fdo, PhysicalDeviceObject );
       if ( bus_ptr->LowerDeviceObject == NULL )
 	{
-	  IoDeleteDevice ( boot_bus_fdo );
-	  boot_bus_fdo = NULL;
+	  IoDeleteDevice ( fdo );
 	  return Error ( "IoAttachDeviceToDeviceStack",
 			 STATUS_NO_SUCH_DEVICE );
 	}
     }
-  boot_bus_fdo->Flags &= ~DO_DEVICE_INITIALIZING;
+  fdo->Flags &= ~DO_DEVICE_INITIALIZING;
 #ifdef RIS
-  bus_dev_ptr->State = Started;
+  dev_ptr->State = Started;
 #endif
   DBG ( "Exit\n" );
   return STATUS_SUCCESS;
@@ -355,9 +367,18 @@ bus__create (
   /*
    * Populate non-zero device defaults
    */
+  bus_ptr->device = dev_ptr;
   bus_ptr->prev_free = dev_ptr->ops.free;
+  dev_ptr->TODO_temp_measure = dev_ptr;
+  dev_ptr->ops.create_pdo = create_pdo;
   dev_ptr->ops.free = free_bus;
   dev_ptr->ext = bus_ptr;
+  dev_ptr->IsBus = TRUE;
+  dev_ptr->State = NotStarted;
+  dev_ptr->OldState = NotStarted;
+  bus_ptr->Children = 0;
+  bus_ptr->first_child_ptr = NULL;
+  KeInitializeSpinLock ( &bus_ptr->SpinLock );
   /*
    * Register the default bus IRP handling table
    */
@@ -387,8 +408,18 @@ device__create_pdo_decl (
  )
 {
   PDEVICE_OBJECT pdo_ptr = NULL;
+  bus__type_ptr bus_ptr;
   NTSTATUS status;
 
+  /*
+   * Note the bus device needing a PDO
+   */
+  if ( dev_ptr == NULL )
+    {
+      DBG ( "No device passed\n" );
+      return NULL;
+    }
+  bus_ptr = ( bus__type_ptr ) dev_ptr->ext;
   /*
    * Always create the root-enumerated bus device 
    */
@@ -400,7 +431,16 @@ device__create_pdo_decl (
       return NULL;
     }
   /*
-   * Attach FDO to PDO *sigh*
+   * We have a PDO.  Note it in the bus
+   */
+  bus_ptr->PhysicalDeviceObject = pdo_ptr;
+  /*
+   * Attach FDO to PDO. *sigh*  Note that we do not own the PDO,
+   * so we must associate the bus structure with the FDO, instead.
+   * Consider that the AddDevice()/attach_fdo() routine takes two parameters,
+   * neither of which are guaranteed to be owned by a caller in this driver.
+   * Since attach_fdo() associates a bus device, it is forced to walk our
+   * global list of bus devices.  Otherwise, it would be easy to pass it here
    */
   status = attach_fdo ( driver__obj_ptr, pdo_ptr );
   if ( !NT_SUCCESS ( status ) )
@@ -426,6 +466,8 @@ bus__init (
   void
  )
 {
+  bus__type_ptr boot_bus_ptr;
+
   /*
    * Initialize the global list of devices
    */
@@ -438,8 +480,22 @@ bus__init (
   /*
    * Establish the boot bus (required for booting from a WinVBlock disk)
    */
-  if ( create_pdo ( NULL ) == NULL )	/* TODO: Pass a bus */
+  boot_bus_ptr = bus__create (  );
+  if ( boot_bus_ptr == NULL )
     return STATUS_UNSUCCESSFUL;
+  RtlInitUnicodeString ( &boot_bus_ptr->dev_name,
+			 L"\\Device\\" winvblock__literal_w );
+  RtlInitUnicodeString ( &boot_bus_ptr->dos_dev_name,
+			 L"\\DosDevices\\" winvblock__literal_w );
+  /*
+   * Create the PDO, which also attaches the FDO *sigh*
+   */
+  if ( create_pdo ( boot_bus_ptr->device ) == NULL )
+    {
+      free_bus ( boot_bus_ptr->device );
+      return STATUS_UNSUCCESSFUL;
+    }
+  boot_bus_fdo = boot_bus_ptr->device->Self;
 
   return STATUS_SUCCESS;
 }
@@ -474,9 +530,9 @@ device__free_decl (
 }
 
 /**
- * Get a pointer to the bus device's extension space
+ * Get a pointer to the boot bus device
  *
- * @ret         A pointer to the bus device's extension space, or NULL
+ * @ret         A pointer to the boot bus, or NULL
  */
 winvblock__lib_func bus__type_ptr
 bus__boot (
@@ -488,5 +544,5 @@ bus__boot (
       DBG ( "No boot bus device!\n" );
       return NULL;
     }
-  return get_bus_ptr ( boot_bus_fdo->DeviceExtension );
+  return bus__get_ptr ( boot_bus_fdo->DeviceExtension );
 }

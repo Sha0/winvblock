@@ -55,7 +55,7 @@ irp__handler_decl ( bus_pnp__start_dev )
   KEVENT event;
   bus__type_ptr bus_ptr;
 
-  bus_ptr = get_bus_ptr ( DeviceExtension );
+  bus_ptr = bus__get_ptr ( DeviceExtension );
   KeInitializeEvent ( &event, NotificationEvent, FALSE );
   IoCopyCurrentIrpStackLocationToNext ( Irp );
   IoSetCompletionRoutine ( Irp,
@@ -91,7 +91,7 @@ irp__handler_decl ( bus_pnp__remove_dev )
   Irp->IoStatus.Information = 0;
   Irp->IoStatus.Status = STATUS_SUCCESS;
   IoSkipCurrentIrpStackLocation ( Irp );
-  bus_ptr = get_bus_ptr ( DeviceExtension );
+  bus_ptr = bus__get_ptr ( DeviceExtension );
   status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
   walker = ( device__type_ptr ) bus_ptr->first_child_ptr;
   while ( walker != NULL )
@@ -117,7 +117,7 @@ irp__handler_decl ( bus_pnp__query_dev_relations )
   disk__type_ptr walker;
   PDEVICE_RELATIONS dev_relations;
 
-  bus_ptr = get_bus_ptr ( DeviceExtension );
+  bus_ptr = bus__get_ptr ( DeviceExtension );
   if ( Stack->Parameters.QueryDeviceRelations.Type != BusRelations
        || Irp->IoStatus.Information )
     {
@@ -175,7 +175,7 @@ irp__handler_decl ( bus_pnp__simple )
   NTSTATUS status;
   bus__type_ptr bus_ptr;
 
-  bus_ptr = get_bus_ptr ( DeviceExtension );
+  bus_ptr = bus__get_ptr ( DeviceExtension );
   switch ( Stack->MinorFunction )
     {
       case IRP_MN_QUERY_PNP_DEVICE_STATE:
