@@ -58,7 +58,7 @@ x ( \
   IN device__type_ptr dev_ptr \
  )
 /*
- * Function pointer for a device initialization routine.
+ * Function pointer for a device PDO creation routine.
  * 'indent' mangles this, so it looks weird
  */
 typedef device__create_pdo_decl (
@@ -123,7 +123,7 @@ x ( \
   IN device__type_ptr dev_ptr \
  )
 /*
- * Function pointer for a device close routine.
+ * Function pointer for a device deletion routine.
  * 'indent' mangles this, so it looks weird
  */
 typedef device__free_decl (

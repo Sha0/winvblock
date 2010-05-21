@@ -98,7 +98,7 @@ bus__add_child (
   dev_obj_ptr = device__create_pdo ( dev_ptr );
   if ( dev_obj_ptr == NULL )
     {
-      DBG ( "bus__add_child() failed!\n" );
+      DBG ( "PDO creation failed!\n" );
       return FALSE;
     }
 
@@ -256,13 +256,13 @@ attach_fdo (
 		     &boot_bus_fdo );
   if ( !NT_SUCCESS ( Status ) )
     {
-      return Error ( "Bus_AddDevice IoCreateDevice", Status );
+      return Error ( "IoCreateDevice", Status );
     }
   Status = IoCreateSymbolicLink ( &DosDeviceName, &DeviceName );
   if ( !NT_SUCCESS ( Status ) )
     {
       IoDeleteDevice ( boot_bus_fdo );
-      return Error ( "Bus_AddDevice IoCreateSymbolicLink", Status );
+      return Error ( "IoCreateSymbolicLink", Status );
     }
 
   /*
@@ -306,7 +306,7 @@ attach_fdo (
 	{
 	  IoDeleteDevice ( boot_bus_fdo );
 	  boot_bus_fdo = NULL;
-	  return Error ( "AddDevice IoAttachDeviceToDeviceStack",
+	  return Error ( "IoAttachDeviceToDeviceStack",
 			 STATUS_NO_SUCH_DEVICE );
 	}
     }
@@ -405,7 +405,7 @@ device__create_pdo_decl (
   status = attach_fdo ( driver__obj_ptr, pdo_ptr );
   if ( !NT_SUCCESS ( status ) )
     {
-      DBG ( "Bus_AddDevice() went wrong!\n" );
+      DBG ( "attach_fdo() went wrong!\n" );
       goto err_add_dev;
     }
   return pdo_ptr;
