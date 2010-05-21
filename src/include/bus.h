@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _BUS_H
-#  define _BUS_H
+#ifndef _bus_h
+#  define _bus_h
 
 /**
  * @file
@@ -37,6 +37,8 @@ winvblock__def_struct ( bus__type )
   winvblock__uint8_ptr first_child_ptr;
   KSPIN_LOCK SpinLock;
   LIST_ENTRY tracking;
+  winvblock__any_ptr ext;
+  device__free_routine prev_free;
 };
 
 extern NTSTATUS STDCALL Bus_GetDeviceCapabilities (
@@ -70,7 +72,7 @@ extern void bus__finalize (
  * bus__type, track it in a global list, as well as populate the bus
  * with default values.
  */
-extern winvblock__lib_func STDCALL bus__type_ptr bus__create (
+extern winvblock__lib_func bus__type_ptr bus__create (
   void
  );
 
@@ -90,7 +92,7 @@ extern winvblock__lib_func winvblock__bool STDCALL bus__add_child (
  *
  * @ret         A pointer to the bus device's extension space, or NULL
  */
-extern winvblock__lib_func bus__type_ptr STDCALL bus__dev (
+extern winvblock__lib_func bus__type_ptr bus__boot (
   void
  );
 
@@ -102,4 +104,4 @@ extern winvblock__lib_func bus__type_ptr STDCALL bus__dev (
 #  define get_bus_ptr( dev_ptr ) \
   ( ( bus__type_ptr ) dev_ptr )
 
-#endif				/* _BUS_H */
+#endif				/* _bus_h */

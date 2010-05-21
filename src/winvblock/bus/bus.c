@@ -38,9 +38,13 @@
 #include "bus_dev_ctl.h"
 #include "debug.h"
 
-static PDEVICE_OBJECT bus_fdo = NULL;
+static PDEVICE_OBJECT boot_bus_fdo = NULL;
 static LIST_ENTRY bus_list;
 static KSPIN_LOCK bus_list_lock;
+/* Forward declaration */
+static device__free_decl (
+  free_bus
+ );
 
 /**
  * Tear down the global, bus-common environment
@@ -56,7 +60,7 @@ bus__finalize (
   RtlInitUnicodeString ( &DosDeviceName,
 			 L"\\DosDevices\\" winvblock__literal_w );
   IoDeleteSymbolicLink ( &DosDeviceName );
-  bus_fdo = NULL;
+  boot_bus_fdo = NULL;
   DBG ( "Exit\n" );
 }
 
@@ -82,7 +86,7 @@ bus__add_child (
   device__type_ptr walker;
 
   DBG ( "Entry\n" );
-  if ( !bus_fdo )
+  if ( !boot_bus_fdo )
     {
       DBG ( "No bus device!\n" );
       return FALSE;
@@ -90,12 +94,12 @@ bus__add_child (
   /*
    * Establish a pointer to the bus
    */
-  bus_ptr = get_bus_ptr ( bus_fdo->DeviceExtension );
+  bus_ptr = get_bus_ptr ( boot_bus_fdo->DeviceExtension );
   /*
    * Create the child device
    */
-  dev_obj_ptr = dev_ptr->ops.create_pdo ( dev_ptr );
-  if ( !dev_obj_ptr )
+  dev_obj_ptr = device__create_pdo ( dev_ptr );
+  if ( dev_obj_ptr == NULL )
     {
       DBG ( "bus__add_child() failed!\n" );
       return FALSE;
@@ -106,7 +110,7 @@ bus__add_child (
    * extension space.  We don't need the original details anymore
    */
   dev_ptr = dev_obj_ptr->DeviceExtension;
-  dev_ptr->Parent = bus_fdo;
+  dev_ptr->Parent = boot_bus_fdo;
   dev_ptr->next_sibling_ptr = NULL;
   /*
    * Initialize the device.  For disks, this routine is responsible for
@@ -244,7 +248,7 @@ attach_fdo (
   bus__type_ptr bus_ptr;
 
   DBG ( "Entry\n" );
-  if ( bus_fdo )
+  if ( boot_bus_fdo )
     return STATUS_SUCCESS;
   RtlInitUnicodeString ( &DeviceName, L"\\Device\\" winvblock__literal_w );
   RtlInitUnicodeString ( &DosDeviceName,
@@ -252,7 +256,7 @@ attach_fdo (
   Status =
     IoCreateDevice ( DriverObject, sizeof ( bus__type ), &DeviceName,
 		     FILE_DEVICE_CONTROLLER, FILE_DEVICE_SECURE_OPEN, FALSE,
-		     &bus_fdo );
+		     &boot_bus_fdo );
   if ( !NT_SUCCESS ( Status ) )
     {
       return Error ( "Bus_AddDevice IoCreateDevice", Status );
@@ -260,19 +264,19 @@ attach_fdo (
   Status = IoCreateSymbolicLink ( &DosDeviceName, &DeviceName );
   if ( !NT_SUCCESS ( Status ) )
     {
-      IoDeleteDevice ( bus_fdo );
+      IoDeleteDevice ( boot_bus_fdo );
       return Error ( "Bus_AddDevice IoCreateSymbolicLink", Status );
     }
 
   /*
    * Set some default parameters for a bus
    */
-  bus_dev_ptr = ( device__type_ptr ) bus_fdo->DeviceExtension;
+  bus_dev_ptr = ( device__type_ptr ) boot_bus_fdo->DeviceExtension;
   RtlZeroMemory ( bus_dev_ptr, sizeof ( bus__type ) );
   bus_dev_ptr->IsBus = TRUE;
   bus_dev_ptr->size = sizeof ( bus__type );
   bus_dev_ptr->DriverObject = DriverObject;
-  bus_dev_ptr->Self = bus_fdo;
+  bus_dev_ptr->Self = boot_bus_fdo;
   bus_dev_ptr->State = NotStarted;
   bus_dev_ptr->OldState = NotStarted;
   /*
@@ -292,24 +296,24 @@ attach_fdo (
   bus_ptr->Children = 0;
   bus_ptr->first_child_ptr = NULL;
   KeInitializeSpinLock ( &bus_ptr->SpinLock );
-  bus_fdo->Flags |= DO_DIRECT_IO;	/* FIXME? */
-  bus_fdo->Flags |= DO_POWER_INRUSH;	/* FIXME? */
+  boot_bus_fdo->Flags |= DO_DIRECT_IO;	/* FIXME? */
+  boot_bus_fdo->Flags |= DO_POWER_INRUSH;	/* FIXME? */
   /*
    * Add the bus to the device tree
    */
   if ( PhysicalDeviceObject != NULL )
     {
       bus_ptr->LowerDeviceObject =
-	IoAttachDeviceToDeviceStack ( bus_fdo, PhysicalDeviceObject );
+	IoAttachDeviceToDeviceStack ( boot_bus_fdo, PhysicalDeviceObject );
       if ( bus_ptr->LowerDeviceObject == NULL )
 	{
-	  IoDeleteDevice ( bus_fdo );
-	  bus_fdo = NULL;
+	  IoDeleteDevice ( boot_bus_fdo );
+	  boot_bus_fdo = NULL;
 	  return Error ( "AddDevice IoAttachDeviceToDeviceStack",
 			 STATUS_NO_SUCH_DEVICE );
 	}
     }
-  bus_fdo->Flags &= ~DO_DEVICE_INITIALIZING;
+  boot_bus_fdo->Flags &= ~DO_DEVICE_INITIALIZING;
 #ifdef RIS
   bus_dev_ptr->State = Started;
 #endif
@@ -324,20 +328,27 @@ attach_fdo (
  *
  * See the header file for additional details
  */
-winvblock__lib_func STDCALL bus__type_ptr
+winvblock__lib_func bus__type_ptr
 bus__create (
   void
  )
 {
+  device__type_ptr dev_ptr;
   bus__type_ptr bus_ptr;
 
+  /*
+   * Try to create a device
+   */
+  dev_ptr = device__create (  );
+  if ( dev_ptr == NULL )
+    goto err_nodev;
   /*
    * Bus devices might be used for booting and should
    * not be allocated from a paged memory pool
    */
-  bus_ptr = ExAllocatePool ( NonPagedPool, sizeof ( device__type ) );
+  bus_ptr = ExAllocatePool ( NonPagedPool, sizeof ( bus__type ) );
   if ( bus_ptr == NULL )
-    goto err_nomem;
+    goto err_nobus;
   RtlZeroMemory ( bus_ptr, sizeof ( bus__type ) );
   /*
    * Track the new device in our global list
@@ -345,15 +356,24 @@ bus__create (
   ExInterlockedInsertTailList ( &bus_list, &bus_ptr->tracking,
 				&bus_list_lock );
   /*
-   * TODO: Populate non-zero device defaults
+   * Populate non-zero device defaults
    */
+  bus_ptr->prev_free = dev_ptr->ops.free;
+  dev_ptr->ops.free = free_bus;
+  dev_ptr->ext = bus_ptr;
   /*
-   * TODO: Register the default driver IRP handling table
+   * Register the default bus IRP handling table
    */
-
-err_nomem:
+  irp__reg_table ( &dev_ptr->irp_handler_chain, handling_table );
 
   return bus_ptr;
+
+err_nobus:
+
+  device__free ( dev_ptr );
+err_nodev:
+
+  return NULL;
 }
 
 /**
@@ -428,19 +448,48 @@ bus__init (
 }
 
 /**
+ * Default bus deletion operation
+ *
+ * @v dev_ptr           Points to the bus device to delete
+ */
+static
+device__free_decl (
+  free_bus
+ )
+{
+  bus__type_ptr bus_ptr = ( bus__type_ptr ) dev_ptr->ext;
+  /*
+   * Un-register the default driver IRP handling table
+   */
+  irp__unreg_table ( &dev_ptr->irp_handler_chain, handling_table );
+  /*
+   * Free the "inherited class"
+   */
+  bus_ptr->prev_free ( dev_ptr );
+  /*
+   * Track the bus deletion in our global list.  Unfortunately,
+   * for now we have faith that a bus won't be deleted twice and
+   * result in a race condition.  Something to keep in mind...
+   */
+  ExInterlockedRemoveHeadList ( bus_ptr->tracking.Blink, &bus_list_lock );
+
+  ExFreePool ( bus_ptr );
+}
+
+/**
  * Get a pointer to the bus device's extension space
  *
  * @ret         A pointer to the bus device's extension space, or NULL
  */
-winvblock__lib_func bus__type_ptr STDCALL
-bus__dev (
+winvblock__lib_func bus__type_ptr
+bus__boot (
   void
  )
 {
-  if ( !bus_fdo )
+  if ( !boot_bus_fdo )
     {
-      DBG ( "No bus device!\n" );
+      DBG ( "No boot bus device!\n" );
       return NULL;
     }
-  return get_bus_ptr ( bus_fdo->DeviceExtension );
+  return get_bus_ptr ( boot_bus_fdo->DeviceExtension );
 }

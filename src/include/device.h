@@ -64,6 +64,14 @@ x ( \
 typedef device__create_pdo_decl (
    ( *device__create_pdo_routine )
  );
+/**
+ * Create a device PDO
+ *
+ * @v dev_ptr           Points to the device that needs a PDO
+ */
+extern winvblock__lib_func device__create_pdo_decl (
+  device__create_pdo
+ );
 
 /**
  * Device initialization routine
@@ -104,6 +112,33 @@ typedef device__close_decl (
  );
 
 /**
+ * Device deletion routine
+ *
+ * @v dev_ptr           Points to the device to delete
+ */
+#  define device__free_decl( x ) \
+\
+void STDCALL \
+x ( \
+  IN device__type_ptr dev_ptr \
+ )
+/*
+ * Function pointer for a device close routine.
+ * 'indent' mangles this, so it looks weird
+ */
+typedef device__free_decl (
+   ( *device__free_routine )
+ );
+/**
+ * Delete a device
+ *
+ * @v dev_ptr           Points to the device to delete
+ */
+extern winvblock__lib_func STDCALL void device__free (
+  device__type_ptr dev_ptr
+ );
+
+/**
  * Initialize the global, device-common environment
  *
  * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
@@ -122,7 +157,7 @@ extern STDCALL NTSTATUS device__init (
  * device__type, track it in a global list, as well as populate the device
  * with default values.
  */
-extern winvblock__lib_func STDCALL device__type_ptr device__create (
+extern winvblock__lib_func device__type_ptr device__create (
   void
  );
 
@@ -131,6 +166,7 @@ winvblock__def_struct ( device__ops )
   device__create_pdo_routine create_pdo;
   device__init_routine init;
   device__close_routine close;
+  device__free_routine free;
 };
 
 /* Details common to all devices this driver works with */
@@ -147,6 +183,7 @@ struct _device__type
   device__type_ptr next_sibling_ptr;
   device__ops ops;
   LIST_ENTRY tracking;
+  winvblock__any_ptr ext;
 };
 
 #endif				/* _device_h */

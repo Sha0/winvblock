@@ -33,9 +33,17 @@
 #include "irp.h"
 #include "device.h"
 #include "driver.h"
+#include "debug.h"
 
 static LIST_ENTRY dev_list;
 static KSPIN_LOCK dev_list_lock;
+/* Forward declarations */
+static device__free_decl (
+  free_dev
+ );
+static device__create_pdo_decl (
+  make_dev_pdo
+ );
 
 /**
  * Initialize the global, device-common environment
@@ -63,7 +71,7 @@ device__init (
  *
  * See the header file for additional details
  */
-winvblock__lib_func STDCALL device__type_ptr
+winvblock__lib_func device__type_ptr
 device__create (
   void
  )
@@ -76,7 +84,7 @@ device__create (
    */
   dev_ptr = ExAllocatePool ( NonPagedPool, sizeof ( device__type ) );
   if ( dev_ptr == NULL )
-    goto err_nomem;
+    return NULL;
   RtlZeroMemory ( dev_ptr, sizeof ( device__type ) );
   /*
    * Track the new device in our global list
@@ -88,13 +96,83 @@ device__create (
    */
   dev_ptr->size = sizeof ( device__type );
   dev_ptr->DriverObject = driver__obj_ptr;
+  dev_ptr->ops.create_pdo = make_dev_pdo;
+  dev_ptr->ops.free = free_dev;
   /*
    * Register the default driver IRP handling table
    */
   irp__reg_table_s ( &dev_ptr->irp_handler_chain, driver__handling_table,
 		     driver__handling_table_size );
 
-err_nomem:
-
   return dev_ptr;
+}
+
+/**
+ * Create a device PDO
+ *
+ * @v dev_ptr           Points to the device that needs a PDO
+ */
+winvblock__lib_func
+device__create_pdo_decl (
+  device__create_pdo
+ )
+{
+  return dev_ptr->ops.create_pdo ( dev_ptr );
+}
+
+/**
+ * Default PDO creation operation
+ *
+ * @v dev_ptr           Points to the device that needs a PDO
+ *
+ * This function does nothing, since it doesn't make sense to create a PDO
+ * for an unknown type of device.
+ */
+static
+device__create_pdo_decl (
+  make_dev_pdo
+ )
+{
+  DBG ( "No specific PDO creation operation for this device!\n" );
+  return NULL;
+}
+
+/**
+ * Delete a device
+ *
+ * @v dev_ptr           Points to the device to delete
+ */
+winvblock__lib_func STDCALL void
+device__free (
+  device__type_ptr dev_ptr
+ )
+{
+  /*
+   * Call the device's free routine
+   */
+  dev_ptr->ops.free ( dev_ptr );
+}
+
+/**
+ * Default device deletion operation
+ *
+ * @v dev_ptr           Points to the device to delete
+ */
+static
+device__free_decl (
+  free_dev
+ )
+{
+  /*
+   * Un-register the default driver IRP handling table
+   */
+  irp__unreg_table ( &dev_ptr->irp_handler_chain, driver__handling_table );
+  /*
+   * Track the device deletion in our global list.  Unfortunately,
+   * for now we have faith that a device won't be deleted twice and
+   * result in a race condition.  Something to keep in mind...
+   */
+  ExInterlockedRemoveHeadList ( dev_ptr->tracking.Blink, &dev_list_lock );
+
+  ExFreePool ( dev_ptr );
 }

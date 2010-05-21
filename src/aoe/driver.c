@@ -806,7 +806,7 @@ DriverEntry (
     }
 
   {
-    bus__type_ptr bus_ptr = bus__dev (  );
+    bus__type_ptr bus_ptr = bus__boot (  );
     if ( !bus_ptr )
       {
 	DBG ( "Unable to register for IOCTLs!\n" );
@@ -940,7 +940,7 @@ unload (
    */
   KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
   {
-    bus__type_ptr bus_ptr = bus__dev (  );
+    bus__type_ptr bus_ptr = bus__boot (  );
     if ( !bus_ptr )
       {
 	DBG ( "Unable to un-register IOCTLs!\n" );
