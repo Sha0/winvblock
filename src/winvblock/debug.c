@@ -234,8 +234,8 @@ Debug_DecodeIrp (
   IN PCHAR DebugMessage
  )
 {
-  device__type_ptr DeviceExtension =
-    ( device__type_ptr ) DeviceObject->DeviceExtension;
+  device__type_ptr dev_ptr =
+    ( ( driver__dev_ext_ptr ) DeviceObject->DeviceExtension )->device;
   PIO_STACK_LOCATION Stack = IoGetCurrentIrpStackLocation ( Irp );
   PSCSI_REQUEST_BLOCK Srb;
   PCDB Cdb;
@@ -243,7 +243,7 @@ Debug_DecodeIrp (
    SectorCount;
   PSTORAGE_PROPERTY_QUERY StoragePropertyQuery;
 
-  sprintf ( DebugMessage, "%s %s", ( DeviceExtension->IsBus ? "Bus" : "Disk" ),
+  sprintf ( DebugMessage, "%s %s", ( dev_ptr->IsBus ? "Bus" : "Disk" ),
 	    Debug_MajorFunctionString ( Stack->MajorFunction ) );
   switch ( Stack->MajorFunction )
     {
@@ -279,7 +279,7 @@ Debug_DecodeIrp (
 		  ( int )Stack->Parameters.DeviceIoControl.IoControlCode,
 		  Debug_DeviceIoControlString ( Stack->Parameters.
 						DeviceIoControl.IoControlCode ) );
-	if ( !DeviceExtension->IsBus
+	if ( !dev_ptr->IsBus
 	     && Stack->Parameters.DeviceIoControl.IoControlCode ==
 	     IOCTL_STORAGE_QUERY_PROPERTY )
 	  {
@@ -315,7 +315,7 @@ Debug_DecodeIrp (
 	  }
 	break;
       case IRP_MJ_SCSI:
-	if ( !DeviceExtension->IsBus )
+	if ( !dev_ptr->IsBus )
 	  {
 	    Srb = Stack->Parameters.Scsi.Srb;
 	    Cdb = ( PCDB ) Srb->Cdb;

@@ -36,6 +36,19 @@
 #include "ramdisk.h"
 #include "debug.h"
 
+/*
+ * Yield a pointer to the RAM disk
+ */
+#define ramdisk_get_ptr( dev_ptr ) \
+  ( ( ramdisk__type_ptr ) ( disk__get_ptr ( dev_ptr ) )->ext )
+
+static LIST_ENTRY ramdisk_list;
+static KSPIN_LOCK ramdisk_list_lock;
+/* Forward declaration */
+static device__free_decl (
+  free_ramdisk
+ );
+
 /* With thanks to karyonix, who makes FiraDisk */
 static __inline void STDCALL
 fast_copy (
@@ -60,8 +73,8 @@ disk__io_decl (
   /*
    * Establish pointers to the disk and RAM disk
    */
-  disk_ptr = get_disk_ptr ( dev_ptr );
-  ramdisk_ptr = ramdisk__get_ptr ( dev_ptr );
+  disk_ptr = disk__get_ptr ( dev_ptr );
+  ramdisk_ptr = ramdisk_get_ptr ( dev_ptr );
 
   if ( sector_count < 1 )
     {
@@ -107,7 +120,7 @@ disk__pnp_id_decl (
   query_id
  )
 {
-  ramdisk__type_ptr ramdisk_ptr = ramdisk__get_ptr ( &disk_ptr->device );
+  ramdisk__type_ptr ramdisk_ptr = ramdisk_get_ptr ( disk_ptr->device );
   static PWCHAR hw_ids[disk__media_count] =
     { winvblock__literal_w L"\\RAMFloppyDisk",
     winvblock__literal_w L"\\RAMHardDisk",
@@ -138,10 +151,102 @@ disk__pnp_id_decl (
     }
 }
 
-disk__ops ramdisk__default_ops = {
-  io,
-  disk__default_max_xfer_len,
-  disk__default_init,
-  query_id,
-  disk__default_close
-};
+/**
+ * Create a new RAM disk
+ *
+ * @ret ramdisk_ptr     The address of a new RAM disk, or NULL for failure
+ *
+ * See the header file for additional details
+ */
+ramdisk__type_ptr
+ramdisk__create (
+  void
+ )
+{
+  disk__type_ptr disk_ptr;
+  ramdisk__type_ptr ramdisk_ptr;
+
+  /*
+   * Try to create a disk
+   */
+  disk_ptr = disk__create (  );
+  if ( disk_ptr == NULL )
+    goto err_nodisk;
+  /*
+   * RAM disk devices might be used for booting and should
+   * not be allocated from a paged memory pool
+   */
+  ramdisk_ptr = ExAllocatePool ( NonPagedPool, sizeof ( ramdisk__type ) );
+  if ( ramdisk_ptr == NULL )
+    goto err_noramdisk;
+  RtlZeroMemory ( ramdisk_ptr, sizeof ( ramdisk__type ) );
+  /*
+   * Track the new RAM disk in our global list
+   */
+  ExInterlockedInsertTailList ( &ramdisk_list, &ramdisk_ptr->tracking,
+				&ramdisk_list_lock );
+  /*
+   * Populate non-zero device defaults
+   */
+  ramdisk_ptr->disk = disk_ptr;
+  ramdisk_ptr->prev_free = disk_ptr->device->ops.free;
+  disk_ptr->device->ops.free = free_ramdisk;
+  disk_ptr->disk_ops.io = io;
+  disk_ptr->disk_ops.pnp_id = query_id;
+  disk_ptr->ext = ramdisk_ptr;
+
+  return ramdisk_ptr;
+
+err_noramdisk:
+
+  device__free ( disk_ptr->device );
+err_nodisk:
+
+  return NULL;
+}
+
+/**
+ * Initialize the global, RAM disk-common environment
+ *
+ * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
+ */
+NTSTATUS
+ramdisk__init (
+  void
+ )
+{
+  /*
+   * Initialize the global list of RAM disks
+   */
+  InitializeListHead ( &ramdisk_list );
+  KeInitializeSpinLock ( &ramdisk_list_lock );
+
+  return STATUS_SUCCESS;
+}
+
+/**
+ * Default RAM disk deletion operation
+ *
+ * @v dev_ptr           Points to the RAM disk device to delete
+ */
+static
+device__free_decl (
+  free_ramdisk
+ )
+{
+  disk__type_ptr disk_ptr = disk__get_ptr ( dev_ptr );
+  ramdisk__type_ptr ramdisk_ptr = ramdisk_get_ptr ( dev_ptr );
+  /*
+   * Free the "inherited class"
+   */
+  ramdisk_ptr->prev_free ( dev_ptr );
+  /*
+   * Track the RAM disk deletion in our global list.  Unfortunately,
+   * for now we have faith that a RAM disk won't be deleted twice and
+   * result in a race condition.  Something to keep in mind...
+   */
+  ExInterlockedRemoveHeadList ( ramdisk_ptr->tracking.Blink,
+				&ramdisk_list_lock );
+
+  ExFreePool ( ramdisk_ptr );
+}

@@ -71,7 +71,7 @@ grub4dos__find (
   grub4dos_drive_mapping_ptr Grub4DosDriveMapSlotPtr;
   winvblock__uint32 i = 8;
   winvblock__bool FoundGrub4DosMapping = FALSE;
-  ramdisk__type ramdisk = { 0 };
+  ramdisk__type_ptr ramdisk_ptr;
 
   /*
    * Find a GRUB4DOS memory-mapped disk.  Start by looking at the
@@ -128,38 +128,42 @@ grub4dos__find (
 	      DBG ( "Skipping non-RAM disk GRUB4DOS mapping\n" );
 	      continue;
 	    }
+	  ramdisk_ptr = ramdisk__create (  );
+	  if ( ramdisk_ptr == NULL )
+	    {
+	      DBG ( "Could not create GRUB4DOS disk!\n" );
+	      return;
+	    }
 	  /*
 	   * Possible precision loss
 	   */
 	  if ( Grub4DosDriveMapSlotPtr[i].SourceODD )
 	    {
-	      ramdisk.disk.media = disk__media_optical;
-	      ramdisk.disk.SectorSize = 2048;
+	      ramdisk_ptr->disk->media = disk__media_optical;
+	      ramdisk_ptr->disk->SectorSize = 2048;
 	    }
 	  else
 	    {
-	      ramdisk.disk.media =
+	      ramdisk_ptr->disk->media =
 		Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ?
 		disk__media_hard : disk__media_floppy;
-	      ramdisk.disk.SectorSize = 512;
+	      ramdisk_ptr->disk->SectorSize = 512;
 	    }
-	  DBG ( "RAM Drive is type: %d\n", ramdisk.disk.media );
-	  ramdisk.DiskBuf =
+	  DBG ( "RAM Drive is type: %d\n", ramdisk_ptr->disk->media );
+	  ramdisk_ptr->DiskBuf =
 	    ( winvblock__uint32 ) ( Grub4DosDriveMapSlotPtr[i].SectorStart *
 				    512 );
-	  ramdisk.disk.LBADiskSize = ramdisk.DiskSize =
+	  ramdisk_ptr->disk->LBADiskSize = ramdisk_ptr->DiskSize =
 	    ( winvblock__uint32 ) Grub4DosDriveMapSlotPtr[i].SectorCount;
-	  ramdisk.disk.Heads = Grub4DosDriveMapSlotPtr[i].MaxHead + 1;
-	  ramdisk.disk.Sectors = Grub4DosDriveMapSlotPtr[i].DestMaxSector;
-	  ramdisk.disk.Cylinders =
-	    ramdisk.disk.LBADiskSize / ( ramdisk.disk.Heads *
-					 ramdisk.disk.Sectors );
-	  ramdisk.disk.BootDrive = TRUE;
-	  ramdisk.disk.ops = &ramdisk__default_ops;
-	  disk__put_dev_ops ( &ramdisk.disk.device );
-	  ramdisk.disk.device.size = sizeof ( ramdisk__type );
+	  ramdisk_ptr->disk->Heads = Grub4DosDriveMapSlotPtr[i].MaxHead + 1;
+	  ramdisk_ptr->disk->Sectors =
+	    Grub4DosDriveMapSlotPtr[i].DestMaxSector;
+	  ramdisk_ptr->disk->Cylinders =
+	    ramdisk_ptr->disk->LBADiskSize / ( ramdisk_ptr->disk->Heads *
+					       ramdisk_ptr->disk->Sectors );
+	  ramdisk_ptr->disk->BootDrive = TRUE;
 	  FoundGrub4DosMapping = TRUE;
-	  bus__add_child ( bus__boot (  ), &ramdisk.disk.device );
+	  bus__add_child ( bus__boot (  ), ramdisk_ptr->disk->device );
 	}
       InterruptVector = &SafeMbrHookPtr->PrevHook;
     }

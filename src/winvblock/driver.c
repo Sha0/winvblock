@@ -38,6 +38,8 @@
 #include "registry.h"
 #include "mount.h"
 #include "bus.h"
+#include "filedisk.h"
+#include "ramdisk.h"
 #include "debug.h"
 
 /* in this file */
@@ -193,6 +195,9 @@ DriverEntry (
    */
   device__init (  );		/* TODO: Check for error */
   bus__init (  );		/* TODO: Check for error */
+  disk__init (  );		/* TODO: Check for error */
+  filedisk__init (  );		/* TODO: Check for error */
+  ramdisk__init (  );		/* TODO: Check for error */
 
   Driver_Globals_Started = TRUE;
   DBG ( "Exit\n" );
@@ -259,7 +264,7 @@ Driver_Dispatch (
 {
   NTSTATUS status;
   PIO_STACK_LOCATION Stack;
-  device__type_ptr DeviceExtension;
+  device__type_ptr dev_ptr;
   size_t irp_handler_index;
   winvblock__bool completion = FALSE;
 
@@ -267,12 +272,12 @@ Driver_Dispatch (
   Debug_IrpStart ( DeviceObject, Irp );
 #endif
   Stack = IoGetCurrentIrpStackLocation ( Irp );
-  DeviceExtension = ( device__type_ptr ) DeviceObject->DeviceExtension;
+  dev_ptr = ( ( driver__dev_ext_ptr ) DeviceObject->DeviceExtension )->device;
 
   /*
    * We handle IRP_MJ_POWER as an exception 
    */
-  if ( DeviceExtension->State == Deleted )
+  if ( dev_ptr->State == Deleted )
     {
       if ( Stack->MajorFunction == IRP_MJ_POWER )
 	PoStartNextPowerIrp ( Irp );
@@ -285,8 +290,7 @@ Driver_Dispatch (
       return STATUS_NO_SUCH_DEVICE;
     }
 
-  status =
-    irp__process ( DeviceObject, Irp, Stack, DeviceExtension, &completion );
+  status = irp__process ( DeviceObject, Irp, Stack, dev_ptr, &completion );
 
 #ifdef DEBUGIRPS
   if ( status != STATUS_PENDING )

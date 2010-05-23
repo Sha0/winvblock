@@ -55,7 +55,7 @@ irp__handler_decl ( bus_pnp__start_dev )
   KEVENT event;
   bus__type_ptr bus_ptr;
 
-  bus_ptr = bus__get_ptr ( DeviceExtension );
+  bus_ptr = bus__get_ptr ( dev_ptr );
   KeInitializeEvent ( &event, NotificationEvent, FALSE );
   IoCopyCurrentIrpStackLocationToNext ( Irp );
   IoSetCompletionRoutine ( Irp,
@@ -69,8 +69,8 @@ irp__handler_decl ( bus_pnp__start_dev )
     }
   if ( NT_SUCCESS ( status = Irp->IoStatus.Status ) )
     {
-      DeviceExtension->OldState = DeviceExtension->State;
-      DeviceExtension->State = Started;
+      dev_ptr->OldState = dev_ptr->State;
+      dev_ptr->State = Started;
     }
   status = STATUS_SUCCESS;
   Irp->IoStatus.Status = status;
@@ -86,25 +86,27 @@ irp__handler_decl ( bus_pnp__remove_dev )
   device__type_ptr walker,
    next;
 
-  DeviceExtension->OldState = DeviceExtension->State;
-  DeviceExtension->State = Deleted;
+  dev_ptr->OldState = dev_ptr->State;
+  dev_ptr->State = Deleted;
   Irp->IoStatus.Information = 0;
   Irp->IoStatus.Status = STATUS_SUCCESS;
   IoSkipCurrentIrpStackLocation ( Irp );
-  bus_ptr = bus__get_ptr ( DeviceExtension );
+  bus_ptr = bus__get_ptr ( dev_ptr );
   status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
-  walker = ( device__type_ptr ) bus_ptr->first_child_ptr;
+  walker = bus_ptr->first_child_ptr;
   while ( walker != NULL )
     {
-      next = ( device__type_ptr ) walker->next_sibling_ptr;
-      walker->ops.close ( walker );
+      next = walker->next_sibling_ptr;
+      device__close ( walker );
       IoDeleteDevice ( walker->Self );
+      device__free ( walker );
       walker = next;
     }
   bus_ptr->Children = 0;
   bus_ptr->first_child_ptr = NULL;
   IoDetachDevice ( bus_ptr->LowerDeviceObject );
-  IoDeleteDevice ( DeviceExtension->Self );
+  IoDeleteDevice ( dev_ptr->Self );
+  device__free ( dev_ptr );
   *completion_ptr = TRUE;
   return status;
 }
@@ -114,10 +116,10 @@ irp__handler_decl ( bus_pnp__query_dev_relations )
   NTSTATUS status;
   bus__type_ptr bus_ptr;
   winvblock__uint32 count;
-  disk__type_ptr walker;
+  device__type_ptr walker;
   PDEVICE_RELATIONS dev_relations;
 
-  bus_ptr = bus__get_ptr ( DeviceExtension );
+  bus_ptr = bus__get_ptr ( dev_ptr );
   if ( Stack->Parameters.QueryDeviceRelations.Type != BusRelations
        || Irp->IoStatus.Information )
     {
@@ -129,11 +131,11 @@ irp__handler_decl ( bus_pnp__query_dev_relations )
     }
   probe__disks (  );
   count = 0;
-  walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
+  walker = bus_ptr->first_child_ptr;
   while ( walker != NULL )
     {
       count++;
-      walker = ( disk__type_ptr ) walker->device.next_sibling_ptr;
+      walker = walker->next_sibling_ptr;
     }
   dev_relations =
     ( PDEVICE_RELATIONS ) ExAllocatePool ( NonPagedPool,
@@ -153,13 +155,13 @@ irp__handler_decl ( bus_pnp__query_dev_relations )
   dev_relations->Count = count;
 
   count = 0;
-  walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
+  walker = bus_ptr->first_child_ptr;
   while ( walker != NULL )
     {
-      ObReferenceObject ( walker->device.Self );
-      dev_relations->Objects[count] = walker->device.Self;
+      ObReferenceObject ( walker->Self );
+      dev_relations->Objects[count] = walker->Self;
       count++;
-      walker = ( disk__type_ptr ) walker->device.next_sibling_ptr;
+      walker = walker->next_sibling_ptr;
     }
   Irp->IoStatus.Information = ( ULONG_PTR ) dev_relations;
   status = STATUS_SUCCESS;
@@ -175,7 +177,7 @@ irp__handler_decl ( bus_pnp__simple )
   NTSTATUS status;
   bus__type_ptr bus_ptr;
 
-  bus_ptr = bus__get_ptr ( DeviceExtension );
+  bus_ptr = bus__get_ptr ( dev_ptr );
   switch ( Stack->MinorFunction )
     {
       case IRP_MN_QUERY_PNP_DEVICE_STATE:
@@ -183,31 +185,31 @@ irp__handler_decl ( bus_pnp__simple )
 	status = STATUS_SUCCESS;
 	break;
       case IRP_MN_QUERY_STOP_DEVICE:
-	DeviceExtension->OldState = DeviceExtension->State;
-	DeviceExtension->State = StopPending;
+	dev_ptr->OldState = dev_ptr->State;
+	dev_ptr->State = StopPending;
 	status = STATUS_SUCCESS;
 	break;
       case IRP_MN_CANCEL_STOP_DEVICE:
-	DeviceExtension->State = DeviceExtension->OldState;
+	dev_ptr->State = dev_ptr->OldState;
 	status = STATUS_SUCCESS;
 	break;
       case IRP_MN_STOP_DEVICE:
-	DeviceExtension->OldState = DeviceExtension->State;
-	DeviceExtension->State = Stopped;
+	dev_ptr->OldState = dev_ptr->State;
+	dev_ptr->State = Stopped;
 	status = STATUS_SUCCESS;
 	break;
       case IRP_MN_QUERY_REMOVE_DEVICE:
-	DeviceExtension->OldState = DeviceExtension->State;
-	DeviceExtension->State = RemovePending;
+	dev_ptr->OldState = dev_ptr->State;
+	dev_ptr->State = RemovePending;
 	status = STATUS_SUCCESS;
 	break;
       case IRP_MN_CANCEL_REMOVE_DEVICE:
-	DeviceExtension->State = DeviceExtension->OldState;
+	dev_ptr->State = dev_ptr->OldState;
 	status = STATUS_SUCCESS;
 	break;
       case IRP_MN_SURPRISE_REMOVAL:
-	DeviceExtension->OldState = DeviceExtension->State;
-	DeviceExtension->State = SurpriseRemovePending;
+	dev_ptr->OldState = dev_ptr->State;
+	dev_ptr->State = SurpriseRemovePending;
 	status = STATUS_SUCCESS;
 	break;
       default:

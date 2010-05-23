@@ -28,18 +28,18 @@
  */
 
 /* An unfortunate forward declaration.  Definition resolved in device.h */
-struct _device__type;
+winvblock__def_struct ( device__type );
 
 /* We have lots of these, so offer a convenience macro for declarations */
 #  define irp__handler_decl( x ) \
 \
-NTSTATUS STDCALL \
-x ( \
-  IN PDEVICE_OBJECT DeviceObject, \
-  IN PIRP Irp, \
-  IN PIO_STACK_LOCATION Stack, \
-  IN struct _device__type *DeviceExtension, \
-  OUT winvblock__bool_ptr completion_ptr \
+NTSTATUS STDCALL                                \
+x (                                             \
+  IN PDEVICE_OBJECT DeviceObject,               \
+  IN PIRP Irp,                                  \
+  IN PIO_STACK_LOCATION Stack,                  \
+  IN struct _device__type *dev_ptr,             \
+  OUT winvblock__bool_ptr completion_ptr        \
  )
 /*
  * Function pointer for an IRP handler.

@@ -50,14 +50,14 @@ irp__handler_decl (
   bus__type_ptr bus_ptr;
 
   DBG ( "Request to detach disk: %d\n", *( winvblock__uint32_ptr ) buffer );
-  bus_ptr = bus__get_ptr ( DeviceExtension );
-  disk_walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
+  bus_ptr = bus__get_ptr ( dev_ptr );
+  disk_walker = disk__get_ptr ( bus_ptr->first_child_ptr );
   prev_disk_walker = disk_walker;
   while ( ( disk_walker != NULL )
 	  && ( disk_walker->DiskNumber != *( winvblock__uint32_ptr ) buffer ) )
     {
       prev_disk_walker = disk_walker;
-      disk_walker = ( disk__type_ptr ) disk_walker->device.next_sibling_ptr;
+      disk_walker = ( disk__type_ptr ) disk_walker->device->next_sibling_ptr;
     }
   if ( disk_walker != NULL )
     {
@@ -68,18 +68,17 @@ irp__handler_decl (
 	  return STATUS_INVALID_DEVICE_REQUEST;
 	}
       DBG ( "Deleting disk %d\n", disk_walker->DiskNumber );
-      if ( disk_walker == ( disk__type_ptr ) bus_ptr->first_child_ptr )
+      if ( disk_walker == disk__get_ptr ( bus_ptr->first_child_ptr ) )
 	{
-	  bus_ptr->first_child_ptr =
-	    ( winvblock__uint8_ptr ) disk_walker->device.next_sibling_ptr;
+	  bus_ptr->first_child_ptr = disk_walker->device->next_sibling_ptr;
 	}
       else
 	{
-	  prev_disk_walker->device.next_sibling_ptr =
-	    disk_walker->device.next_sibling_ptr;
+	  prev_disk_walker->device->next_sibling_ptr =
+	    disk_walker->device->next_sibling_ptr;
 	}
       disk_walker->Unmount = TRUE;
-      disk_walker->device.next_sibling_ptr = NULL;
+      disk_walker->device->next_sibling_ptr = NULL;
       if ( bus_ptr->PhysicalDeviceObject != NULL )
 	IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
 				      BusRelations );
@@ -96,13 +95,12 @@ irp__handler_decl ( bus_dev_ctl__dispatch )
     {
       case IOCTL_FILE_ATTACH:
 	status =
-	  filedisk__attach ( DeviceObject, Irp, Stack, DeviceExtension,
+	  filedisk__attach ( DeviceObject, Irp, Stack, dev_ptr,
 			     completion_ptr );
 	break;
       case IOCTL_FILE_DETACH:
 	status =
-	  disk_detach ( DeviceObject, Irp, Stack, DeviceExtension,
-			completion_ptr );
+	  disk_detach ( DeviceObject, Irp, Stack, dev_ptr, completion_ptr );
 	break;
       default:
 	Irp->IoStatus.Information = 0;

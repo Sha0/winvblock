@@ -34,7 +34,7 @@ winvblock__def_struct ( bus__type )
   PDEVICE_OBJECT LowerDeviceObject;
   PDEVICE_OBJECT PhysicalDeviceObject;
   winvblock__uint32 Children;
-  winvblock__uint8_ptr first_child_ptr;
+  device__type_ptr first_child_ptr;
   KSPIN_LOCK SpinLock;
   LIST_ENTRY tracking;
   winvblock__any_ptr ext;
@@ -54,7 +54,7 @@ extern NTSTATUS STDCALL Bus_GetDeviceCapabilities (
  *
  * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
  */
-extern STDCALL NTSTATUS bus__init (
+extern NTSTATUS bus__init (
   void
  );
 
@@ -102,10 +102,8 @@ extern winvblock__lib_func bus__type_ptr bus__boot (
  );
 
 /*
- * Yield a pointer to the bus.  Whoa
+ * Yield a pointer to the bus
  */
-#  define bus__get_ptr( dev_ext )                                       \
-  ( ( bus__type_ptr )                                                   \
-    ( ( ( device__type_ptr* ) dev_ext )[0]->TODO_temp_measure->ext ) )
+#  define bus__get_ptr( dev_ptr ) ( ( bus__type_ptr ) dev_ptr->ext )
 
 #endif				/* _bus_h */

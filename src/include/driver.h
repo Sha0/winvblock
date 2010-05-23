@@ -62,4 +62,13 @@ extern NTSTATUS STDCALL DriverEntry (
   IN PUNICODE_STRING RegistryPath
  );
 
+/* An unfortunate forward declaration.  Definition resolved in device.h */
+winvblock__def_struct ( device__type );
+
+/* The physical/function device object's (PDO's/FDO's) DeviceExtension */
+winvblock__def_struct ( driver__dev_ext )
+{
+  device__type_ptr device;
+};
+
 #endif				/* _DRIVER_H */

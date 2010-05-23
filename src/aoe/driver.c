@@ -50,7 +50,8 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject (
   IN PLARGE_INTEGER Timeout OPTIONAL
  );
 
-/* In this file */
+/* Forward declarations */
+winvblock__def_struct ( aoe_disk_type );
 static void STDCALL thread (
   IN void *StartContext
  );
@@ -60,6 +61,12 @@ static void process_abft (
  );
 static void STDCALL unload (
   IN PDRIVER_OBJECT DriverObject
+ );
+static aoe_disk_type_ptr create_aoe_disk (
+  void
+ );
+static device__free_decl (
+  free_aoe_disk
  );
 
 /** Tag types */
@@ -138,7 +145,7 @@ winvblock__def_struct ( io_req )
 winvblock__def_struct ( work_tag )
 {
   tag_type type;
-  device__type_ptr DeviceExtension;
+  device__type_ptr device;
   io_req_ptr request_ptr;
   winvblock__uint32 Id;
   packet_ptr packet_data;
@@ -154,7 +161,7 @@ winvblock__def_struct ( work_tag )
 /** A disk search */
 winvblock__def_struct ( disk_search )
 {
-  device__type_ptr DeviceExtension;
+  device__type_ptr device;
   work_tag_ptr tag;
   disk_search_ptr next;
 };
@@ -173,9 +180,9 @@ enum _search_state
 winvblock__def_enum ( search_state );
 
 /** The AoE disk type */
-winvblock__def_struct ( aoe_disk_type )
+struct _aoe_disk_type
 {
-  disk__type disk;
+  disk__type_ptr disk;
   winvblock__uint32 MTU;
   winvblock__uint8 ClientMac[6];
   winvblock__uint8 ServerMac[6];
@@ -184,6 +191,8 @@ winvblock__def_struct ( aoe_disk_type )
   winvblock__uint32 MaxSectorsPerPacket;
   winvblock__uint32 Timeout;
   search_state search_state;
+  device__free_routine prev_free;
+  LIST_ENTRY tracking;
 };
 
 winvblock__def_struct ( target_list )
@@ -205,6 +214,8 @@ static disk_search_ptr AoE_Globals_DiskSearchList = NULL;
 static LONG AoE_Globals_OutstandingTags = 0;
 static HANDLE AoE_Globals_ThreadHandle;
 static winvblock__bool AoE_Globals_Started = FALSE;
+static LIST_ENTRY aoe_disk_list;
+static KSPIN_LOCK aoe_disk_list_lock;
 
 static irp__handling handling_table[] = {
   /*
@@ -704,6 +715,11 @@ DriverEntry (
   if ( AoE_Globals_Started )
     return STATUS_SUCCESS;
   /*
+   * Initialize the global list of AoE disks
+   */
+  InitializeListHead ( &aoe_disk_list );
+  KeInitializeSpinLock ( &aoe_disk_list_lock );
+  /*
    * Setup the Registry
    */
   if ( !NT_SUCCESS ( setup_reg ( &Status ) ) )
@@ -892,9 +908,8 @@ unload (
   disk_searcher = AoE_Globals_DiskSearchList;
   while ( disk_searcher != NULL )
     {
-      KeSetEvent ( &
-		   ( get_disk_ptr ( disk_searcher->DeviceExtension )->
-		     SearchEvent ), 0, FALSE );
+      KeSetEvent ( &( disk__get_ptr ( disk_searcher->device )->SearchEvent ),
+		   0, FALSE );
       previous_disk_searcher = disk_searcher;
       disk_searcher = disk_searcher->next;
       ExFreePool ( previous_disk_searcher );
@@ -958,7 +973,7 @@ unload (
 /**
  * Search for disk parameters
  *
- * @v DeviceExtension		The device extension for the disk
+ * @v dev_ptr                   The device extension for the disk
  *
  * Returns TRUE if the disk could be matched, FALSE otherwise.
  */
@@ -996,7 +1011,7 @@ disk__init_decl (
   /*
    * Initialize the disk search 
    */
-  disk_searcher->DeviceExtension = &disk_ptr->device;
+  disk_searcher->device = disk_ptr->device;
   disk_searcher->next = NULL;
   aoe_disk_ptr->search_state = search_state_search_nic;
   KeResetEvent ( &disk_ptr->SearchEvent );
@@ -1176,8 +1191,7 @@ disk__init_decl (
 	       */
 	      disk_search_walker = AoE_Globals_DiskSearchList;
 	      while ( disk_search_walker
-		      && disk_search_walker->DeviceExtension !=
-		      &disk_ptr->device )
+		      && disk_search_walker->device != disk_ptr->device )
 		{
 		  previous_disk_searcher = disk_search_walker;
 		  disk_search_walker = disk_search_walker->next;
@@ -1240,7 +1254,7 @@ disk__init_decl (
 	}
       RtlZeroMemory ( tag, sizeof ( work_tag ) );
       tag->type = tag_type_search_drive;
-      tag->DeviceExtension = &disk_ptr->device;
+      tag->device = disk_ptr->device;
 
       /*
        * Establish our tag's AoE packet 
@@ -1354,7 +1368,7 @@ disk__io_decl (
   /*
    * Establish pointers to the disk and AoE disk
    */
-  disk_ptr = get_disk_ptr ( dev_ptr );
+  disk_ptr = disk__get_ptr ( dev_ptr );
   aoe_disk_ptr = get_aoe_disk_ptr ( dev_ptr );
 
   if ( AoE_Globals_Stop )
@@ -1442,7 +1456,7 @@ disk__io_decl (
       RtlZeroMemory ( tag, sizeof ( work_tag ) );
       tag->type = tag_type_io;
       tag->request_ptr = request_ptr;
-      tag->DeviceExtension = dev_ptr;
+      tag->device = dev_ptr;
       request_ptr->TagCount++;
       tag->Id = 0;
       tag->BufferOffset = i * disk_ptr->SectorSize;
@@ -1730,8 +1744,8 @@ aoe__reply (
   /*
    * Establish pointers to the disk device and AoE disk
    */
-  disk_ptr = get_disk_ptr ( tag->DeviceExtension );
-  aoe_disk_ptr = get_aoe_disk_ptr ( tag->DeviceExtension );
+  disk_ptr = disk__get_ptr ( tag->device );
+  aoe_disk_ptr = get_aoe_disk_ptr ( tag->device );
 
   /*
    * If our tag was a discovery request, note the server 
@@ -1960,8 +1974,8 @@ thread (
 	  /*
 	   * Establish pointers to the disk and AoE disk
 	   */
-	  disk_ptr = get_disk_ptr ( tag->DeviceExtension );
-	  aoe_disk_ptr = get_aoe_disk_ptr ( tag->DeviceExtension );
+	  disk_ptr = disk__get_ptr ( tag->device );
+	  aoe_disk_ptr = get_aoe_disk_ptr ( tag->device );
 
 	  RequestTimeout = aoe_disk_ptr->Timeout;
 	  if ( tag->Id == 0 )
@@ -2098,14 +2112,6 @@ disk__close_decl ( close )
   return;
 }
 
-static disk__ops default_ops = {
-  io,
-  max_xfer_len,
-  init,
-  query_id,
-  close
-};
-
 static void
 process_abft (
   void
@@ -2118,7 +2124,7 @@ process_abft (
    i;
   winvblock__bool FoundAbft = FALSE;
   abft AoEBootRecord;
-  aoe_disk_type aoe_disk;
+  aoe_disk_type_ptr aoe_disk_ptr;
 
   /*
    * Find aBFT
@@ -2170,24 +2176,27 @@ process_abft (
 
   if ( FoundAbft )
     {
+      aoe_disk_ptr = create_aoe_disk (  );
+      if ( aoe_disk_ptr == NULL )
+	{
+	  DBG ( "Could not create AoE disk from aBFT!\n" );
+	  return;
+	}
       DBG ( "Attaching AoE disk from client NIC "
 	    "%02x:%02x:%02x:%02x:%02x:%02x to major: %d minor: %d\n",
 	    AoEBootRecord.ClientMac[0], AoEBootRecord.ClientMac[1],
 	    AoEBootRecord.ClientMac[2], AoEBootRecord.ClientMac[3],
 	    AoEBootRecord.ClientMac[4], AoEBootRecord.ClientMac[5],
 	    AoEBootRecord.Major, AoEBootRecord.Minor );
-      RtlCopyMemory ( aoe_disk.ClientMac, AoEBootRecord.ClientMac, 6 );
-      RtlFillMemory ( aoe_disk.ServerMac, 6, 0xff );
-      aoe_disk.Major = AoEBootRecord.Major;
-      aoe_disk.Minor = AoEBootRecord.Minor;
-      aoe_disk.MaxSectorsPerPacket = 1;
-      aoe_disk.Timeout = 200000;	/* 20 ms. */
-      aoe_disk.disk.BootDrive = TRUE;
-      aoe_disk.disk.media = disk__media_hard;
-      aoe_disk.disk.ops = &default_ops;
-      disk__put_dev_ops ( &aoe_disk.disk.device );
-      aoe_disk.disk.device.size = sizeof ( aoe_disk_type );
-      bus__add_child ( bus__boot (  ), &aoe_disk.disk.device );
+      RtlCopyMemory ( aoe_disk_ptr->ClientMac, AoEBootRecord.ClientMac, 6 );
+      RtlFillMemory ( aoe_disk_ptr->ServerMac, 6, 0xff );
+      aoe_disk_ptr->Major = AoEBootRecord.Major;
+      aoe_disk_ptr->Minor = AoEBootRecord.Minor;
+      aoe_disk_ptr->MaxSectorsPerPacket = 1;
+      aoe_disk_ptr->Timeout = 200000;	/* 20 ms. */
+      aoe_disk_ptr->disk->BootDrive = TRUE;
+      aoe_disk_ptr->disk->media = disk__media_hard;
+      bus__add_child ( bus__boot (  ), aoe_disk_ptr->disk->device );
     }
   else
     {
@@ -2271,13 +2280,13 @@ irp__handler_decl (
 
   DBG ( "Got IOCTL_AOE_SHOW...\n" );
 
-  bus_ptr = bus__get_ptr ( DeviceExtension );
-  disk_walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
+  bus_ptr = bus__get_ptr ( dev_ptr );
+  disk_walker = disk__get_ptr ( bus_ptr->first_child_ptr );
   count = 0;
   while ( disk_walker != NULL )
     {
       count++;
-      disk_walker = ( disk__type_ptr ) disk_walker->device.next_sibling_ptr;
+      disk_walker = disk__get_ptr ( disk_walker->device->next_sibling_ptr );
     }
 
   if ( ( disks =
@@ -2298,7 +2307,7 @@ irp__handler_decl (
   disks->Count = count;
 
   count = 0;
-  disk_walker = ( disk__type_ptr ) bus_ptr->first_child_ptr;
+  disk_walker = disk__get_ptr ( bus_ptr->first_child_ptr );
   while ( disk_walker != NULL )
     {
       aoe_disk_type_ptr aoe_disk_ptr =
@@ -2313,7 +2322,7 @@ irp__handler_decl (
       disks->Disk[count].Minor = aoe_disk_ptr->Minor;
       disks->Disk[count].LBASize = disk_walker->LBADiskSize;
       count++;
-      disk_walker = ( disk__type_ptr ) disk_walker->device.next_sibling_ptr;
+      disk_walker = disk__get_ptr ( disk_walker->device->next_sibling_ptr );
     }
   RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, disks,
 		  ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
@@ -2336,24 +2345,29 @@ irp__handler_decl (
  )
 {
   winvblock__uint8_ptr buffer = Irp->AssociatedIrp.SystemBuffer;
-  aoe_disk_type aoe_disk;
+  aoe_disk_type_ptr aoe_disk_ptr;
 
   DBG ( "Got IOCTL_AOE_MOUNT for client: %02x:%02x:%02x:%02x:%02x:%02x "
 	"Major:%d Minor:%d\n", buffer[0], buffer[1], buffer[2], buffer[3],
 	buffer[4], buffer[5], *( winvblock__uint16_ptr ) ( &buffer[6] ),
 	( winvblock__uint8 ) buffer[8] );
-  RtlCopyMemory ( aoe_disk.ClientMac, buffer, 6 );
-  RtlFillMemory ( aoe_disk.ServerMac, 6, 0xff );
-  aoe_disk.Major = *( winvblock__uint16_ptr ) ( &buffer[6] );
-  aoe_disk.Minor = ( winvblock__uint8 ) buffer[8];
-  aoe_disk.MaxSectorsPerPacket = 1;
-  aoe_disk.Timeout = 200000;	/* 20 ms. */
-  aoe_disk.disk.BootDrive = FALSE;
-  aoe_disk.disk.media = disk__media_hard;
-  aoe_disk.disk.ops = &default_ops;
-  disk__put_dev_ops ( &aoe_disk.disk.device );
-  aoe_disk.disk.device.size = sizeof ( aoe_disk_type );
-  bus__add_child ( bus__boot (  ), &aoe_disk.disk.device );
+  aoe_disk_ptr = create_aoe_disk (  );
+  if ( aoe_disk_ptr == NULL )
+    {
+      DBG ( "Could not create AoE disk!\n" );
+      Irp->IoStatus.Information = 0;
+      *completion_ptr = TRUE;
+      return STATUS_INSUFFICIENT_RESOURCES;
+    }
+  RtlCopyMemory ( aoe_disk_ptr->ClientMac, buffer, 6 );
+  RtlFillMemory ( aoe_disk_ptr->ServerMac, 6, 0xff );
+  aoe_disk_ptr->Major = *( winvblock__uint16_ptr ) ( &buffer[6] );
+  aoe_disk_ptr->Minor = ( winvblock__uint8 ) buffer[8];
+  aoe_disk_ptr->MaxSectorsPerPacket = 1;
+  aoe_disk_ptr->Timeout = 200000;	/* 20 ms. */
+  aoe_disk_ptr->disk->BootDrive = FALSE;
+  aoe_disk_ptr->disk->media = disk__media_hard;
+  bus__add_child ( bus__boot (  ), aoe_disk_ptr->disk->device );
   Irp->IoStatus.Information = 0;
   *completion_ptr = TRUE;
   return STATUS_SUCCESS;
@@ -2366,16 +2380,13 @@ irp__handler_decl ( aoe__bus_dev_ctl_dispatch )
   switch ( Stack->Parameters.DeviceIoControl.IoControlCode )
     {
       case IOCTL_AOE_SCAN:
-	status =
-	  scan ( DeviceObject, Irp, Stack, DeviceExtension, completion_ptr );
+	status = scan ( DeviceObject, Irp, Stack, dev_ptr, completion_ptr );
 	break;
       case IOCTL_AOE_SHOW:
-	status =
-	  show ( DeviceObject, Irp, Stack, DeviceExtension, completion_ptr );
+	status = show ( DeviceObject, Irp, Stack, dev_ptr, completion_ptr );
 	break;
       case IOCTL_AOE_MOUNT:
-	status =
-	  mount ( DeviceObject, Irp, Stack, DeviceExtension, completion_ptr );
+	status = mount ( DeviceObject, Irp, Stack, dev_ptr, completion_ptr );
 	break;
       case IOCTL_AOE_UMOUNT:
 	Stack->Parameters.DeviceIoControl.IoControlCode = IOCTL_FILE_DETACH;
@@ -2384,4 +2395,91 @@ irp__handler_decl ( aoe__bus_dev_ctl_dispatch )
   if ( *completion_ptr )
     IoCompleteRequest ( Irp, IO_NO_INCREMENT );
   return status;
+}
+
+/**
+ * Create a new AoE disk
+ *
+ * @ret aoe_disk_ptr    The address of a new AoE disk, or NULL for failure
+ *
+ * This function should not be confused with a PDO creation routine, which is
+ * actually implemented for each device type.  This routine will allocate a
+ * aoe_disk_type, track it in a global list, as well as populate the disk
+ * with default values.
+ */
+static aoe_disk_type_ptr
+create_aoe_disk (
+  void
+ )
+{
+  disk__type_ptr disk_ptr;
+  aoe_disk_type_ptr aoe_disk_ptr;
+
+  /*
+   * Try to create a disk
+   */
+  disk_ptr = disk__create (  );
+  if ( disk_ptr == NULL )
+    goto err_nodisk;
+  /*
+   * AoE disk devices might be used for booting and should
+   * not be allocated from a paged memory pool
+   */
+  aoe_disk_ptr = ExAllocatePool ( NonPagedPool, sizeof ( aoe_disk_type ) );
+  if ( aoe_disk_ptr == NULL )
+    goto err_noaoedisk;
+  RtlZeroMemory ( aoe_disk_ptr, sizeof ( aoe_disk_type ) );
+  /*
+   * Track the new AoE disk in our global list
+   */
+  ExInterlockedInsertTailList ( &aoe_disk_list, &aoe_disk_ptr->tracking,
+				&aoe_disk_list_lock );
+  /*
+   * Populate non-zero device defaults
+   */
+  aoe_disk_ptr->disk = disk_ptr;
+  aoe_disk_ptr->prev_free = disk_ptr->device->ops.free;
+  disk_ptr->device->ops.free = free_aoe_disk;
+  disk_ptr->disk_ops.io = io;
+  disk_ptr->disk_ops.max_xfer_len = max_xfer_len;
+  disk_ptr->disk_ops.pnp_id = query_id;
+  disk_ptr->disk_ops.init = init;
+  disk_ptr->disk_ops.close = close;
+  disk_ptr->ext = aoe_disk_ptr;
+
+  return aoe_disk_ptr;
+
+err_noaoedisk:
+
+  device__free ( disk_ptr->device );
+err_nodisk:
+
+  return NULL;
+}
+
+/**
+ * Default AoE disk deletion operation
+ *
+ * @v dev_ptr           Points to the AoE disk device to delete
+ */
+static
+device__free_decl (
+  free_aoe_disk
+ )
+{
+  disk__type_ptr disk_ptr = disk__get_ptr ( dev_ptr );
+  aoe_disk_type_ptr aoe_disk_ptr = get_aoe_disk_ptr ( dev_ptr );
+  /*
+   * Free the "inherited class"
+   */
+  aoe_disk_ptr->prev_free ( dev_ptr );
+  /*
+   * Track the AoE disk deletion in our global list.  Unfortunately,
+   * for now we have faith that an AoE disk won't be deleted twice and
+   * result in a race condition.  Something to keep in mind...
+   */
+  ExInterlockedRemoveHeadList ( aoe_disk_ptr->tracking.Blink,
+				&aoe_disk_list_lock );
+
+  ExFreePool ( aoe_disk_ptr );
 }

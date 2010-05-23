@@ -49,7 +49,7 @@ check_mbft (
   winvblock__uint32 i;
   winvblock__uint8 Checksum = 0;
   safe_mbr_hook_ptr AssociatedHook;
-  ramdisk__type ramdisk = { 0 };
+  ramdisk__type_ptr ramdisk_ptr;
 
   if ( Offset >= 0x100000 )
     {
@@ -84,30 +84,33 @@ check_mbft (
     }
   DBG ( "MEMDISK DiskBuf: 0x%08x\n", mBFT->mdi.diskbuf );
   DBG ( "MEMDISK DiskSize: %d sectors\n", mBFT->mdi.disksize );
-  ramdisk.DiskBuf = mBFT->mdi.diskbuf;
-  ramdisk.disk.LBADiskSize = ramdisk.DiskSize = mBFT->mdi.disksize;
+  ramdisk_ptr = ramdisk__create (  );
+  if ( ramdisk_ptr == NULL )
+    {
+      DBG ( "Could not create MEMDISK disk!\n" );
+      return FALSE;
+    }
+  ramdisk_ptr->DiskBuf = mBFT->mdi.diskbuf;
+  ramdisk_ptr->disk->LBADiskSize = ramdisk_ptr->DiskSize = mBFT->mdi.disksize;
   if ( mBFT->mdi.driveno == 0xE0 )
     {
-      ramdisk.disk.media = disk__media_optical;
-      ramdisk.disk.SectorSize = 2048;
+      ramdisk_ptr->disk->media = disk__media_optical;
+      ramdisk_ptr->disk->SectorSize = 2048;
     }
   else
     {
       if ( mBFT->mdi.driveno & 0x80 )
-	ramdisk.disk.media = disk__media_hard;
+	ramdisk_ptr->disk->media = disk__media_hard;
       else
-	ramdisk.disk.media = disk__media_floppy;
-      ramdisk.disk.SectorSize = 512;
+	ramdisk_ptr->disk->media = disk__media_floppy;
+      ramdisk_ptr->disk->SectorSize = 512;
     }
-  DBG ( "RAM Drive is type: %d\n", ramdisk.disk.media );
-  ramdisk.disk.Cylinders = mBFT->mdi.cylinders;
-  ramdisk.disk.Heads = mBFT->mdi.heads;
-  ramdisk.disk.Sectors = mBFT->mdi.sectors;
-  ramdisk.disk.BootDrive = TRUE;
-  ramdisk.disk.ops = &ramdisk__default_ops;
-  disk__put_dev_ops ( &ramdisk.disk.device );
-  ramdisk.disk.device.size = sizeof ( ramdisk__type );
-  bus__add_child ( bus__boot (  ), &ramdisk.disk.device );
+  DBG ( "RAM Drive is type: %d\n", ramdisk_ptr->disk->media );
+  ramdisk_ptr->disk->Cylinders = mBFT->mdi.cylinders;
+  ramdisk_ptr->disk->Heads = mBFT->mdi.heads;
+  ramdisk_ptr->disk->Sectors = mBFT->mdi.sectors;
+  ramdisk_ptr->disk->BootDrive = TRUE;
+  bus__add_child ( bus__boot (  ), ramdisk_ptr->disk->device );
   AssociatedHook->Flags = 1;
   return TRUE;
 }

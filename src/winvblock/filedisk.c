@@ -38,13 +38,38 @@
 #include "filedisk.h"
 #include "debug.h"
 
+winvblock__def_struct ( filedisk_type )
+{
+  disk__type_ptr disk;
+  HANDLE file;
+  winvblock__uint32 hash;
+  device__free_routine prev_free;
+  LIST_ENTRY tracking;
+};
+
+/*
+ * Yield a pointer to the file-backed disk
+ */
+#define filedisk_get_ptr( dev_ptr ) \
+  ( ( filedisk_type_ptr ) ( disk__get_ptr ( dev_ptr ) )->ext )
+
+static LIST_ENTRY filedisk_list;
+static KSPIN_LOCK filedisk_list_lock;
+/* Forward declarations */
+static filedisk_type_ptr create_filedisk (
+  void
+ );
+static device__free_decl (
+  free_filedisk
+ );
+
 static
 disk__io_decl (
   io
  )
 {
   disk__type_ptr disk_ptr;
-  filedisk__type_ptr filedisk_ptr;
+  filedisk_type_ptr filedisk_ptr;
   LARGE_INTEGER offset;
   NTSTATUS status;
   IO_STATUS_BLOCK io_status;
@@ -52,8 +77,8 @@ disk__io_decl (
   /*
    * Establish pointers to the disk and filedisk
    */
-  disk_ptr = get_disk_ptr ( dev_ptr );
-  filedisk_ptr = filedisk__get_ptr ( dev_ptr );
+  disk_ptr = disk__get_ptr ( dev_ptr );
+  filedisk_ptr = filedisk_get_ptr ( dev_ptr );
 
   if ( sector_count < 1 )
     {
@@ -89,7 +114,7 @@ disk__pnp_id_decl (
   query_id
  )
 {
-  filedisk__type_ptr filedisk_ptr = filedisk__get_ptr ( &disk_ptr->device );
+  filedisk_type_ptr filedisk_ptr = filedisk_get_ptr ( disk_ptr->device );
   static PWCHAR hw_ids[disk__media_count] =
     { winvblock__literal_w L"\\FileFloppyDisk",
     winvblock__literal_w L"\\FileHardDisk",
@@ -117,8 +142,6 @@ disk__pnp_id_decl (
     }
 }
 
-static disk__ops default_ops;
-
 irp__handler_decl ( filedisk__attach )
 {
   ANSI_STRING file_path1;
@@ -130,7 +153,14 @@ irp__handler_decl ( filedisk__attach )
   HANDLE file = NULL;
   IO_STATUS_BLOCK io_status;
   FILE_STANDARD_INFORMATION info;
-  filedisk__type filedisk = { 0 };
+  filedisk_type_ptr filedisk_ptr;
+
+  filedisk_ptr = create_filedisk (  );
+  if ( filedisk_ptr == NULL )
+    {
+      DBG ( "Could not create file-backed disk!\n" );
+      return STATUS_INSUFFICIENT_RESOURCES;
+    }
 
   RtlInitAnsiString ( &file_path1,
 		      ( char * )&buf[sizeof ( mount__filedisk )] );
@@ -155,24 +185,24 @@ irp__handler_decl ( filedisk__attach )
   if ( !NT_SUCCESS ( status ) )
     return status;
 
-  filedisk.file = file;
+  filedisk_ptr->file = file;
 
   switch ( params->type )
     {
       case 'f':
-	filedisk.disk.media = disk__media_floppy;
-	filedisk.disk.SectorSize = 512;
+	filedisk_ptr->disk->media = disk__media_floppy;
+	filedisk_ptr->disk->SectorSize = 512;
 	break;
       case 'c':
-	filedisk.disk.media = disk__media_optical;
-	filedisk.disk.SectorSize = 2048;
+	filedisk_ptr->disk->media = disk__media_optical;
+	filedisk_ptr->disk->SectorSize = 2048;
 	break;
       default:
-	filedisk.disk.media = disk__media_hard;
-	filedisk.disk.SectorSize = 512;
+	filedisk_ptr->disk->media = disk__media_hard;
+	filedisk_ptr->disk->SectorSize = 512;
 	break;
     }
-  DBG ( "File-backed disk is type: %d\n", filedisk.disk.media );
+  DBG ( "File-backed disk is type: %d\n", filedisk_ptr->disk->media );
   /*
    * Determine the disk's size
    */
@@ -182,28 +212,29 @@ irp__handler_decl ( filedisk__attach )
   if ( !NT_SUCCESS ( status ) )
     {
       ZwClose ( file );
+      free_filedisk ( filedisk_ptr->disk->device );
       return status;
     }
-  filedisk.disk.LBADiskSize =
-    info.EndOfFile.QuadPart / filedisk.disk.SectorSize;
-  filedisk.disk.Cylinders = params->cylinders;
-  filedisk.disk.Heads = params->heads;
-  filedisk.disk.Sectors = params->sectors;
+  filedisk_ptr->disk->LBADiskSize =
+    info.EndOfFile.QuadPart / filedisk_ptr->disk->SectorSize;
+  filedisk_ptr->disk->Cylinders = params->cylinders;
+  filedisk_ptr->disk->Heads = params->heads;
+  filedisk_ptr->disk->Sectors = params->sectors;
   /*
    * A really stupid "hash".  RtlHashUnicodeString() would have been
    * good, but is only available >= Windows XP
    */
-  filedisk.hash = ( winvblock__uint32 ) filedisk.disk.LBADiskSize;
+  filedisk_ptr->hash = ( winvblock__uint32 ) filedisk_ptr->disk->LBADiskSize;
   {
     char *path_iterator = file_path1.Buffer;
 
     while ( *path_iterator )
-      filedisk.hash += *path_iterator++;
+      filedisk_ptr->hash += *path_iterator++;
   }
-  filedisk.disk.ops = &default_ops;
-  disk__put_dev_ops ( &filedisk.disk.device );
-  filedisk.disk.device.size = sizeof ( filedisk__type );
-  bus__add_child ( bus__boot (  ), &filedisk.disk.device );
+  /*
+   * FIXME: Check for error below!
+   */
+  bus__add_child ( bus__boot (  ), filedisk_ptr->disk->device );
   return STATUS_SUCCESS;
 }
 
@@ -212,15 +243,111 @@ disk__close_decl (
   close
  )
 {
-  filedisk__type_ptr filedisk_ptr = filedisk__get_ptr ( &disk_ptr->device );
+  filedisk_type_ptr filedisk_ptr = filedisk_get_ptr ( disk_ptr->device );
   ZwClose ( filedisk_ptr->file );
   return;
 }
 
-static disk__ops default_ops = {
-  io,
-  disk__default_max_xfer_len,
-  disk__default_init,
-  query_id,
-  close
-};
+/**
+ * Create a new file-backed disk
+ *
+ * @ret filedisk_ptr    The address of a new filedisk, or NULL for failure
+ *
+ * This function should not be confused with a PDO creation routine, which is
+ * actually implemented for each device type.  This routine will allocate a
+ * filedisk_type, track it in a global list, as well as populate the disk
+ * with default values.
+ */
+static filedisk_type_ptr
+create_filedisk (
+  void
+ )
+{
+  disk__type_ptr disk_ptr;
+  filedisk_type_ptr filedisk_ptr;
+
+  /*
+   * Try to create a disk
+   */
+  disk_ptr = disk__create (  );
+  if ( disk_ptr == NULL )
+    goto err_nodisk;
+  /*
+   * File-backed disk devices might be used for booting and should
+   * not be allocated from a paged memory pool
+   */
+  filedisk_ptr = ExAllocatePool ( NonPagedPool, sizeof ( filedisk_type ) );
+  if ( filedisk_ptr == NULL )
+    goto err_nofiledisk;
+  RtlZeroMemory ( filedisk_ptr, sizeof ( filedisk_type ) );
+  /*
+   * Track the new file-backed disk in our global list
+   */
+  ExInterlockedInsertTailList ( &filedisk_list, &filedisk_ptr->tracking,
+				&filedisk_list_lock );
+  /*
+   * Populate non-zero device defaults
+   */
+  filedisk_ptr->disk = disk_ptr;
+  filedisk_ptr->prev_free = disk_ptr->device->ops.free;
+  disk_ptr->device->ops.free = free_filedisk;
+  disk_ptr->disk_ops.io = io;
+  disk_ptr->disk_ops.pnp_id = query_id;
+  disk_ptr->disk_ops.close = close;
+  disk_ptr->ext = filedisk_ptr;
+
+  return filedisk_ptr;
+
+err_nofiledisk:
+
+  device__free ( disk_ptr->device );
+err_nodisk:
+
+  return NULL;
+}
+
+/**
+ * Initialize the global, file-backed disk-common environment
+ *
+ * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
+ */
+NTSTATUS
+filedisk__init (
+  void
+ )
+{
+  /*
+   * Initialize the global list of file-backed disks
+   */
+  InitializeListHead ( &filedisk_list );
+  KeInitializeSpinLock ( &filedisk_list_lock );
+
+  return STATUS_SUCCESS;
+}
+
+/**
+ * Default file-backed disk deletion operation
+ *
+ * @v dev_ptr           Points to the file-backed disk device to delete
+ */
+static
+device__free_decl (
+  free_filedisk
+ )
+{
+  disk__type_ptr disk_ptr = disk__get_ptr ( dev_ptr );
+  filedisk_type_ptr filedisk_ptr = filedisk_get_ptr ( dev_ptr );
+  /*
+   * Free the "inherited class"
+   */
+  filedisk_ptr->prev_free ( dev_ptr );
+  /*
+   * Track the file-backed disk deletion in our global list.  Unfortunately,
+   * for now we have faith that a file-backed disk won't be deleted twice and
+   * result in a race condition.  Something to keep in mind...
+   */
+  ExInterlockedRemoveHeadList ( filedisk_ptr->tracking.Blink,
+				&filedisk_list_lock );
+
+  ExFreePool ( filedisk_ptr );
+}

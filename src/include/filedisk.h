@@ -26,24 +26,17 @@
  *
  */
 
-winvblock__def_struct ( filedisk__type )
-{
-  disk__type disk;
-  HANDLE file;
-  winvblock__uint32 hash;
-};
-
-/*
- * Establish a pointer to the file-backed disk.
- * Since the device extension is the first member of the disk
- * member of a file-backed disk, and the disk structure is itself the
- * first member of a file-backed disk structure, a simple cast will suffice
- */
-#  define filedisk__get_ptr( dev_ptr ) \
-  ( ( filedisk__type_ptr ) dev_ptr )
-
 extern irp__handler_decl (
   filedisk__attach
+ );
+
+/**
+ * Initialize the global, file-backed disk-common environment
+ *
+ * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
+ */
+extern NTSTATUS filedisk__init (
+  void
  );
 
 #endif				/* _filedisk_h */

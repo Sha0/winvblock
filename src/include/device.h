@@ -110,6 +110,14 @@ x ( \
 typedef device__close_decl (
    ( *device__close_routine )
  );
+/**
+ * Close a device
+ *
+ * @v dev_ptr           Points to the device to close
+ */
+extern winvblock__lib_func device__close_decl (
+  device__close
+ );
 
 /**
  * Device deletion routine
@@ -134,8 +142,8 @@ typedef device__free_decl (
  *
  * @v dev_ptr           Points to the device to delete
  */
-extern winvblock__lib_func STDCALL void device__free (
-  device__type_ptr dev_ptr
+extern winvblock__lib_func device__free_decl (
+  device__free
  );
 
 /**
@@ -172,8 +180,6 @@ winvblock__def_struct ( device__ops )
 /* Details common to all devices this driver works with */
 struct _device__type
 {
-  device__type_ptr TODO_temp_measure;
-  size_t size;
   winvblock__bool IsBus;	/* For debugging */
   PDEVICE_OBJECT Self;
   PDEVICE_OBJECT Parent;

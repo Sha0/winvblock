@@ -55,7 +55,7 @@ winvblock__def_struct ( disk__type );
 /**
  * I/O Request
  *
- * @v dev_ptr           The device extension space
+ * @v dev_ptr           Points to the disk's device structure
  * @v mode              Read / write mode
  * @v start_sector      First sector for request
  * @v sector_count      Number of sectors to work with
@@ -64,7 +64,7 @@ winvblock__def_struct ( disk__type );
  */
 #  define disk__io_decl( x ) \
 \
-NTSTATUS \
+NTSTATUS STDCALL \
 x ( \
   IN device__type_ptr dev_ptr, \
   IN disk__io_mode mode, \
@@ -100,10 +100,6 @@ typedef disk__max_xfer_len_decl (
    ( *disk__max_xfer_len_routine )
  );
 
-extern disk__max_xfer_len_decl (
-  disk__default_max_xfer_len
- );
-
 /**
  * Disk initialization routine
  *
@@ -121,10 +117,6 @@ x ( \
  */
 typedef disk__init_decl (
    ( *disk__init_routine )
- );
-
-extern disk__init_decl (
-  disk__default_init
  );
 
 /**
@@ -171,10 +163,6 @@ typedef disk__close_decl (
    ( *disk__close_routine )
  );
 
-extern disk__close_decl (
-  disk__default_close
- );
-
 winvblock__def_struct ( disk__ops )
 {
   disk__io_routine io;
@@ -186,68 +174,39 @@ winvblock__def_struct ( disk__ops )
 
 struct _disk__type
 {
-  device__type device;
+  device__type_ptr device;
   KEVENT SearchEvent;
   KSPIN_LOCK SpinLock;
   winvblock__bool BootDrive;
   winvblock__bool Unmount;
   winvblock__uint32 DiskNumber;
   disk__media media;
-  disk__ops_ptr ops;
+  disk__ops disk_ops;
   LONGLONG LBADiskSize;
   LONGLONG Cylinders;
   winvblock__uint32 Heads;
   winvblock__uint32 Sectors;
   winvblock__uint32 SectorSize;
   winvblock__uint32 SpecialFileCount;
+  device__free_routine prev_free;
+  LIST_ENTRY tracking;
+  winvblock__any_ptr ext;
 };
 
-/* Device operations for disks */
-extern device__ops disk__dev_ops;
-/* Copy default disk device operations into a device */
-winvblock__lib_func void disk__put_dev_ops (
-  device__type_ptr dev
- );
-
 /*
- * Establish a pointer to the child disk.
- * Since the device extension is the first member of a disk
- * structure, a simple cast will suffice
+ * Yield a pointer to the disk
  */
-#  define get_disk_ptr( dev_ptr ) \
-  ( ( disk__type_ptr ) dev_ptr )
+#  define disk__get_ptr( dev_ptr ) ( ( disk__type_ptr ) dev_ptr->ext )
 
-__inline
-disk__io_decl (
+extern disk__io_decl (
   disk__io
- )
-{
-  disk__type_ptr disk_ptr;
-
-  /*
-   * Establish a pointer to the disk
-   */
-  disk_ptr = get_disk_ptr ( dev_ptr );
-
-  return disk_ptr->ops->io ( dev_ptr, mode, start_sector, sector_count, buffer,
-			     irp );
-}
-
-__inline
-disk__max_xfer_len_decl (
+ );
+extern disk__max_xfer_len_decl (
   disk__max_xfer_len
- )
-{
-  return disk_ptr->ops->max_xfer_len ( disk_ptr );
-}
-
-__inline
-disk__pnp_id_decl (
+ );
+extern disk__pnp_id_decl (
   disk__query_id
- )
-{
-  return disk_ptr->ops->pnp_id ( disk_ptr, query_type, buf_512 );
-}
+ );
 
 /**
  * Attempt to guess a disk's geometry
@@ -258,6 +217,29 @@ disk__pnp_id_decl (
 extern winvblock__lib_func void disk__guess_geometry (
   IN disk__boot_sect_ptr boot_sect_ptr,
   IN OUT disk__type_ptr disk_ptr
+ );
+
+/**
+ * Create a new disk
+ *
+ * @ret disk_ptr        The address of a new disk, or NULL for failure
+ *
+ * This function should not be confused with a PDO creation routine, which is
+ * actually implemented for each device type.  This routine will allocate a
+ * disk__type, track it in a global list, as well as populate the disk
+ * with default values.
+ */
+extern winvblock__lib_func disk__type_ptr disk__create (
+  void
+ );
+
+/**
+ * Initialize the global, disk-common environment
+ *
+ * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
+ */
+extern NTSTATUS disk__init (
+  void
  );
 
 #endif				/* _disk_h */

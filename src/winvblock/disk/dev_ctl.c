@@ -55,7 +55,7 @@ irp__handler_decl (
   STORAGE_ADAPTER_DESCRIPTOR storage_adapter_desc;
   STORAGE_DEVICE_DESCRIPTOR storage_dev_desc;
 
-  disk_ptr = get_disk_ptr ( DeviceExtension );
+  disk_ptr = disk__get_ptr ( dev_ptr );
   if ( storage_prop_query->PropertyId == StorageAdapterProperty
        && storage_prop_query->QueryType == PropertyStandardQuery )
     {
@@ -133,7 +133,7 @@ irp__handler_decl (
       sizeof ( DISK_GEOMETRY ) ? Stack->Parameters.DeviceIoControl.
       OutputBufferLength : sizeof ( DISK_GEOMETRY ) );
   disk_geom.MediaType = FixedMedia;
-  disk_ptr = get_disk_ptr ( DeviceExtension );
+  disk_ptr = disk__get_ptr ( dev_ptr );
   disk_geom.Cylinders.QuadPart = disk_ptr->Cylinders;
   disk_geom.TracksPerCylinder = disk_ptr->Heads;
   disk_geom.SectorsPerTrack = disk_ptr->Sectors;
@@ -159,7 +159,7 @@ irp__handler_decl (
   scsi_address.Length = sizeof ( SCSI_ADDRESS );
   scsi_address.PortNumber = 0;
   scsi_address.PathId = 0;
-  disk_ptr = get_disk_ptr ( DeviceExtension );
+  disk_ptr = disk__get_ptr ( dev_ptr );
   scsi_address.TargetId = ( winvblock__uint8 ) disk_ptr->DiskNumber;
   scsi_address.Lun = 0;
   RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, &scsi_address, copy_size );
@@ -175,17 +175,17 @@ irp__handler_decl ( disk_dev_ctl__dispatch )
     {
       case IOCTL_STORAGE_QUERY_PROPERTY:
 	status =
-	  storage_query_prop ( DeviceObject, Irp, Stack, DeviceExtension,
+	  storage_query_prop ( DeviceObject, Irp, Stack, dev_ptr,
 			       completion_ptr );
 	break;
       case IOCTL_DISK_GET_DRIVE_GEOMETRY:
 	status =
-	  disk_get_drive_geom ( DeviceObject, Irp, Stack, DeviceExtension,
+	  disk_get_drive_geom ( DeviceObject, Irp, Stack, dev_ptr,
 				completion_ptr );
 	break;
       case IOCTL_SCSI_GET_ADDRESS:
 	status =
-	  scsi_get_address ( DeviceObject, Irp, Stack, DeviceExtension,
+	  scsi_get_address ( DeviceObject, Irp, Stack, dev_ptr,
 			     completion_ptr );
 	break;
 	/*

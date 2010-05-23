@@ -28,20 +28,34 @@
 
 winvblock__def_struct ( ramdisk__type )
 {
-  disk__type disk;
+  disk__type_ptr disk;
   winvblock__uint32 DiskBuf;
   winvblock__uint32 DiskSize;
+  device__free_routine prev_free;
+  LIST_ENTRY tracking;
 };
 
-extern disk__ops ramdisk__default_ops;
-
-/*
- * Establish a pointer to the RAM disk.
- * Since the device extension is the first member of the disk
- * member of an AoE disk, and the disk structure is itself the
- * first member of an AoE disk structure, a simple cast will suffice
+/**
+ * Initialize the global, RAM disk-common environment
+ *
+ * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
  */
-#  define ramdisk__get_ptr( dev_ptr ) \
-  ( ( ramdisk__type_ptr ) dev_ptr )
+extern NTSTATUS ramdisk__init (
+  void
+ );
+
+/**
+ * Create a new RAM disk
+ *
+ * @ret ramdisk_ptr     The address of a new RAM disk, or NULL for failure
+ *
+ * This function should not be confused with a PDO creation routine, which is
+ * actually implemented for each device type.  This routine will allocate a
+ * ramdisk__type, track it in a global list, as well as populate the disk
+ * with default values.
+ */
+extern ramdisk__type_ptr ramdisk__create (
+  void
+ );
 
 #endif				/* _ramdisk_h */

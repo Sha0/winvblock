@@ -116,14 +116,14 @@ typedef struct _DISK_CDB16
 
 #define scsi_op( x ) \
 \
-NTSTATUS STDCALL \
-x ( \
-  IN struct _device__type *DeviceExtension, \
-  IN PIRP Irp, \
-  IN disk__type_ptr disk_ptr, \
-  IN PSCSI_REQUEST_BLOCK Srb, \
-  IN PCDB Cdb, \
-  OUT winvblock__bool_ptr completion_ptr \
+NTSTATUS STDCALL                                \
+x (                                             \
+  IN struct _device__type *dev_ptr,             \
+  IN PIRP Irp,                                  \
+  IN disk__type_ptr disk_ptr,                   \
+  IN PSCSI_REQUEST_BLOCK Srb,                   \
+  IN PCDB Cdb,                                  \
+  OUT winvblock__bool_ptr completion_ptr        \
  )
 
 static
@@ -197,7 +197,7 @@ scsi_op (
   if ( Cdb->AsByte[0] == SCSIOP_READ || Cdb->AsByte[0] == SCSIOP_READ16 )
     {
       *completion_ptr = TRUE;
-      return disk__io ( DeviceExtension, disk__io_mode_read, start_sector,
+      return disk__io ( dev_ptr, disk__io_mode_read, start_sector,
 			sector_count,
 			( ( winvblock__uint8_ptr ) Srb->DataBuffer -
 			  ( winvblock__uint8_ptr )
@@ -210,7 +210,7 @@ scsi_op (
   else
     {
       *completion_ptr = TRUE;
-      return disk__io ( DeviceExtension, disk__io_mode_write, start_sector,
+      return disk__io ( dev_ptr, disk__io_mode_write, start_sector,
 			sector_count,
 			( ( winvblock__uint8_ptr ) Srb->DataBuffer -
 			  ( winvblock__uint8_ptr )
@@ -360,7 +360,7 @@ irp__handler_decl ( disk_scsi__dispatch )
   /*
    * Establish a pointer to the disk
    */
-  disk_ptr = get_disk_ptr ( DeviceExtension );
+  disk_ptr = disk__get_ptr ( dev_ptr );
 
   Srb = Stack->Parameters.Scsi.Srb;
   Srb->SrbStatus = SRB_STATUS_INVALID_REQUEST;
@@ -387,29 +387,26 @@ irp__handler_decl ( disk_scsi__dispatch )
 	    case SCSIOP_WRITE:
 	    case SCSIOP_WRITE16:
 	      status =
-		read_write ( DeviceExtension, Irp, disk_ptr, Srb, Cdb,
-			     &completion );
+		read_write ( dev_ptr, Irp, disk_ptr, Srb, Cdb, &completion );
 	      break;
 	    case SCSIOP_VERIFY:
 	    case SCSIOP_VERIFY16:
 	      status =
-		verify ( DeviceExtension, Irp, disk_ptr, Srb, Cdb,
-			 &completion );
+		verify ( dev_ptr, Irp, disk_ptr, Srb, Cdb, &completion );
 	      break;
 	    case SCSIOP_READ_CAPACITY:
 	      status =
-		read_capacity ( DeviceExtension, Irp, disk_ptr, Srb, Cdb,
+		read_capacity ( dev_ptr, Irp, disk_ptr, Srb, Cdb,
 				&completion );
 	      break;
 	    case SCSIOP_READ_CAPACITY16:
 	      status =
-		read_capacity_16 ( DeviceExtension, Irp, disk_ptr, Srb, Cdb,
+		read_capacity_16 ( dev_ptr, Irp, disk_ptr, Srb, Cdb,
 				   &completion );
 	      break;
 	    case SCSIOP_MODE_SENSE:
 	      status =
-		mode_sense ( DeviceExtension, Irp, disk_ptr, Srb, Cdb,
-			     &completion );
+		mode_sense ( dev_ptr, Irp, disk_ptr, Srb, Cdb, &completion );
 	      break;
 	    case SCSIOP_MEDIUM_REMOVAL:
 	      Irp->IoStatus.Information = 0;
@@ -418,8 +415,7 @@ irp__handler_decl ( disk_scsi__dispatch )
 	      break;
 	    case SCSIOP_READ_TOC:
 	      status =
-		read_toc ( DeviceExtension, Irp, disk_ptr, Srb, Cdb,
-			   &completion );
+		read_toc ( dev_ptr, Irp, disk_ptr, Srb, Cdb, &completion );
 	      break;
 	    default:
 	      DBG ( "Invalid SCSIOP (%02x)!!\n", Cdb->AsByte[0] );

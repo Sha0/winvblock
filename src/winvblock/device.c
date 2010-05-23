@@ -94,7 +94,6 @@ device__create (
   /*
    * Populate non-zero device defaults
    */
-  dev_ptr->size = sizeof ( device__type );
   dev_ptr->DriverObject = driver__obj_ptr;
   dev_ptr->ops.create_pdo = make_dev_pdo;
   dev_ptr->ops.free = free_dev;
@@ -138,13 +137,29 @@ device__create_pdo_decl (
 }
 
 /**
+ * Close a device
+ *
+ * @v dev_ptr           Points to the device to close
+ */
+winvblock__lib_func
+device__close_decl (
+  device__close
+ )
+{
+  /*
+   * Call the device's close routine
+   */
+  dev_ptr->ops.close ( dev_ptr );
+}
+
+/**
  * Delete a device
  *
  * @v dev_ptr           Points to the device to delete
  */
-winvblock__lib_func STDCALL void
-device__free (
-  device__type_ptr dev_ptr
+winvblock__lib_func
+device__free_decl (
+  device__free
  )
 {
   /*
