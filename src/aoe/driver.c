@@ -2274,19 +2274,19 @@ irp__handler_decl (
  )
 {
   winvblock__uint32 count;
-  disk__type_ptr disk_walker;
+  device__type_ptr dev_walker;
   bus__type_ptr bus_ptr;
   aoe__mount_disks_ptr disks;
 
   DBG ( "Got IOCTL_AOE_SHOW...\n" );
 
   bus_ptr = bus__get_ptr ( dev_ptr );
-  disk_walker = disk__get_ptr ( bus_ptr->first_child_ptr );
+  dev_walker = bus_ptr->first_child_ptr;
   count = 0;
-  while ( disk_walker != NULL )
+  while ( dev_walker != NULL )
     {
       count++;
-      disk_walker = disk__get_ptr ( disk_walker->device->next_sibling_ptr );
+      dev_walker = dev_walker->next_sibling_ptr;
     }
 
   if ( ( disks =
@@ -2307,22 +2307,22 @@ irp__handler_decl (
   disks->Count = count;
 
   count = 0;
-  disk_walker = disk__get_ptr ( bus_ptr->first_child_ptr );
-  while ( disk_walker != NULL )
+  dev_walker = bus_ptr->first_child_ptr;
+  while ( dev_walker != NULL )
     {
-      aoe_disk_type_ptr aoe_disk_ptr =
-	get_aoe_disk_ptr ( &disk_walker->device );
+      disk__type_ptr disk_ptr = disk__get_ptr ( dev_walker );
+      aoe_disk_type_ptr aoe_disk_ptr = get_aoe_disk_ptr ( dev_walker );
 
-      disks->Disk[count].Disk = disk_walker->DiskNumber;
+      disks->Disk[count].Disk = disk_ptr->DiskNumber;
       RtlCopyMemory ( &disks->Disk[count].ClientMac, &aoe_disk_ptr->ClientMac,
 		      6 );
       RtlCopyMemory ( &disks->Disk[count].ServerMac, &aoe_disk_ptr->ServerMac,
 		      6 );
       disks->Disk[count].Major = aoe_disk_ptr->Major;
       disks->Disk[count].Minor = aoe_disk_ptr->Minor;
-      disks->Disk[count].LBASize = disk_walker->LBADiskSize;
+      disks->Disk[count].LBASize = disk_ptr->LBADiskSize;
       count++;
-      disk_walker = disk__get_ptr ( disk_walker->device->next_sibling_ptr );
+      dev_walker = dev_walker->next_sibling_ptr;
     }
   RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, disks,
 		  ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
