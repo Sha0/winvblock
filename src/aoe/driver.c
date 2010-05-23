@@ -225,13 +225,10 @@ static irp__handling handling_table[] = {
 };
 
 /*
- * Establish a pointer to the AoE disk.
- * Since the device extension is the first member of the disk
- * member of an AoE disk, and the disk structure is itself the
- * first member of an AoE disk structure, a simple cast will suffice
+ * Yield a pointer to the AoE disk
  */
 #define get_aoe_disk_ptr( dev_ptr ) \
-  ( ( aoe_disk_type_ptr ) dev_ptr )
+  ( ( aoe_disk_type_ptr ) ( disk__get_ptr ( dev_ptr ) )->ext )
 
 static winvblock__bool STDCALL
 setup_reg (
@@ -995,7 +992,7 @@ disk__init_decl (
   winvblock__uint32 MTU;
   aoe_disk_type_ptr aoe_disk_ptr;
 
-  aoe_disk_ptr = get_aoe_disk_ptr ( &disk_ptr->device );
+  aoe_disk_ptr = get_aoe_disk_ptr ( disk_ptr->device );
   /*
    * Allocate our disk search 
    */
@@ -2051,7 +2048,7 @@ disk__max_xfer_len_decl (
   max_xfer_len
  )
 {
-  aoe_disk_type_ptr aoe_disk_ptr = get_aoe_disk_ptr ( &disk_ptr->device );
+  aoe_disk_type_ptr aoe_disk_ptr = get_aoe_disk_ptr ( disk_ptr->device );
 
   return disk_ptr->SectorSize * aoe_disk_ptr->MaxSectorsPerPacket;
 }
@@ -2061,7 +2058,7 @@ disk__pnp_id_decl (
   query_id
  )
 {
-  aoe_disk_type_ptr aoe_disk_ptr = get_aoe_disk_ptr ( &disk_ptr->device );
+  aoe_disk_type_ptr aoe_disk_ptr = get_aoe_disk_ptr ( disk_ptr->device );
 
   switch ( query_type )
     {
