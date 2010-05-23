@@ -45,19 +45,24 @@ irp__handler_decl (
  )
 {
   winvblock__uint8_ptr buffer = Irp->AssociatedIrp.SystemBuffer;
-  disk__type_ptr disk_walker,
-   prev_disk_walker;
+  device__type_ptr dev_walker;
+  disk__type_ptr disk_walker = NULL,
+    prev_disk_walker;
   bus__type_ptr bus_ptr;
 
   DBG ( "Request to detach disk: %d\n", *( winvblock__uint32_ptr ) buffer );
   bus_ptr = bus__get_ptr ( dev_ptr );
-  disk_walker = disk__get_ptr ( bus_ptr->first_child_ptr );
+  dev_walker = bus_ptr->first_child_ptr;
+  if ( dev_walker != NULL )
+    disk_walker = disk__get_ptr ( dev_walker );
   prev_disk_walker = disk_walker;
   while ( ( disk_walker != NULL )
 	  && ( disk_walker->DiskNumber != *( winvblock__uint32_ptr ) buffer ) )
     {
       prev_disk_walker = disk_walker;
-      disk_walker = ( disk__type_ptr ) disk_walker->device->next_sibling_ptr;
+      dev_walker = dev_walker->next_sibling_ptr;
+      if ( dev_walker != NULL )
+	disk_walker = disk__get_ptr ( dev_walker );
     }
   if ( disk_walker != NULL )
     {
@@ -70,15 +75,15 @@ irp__handler_decl (
       DBG ( "Deleting disk %d\n", disk_walker->DiskNumber );
       if ( disk_walker == disk__get_ptr ( bus_ptr->first_child_ptr ) )
 	{
-	  bus_ptr->first_child_ptr = disk_walker->device->next_sibling_ptr;
+	  bus_ptr->first_child_ptr = dev_walker->next_sibling_ptr;
 	}
       else
 	{
 	  prev_disk_walker->device->next_sibling_ptr =
-	    disk_walker->device->next_sibling_ptr;
+	    dev_walker->next_sibling_ptr;
 	}
       disk_walker->Unmount = TRUE;
-      disk_walker->device->next_sibling_ptr = NULL;
+      dev_walker->next_sibling_ptr = NULL;
       if ( bus_ptr->PhysicalDeviceObject != NULL )
 	IoInvalidateDeviceRelations ( bus_ptr->PhysicalDeviceObject,
 				      BusRelations );
