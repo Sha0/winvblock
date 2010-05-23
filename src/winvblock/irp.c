@@ -196,6 +196,8 @@ irp__handler_decl ( irp__process )
 	  if ( *completion_ptr )
 	    break;
 	}
+      if ( *completion_ptr )
+	break;
       link = link->next;
     }
   return status;

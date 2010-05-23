@@ -70,6 +70,7 @@ irp__handler_decl (
 	{
 	  DBG ( "Cannot unmount a boot drive.\n" );
 	  Irp->IoStatus.Information = 0;
+	  *completion_ptr = TRUE;
 	  return STATUS_INVALID_DEVICE_REQUEST;
 	}
       DBG ( "Deleting disk %d\n", disk_walker->DiskNumber );
@@ -90,6 +91,7 @@ irp__handler_decl (
     }
   bus_ptr->Children--;
   Irp->IoStatus.Information = 0;
+  *completion_ptr = TRUE;
   return STATUS_SUCCESS;
 }
 
