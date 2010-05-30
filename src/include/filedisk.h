@@ -26,6 +26,15 @@
  *
  */
 
+winvblock__def_struct ( filedisk__type )
+{
+  disk__type_ptr disk;
+  HANDLE file;
+  winvblock__uint32 hash;
+  device__free_routine prev_free;
+  LIST_ENTRY tracking;
+};
+
 extern irp__handler_decl (
   filedisk__attach
  );
@@ -36,6 +45,20 @@ extern irp__handler_decl (
  * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
  */
 extern NTSTATUS filedisk__init (
+  void
+ );
+
+/**
+ * Create a new file-backed disk
+ *
+ * @ret filedisk_ptr    The address of a new filedisk, or NULL for failure
+ *
+ * This function should not be confused with a PDO creation routine, which is
+ * actually implemented for each device type.  This routine will allocate a
+ * filedisk_type, track it in a global list, as well as populate the disk
+ * with default values.
+ */
+extern filedisk__type_ptr filedisk__create (
   void
  );
 

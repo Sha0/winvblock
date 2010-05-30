@@ -1,6 +1,6 @@
 @echo off
 
-set lib=bus disk ramdisk
+set lib=bus disk ramdisk filedisk
 
 set links=
 for /d %%a in (%lib%) do (
@@ -10,7 +10,7 @@ for /d %%a in (%lib%) do (
   popd
   )
 
-set c=debug.c driver.c filedisk.c irp.c probe.c registry.c winvblock.rc device.c
+set c=debug.c driver.c irp.c probe.c registry.c winvblock.rc device.c
 
 set name=WVBlk%bits%
 

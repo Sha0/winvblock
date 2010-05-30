@@ -38,27 +38,15 @@
 #include "filedisk.h"
 #include "debug.h"
 
-winvblock__def_struct ( filedisk_type )
-{
-  disk__type_ptr disk;
-  HANDLE file;
-  winvblock__uint32 hash;
-  device__free_routine prev_free;
-  LIST_ENTRY tracking;
-};
-
 /*
  * Yield a pointer to the file-backed disk
  */
 #define filedisk_get_ptr( dev_ptr ) \
-  ( ( filedisk_type_ptr ) ( disk__get_ptr ( dev_ptr ) )->ext )
+  ( ( filedisk__type_ptr ) ( disk__get_ptr ( dev_ptr ) )->ext )
 
 static LIST_ENTRY filedisk_list;
 static KSPIN_LOCK filedisk_list_lock;
-/* Forward declarations */
-static filedisk_type_ptr create_filedisk (
-  void
- );
+/* Forward declaration */
 static device__free_decl (
   free_filedisk
  );
@@ -69,7 +57,7 @@ disk__io_decl (
  )
 {
   disk__type_ptr disk_ptr;
-  filedisk_type_ptr filedisk_ptr;
+  filedisk__type_ptr filedisk_ptr;
   LARGE_INTEGER offset;
   NTSTATUS status;
   IO_STATUS_BLOCK io_status;
@@ -114,7 +102,7 @@ disk__pnp_id_decl (
   query_id
  )
 {
-  filedisk_type_ptr filedisk_ptr = filedisk_get_ptr ( disk_ptr->device );
+  filedisk__type_ptr filedisk_ptr = filedisk_get_ptr ( disk_ptr->device );
   static PWCHAR hw_ids[disk__media_count] =
     { winvblock__literal_w L"\\FileFloppyDisk",
     winvblock__literal_w L"\\FileHardDisk",
@@ -153,9 +141,9 @@ irp__handler_decl ( filedisk__attach )
   HANDLE file = NULL;
   IO_STATUS_BLOCK io_status;
   FILE_STANDARD_INFORMATION info;
-  filedisk_type_ptr filedisk_ptr;
+  filedisk__type_ptr filedisk_ptr;
 
-  filedisk_ptr = create_filedisk (  );
+  filedisk_ptr = filedisk__create (  );
   if ( filedisk_ptr == NULL )
     {
       DBG ( "Could not create file-backed disk!\n" );
@@ -243,7 +231,7 @@ disk__close_decl (
   close
  )
 {
-  filedisk_type_ptr filedisk_ptr = filedisk_get_ptr ( disk_ptr->device );
+  filedisk__type_ptr filedisk_ptr = filedisk_get_ptr ( disk_ptr->device );
   ZwClose ( filedisk_ptr->file );
   return;
 }
@@ -253,18 +241,15 @@ disk__close_decl (
  *
  * @ret filedisk_ptr    The address of a new filedisk, or NULL for failure
  *
- * This function should not be confused with a PDO creation routine, which is
- * actually implemented for each device type.  This routine will allocate a
- * filedisk_type, track it in a global list, as well as populate the disk
- * with default values.
+ * See the header file for additional details
  */
-static filedisk_type_ptr
-create_filedisk (
+static filedisk__type_ptr
+filedisk__create (
   void
  )
 {
   disk__type_ptr disk_ptr;
-  filedisk_type_ptr filedisk_ptr;
+  filedisk__type_ptr filedisk_ptr;
 
   /*
    * Try to create a disk
@@ -276,10 +261,10 @@ create_filedisk (
    * File-backed disk devices might be used for booting and should
    * not be allocated from a paged memory pool
    */
-  filedisk_ptr = ExAllocatePool ( NonPagedPool, sizeof ( filedisk_type ) );
+  filedisk_ptr = ExAllocatePool ( NonPagedPool, sizeof ( filedisk__type ) );
   if ( filedisk_ptr == NULL )
     goto err_nofiledisk;
-  RtlZeroMemory ( filedisk_ptr, sizeof ( filedisk_type ) );
+  RtlZeroMemory ( filedisk_ptr, sizeof ( filedisk__type ) );
   /*
    * Track the new file-backed disk in our global list
    */
@@ -336,7 +321,7 @@ device__free_decl (
  )
 {
   disk__type_ptr disk_ptr = disk__get_ptr ( dev_ptr );
-  filedisk_type_ptr filedisk_ptr = filedisk_get_ptr ( dev_ptr );
+  filedisk__type_ptr filedisk_ptr = filedisk_get_ptr ( dev_ptr );
   /*
    * Free the "inherited class"
    */
