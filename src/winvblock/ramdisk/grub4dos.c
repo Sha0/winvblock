@@ -37,29 +37,10 @@
 #include "ramdisk.h"
 #include "debug.h"
 #include "probe.h"
-
-/* From GRUB4DOS 0.4.4's stage2/shared.h */
-winvblock__def_struct ( grub4dos_drive_mapping )
-{
-  winvblock__uint8 SourceDrive;
-  winvblock__uint8 DestDrive;
-  winvblock__uint8 MaxHead;
-  winvblock__uint8 MaxSector:6;
-  winvblock__uint8 RestrictionX:1;
-  winvblock__uint16 DestMaxCylinder:13;
-  winvblock__uint16 SourceODD:1;
-  winvblock__uint16 DestODD:1;
-  winvblock__uint16 DestLBASupport:1;
-  winvblock__uint8 DestMaxHead;
-  winvblock__uint8 DestMaxSector:6;
-  winvblock__uint8 RestrictionY:1;
-  winvblock__uint8 InSituOption:1;
-  winvblock__uint64 SectorStart;
-  winvblock__uint64 SectorCount;
-};
+#include "grub4dos.h"
 
 void
-grub4dos__find (
+ramdisk_grub4dos__find (
   void
  )
 {
@@ -68,7 +49,7 @@ grub4dos__find (
   int_vector_ptr InterruptVector;
   winvblock__uint32 Int13Hook;
   safe_mbr_hook_ptr SafeMbrHookPtr;
-  grub4dos_drive_mapping_ptr Grub4DosDriveMapSlotPtr;
+  grub4dos__drive_mapping_ptr Grub4DosDriveMapSlotPtr;
   winvblock__uint32 i = 8;
   winvblock__bool FoundGrub4DosMapping = FALSE;
   ramdisk__type_ptr ramdisk_ptr;
@@ -100,10 +81,10 @@ grub4dos__find (
 	  continue;
 	}
       Grub4DosDriveMapSlotPtr =
-	( grub4dos_drive_mapping_ptr ) ( PhysicalMemory +
-					 ( ( ( winvblock__uint32 )
-					     InterruptVector->
-					     Segment ) << 4 ) + 0x20 );
+	( grub4dos__drive_mapping_ptr ) ( PhysicalMemory +
+					  ( ( ( winvblock__uint32 )
+					      InterruptVector->
+					      Segment ) << 4 ) + 0x20 );
       while ( i-- )
 	{
 	  DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",

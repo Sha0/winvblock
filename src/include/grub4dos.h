@@ -22,11 +22,34 @@
 /**
  * @file
  *
- * GRUB4DOS RAM disk specifics
+ * GRUB4DOS disk specifics
  *
  */
 
-extern void grub4dos__find (
+/* From GRUB4DOS 0.4.4's stage2/shared.h */
+winvblock__def_struct ( grub4dos__drive_mapping )
+{
+  winvblock__uint8 SourceDrive;
+  winvblock__uint8 DestDrive;
+  winvblock__uint8 MaxHead;
+  winvblock__uint8 MaxSector:6;
+  winvblock__uint8 RestrictionX:1;
+  winvblock__uint16 DestMaxCylinder:13;
+  winvblock__uint16 SourceODD:1;
+  winvblock__uint16 DestODD:1;
+  winvblock__uint16 DestLBASupport:1;
+  winvblock__uint8 DestMaxHead;
+  winvblock__uint8 DestMaxSector:6;
+  winvblock__uint8 RestrictionY:1;
+  winvblock__uint8 InSituOption:1;
+  winvblock__uint64 SectorStart;
+  winvblock__uint64 SectorCount;
+};
+
+extern void ramdisk_grub4dos__find (
+  void
+ );
+extern void filedisk_grub4dos__find (
   void
  );
 

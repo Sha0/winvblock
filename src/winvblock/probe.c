@@ -82,6 +82,7 @@ probe__disks (
   if ( probed )
     return;
   memdisk__find (  );
-  grub4dos__find (  );
+  ramdisk_grub4dos__find (  );
+  filedisk_grub4dos__find (  );
   probed = TRUE;
 }
