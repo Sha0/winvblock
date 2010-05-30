@@ -196,30 +196,28 @@ scsi_op (
 
   if ( Cdb->AsByte[0] == SCSIOP_READ || Cdb->AsByte[0] == SCSIOP_READ16 )
     {
-      *completion_ptr = TRUE;
-      return disk__io ( dev_ptr, disk__io_mode_read, start_sector,
-			sector_count,
-			( ( winvblock__uint8_ptr ) Srb->DataBuffer -
-			  ( winvblock__uint8_ptr )
-			  MmGetMdlVirtualAddress ( Irp->MdlAddress ) ) +
-			( winvblock__uint8_ptr )
-			MmGetSystemAddressForMdlSafe ( Irp->MdlAddress,
-						       HighPagePriority ),
-			Irp );
+      status =
+	disk__io ( dev_ptr, disk__io_mode_read, start_sector, sector_count,
+		   ( ( winvblock__uint8_ptr ) Srb->DataBuffer -
+		     ( winvblock__uint8_ptr )
+		     MmGetMdlVirtualAddress ( Irp->MdlAddress ) ) +
+		   ( winvblock__uint8_ptr )
+		   MmGetSystemAddressForMdlSafe ( Irp->MdlAddress,
+						  HighPagePriority ), Irp );
     }
   else
     {
-      *completion_ptr = TRUE;
-      return disk__io ( dev_ptr, disk__io_mode_write, start_sector,
-			sector_count,
-			( ( winvblock__uint8_ptr ) Srb->DataBuffer -
-			  ( winvblock__uint8_ptr )
-			  MmGetMdlVirtualAddress ( Irp->MdlAddress ) ) +
-			( winvblock__uint8_ptr )
-			MmGetSystemAddressForMdlSafe ( Irp->MdlAddress,
-						       HighPagePriority ),
-			Irp );
+      status =
+	disk__io ( dev_ptr, disk__io_mode_write, start_sector, sector_count,
+		   ( ( winvblock__uint8_ptr ) Srb->DataBuffer -
+		     ( winvblock__uint8_ptr )
+		     MmGetMdlVirtualAddress ( Irp->MdlAddress ) ) +
+		   ( winvblock__uint8_ptr )
+		   MmGetSystemAddressForMdlSafe ( Irp->MdlAddress,
+						  HighPagePriority ), Irp );
     }
+  if ( status != STATUS_PENDING )
+    *completion_ptr = TRUE;
   return status;
 }
 
@@ -445,7 +443,8 @@ ret_path:
   if ( !completion )
     {
       Irp->IoStatus.Status = status;
-      IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+      if ( status != STATUS_PENDING )
+	IoCompleteRequest ( Irp, IO_NO_INCREMENT );
     }
   *completion_ptr = TRUE;
   return status;
