@@ -33,6 +33,7 @@ winvblock__def_struct ( filedisk__type )
   winvblock__uint32 hash;
   device__free_routine prev_free;
   LIST_ENTRY tracking;
+  LARGE_INTEGER offset;
 };
 
 extern irp__handler_decl (

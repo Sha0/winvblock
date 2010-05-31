@@ -79,8 +79,12 @@ disk__io_decl (
       IoCompleteRequest ( irp, IO_NO_INCREMENT );
       return STATUS_CANCELLED;
     }
-
+  /*
+   * Calculate the offset
+   */
   offset.QuadPart = start_sector * disk_ptr->SectorSize;
+  offset.QuadPart += filedisk_ptr->offset.QuadPart;
+
   if ( mode == disk__io_mode_write )
     status =
       ZwWriteFile ( filedisk_ptr->file, NULL, NULL, NULL, &io_status, buffer,
