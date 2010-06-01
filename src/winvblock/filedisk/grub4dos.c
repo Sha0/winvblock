@@ -55,7 +55,37 @@ check_disk_match (
   IN filedisk__type_ptr filedisk_ptr
  )
 {
-  return STATUS_SUCCESS;
+  mbr_ptr buf;
+  NTSTATUS status;
+  IO_STATUS_BLOCK io_status;
+  winvblock__bool pass = FALSE;
+
+  /*
+   * Allocate a buffer for testing for an MBR
+   */
+  buf = ExAllocatePool ( NonPagedPool, sizeof ( mbr ) );
+  if ( buf == NULL )
+    return STATUS_INSUFFICIENT_RESOURCES;
+  /*
+   * Read in the buffer
+   */
+  status =
+    ZwReadFile ( file, NULL, NULL, NULL, &io_status, buf, sizeof ( mbr ),
+		 &filedisk_ptr->offset, NULL );
+  if ( !NT_SUCCESS ( status ) )
+    return status;
+  /*
+   * Check for an MBR signature
+   */
+  if ( buf->mbr_sig == 0xaa55 )
+    pass = TRUE;
+  /*
+   * Free buffer and return status
+   */
+  ExFreePool ( buf );
+  if ( pass )
+    return STATUS_SUCCESS;
+  return STATUS_UNSUCCESSFUL;
 }
 
 /**
