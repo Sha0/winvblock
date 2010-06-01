@@ -361,7 +361,10 @@ thread (
   LARGE_INTEGER timeout;
   PLIST_ENTRY walker;
 
-  timeout.QuadPart = -100000LL;
+  /*
+   * Wake up at least every second
+   */
+  timeout.QuadPart = -10000000LL;
   /*
    * The read/write request processing loop
    */
