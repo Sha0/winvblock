@@ -340,3 +340,129 @@ device__free_decl (
 
   ExFreePool ( filedisk_ptr );
 }
+
+/* Threaded read/write request */
+winvblock__def_struct ( thread_req )
+{
+  LIST_ENTRY list_entry;
+  device__type_ptr dev_ptr;
+  disk__io_mode mode;
+  LONGLONG start_sector;
+  winvblock__uint32 sector_count;
+  winvblock__uint8_ptr buffer;
+  PIRP irp;
+};
+
+/**
+ * A threaded, file-backed disk's worker thread
+ *
+ * @v StartContext      Points to a file-backed disk
+ */
+static void STDCALL
+thread (
+  IN void *StartContext
+ )
+{
+  filedisk__type_ptr filedisk_ptr = StartContext;
+  LARGE_INTEGER timeout;
+  PLIST_ENTRY walker;
+
+  /*
+   * Initialize threading parameters
+   */
+  InitializeListHead ( &filedisk_ptr->req_list );
+  KeInitializeSpinLock ( &filedisk_ptr->req_list_lock );
+  KeInitializeEvent ( &filedisk_ptr->signal, SynchronizationEvent, FALSE );
+  timeout.QuadPart = -100000LL;
+  /*
+   * The read/write request processing loop
+   */
+  while ( TRUE )
+    {
+      /*
+       * Wait for work-to-do signal or the timeout
+       */
+      KeWaitForSingleObject ( &filedisk_ptr->signal, Executive, KernelMode,
+			      FALSE, &timeout );
+      KeResetEvent ( &filedisk_ptr->signal );
+      /*
+       * Are we being torn down?  We abuse the device's free() member
+       */
+      if ( filedisk_ptr->disk->device->ops.free == NULL )
+	{
+	  break;
+	}
+      /*
+       * Process each read/write request in the list
+       */
+      while ( walker =
+	      ExInterlockedRemoveHeadList ( &filedisk_ptr->req_list,
+					    &filedisk_ptr->req_list_lock ) )
+	{
+	  thread_req_ptr req;
+
+	  req = CONTAINING_RECORD ( walker, thread_req, list_entry );
+	  io ( req->dev_ptr, req->mode, req->start_sector, req->sector_count,
+	       req->buffer, req->irp );
+	  ExFreePool ( req );
+	}
+    }
+  /*
+   * Time to tear things down
+   */
+  free_filedisk ( filedisk_ptr->disk->device );
+}
+
+static
+disk__io_decl (
+  threaded_io
+ )
+{
+  filedisk__type_ptr filedisk_ptr;
+  thread_req_ptr req;
+
+  filedisk_ptr = filedisk_get_ptr ( dev_ptr );
+  /*
+   * Allocate the request
+   */
+  req = ExAllocatePool ( NonPagedPool, sizeof ( thread_req ) );
+  if ( req == NULL )
+    {
+      irp->IoStatus.Information = 0;
+      irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+      IoCompleteRequest ( irp, IO_NO_INCREMENT );
+      return STATUS_INSUFFICIENT_RESOURCES;
+    }
+  /*
+   * Remember the request
+   */
+  req->dev_ptr = dev_ptr;
+  req->mode = mode;
+  req->start_sector = start_sector;
+  req->sector_count = sector_count;
+  req->buffer = buffer;
+  req->irp = irp;
+  ExInterlockedInsertTailList ( &filedisk_ptr->req_list, &req->list_entry,
+				&filedisk_ptr->req_list_lock );
+  /*
+   * Signal worker thread and return
+   */
+  KeSetEvent ( &filedisk_ptr->signal, 0, FALSE );
+  return STATUS_PENDING;
+}
+
+/**
+ * Threaded, file-backed disk deletion operation
+ *
+ * @v dev_ptr           Points to the file-backed disk device to delete
+ */
+static
+device__free_decl (
+  free_threaded_filedisk
+ )
+{
+  /*
+   * Queue the tear-down and return.  The thread will catch this on timeout
+   */
+  dev_ptr->ops.free = NULL;
+}

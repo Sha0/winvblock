@@ -34,6 +34,12 @@ winvblock__def_struct ( filedisk__type )
   device__free_routine prev_free;
   LIST_ENTRY tracking;
   LARGE_INTEGER offset;
+  /*
+   * For threaded instances 
+   */
+  LIST_ENTRY req_list;
+  KSPIN_LOCK req_list_lock;
+  KEVENT signal;
 };
 
 extern irp__handler_decl (
@@ -56,7 +62,7 @@ extern NTSTATUS filedisk__init (
  *
  * This function should not be confused with a PDO creation routine, which is
  * actually implemented for each device type.  This routine will allocate a
- * filedisk_type, track it in a global list, as well as populate the disk
+ * filedisk__type, track it in a global list, as well as populate the disk
  * with default values.
  */
 extern filedisk__type_ptr filedisk__create (
