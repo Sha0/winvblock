@@ -80,4 +80,10 @@ extern filedisk__type_ptr filedisk__create_threaded (
   void
  );
 
+/*
+ * Yield a pointer to the file-backed disk
+ */
+#  define filedisk__get_ptr( dev_ptr ) \
+  ( ( filedisk__type_ptr ) ( disk__get_ptr ( dev_ptr ) )->ext )
+
 #endif				/* _filedisk_h */

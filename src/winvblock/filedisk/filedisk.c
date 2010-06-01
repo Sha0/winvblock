@@ -38,12 +38,6 @@
 #include "filedisk.h"
 #include "debug.h"
 
-/*
- * Yield a pointer to the file-backed disk
- */
-#define filedisk_get_ptr( dev_ptr ) \
-  ( ( filedisk__type_ptr ) ( disk__get_ptr ( dev_ptr ) )->ext )
-
 static LIST_ENTRY filedisk_list;
 static KSPIN_LOCK filedisk_list_lock;
 /* Forward declaration */
@@ -66,7 +60,7 @@ disk__io_decl (
    * Establish pointers to the disk and filedisk
    */
   disk_ptr = disk__get_ptr ( dev_ptr );
-  filedisk_ptr = filedisk_get_ptr ( dev_ptr );
+  filedisk_ptr = filedisk__get_ptr ( dev_ptr );
 
   if ( sector_count < 1 )
     {
@@ -106,7 +100,7 @@ disk__pnp_id_decl (
   query_id
  )
 {
-  filedisk__type_ptr filedisk_ptr = filedisk_get_ptr ( disk_ptr->device );
+  filedisk__type_ptr filedisk_ptr = filedisk__get_ptr ( disk_ptr->device );
   static PWCHAR hw_ids[disk__media_count] =
     { winvblock__literal_w L"\\FileFloppyDisk",
     winvblock__literal_w L"\\FileHardDisk",
@@ -235,7 +229,7 @@ disk__close_decl (
   close
  )
 {
-  filedisk__type_ptr filedisk_ptr = filedisk_get_ptr ( disk_ptr->device );
+  filedisk__type_ptr filedisk_ptr = filedisk__get_ptr ( disk_ptr->device );
   ZwClose ( filedisk_ptr->file );
   return;
 }
@@ -325,7 +319,7 @@ device__free_decl (
  )
 {
   disk__type_ptr disk_ptr = disk__get_ptr ( dev_ptr );
-  filedisk__type_ptr filedisk_ptr = filedisk_get_ptr ( dev_ptr );
+  filedisk__type_ptr filedisk_ptr = filedisk__get_ptr ( dev_ptr );
   /*
    * Free the "inherited class"
    */
@@ -415,7 +409,7 @@ disk__io_decl (
   filedisk__type_ptr filedisk_ptr;
   thread_req_ptr req;
 
-  filedisk_ptr = filedisk_get_ptr ( dev_ptr );
+  filedisk_ptr = filedisk__get_ptr ( dev_ptr );
   /*
    * Allocate the request
    */
