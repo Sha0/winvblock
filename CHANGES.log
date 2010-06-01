@@ -1,4 +1,416 @@
 Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue Jun 1 03:19:42 2010 -0400
+
+    [version] Up version to 0.0.1.8
+    
+    This release introduces initial support for GRUB4DOS
+    sector-mapped disks.  Currently, only HDD images with MBRs
+    are supported.
+    
+    Please note that this is an early stage in supporting this
+    scenario, so you might find quirks.  Also be aware of the
+    limitations:
+    - If your booted-from disk image file gets _moved_ while you
+      are booted from it, expect terrible things to happen.  Try
+      to avoid such things as defragmenting the filesystem with
+      the disk image on it!
+    - There isn't really a good way to know which Windows disk a
+      GRUB4DOS backing disk corresponds to!  Not enough information
+      is available to make the right decision.  BIOS drive numbers
+      have no relevance in Windows, so we cannot exactly identify
+      which backing disk is correct for a disk image
+    - WinVBlock is not capable of magic; your booted disk image
+      _must_ have drivers and device ID associations so that the
+      _real_ disks are found at boot time!
+
+commit 528bc2fd78dc16ab0eb491d16d7c9754cedf2baf
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue Jun 1 03:09:12 2010 -0400
+
+    [filedisk] Add MBR check for GRUB4DOS disks
+    
+    We lack any good means of finding the correct backing disk for
+    a boot-time file-backed disk.  Here is a really cheap check
+    which will test for an MBR where we would expect on on the
+    backing disk.  This doesn't support CD/DVD, obviously.
+
+commit 4e975c0c27e20785862311a2cdb26195fe7c4f9d
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue Jun 1 02:28:04 2010 -0400
+
+    [disk] Move MBR structure def. and CHS macros into header
+
+commit 0ae2ca7a78e9cf27f22a316dcb05803c62db80b9
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue Jun 1 00:43:43 2010 -0400
+
+    [filedisk] Increase timeout for threaded disk processing
+    
+    If there's nothing to do but a possible device__free(),
+    just sleep for up to a whole second before checking.
+
+commit 011dab2d9d092b18e4b33ac6c4f9cef704bc76ef
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue Jun 1 00:04:06 2010 -0400
+
+    [filedisk] Initial support for booting a filedisk from GRUB4DOS
+    
+    Whee.  We scan memory for GRUB4DOS sector-mapped disks, create
+    filedisks for them, then hook them so that the first time they
+    are used, we try to find the appropriate backing disk for each.
+    
+    The limitations of the current implementation are:
+    - We assume the first disk is the right backing disk (very naive)
+    - We don't check to make sure we don't open our own disk
+    - It's pretty slow for some reason that needs investigation
+    - There is not really a good way to associate GRUB4DOS mappings
+      to Windows disks; not enough information is passed!
+    - If the image file for a filedisk gets moved while we are using
+      it, expect terrible things to happen!
+
+commit c4ecc3c834c3cc134c57a6ff6111c5bf304518e5
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 31 22:36:38 2010 -0400
+
+    [filedisk] Move filedisk__get_ptr macro into header
+    
+    Same as other such *__get_ptr() macros used by multiple
+    C source files.
+
+commit 66a679f8bbd572030568f71a4230e8be13add7d6
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 31 21:41:18 2010 -0400
+
+    [filedisk] Implement threaded filedisk creation function
+    
+    filedisk__create_threaded() should return a pointer to a
+    threaded, file-backed disk.
+
+commit 98538ada95a51016053f6697554de76cf19f9d33
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 31 21:21:16 2010 -0400
+
+    [filedisk] Add support for threaded filedisks
+    
+    We now have a disk__io routine which enqueues a request for
+    later processing.  We implement a device__free routine to
+    support such asynchronous filedisks.  We have a thread
+    function per threaded filedisk which processes the queue
+    of requests.
+
+commit 9e1d1812362fc789b8fb9c2c0f742000335fa3f9
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 31 15:29:26 2010 -0400
+
+    [filedisk] Allow for a file offset
+    
+    It's useful to have a base offset into a file from which
+    the virtual disk's sectors will be considered to start.
+
+commit 351f5f0aa0b3b3b08d38d8cb4618cf01ca10d71c
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun May 30 02:16:19 2010 -0400
+
+    [filedisk] Add GRUB4DOS module
+    
+    Distinguish between the case of GRUB4DOS RAM disks and
+    GRUB4DOS sector-mapped (file-backed) disks.  A new probe
+    routine is added (which currently does nothing).
+
+commit d496bbd8a09700f1f9eff5699f5b4e1e84c13c16
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun May 30 02:01:01 2010 -0400
+
+    [filedisk] Put in own subdir and change to library
+    
+    There is a plan to support GRUB4DOS sector-mapped disks,
+    so we will need another probe routine, suggesting that
+    there should be a GRUB4DOS source file in a filedisk/
+    directory, as there is a GRUB4DOS source file in the
+    ramdisk/ directory.
+
+commit 7851226757d4ef03b7fdc7fe8341fbcc755ddbd5
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun May 30 01:27:48 2010 -0400
+
+    [disk] Allow for asynchronous IRP completion
+    
+    After much debugging, it was revealed that in order to use
+    ZwReadFile() for a file-backed disk during boot, one needs
+    to return STATUS_PENDING to the caller and start a worker
+    thread who will use ZwReadFile() and then complete the IRP.
+
+commit c3bbae2932391febefafa00590744e3b648455e1
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun May 23 13:36:53 2010 -0400
+
+    [irp,bus] Send and handle IRP completion properly for detach
+    
+    The disk detach handler was not completing the IRP and the
+    IRP processor was not checking for completion in an outer
+    while() loop.  Both fixed.
+
+commit cdb9742c4666551053e24693814a0112d097eefc
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun May 23 12:47:02 2010 -0400
+
+    [aoe] Fix get_ptr macro and uses
+    
+    How I missed this, I really have no idea...
+
+commit 85a5a7a469f6e8fc509999e4eca7c7ecf246ce30
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun May 23 11:46:31 2010 -0400
+
+    [bus] Fix NULL pointer dereference when disk walking
+    
+    For 'winvblk detach' and 'winvblk umount' commands.
+
+commit 9ae27babccf48d38a7908891dec8ed48e23b1a56
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun May 23 11:45:17 2010 -0400
+
+    [aoe] Fix NULL pointer dereferencing in disk walking
+    
+    For the 'winvblk show' command...  Which, by the way,
+    should be untied from the AoE module at some point.
+
+commit dafb0c3962355ada36b71501e890eb96dba873f5
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Sun May 23 05:18:22 2010 -0400
+
+    [major] Re-work device structures and creation
+    
+    This rather large commit affects a majority of the AoE and
+    WinVBlock modules.  It is unfortunately large in order to
+    ensure that after the series of changes were made, that a
+    system was still bootable from a WinVBlock disk.
+    
+    What was involved:
+    
+    A DEVICE_OBJECT's DeviceExtension member no longer points to
+    one of our device types.  All of our device types were
+    previously structures which included the structures they
+    derived functionality from as their first members.  So you
+    had something like a RAM disk with a disk as its first
+    member, a disk having a device as its first member.  So to
+    access any one of the structures, you could quite simply
+    cast a pointer.
+    
+    Now a DeviceExtension points to a pointer to a device__type.
+    A device__type has an ext member which is a pointer to the
+    instance of the next-higher structure type, such as a
+    disk__type.  A disk__type also has an ext member, so that
+    AoE, RAM, and file-backed disks can extend it.
+    
+    Each device class provides a global creation routine, which
+    tracks the device instance in a list of created devices for
+    that type.  The device class' creation routine should set
+    default parameters.  The creation routine can override the
+    device routines used by callers calling the routines of the
+    "base class" (the device type).  As an example, when you
+    create a RAM disk, you:
+      - create a disk
+        - which creates a device
+        - which hook's a device routine for the device
+      - hook some of the disk's routines
+      - add the RAM disk to the global list
+    
+    When deleting the RAM disk, you:
+      - call the deletion routine you hooked for the disk
+        - which calls the deletion rout. it hooked for the dev.
+      - remove the RAM disk from the global list
+    
+    Some copy'n'pasted comments were corrected.
+    
+    Some code expecting the base-class-as-first-member-of-
+    derived-class was exposed and modified appropriately.
+    
+    get_ptr() macros were changed.
+    
+    DEVICE_OBJECT deletion paths were tied to device__free()
+    calls.
+    
+    Some TODOs are left: More error-checking when calling
+    module initialization functions, watching NULL pointer
+    dereferences when walking sibling pointers.
+
+commit ee22e3f47b5745cbbd82bd4dbe61ae079b690082
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri May 21 15:33:32 2010 -0400
+
+    [bus] Use new bus creation strategy
+    
+    When creating the boot bus or when a user manually installs
+    a bus device, the bus module will use the new device creation
+    scheme.
+    
+    When the bus module initializes, it creates the boot bus,
+    which is a root-enumerated device via IoReportDetectedDevice().
+    Using this kernel function means that the PnpManager owns the
+    PDO.  If a user manually installs a bus device, PnpManager also
+    owns the PDO.  So the create_pdo() routine for a bus doesn't
+    make a lot of sense, except for indirectly for the case of the
+    boot bus only.
+    
+    Also, when the IoReportDetectedDevice() is used, we must
+    manually call our attach_fdo() function to create the
+    DEVICE_OBJECT which we own and which we will associate with
+    the driver-internal bus & device details.
+    
+    There is a really big nasty TODO left over in this commit
+    which should be removed as soon as possible.  In shifting to
+    the new device classing scheme, we are part-way through,
+    where some devices use a DEVICE_OBJECT's DeviceExtension as
+    a device__type_ptr, and the bus uses it as a device__type_ptr*.
+    So for now, we have the mini IRP handling system sense if it
+    should compensate for this.
+    
+    The next steps will be to move all of the various disk types
+    to use counterpart strategies for device classing.  But hey,
+    it still boots.
+
+commit 09743972d1ed6483a9ac1be0a6011f991390b9b5
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Fri May 21 00:07:53 2010 -0400
+
+    [cosmetics] Fix some typos due to copy and paste
+
+commit b21520d56202027a0e01212f4e7fe746ac4d669c
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu May 20 23:48:15 2010 -0400
+
+    [bus] bus__add_child once more takes a bus param
+    
+    Trying to move away from the "one bus" model.
+
+commit 7b4b51eecd6904c2aaf7fc3bff1ccc84a07d02b3
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu May 20 23:12:12 2010 -0400
+
+    [device,bus] Further develop device routines
+    
+    Much of it unused for now, but eventually (seems like it's
+    always eventually) each device type will create an instance
+    of a type it would like to derive from, then overrides
+    whatever operations it wants to.  When the device is asked
+    to perform operations, it should either have sensible, do-
+    nothing defaults or meaningful device-specific operations.
+
+commit badf22aa21fd2497a395bd8321770e207bdf1310
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu May 20 16:19:28 2010 -0400
+
+    [bus] Create boot bus here, introduce init function
+    
+    The bus module is now responsible for creation of bus PDOs,
+    such as the boot bus which exposes WinVBlock-supported boot
+    disks.  We now have bus__init() and bus__finalize() funcs
+    which are called by the driver module.
+    
+    We also mimic the device module by having a bus__create()
+    function, though it is currently unused, also like the
+    device__create() function.
+
+commit b99d66372c8ed5a83a76c5fd584ce472f2631d03
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu May 20 09:41:29 2010 -0400
+
+    [device] Don't use a pointer for device operations
+    
+    Instead of pointing at some device operations structure,
+    we actually copy the operations' function pointers for
+    each device.
+
+commit f0dc2f7cfb53df889524e8de78a1cbe8ba1fa531
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Thu May 20 01:44:59 2010 -0400
+
+    [device] Introduce device creation routine
+    
+    Though currently unused, the idea is to eventually have the
+    different device type modules as providers of their device
+    types.  The new device-common module will produce a device
+    structure which has device-common properties.  A caller can
+    then override whichever properties they need to, such as the
+    device operations.
+    
+    Also, device creation should track created devices for easy
+    tear-down later on.
+
+commit 95ccb0ef85ced48b53b4d459d36dd2170603b2fd
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue May 18 16:39:41 2010 -0400
+
+    [device] Introduce device header and move details there
+    
+    Move device specifics out of the driver header and into a
+    device headers, instead.  We are on our way to a form of
+    device functionality inheritance...  Something like:
+    
+      device
+      ..bus
+      ..disk
+      ....aoe
+      ....ramdisk
+      ....filedisk
+    
+    "And the rest." - Gilligan's Island
+
+commit ca9d2991567c6ef9d846ccad0eb13c06e8a38d1b
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue May 18 10:42:23 2010 -0400
+
+    [winvblock/driver] Rename dev_ext member to device
+    
+    Just cosmetic.  I am trying to hide the details of
+    Windows DEVICE_OBJECTs with their DeviceExtension.
+
+commit 81ea249b7a177e6ef8ed86d4854c2cb55430d4ab
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Tue May 18 10:25:47 2010 -0400
+
+    [project] Rename dev_ext variables to dev
+    
+    Just cosmetic.  I am trying to hide the details of
+    Windows DEVICE_OBJECTs with their DeviceExtension.
+
+commit 30cc5dec4305178d39512d8e6fdb67dd91819fa7
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 17 23:02:32 2010 -0400
+
+    [winvblock/driver] Rename driver__dev_ext to device__type
+    
+    This type will be coming out of the driver module soon.
+
+commit 763dec1e3c74a8095fbb43ec0ebff5acd0660ff5
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 17 20:59:12 2010 -0400
+
+    [winvblock/probe] Move disk probe routine into bus
+    
+    It makes some sense that we can delay our RAM disk probing
+    until the bus is actually queried for children.  This means
+    that the DriverEntry() returns sooner.
+
+commit 68b99504849b45911ea5ada3ad2c8aa2245c1256
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 17 20:27:37 2010 -0400
+
+    [disk] Add missing extern specifier for export
+
+commit e749b9e42922aa04ab246bc53da31c2f3b75b358
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
+Date:   Mon May 17 00:12:05 2010 -0400
+
+    [build] Re-visit build system and directory structure
+    
+    Thanks to OSR's ntdev mailing-list and Tim Roberts' response,
+    we now have a directory layout with some hierarchical
+    organization.  Very nice.
+
+commit 18e2cbd719c6974a5334b7b773e8a28f83fde31b
+Author: Shao Miller <Shao.Miller@yrdsb.edu.on.ca>
 Date:   Sun May 16 17:23:51 2010 -0400
 
     [version] Up version to 0.0.1.7

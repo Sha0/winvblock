@@ -35,7 +35,7 @@ Class=SCSIAdapter
 ClassGUID={4D36E97B-E325-11CE-BFC1-08002BE10318}
 Provider=WinVBlock
 CatalogFile=winvblk.cat
-DriverVer=05/16/2010,0.0.0.7
+DriverVer=05/16/2010,0.0.0.8
  
 [Manufacturer]
 WinVBlock=WinVBlockDriver,,NTamd64
