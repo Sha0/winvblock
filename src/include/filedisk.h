@@ -68,5 +68,16 @@ extern NTSTATUS filedisk__init (
 extern filedisk__type_ptr filedisk__create (
   void
  );
+/**
+ * Create a new threaded, file-backed disk
+ *
+ * @ret filedisk_ptr    The address of a new filedisk, or NULL for failure
+ *
+ * See filedisk__create() above.  This routine uses threaded routines
+ * for disk reads/writes, and frees asynchronously, too.
+ */
+extern filedisk__type_ptr filedisk__create_threaded (
+  void
+ );
 
 #endif				/* _filedisk_h */

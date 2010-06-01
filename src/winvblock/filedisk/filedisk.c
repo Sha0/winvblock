@@ -247,7 +247,7 @@ disk__close_decl (
  *
  * See the header file for additional details
  */
-static filedisk__type_ptr
+filedisk__type_ptr
 filedisk__create (
   void
  )
@@ -367,12 +367,6 @@ thread (
   LARGE_INTEGER timeout;
   PLIST_ENTRY walker;
 
-  /*
-   * Initialize threading parameters
-   */
-  InitializeListHead ( &filedisk_ptr->req_list );
-  KeInitializeSpinLock ( &filedisk_ptr->req_list_lock );
-  KeInitializeEvent ( &filedisk_ptr->signal, SynchronizationEvent, FALSE );
   timeout.QuadPart = -100000LL;
   /*
    * The read/write request processing loop
@@ -465,4 +459,49 @@ device__free_decl (
    * Queue the tear-down and return.  The thread will catch this on timeout
    */
   dev_ptr->ops.free = NULL;
+}
+
+/**
+ * Create a new threaded, file-backed disk
+ *
+ * @ret filedisk_ptr    The address of a new filedisk, or NULL for failure
+ *
+ * See the header file for additional details
+ */
+filedisk__type_ptr
+filedisk__create_threaded (
+  void
+ )
+{
+  filedisk__type_ptr filedisk_ptr;
+  OBJECT_ATTRIBUTES obj_attrs;
+  HANDLE thread_handle;
+
+  /*
+   * Try to create a filedisk
+   */
+  filedisk_ptr = filedisk__create (  );
+  if ( filedisk_ptr == NULL )
+    goto err_nofiledisk;
+  /*
+   * Use threaded routines
+   */
+  filedisk_ptr->disk->disk_ops.io = threaded_io;
+  filedisk_ptr->disk->device->ops.free = free_threaded_filedisk;
+  /*
+   * Initialize threading parameters and start the filedisk's thread
+   */
+  InitializeListHead ( &filedisk_ptr->req_list );
+  KeInitializeSpinLock ( &filedisk_ptr->req_list_lock );
+  KeInitializeEvent ( &filedisk_ptr->signal, SynchronizationEvent, FALSE );
+  InitializeObjectAttributes ( &obj_attrs, NULL, OBJ_KERNEL_HANDLE, NULL,
+			       NULL );
+  PsCreateSystemThread ( &thread_handle, THREAD_ALL_ACCESS, &obj_attrs, NULL,
+			 NULL, thread, filedisk_ptr );
+
+  return filedisk_ptr;
+
+err_nofiledisk:
+
+  return NULL;
 }
