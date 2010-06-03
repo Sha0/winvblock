@@ -1,7 +1,7 @@
 [Project]
 FileName=WinVBlock.dev
 Name=WinVBlock
-UnitCount=56
+UnitCount=57
 PchHead=-1
 PchSource=-1
 Ver=3
@@ -635,6 +635,16 @@ BuildCmd=
 FileName=src\winvblock\filedisk\grub4dos.c
 CompileCpp=1
 Folder=WinVBlock/FileDisk
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit57]
+FileName=src\include\byte.h
+CompileCpp=1
+Folder=Include
 Compile=1
 Link=1
 Priority=1000
