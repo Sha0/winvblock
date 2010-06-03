@@ -60,27 +60,29 @@ check_disk_match (
   msvhd__footer_ptr buf;
   NTSTATUS status;
   IO_STATUS_BLOCK io_status;
-  LARGE_INTEGER end_sect;
-  winvblock__bool pass = TRUE;
+  LARGE_INTEGER end_part;
 
   /*
    * Allocate a buffer for testing for a MS .VHD footer
    */
   buf = ExAllocatePool ( NonPagedPool, sizeof ( *buf ) );
   if ( buf == NULL )
-    return STATUS_INSUFFICIENT_RESOURCES;
+    {
+      status = STATUS_INSUFFICIENT_RESOURCES;
+      goto err_alloc;
+    }
   /*
    * Read in the buffer
    */
-  end_sect.QuadPart =
+  end_part.QuadPart =
     filedisk_ptr->offset.QuadPart +
     ( filedisk_ptr->disk->LBADiskSize * filedisk_ptr->disk->SectorSize ) -
     sizeof ( *buf );
   status =
     ZwReadFile ( file, NULL, NULL, NULL, &io_status, buf, sizeof ( *buf ),
-		 &end_sect, NULL );
+		 &end_part, NULL );
   if ( !NT_SUCCESS ( status ) )
-    return status;
+    goto err_read;
   /*
    * Adjust the footer's byte ordering
    */
@@ -90,32 +92,31 @@ check_disk_match (
    */
   if ( RtlCompareMemory ( &buf->cookie, "conectix", sizeof ( buf->cookie ) ) !=
        sizeof ( buf->cookie ) )
-    pass = FALSE;
+    status = STATUS_UNSUCCESSFUL;
   if ( buf->file_ver.val != 0x10000 )
-    pass = FALSE;
+    status = STATUS_UNSUCCESSFUL;
   if ( buf->data_offset.val != 0xffffffff )
-    pass = FALSE;
+    status = STATUS_UNSUCCESSFUL;
   if ( buf->orig_size.val != buf->cur_size.val )
-    pass = FALSE;
+    status = STATUS_UNSUCCESSFUL;
   if ( buf->type.val != 2 )
-    pass = FALSE;
+    status = STATUS_UNSUCCESSFUL;
   /*
    * Match against our expected disk size, within an OD sector's worth
    */
-  if ( buf->orig_size.val <
-       filedisk_ptr->disk->LBADiskSize * filedisk_ptr->disk->SectorSize )
-    pass = FALSE;
-  if ( buf->orig_size.val -
-       filedisk_ptr->disk->LBADiskSize * filedisk_ptr->disk->SectorSize >
-       2048 )
-    pass = FALSE;
-  /*
-   * Free buffer and return status
-   */
+  if ( filedisk_ptr->disk->LBADiskSize * filedisk_ptr->disk->SectorSize <
+       buf->orig_size.val )
+    status = STATUS_UNSUCCESSFUL;
+  if ( filedisk_ptr->disk->LBADiskSize * filedisk_ptr->disk->SectorSize -
+       buf->orig_size.val > 2048 )
+    status = STATUS_UNSUCCESSFUL;
+
+err_read:
+
   ExFreePool ( buf );
-  if ( pass )
-    return STATUS_SUCCESS;
-  return STATUS_UNSUCCESSFUL;
+err_alloc:
+
+  return status;
 }
 
 /**
