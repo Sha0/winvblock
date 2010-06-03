@@ -182,8 +182,8 @@ struct _disk__type
   winvblock__uint32 DiskNumber;
   disk__media media;
   disk__ops disk_ops;
-  LONGLONG LBADiskSize;
-  LONGLONG Cylinders;
+  ULONGLONG LBADiskSize;
+  ULONGLONG Cylinders;
   winvblock__uint32 Heads;
   winvblock__uint32 Sectors;
   winvblock__uint32 SectorSize;

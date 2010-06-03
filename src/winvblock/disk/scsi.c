@@ -131,7 +131,7 @@ scsi_op (
   read_write
  )
 {
-  LONGLONG start_sector;
+  ULONGLONG start_sector;
   winvblock__uint32 sector_count;
   NTSTATUS status = STATUS_SUCCESS;
 
