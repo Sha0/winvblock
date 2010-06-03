@@ -393,8 +393,8 @@ thread (
 	  thread_req_ptr req;
 
 	  req = CONTAINING_RECORD ( walker, thread_req, list_entry );
-	  io ( req->dev_ptr, req->mode, req->start_sector, req->sector_count,
-	       req->buffer, req->irp );
+	  filedisk_ptr->sync_io ( req->dev_ptr, req->mode, req->start_sector,
+				  req->sector_count, req->buffer, req->irp );
 	  ExFreePool ( req );
 	}
     }
@@ -483,6 +483,7 @@ filedisk__create_threaded (
   /*
    * Use threaded routines
    */
+  filedisk_ptr->sync_io = io;
   filedisk_ptr->disk->disk_ops.io = threaded_io;
   filedisk_ptr->disk->device->ops.free = free_threaded_filedisk;
   /*

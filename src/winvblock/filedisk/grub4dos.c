@@ -42,7 +42,7 @@
 #include "byte.h"
 #include "msvhd.h"
 
-static disk__io_routine threaded_io;
+static disk__io_routine sync_io;
 
 /**
  * Check if a disk might be the matching backing disk for
@@ -72,12 +72,14 @@ check_disk_match (
       goto err_alloc;
     }
   /*
-   * Read in the buffer
+   * Read in the buffer.  Note that we adjust for the .VHD footer (plus
+   * prefixed padding for an .ISO) that we truncated from the reported disk
+   * size earlier when the disk mapping was found
    */
   end_part.QuadPart =
     filedisk_ptr->offset.QuadPart +
-    ( filedisk_ptr->disk->LBADiskSize * filedisk_ptr->disk->SectorSize ) -
-    sizeof ( *buf );
+    ( filedisk_ptr->disk->LBADiskSize * filedisk_ptr->disk->SectorSize ) +
+    filedisk_ptr->disk->SectorSize - sizeof ( *buf );
   status =
     ZwReadFile ( file, NULL, NULL, NULL, &io_status, buf, sizeof ( *buf ),
 		 &end_part, NULL );
@@ -102,13 +104,10 @@ check_disk_match (
   if ( buf->type.val != 2 )
     status = STATUS_UNSUCCESSFUL;
   /*
-   * Match against our expected disk size, within an OD sector's worth
+   * Match against our expected disk size
    */
-  if ( filedisk_ptr->disk->LBADiskSize * filedisk_ptr->disk->SectorSize <
-       buf->orig_size.val )
-    status = STATUS_UNSUCCESSFUL;
-  if ( filedisk_ptr->disk->LBADiskSize * filedisk_ptr->disk->SectorSize -
-       buf->orig_size.val > 2048 )
+  if ( ( filedisk_ptr->disk->LBADiskSize * filedisk_ptr->disk->SectorSize ) !=
+       buf->cur_size.val )
     status = STATUS_UNSUCCESSFUL;
 
 err_read:
@@ -193,12 +192,11 @@ disk__io_decl (
    *  Use the backing disk and restore the original read/write routine
    */
   filedisk_ptr->file = file;
-  filedisk_ptr->disk->disk_ops.io = threaded_io;
+  filedisk_ptr->sync_io = sync_io;
   /*
    * Call the original read/write routine
    */
-  return threaded_io ( dev_ptr, mode, start_sector, sector_count, buffer,
-		       irp );
+  return sync_io ( dev_ptr, mode, start_sector, sector_count, buffer, irp );
 
 dud:
   irp->IoStatus.Information = 0;
@@ -288,8 +286,8 @@ filedisk_grub4dos__find (
 	      DBG ( "Could not create GRUB4DOS disk!\n" );
 	      return;
 	    }
-	  threaded_io = filedisk_ptr->disk->disk_ops.io;
-	  filedisk_ptr->disk->disk_ops.io = io;
+	  sync_io = filedisk_ptr->sync_io;
+	  filedisk_ptr->sync_io = io;
 	  /*
 	   * Possible precision loss
 	   */
@@ -314,10 +312,19 @@ filedisk_grub4dos__find (
 	    Grub4DosDriveMapSlotPtr[i].SectorStart *
 	    ( Grub4DosDriveMapSlotPtr[i].DestODD ? 2048 : 512 );
 	  /*
-	   * Size and geometry
+	   * Size and geometry.  Please note that since we require a .VHD
+	   * footer, we exclude this from the LBA disk size by truncating
+	   * a 512-byte sector for HDD images, or a 2048-byte sector for .ISO
 	   */
-	  filedisk_ptr->disk->LBADiskSize =
-	    ( winvblock__uint32 ) Grub4DosDriveMapSlotPtr[i].SectorCount;
+	  {
+	    ULONGLONG total_size =
+	      Grub4DosDriveMapSlotPtr[i].SectorCount *
+	      ( Grub4DosDriveMapSlotPtr[i].DestODD ? 2048 : 512 );
+	    filedisk_ptr->disk->LBADiskSize =
+	      ( total_size -
+		filedisk_ptr->disk->SectorSize ) /
+	      filedisk_ptr->disk->SectorSize;
+	  }
 	  filedisk_ptr->disk->Heads = Grub4DosDriveMapSlotPtr[i].MaxHead + 1;
 	  filedisk_ptr->disk->Sectors =
 	    Grub4DosDriveMapSlotPtr[i].DestMaxSector;
