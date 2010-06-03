@@ -39,6 +39,8 @@
 #include "debug.h"
 #include "probe.h"
 #include "grub4dos.h"
+#include "byte.h"
+#include "msvhd.h"
 
 static disk__io_routine threaded_io;
 
@@ -55,30 +57,58 @@ check_disk_match (
   IN filedisk__type_ptr filedisk_ptr
  )
 {
-  mbr_ptr buf;
+  msvhd__footer_ptr buf;
   NTSTATUS status;
   IO_STATUS_BLOCK io_status;
-  winvblock__bool pass = FALSE;
+  LARGE_INTEGER end_sect;
+  winvblock__bool pass = TRUE;
 
   /*
-   * Allocate a buffer for testing for an MBR
+   * Allocate a buffer for testing for a MS .VHD footer
    */
-  buf = ExAllocatePool ( NonPagedPool, sizeof ( mbr ) );
+  buf = ExAllocatePool ( NonPagedPool, sizeof ( *buf ) );
   if ( buf == NULL )
     return STATUS_INSUFFICIENT_RESOURCES;
   /*
    * Read in the buffer
    */
+  end_sect.QuadPart =
+    filedisk_ptr->offset.QuadPart +
+    ( filedisk_ptr->disk->LBADiskSize * filedisk_ptr->disk->SectorSize ) -
+    sizeof ( *buf );
   status =
-    ZwReadFile ( file, NULL, NULL, NULL, &io_status, buf, sizeof ( mbr ),
-		 &filedisk_ptr->offset, NULL );
+    ZwReadFile ( file, NULL, NULL, NULL, &io_status, buf, sizeof ( *buf ),
+		 &end_sect, NULL );
   if ( !NT_SUCCESS ( status ) )
     return status;
   /*
-   * Check for an MBR signature
+   * Adjust the footer's byte ordering
    */
-  if ( buf->mbr_sig == 0xaa55 )
-    pass = TRUE;
+  msvhd__footer_swap_endian ( buf );
+  /*
+   * Examine .VHD fields for validity
+   */
+  if ( RtlCompareMemory ( &buf->cookie, "conectix", sizeof ( buf->cookie ) ) !=
+       sizeof ( buf->cookie ) )
+    pass = FALSE;
+  if ( buf->file_ver.val != 0x10000 )
+    pass = FALSE;
+  if ( buf->data_offset.val != 0xffffffff )
+    pass = FALSE;
+  if ( buf->orig_size.val != buf->cur_size.val )
+    pass = FALSE;
+  if ( buf->type.val != 2 )
+    pass = FALSE;
+  /*
+   * Match against our expected disk size, within an OD sector's worth
+   */
+  if ( buf->orig_size.val <
+       filedisk_ptr->disk->LBADiskSize * filedisk_ptr->disk->SectorSize )
+    pass = FALSE;
+  if ( buf->orig_size.val -
+       filedisk_ptr->disk->LBADiskSize * filedisk_ptr->disk->SectorSize >
+       2048 )
+    pass = FALSE;
   /*
    * Free buffer and return status
    */
@@ -98,25 +128,26 @@ disk__io_decl (
  )
 {
   filedisk__type_ptr filedisk_ptr;
+  NTSTATUS status;
   GUID disk_guid = GUID_DEVINTERFACE_DISK;
   PWSTR sym_links;
   PWCHAR pos;
   HANDLE file;
-  NTSTATUS status;
 
   filedisk_ptr = filedisk__get_ptr ( dev_ptr );
   /*
    * Find the backing disk and use it.  We walk a list
    * of unicode disk device names and check each one
    */
-  IoGetDeviceInterfaces ( &disk_guid, NULL, 0, &sym_links );
+  status = IoGetDeviceInterfaces ( &disk_guid, NULL, 0, &sym_links );
+  if ( !NT_SUCCESS ( status ) )
+    goto dud;
   pos = sym_links;
   while ( *pos != UNICODE_NULL )
     {
       UNICODE_STRING path;
       OBJECT_ATTRIBUTES obj_attrs;
       IO_STATUS_BLOCK io_status;
-
       RtlInitUnicodeString ( &path, pos );
       InitializeObjectAttributes ( &obj_attrs, &path,
 				   OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE,
@@ -156,12 +187,7 @@ disk__io_decl (
    * If we did not find the backing disk, we are a dud
    */
   if ( !NT_SUCCESS ( status ) )
-    {
-      irp->IoStatus.Information = 0;
-      irp->IoStatus.Status = STATUS_NO_MEDIA_IN_DEVICE;
-      IoCompleteRequest ( irp, IO_NO_INCREMENT );
-      return STATUS_NO_MEDIA_IN_DEVICE;
-    }
+    goto dud;
   /*
    *  Use the backing disk and restore the original read/write routine
    */
@@ -172,6 +198,12 @@ disk__io_decl (
    */
   return threaded_io ( dev_ptr, mode, start_sector, sector_count, buffer,
 		       irp );
+
+dud:
+  irp->IoStatus.Information = 0;
+  irp->IoStatus.Status = STATUS_NO_MEDIA_IN_DEVICE;
+  IoCompleteRequest ( irp, IO_NO_INCREMENT );
+  return STATUS_NO_MEDIA_IN_DEVICE;
 }
 
 void
@@ -188,7 +220,6 @@ filedisk_grub4dos__find (
   winvblock__uint32 i = 8;
   winvblock__bool FoundGrub4DosMapping = FALSE;
   filedisk__type_ptr filedisk_ptr;
-
   /*
    * Find a GRUB4DOS sector-mapped disk.  Start by looking at the
    * real-mode IDT and following the "SafeMBRHook" INT 0x13 hook
@@ -292,7 +323,6 @@ filedisk_grub4dos__find (
 	  filedisk_ptr->disk->Cylinders =
 	    filedisk_ptr->disk->LBADiskSize / ( filedisk_ptr->disk->Heads *
 						filedisk_ptr->disk->Sectors );
-
 	  /*
 	   * Set a filedisk "hash" and mark the drive as a boot-drive.
 	   * The "hash" is 'G4DX', where X is the GRUB4DOS INT 13h
