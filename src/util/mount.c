@@ -29,34 +29,291 @@
 #include <windows.h>
 #include <winioctl.h>
 #include <stdio.h>
+#include <malloc.h>
 
 #include "winvblock.h"
 #include "portable.h"
 #include "mount.h"
 #include "aoe.h"
 
-typedef enum
-{ CommandScan, CommandShow, CommandMount, CommandUmount, CommandAttach,
-  CommandDetach
-} COMMAND;
-
-static void
-Help (
-  void
+/**
+ * Command routine
+ *
+ * @v boot_bus          A handle to the boot bus device
+ */
+#define command_decl( x )       \
+                                \
+int STDCALL                     \
+x (                             \
+  HANDLE boot_bus,              \
+  int argc,                     \
+  char **argv                   \
  )
+/*
+ * Function pointer for a command routine.
+ * 'indent' mangles this, so it looks weird
+ */
+typedef command_decl (
+   ( *command_routine )
+ );
+
+command_decl ( cmd_help )
 {
-  printf ( "winvblk <scan|show|mount|umount|attach|detach>\n\n" );
-  printf ( "  scan\n        Shows the reachable AoE targets.\n\n" );
-  printf ( "  show\n        Shows the mounted AoE targets.\n\n" );
-  printf ( "  mount <client mac address> <major> <minor>\n"
-	   "        Mounts an AoE target.\n\n" );
-  printf ( "  umount <disk number>\n        Unmounts an AoE disk.\n\n" );
-  printf ( "  attach <filepath> <disk type> <cyls> <heads> <sectors>\n"
-	   "        Attaches <filepath> disk image file.\n"
-	   "        <disk type> is 'f' for floppy, 'c' for CD/DVD, "
-	   "'h' for HDD\n\n" );
-  printf ( "  detach <disk number>\n"
-	   "        Detaches file-backed disk.\n\n" );
+  printf ( "winvblk <scan|show|mount|umount|attach|detach>\n"	/*    */
+	   "\n"			/*    */
+	   "  scan\n"		/*    */
+	   "        Shows the reachable AoE targets.\n"	/*    */
+	   "\n"			/*    */
+	   "  show\n"		/*    */
+	   "        Shows the mounted AoE targets.\n"	/*    */
+	   "\n"			/*    */
+	   "  mount <client mac address> <major> <minor>\n"	/*    */
+	   "        Mounts an AoE target.\n"	/*    */
+	   "\n"			/*    */
+	   "  umount <disk number>\n"	/*    */
+	   "        Unmounts an AoE disk.\n"	/*    */
+	   "\n"			/*    */
+	   "  attach <filepath> <disk type> <cyls> <heads> <sectors>\n"	/*    */
+	   "        Attaches <filepath> disk image file.\n"	/*    */
+	   "        <disk type> is 'f' for floppy, 'c' for CD/DVD, 'h' for HDD\n"	/*    */
+	   "\n"			/*    */
+	   "  detach <disk number>\n"	/*    */
+	   "        Detaches file-backed disk.\n"	/*    */
+	   "\n" );
+  return 1;
+}
+
+command_decl ( cmd_scan )
+{
+  aoe__mount_targets_ptr targets;
+  DWORD bytes_returned;
+  winvblock__uint32 i;
+  winvblock__uint8 string[256];
+  int status = 2;
+
+  targets =
+    malloc ( sizeof ( aoe__mount_targets ) +
+	     ( 32 * sizeof ( aoe__mount_target ) ) );
+  if ( targets == NULL )
+    {
+      printf ( "Out of memory\n" );
+      goto err_alloc;
+    }
+  if ( !DeviceIoControl
+       ( boot_bus, IOCTL_AOE_SCAN, NULL, 0, targets,
+	 ( sizeof ( aoe__mount_targets ) +
+	   ( 32 * sizeof ( aoe__mount_target ) ) ), &bytes_returned,
+	 ( LPOVERLAPPED ) NULL ) )
+    {
+      printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
+      status = 2;
+      goto err_ioctl;
+    }
+  if ( targets->Count == 0 )
+    {
+      printf ( "No AoE targets found.\n" );
+      goto err_no_targets;
+    }
+  printf ( "Client NIC          Target      Server MAC         Size\n" );
+  for ( i = 0; i < targets->Count && i < 10; i++ )
+    {
+      sprintf ( string, "e%lu.%lu      ", targets->Target[i].Major,
+		targets->Target[i].Minor );
+      string[10] = 0;
+      printf ( " %02x:%02x:%02x:%02x:%02x:%02x  %s "
+	       " %02x:%02x:%02x:%02x:%02x:%02x  %I64uM\n",
+	       targets->Target[i].ClientMac[0],
+	       targets->Target[i].ClientMac[1],
+	       targets->Target[i].ClientMac[2],
+	       targets->Target[i].ClientMac[3],
+	       targets->Target[i].ClientMac[4],
+	       targets->Target[i].ClientMac[5], string,
+	       targets->Target[i].ServerMac[0],
+	       targets->Target[i].ServerMac[1],
+	       targets->Target[i].ServerMac[2],
+	       targets->Target[i].ServerMac[3],
+	       targets->Target[i].ServerMac[4],
+	       targets->Target[i].ServerMac[5],
+	       ( targets->Target[i].LBASize / 2048 ) );
+    }
+
+err_no_targets:
+
+  status = 0;
+
+err_ioctl:
+
+  free ( targets );
+err_alloc:
+
+  return status;
+}
+
+command_decl ( cmd_show )
+{
+  aoe__mount_disks_ptr mounted_disks;
+  DWORD bytes_returned;
+  winvblock__uint32 i;
+  winvblock__uint8 string[256];
+  int status = 2;
+
+  mounted_disks =
+    malloc ( sizeof ( aoe__mount_disks ) +
+	     ( 32 * sizeof ( aoe__mount_disk ) ) );
+  if ( mounted_disks == NULL )
+    {
+      printf ( "Out of memory\n" );
+      goto err_alloc;
+    }
+  if ( !DeviceIoControl
+       ( boot_bus, IOCTL_AOE_SHOW, NULL, 0, mounted_disks,
+	 ( sizeof ( aoe__mount_disks ) + ( 32 * sizeof ( aoe__mount_disk ) ) ),
+	 &bytes_returned, ( LPOVERLAPPED ) NULL ) )
+    {
+      printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
+      goto err_ioctl;
+    }
+
+  status = 0;
+
+  if ( mounted_disks->Count == 0 )
+    {
+      printf ( "No AoE disks mounted.\n" );
+      goto err_no_disks;
+    }
+  printf ( "Disk  Client NIC         Server MAC         Target      Size\n" );
+  for ( i = 0; i < mounted_disks->Count && i < 10; i++ )
+    {
+      sprintf ( string, "e%lu.%lu      ", mounted_disks->Disk[i].Major,
+		mounted_disks->Disk[i].Minor );
+      string[10] = 0;
+      printf
+	( " %-4lu %02x:%02x:%02x:%02x:%02x:%02x  %02x:%02x:%02x:%02x:%02x:%02x  %s  %I64uM\n",
+	  mounted_disks->Disk[i].Disk, mounted_disks->Disk[i].ClientMac[0],
+	  mounted_disks->Disk[i].ClientMac[1],
+	  mounted_disks->Disk[i].ClientMac[2],
+	  mounted_disks->Disk[i].ClientMac[3],
+	  mounted_disks->Disk[i].ClientMac[4],
+	  mounted_disks->Disk[i].ClientMac[5],
+	  mounted_disks->Disk[i].ServerMac[0],
+	  mounted_disks->Disk[i].ServerMac[1],
+	  mounted_disks->Disk[i].ServerMac[2],
+	  mounted_disks->Disk[i].ServerMac[3],
+	  mounted_disks->Disk[i].ServerMac[4],
+	  mounted_disks->Disk[i].ServerMac[5], string,
+	  ( mounted_disks->Disk[i].LBASize / 2048 ) );
+    }
+
+err_no_disks:
+
+err_ioctl:
+
+  free ( mounted_disks );
+err_alloc:
+
+  return status;
+}
+
+command_decl ( cmd_mount )
+{
+  winvblock__uint8 mac_addr[6];
+  winvblock__uint32 ver_major,
+   ver_minor;
+  winvblock__uint8 in_buf[sizeof ( mount__filedisk ) + 1024];
+  DWORD bytes_returned;
+
+  sscanf ( argv[2], "%02x:%02x:%02x:%02x:%02x:%02x", ( int * )&mac_addr[0],
+	   ( int * )&mac_addr[1], ( int * )&mac_addr[2], ( int * )&mac_addr[3],
+	   ( int * )&mac_addr[4], ( int * )&mac_addr[5] );
+  sscanf ( argv[3], "%d", ( int * )&ver_major );
+  sscanf ( argv[4], "%d", ( int * )&ver_minor );
+  printf ( "mounting e%d.%d from %02x:%02x:%02x:%02x:%02x:%02x\n",
+	   ( int )ver_major, ( int )ver_minor, mac_addr[0], mac_addr[1],
+	   mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5] );
+  memcpy ( &in_buf[0], mac_addr, 6 );
+  ( ( winvblock__uint16_ptr ) & in_buf[6] )[0] =
+    ( winvblock__uint16 ) ver_major;
+  ( ( winvblock__uint8_ptr ) & in_buf[8] )[0] = ( winvblock__uint8 ) ver_minor;
+  if ( !DeviceIoControl
+       ( boot_bus, IOCTL_AOE_MOUNT, in_buf, sizeof ( in_buf ), NULL, 0,
+	 &bytes_returned, ( LPOVERLAPPED ) NULL ) )
+    {
+      printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
+      return 2;
+    }
+  return 0;
+}
+
+command_decl ( cmd_umount )
+{
+  winvblock__uint32 disk_num;
+  winvblock__uint8 in_buf[sizeof ( mount__filedisk ) + 1024];
+  DWORD bytes_returned;
+
+  sscanf ( argv[2], "%d", ( int * )&disk_num );
+  printf ( "unmounting disk %d\n", ( int )disk_num );
+  memcpy ( &in_buf, &disk_num, 4 );
+  if ( !DeviceIoControl
+       ( boot_bus, IOCTL_AOE_UMOUNT, in_buf, sizeof ( in_buf ), NULL, 0,
+	 &bytes_returned, ( LPOVERLAPPED ) NULL ) )
+    {
+      printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
+      return 2;
+    }
+  return 0;
+}
+
+command_decl ( cmd_attach )
+{
+  mount__filedisk filedisk;
+  char obj_path_prefix[] = "\\??\\";
+  winvblock__uint8 in_buf[sizeof ( mount__filedisk ) + 1024];
+  DWORD bytes_returned;
+
+  if ( argc < 6 )
+    {
+      printf ( "Too few parameters.\n\n" );
+      cmd_help ( NULL, 0, NULL );
+      return 1;
+    }
+  filedisk.type = *argv[3];
+  sscanf ( argv[4], "%d", ( int * )&filedisk.cylinders );
+  sscanf ( argv[5], "%d", ( int * )&filedisk.heads );
+  sscanf ( argv[6], "%d", ( int * )&filedisk.sectors );
+  memcpy ( &in_buf, &filedisk, sizeof ( mount__filedisk ) );
+  memcpy ( &in_buf[sizeof ( mount__filedisk )], obj_path_prefix,
+	   sizeof ( obj_path_prefix ) );
+  memcpy ( &in_buf
+	   [sizeof ( mount__filedisk ) + sizeof ( obj_path_prefix ) - 1],
+	   argv[2], strlen ( argv[2] ) + 1 );
+  if ( !DeviceIoControl
+       ( boot_bus, IOCTL_FILE_ATTACH, in_buf, sizeof ( in_buf ), NULL, 0,
+	 &bytes_returned, ( LPOVERLAPPED ) NULL ) )
+    {
+      printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
+      return 2;
+    }
+  return 0;
+}
+
+command_decl ( cmd_detach )
+{
+  winvblock__uint32 disk_num;
+
+  winvblock__uint8 in_buf[sizeof ( mount__filedisk ) + 1024];
+  DWORD bytes_returned;
+
+  sscanf ( argv[2], "%d", ( int * )&disk_num );
+  printf ( "Detaching file-backed disk %d\n", ( int )disk_num );
+  memcpy ( &in_buf, &disk_num, 4 );
+  if ( !DeviceIoControl
+       ( boot_bus, IOCTL_FILE_DETACH, in_buf, sizeof ( in_buf ), NULL, 0,
+	 &bytes_returned, ( LPOVERLAPPED ) NULL ) )
+    {
+      printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
+      return 2;
+    }
+  return 0;
 }
 
 int
@@ -66,249 +323,64 @@ main (
   char **envp
  )
 {
-  COMMAND Command;
-  HANDLE DeviceHandle;
-  winvblock__uint8 InBuffer[sizeof ( mount__filedisk ) + 1024];
-  winvblock__uint8 String[256];
-  aoe__mount_targets_ptr Targets;
-  aoe__mount_disks_ptr Disks;
-  winvblock__uint8 Mac[6];
-  DWORD BytesReturned;
-  winvblock__uint32 Major,
-   Minor,
-   Disk;
-  winvblock__uint32 i;
+  command_routine cmd = cmd_help;
+  HANDLE boot_bus = NULL;
+  int status = 1;
 
   if ( argc < 2 )
     {
-      Help (  );
-      goto end;
+      cmd_help ( NULL, 0, NULL );
+      goto err_too_few_args;
     }
 
   if ( strcmp ( argv[1], "scan" ) == 0 )
     {
-      Command = CommandScan;
+      cmd = cmd_scan;
     }
   else if ( strcmp ( argv[1], "show" ) == 0 )
     {
-      Command = CommandShow;
+      cmd = cmd_show;
     }
   else if ( strcmp ( argv[1], "mount" ) == 0 )
     {
-      Command = CommandMount;
+      cmd = cmd_mount;
     }
   else if ( strcmp ( argv[1], "umount" ) == 0 )
     {
-      Command = CommandUmount;
+      cmd = cmd_umount;
     }
   else if ( strcmp ( argv[1], "attach" ) == 0 )
     {
-      Command = CommandAttach;
+      cmd = cmd_attach;
     }
   else if ( strcmp ( argv[1], "detach" ) == 0 )
     {
-      Command = CommandDetach;
+      cmd = cmd_detach;
     }
   else
     {
-      Help (  );
-      printf ( "Press enter to exit\n" );
-      getchar (  );
-      goto end;
+      cmd_help ( NULL, 0, NULL );
+      goto err_bad_cmd;
     }
 
-  DeviceHandle =
+  boot_bus =
     CreateFile ( "\\\\.\\" winvblock__literal, GENERIC_READ | GENERIC_WRITE,
 		 FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0,
 		 NULL );
-  if ( DeviceHandle == INVALID_HANDLE_VALUE )
+  if ( boot_bus == INVALID_HANDLE_VALUE )
     {
       printf ( "CreateFile (%d)\n", ( int )GetLastError (  ) );
-      goto end;
+      goto err_handle;
     }
 
-  switch ( Command )
-    {
-      case CommandScan:
-	if ( ( Targets =
-	       ( aoe__mount_targets_ptr )
-	       malloc ( sizeof ( aoe__mount_targets ) +
-			( 32 * sizeof ( aoe__mount_target ) ) ) ) == NULL )
-	  {
-	    printf ( "Out of memory\n" );
-	    break;
-	  }
-	if ( !DeviceIoControl
-	     ( DeviceHandle, IOCTL_AOE_SCAN, NULL, 0, Targets,
-	       ( sizeof ( aoe__mount_targets ) +
-		 ( 32 * sizeof ( aoe__mount_target ) ) ), &BytesReturned,
-	       ( LPOVERLAPPED ) NULL ) )
-	  {
-	    printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
-	    free ( Targets );
-	    break;
-	  }
-	if ( Targets->Count == 0 )
-	  {
-	    printf ( "No AoE targets found.\n" );
-	  }
-	else
-	  {
-	    printf
-	      ( "Client NIC          Target      Server MAC         Size\n" );
-	    for ( i = 0; i < Targets->Count && i < 10; i++ )
-	      {
-		sprintf ( String, "e%lu.%lu      ", Targets->Target[i].Major,
-			  Targets->Target[i].Minor );
-		String[10] = 0;
-		printf
-		  ( " %02x:%02x:%02x:%02x:%02x:%02x  %s  %02x:%02x:%02x:%02x:%02x:%02x  %I64uM\n",
-		    Targets->Target[i].ClientMac[0],
-		    Targets->Target[i].ClientMac[1],
-		    Targets->Target[i].ClientMac[2],
-		    Targets->Target[i].ClientMac[3],
-		    Targets->Target[i].ClientMac[4],
-		    Targets->Target[i].ClientMac[5], String,
-		    Targets->Target[i].ServerMac[0],
-		    Targets->Target[i].ServerMac[1],
-		    Targets->Target[i].ServerMac[2],
-		    Targets->Target[i].ServerMac[3],
-		    Targets->Target[i].ServerMac[4],
-		    Targets->Target[i].ServerMac[5],
-		    ( Targets->Target[i].LBASize / 2048 ) );
-	      }
-	  }
-	free ( Targets );
-	printf ( "Press enter to exit\n" );
-	getchar (  );
-	break;
-      case CommandShow:
-	if ( ( Disks =
-	       ( aoe__mount_disks_ptr ) malloc ( sizeof ( aoe__mount_disks ) +
-						 ( 32 *
-						   sizeof
-						   ( aoe__mount_disk ) ) ) ) ==
-	     NULL )
-	  {
-	    printf ( "Out of memory\n" );
-	    break;
-	  }
-	if ( !DeviceIoControl
-	     ( DeviceHandle, IOCTL_AOE_SHOW, NULL, 0, Disks,
-	       ( sizeof ( aoe__mount_disks ) +
-		 ( 32 * sizeof ( aoe__mount_disk ) ) ), &BytesReturned,
-	       ( LPOVERLAPPED ) NULL ) )
-	  {
-	    printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
-	    free ( Disks );
-	    break;
-	  }
-	if ( Disks->Count == 0 )
-	  {
-	    printf ( "No AoE disks mounted.\n" );
-	  }
-	else
-	  {
-	    printf
-	      ( "Disk  Client NIC         Server MAC         Target      Size\n" );
-	    for ( i = 0; i < Disks->Count && i < 10; i++ )
-	      {
-		sprintf ( String, "e%lu.%lu      ", Disks->Disk[i].Major,
-			  Disks->Disk[i].Minor );
-		String[10] = 0;
-		printf
-		  ( " %-4lu %02x:%02x:%02x:%02x:%02x:%02x  %02x:%02x:%02x:%02x:%02x:%02x  %s  %I64uM\n",
-		    Disks->Disk[i].Disk, Disks->Disk[i].ClientMac[0],
-		    Disks->Disk[i].ClientMac[1], Disks->Disk[i].ClientMac[2],
-		    Disks->Disk[i].ClientMac[3], Disks->Disk[i].ClientMac[4],
-		    Disks->Disk[i].ClientMac[5], Disks->Disk[i].ServerMac[0],
-		    Disks->Disk[i].ServerMac[1], Disks->Disk[i].ServerMac[2],
-		    Disks->Disk[i].ServerMac[3], Disks->Disk[i].ServerMac[4],
-		    Disks->Disk[i].ServerMac[5], String,
-		    ( Disks->Disk[i].LBASize / 2048 ) );
-	      }
-	  }
-	free ( Disks );
-	printf ( "Press enter to exit\n" );
-	getchar (  );
-	break;
-      case CommandMount:
-	sscanf ( argv[2], "%02x:%02x:%02x:%02x:%02x:%02x", ( int * )&Mac[0],
-		 ( int * )&Mac[1], ( int * )&Mac[2], ( int * )&Mac[3],
-		 ( int * )&Mac[4], ( int * )&Mac[5] );
-	sscanf ( argv[3], "%d", ( int * )&Major );
-	sscanf ( argv[4], "%d", ( int * )&Minor );
-	printf ( "mounting e%d.%d from %02x:%02x:%02x:%02x:%02x:%02x\n",
-		 ( int )Major, ( int )Minor, Mac[0], Mac[1], Mac[2], Mac[3],
-		 Mac[4], Mac[5] );
-	memcpy ( &InBuffer[0], Mac, 6 );
-	*( winvblock__uint16_ptr ) ( &InBuffer[6] ) =
-	  ( winvblock__uint16 ) Major;
-	*( winvblock__uint8_ptr ) ( &InBuffer[8] ) =
-	  ( winvblock__uint8 ) Minor;
-	if ( !DeviceIoControl
-	     ( DeviceHandle, IOCTL_AOE_MOUNT, InBuffer, sizeof ( InBuffer ),
-	       NULL, 0, &BytesReturned, ( LPOVERLAPPED ) NULL ) )
-	  {
-	    printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
-	  }
-	break;
-      case CommandUmount:
-	sscanf ( argv[2], "%d", ( int * )&Disk );
-	printf ( "unmounting disk %d\n", ( int )Disk );
-	memcpy ( &InBuffer, &Disk, 4 );
-	if ( !DeviceIoControl
-	     ( DeviceHandle, IOCTL_AOE_UMOUNT, InBuffer, sizeof ( InBuffer ),
-	       NULL, 0, &BytesReturned, ( LPOVERLAPPED ) NULL ) )
-	  {
-	    printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
-	  }
-	break;
-      case CommandAttach:
-	{
-	  mount__filedisk filedisk;
-	  char obj_path_prefix[] = "\\??\\";
+  status = cmd ( boot_bus, argc, argv );
 
-	  if ( argc < 6 )
-	    {
-	      printf ( "Too few parameters.\n" );
-	      Help (  );
-	      CloseHandle ( DeviceHandle );
-	      return 1;
-	    }
-	  filedisk.type = *argv[3];
-	  sscanf ( argv[4], "%d", ( int * )&filedisk.cylinders );
-	  sscanf ( argv[5], "%d", ( int * )&filedisk.heads );
-	  sscanf ( argv[6], "%d", ( int * )&filedisk.sectors );
-	  memcpy ( &InBuffer, &filedisk, sizeof ( mount__filedisk ) );
-	  memcpy ( &InBuffer[sizeof ( mount__filedisk )], obj_path_prefix,
-		   sizeof ( obj_path_prefix ) );
-	  memcpy ( &InBuffer
-		   [sizeof ( mount__filedisk ) + sizeof ( obj_path_prefix ) -
-		    1], argv[2], strlen ( argv[2] ) + 1 );
-	  if ( !DeviceIoControl
-	       ( DeviceHandle, IOCTL_FILE_ATTACH, InBuffer,
-		 sizeof ( InBuffer ), NULL, 0, &BytesReturned,
-		 ( LPOVERLAPPED ) NULL ) )
-	    {
-	      printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
-	    }
-	  break;
-	}
-      case CommandDetach:
-	sscanf ( argv[2], "%d", ( int * )&Disk );
-	printf ( "Detaching file-backed disk %d\n", ( int )Disk );
-	memcpy ( &InBuffer, &Disk, 4 );
-	if ( !DeviceIoControl
-	     ( DeviceHandle, IOCTL_FILE_DETACH, InBuffer, sizeof ( InBuffer ),
-	       NULL, 0, &BytesReturned, ( LPOVERLAPPED ) NULL ) )
-	  {
-	    printf ( "DeviceIoControl (%d)\n", ( int )GetLastError (  ) );
-	  }
-	break;
-    }
-  CloseHandle ( DeviceHandle );
+  CloseHandle ( boot_bus );
+err_handle:
 
-end:
-  return 0;
+err_bad_cmd:
+
+err_too_few_args:
+
+  return status;
 }
