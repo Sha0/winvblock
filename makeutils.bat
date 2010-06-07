@@ -11,7 +11,8 @@ popd
 
 pushd .
 cd util
-cl /I%CRT_INC_PATH% /I..\include /DWIN32_LEAN_AND_MEAN mount.c /Fe..\..\bin\winvblk.exe /link /LIBPATH:%DDK_LIB_DEST%\i386 /LIBPATH:%Lib%\crt\i386 bufferoverflowU.lib
+rc winvblock.rc
+cl /I%CRT_INC_PATH% /I..\include /DWIN32_LEAN_AND_MEAN mount.c winvblock.res /Fe..\..\bin\winvblk.exe /link /LIBPATH:%DDK_LIB_DEST%\i386 /LIBPATH:%Lib%\crt\i386 bufferoverflowU.lib
 del mount.obj
 popd
 

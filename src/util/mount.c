@@ -1,6 +1,6 @@
 /**
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
- * Portions copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * For WinAoE contact information, see http://winaoe.org/
  *
  * This file is part of WinVBlock, derived from WinAoE.
@@ -45,9 +45,7 @@
                                 \
 int STDCALL                     \
 x (                             \
-  HANDLE boot_bus,              \
-  int argc,                     \
-  char **argv                   \
+  HANDLE boot_bus               \
  )
 /*
  * Function pointer for a command routine.
@@ -57,33 +55,191 @@ typedef command_decl (
    ( *command_routine )
  );
 
-command_decl ( cmd_help )
+winvblock__def_struct ( option )
 {
-  printf ( "winvblk <scan|show|mount|umount|attach|detach>\n"	/*    */
-	   "\n"			/*    */
-	   "  scan\n"		/*    */
-	   "        Shows the reachable AoE targets.\n"	/*    */
-	   "\n"			/*    */
-	   "  show\n"		/*    */
-	   "        Shows the mounted AoE targets.\n"	/*    */
-	   "\n"			/*    */
-	   "  mount <client mac address> <major> <minor>\n"	/*    */
-	   "        Mounts an AoE target.\n"	/*    */
-	   "\n"			/*    */
-	   "  umount <disk number>\n"	/*    */
-	   "        Unmounts an AoE disk.\n"	/*    */
-	   "\n"			/*    */
-	   "  attach <filepath> <disk type> <cyls> <heads> <sectors>\n"	/*    */
-	   "        Attaches <filepath> disk image file.\n"	/*    */
-	   "        <disk type> is 'f' for floppy, 'c' for CD/DVD, 'h' for HDD\n"	/*    */
-	   "\n"			/*    */
-	   "  detach <disk number>\n"	/*    */
-	   "        Detaches file-backed disk.\n"	/*    */
-	   "\n" );
+  char *name;
+  char *value;
+  int has_arg;
+};
+
+static option opt_h1 = {
+  "HELP", NULL, 0
+};
+
+static option opt_h2 = {
+  "?", NULL, 0
+};
+
+static option opt_cmd = {
+  "CMD", NULL, 1
+};
+
+static option opt_cyls = {
+  "C", NULL, 1
+};
+
+static option opt_heads = {
+  "H", NULL, 1
+};
+
+static option opt_spt = {
+  "S", NULL, 1
+};
+
+static option opt_disknum = {
+  "D", NULL, 1
+};
+
+static option opt_media = {
+  "M", NULL, 1
+};
+
+static option opt_uri = {
+  "U", NULL, 1
+};
+
+static option opt_mac = {
+  "MAC", NULL, 1
+};
+
+static option *options[] = {
+  &opt_h1,
+  &opt_h2,
+  &opt_cmd,
+  &opt_cyls,
+  &opt_heads,
+  &opt_spt,
+  &opt_disknum,
+  &opt_media,
+  &opt_uri,
+  &opt_mac,
+};
+
+static char present[] = "";
+static char *invalid_opt = NULL;
+
+static void
+cmdline_options (
+  int argc,
+  char **argv
+ )
+{
+  int cur = 1;
+
+  while ( cur < argc )
+    {
+      char *cur_arg = argv[cur];
+      int opt;
+
+      /*
+       * Check if the argument is an option.  Look for '-', '--', or '/'
+       */
+      switch ( *cur_arg )
+	{
+	  case '-':
+	    cur_arg++;
+	    if ( *cur_arg == '-' )
+	      cur_arg++;
+	    break;
+	  case '/':
+	    cur_arg++;
+	    break;
+	  default:
+	    invalid_opt = cur_arg;
+	    return;
+	}
+      /*
+       * Convert possible option to upper-case
+       */
+      {
+	char *walker = cur_arg;
+	while ( *walker )
+	  {
+	    *walker = toupper ( *walker );
+	    walker++;
+	  }
+      }
+      /*
+       * Check if the argument is a _valid_ option
+       */
+      opt = 0;
+      while ( opt < sizeof ( options ) / sizeof ( option * ) )
+	{
+	  if ( strcmp ( cur_arg, options[opt]->name ) == 0 )
+	    {
+	      /*
+	       * We have a match.
+	       * Check if the option was already specified
+	       */
+	      if ( options[opt]->value != NULL )
+		{
+		  printf ( "%s specified more than once, making it invalid.\n",
+			   cur_arg );
+		  invalid_opt = cur_arg;
+		  return;
+		}
+	      /*
+	       * The option's value is the next argument.  For boolean
+	       * options, we ignore the value anyway, but need to know the
+	       * option is present
+	       */
+	      if ( cur == argc - 1 )
+		options[opt]->value = present;
+	      else
+		options[opt]->value = argv[cur + 1];
+	      cur += options[opt]->has_arg;
+	      break;
+	    }
+	  opt++;
+	}
+      /*
+       * Did we find no valid option match?
+       */
+      if ( opt == sizeof ( options ) / sizeof ( option * ) )
+	{
+	  invalid_opt = cur_arg;
+	  return;
+	}
+      cur++;
+    }
+}
+
+static
+command_decl (
+  cmd_help
+ )
+{
+  char help_text[] = "\n\
+WinVBlock user-land utility for disk control. (C) 2006-2008 V.,\n\
+                                              (C) 2009-2010 Shao Miller\n\
+Usage:\n\
+  winvblk -cmd <command> [-d <disk number>] [-m <media>] [-u <uri or path>]\n\
+    [-mac <client mac address>] [-c <cyls>] [-h <heads>] [-s <sects per track>]\n\
+  winvblk -?\n\
+\n\
+Parameters:\n\
+  <command> is one of:\n\
+    scan   - Shows the reachable AoE targets.\n\
+    show   - Shows the mounted AoE targets.\n\
+    mount  - Mounts an AoE target.  Requires -mac and -u\n\
+    umount - Unmounts an AoE disk.  Requires -d\n\
+    attach - Attaches <filepath> disk image file.  Requires -u and -m.\n\
+             -c, -h, -s are optional.\n\
+    detach - Detaches file-backed disk.  Requires -d\n\
+  <uri or path> is something like:\n\
+    aoe:eX.Y        - Where X is the \"major\" (shelf) and Y is\n\
+                      the \"minor\" (slot)\n\
+    c:\\my_disk.hdd - The path to a disk image file or .ISO\n\
+  <media> is one of 'c' for CD/DVD, 'f' for floppy, 'h' for hard disk drive\n\
+\n";
+  printf ( help_text );
   return 1;
 }
 
-command_decl ( cmd_scan )
+static
+command_decl (
+  cmd_scan
+ )
 {
   aoe__mount_targets_ptr targets;
   DWORD bytes_returned;
@@ -149,7 +305,10 @@ err_alloc:
   return status;
 }
 
-command_decl ( cmd_show )
+static
+command_decl (
+  cmd_show
+ )
 {
   aoe__mount_disks_ptr mounted_disks;
   DWORD bytes_returned;
@@ -214,7 +373,10 @@ err_alloc:
   return status;
 }
 
-command_decl ( cmd_mount )
+static
+command_decl (
+  cmd_mount
+ )
 {
   winvblock__uint8 mac_addr[6];
   winvblock__uint32 ver_major,
@@ -222,12 +384,18 @@ command_decl ( cmd_mount )
   winvblock__uint8 in_buf[sizeof ( mount__filedisk ) + 1024];
   DWORD bytes_returned;
 
-  sscanf ( argv[2], "%02x:%02x:%02x:%02x:%02x:%02x", ( int * )&mac_addr[0],
-	   ( int * )&mac_addr[1], ( int * )&mac_addr[2], ( int * )&mac_addr[3],
-	   ( int * )&mac_addr[4], ( int * )&mac_addr[5] );
-  sscanf ( argv[3], "%d", ( int * )&ver_major );
-  sscanf ( argv[4], "%d", ( int * )&ver_minor );
-  printf ( "mounting e%d.%d from %02x:%02x:%02x:%02x:%02x:%02x\n",
+  if ( opt_mac.value == NULL || opt_uri.value == NULL )
+    {
+      printf ( "-mac and -u options required.  See -? for help.\n" );
+      return 1;
+    }
+  sscanf ( opt_mac.value, "%02x:%02x:%02x:%02x:%02x:%02x",
+	   ( int * )&mac_addr[0], ( int * )&mac_addr[1], ( int * )&mac_addr[2],
+	   ( int * )&mac_addr[3], ( int * )&mac_addr[4],
+	   ( int * )&mac_addr[5] );
+  sscanf ( opt_uri.value, "aoe:e%lu.%lu", ( int * )&ver_major,
+	   ( int * )&ver_minor );
+  printf ( "mounting e%lu.%lu from %02x:%02x:%02x:%02x:%02x:%02x\n",
 	   ( int )ver_major, ( int )ver_minor, mac_addr[0], mac_addr[1],
 	   mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5] );
   memcpy ( &in_buf[0], mac_addr, 6 );
@@ -244,13 +412,21 @@ command_decl ( cmd_mount )
   return 0;
 }
 
-command_decl ( cmd_umount )
+static
+command_decl (
+  cmd_umount
+ )
 {
   winvblock__uint32 disk_num;
   winvblock__uint8 in_buf[sizeof ( mount__filedisk ) + 1024];
   DWORD bytes_returned;
 
-  sscanf ( argv[2], "%d", ( int * )&disk_num );
+  if ( opt_disknum.value == NULL )
+    {
+      printf ( "-d option required.  See -? for help.\n" );
+      return 1;
+    }
+  sscanf ( opt_disknum.value, "%d", ( int * )&disk_num );
   printf ( "unmounting disk %d\n", ( int )disk_num );
   memcpy ( &in_buf, &disk_num, 4 );
   if ( !DeviceIoControl
@@ -263,29 +439,34 @@ command_decl ( cmd_umount )
   return 0;
 }
 
-command_decl ( cmd_attach )
+static
+command_decl (
+  cmd_attach
+ )
 {
   mount__filedisk filedisk;
   char obj_path_prefix[] = "\\??\\";
   winvblock__uint8 in_buf[sizeof ( mount__filedisk ) + 1024];
   DWORD bytes_returned;
 
-  if ( argc < 6 )
+  if ( opt_uri.value == NULL || opt_media.value == NULL )
     {
-      printf ( "Too few parameters.\n\n" );
-      cmd_help ( NULL, 0, NULL );
+      printf ( "-u and -m options required.  See -? for help.\n" );
       return 1;
     }
-  filedisk.type = *argv[3];
-  sscanf ( argv[4], "%d", ( int * )&filedisk.cylinders );
-  sscanf ( argv[5], "%d", ( int * )&filedisk.heads );
-  sscanf ( argv[6], "%d", ( int * )&filedisk.sectors );
+  filedisk.type = opt_media.value[0];
+  if ( opt_cyls.value != NULL )
+    sscanf ( opt_cyls.value, "%d", ( int * )&filedisk.cylinders );
+  if ( opt_heads.value != NULL )
+    sscanf ( opt_heads.value, "%d", ( int * )&filedisk.heads );
+  if ( opt_spt.value != NULL )
+    sscanf ( opt_spt.value, "%d", ( int * )&filedisk.sectors );
   memcpy ( &in_buf, &filedisk, sizeof ( mount__filedisk ) );
   memcpy ( &in_buf[sizeof ( mount__filedisk )], obj_path_prefix,
 	   sizeof ( obj_path_prefix ) );
   memcpy ( &in_buf
 	   [sizeof ( mount__filedisk ) + sizeof ( obj_path_prefix ) - 1],
-	   argv[2], strlen ( argv[2] ) + 1 );
+	   opt_uri.value, strlen ( opt_uri.value ) + 1 );
   if ( !DeviceIoControl
        ( boot_bus, IOCTL_FILE_ATTACH, in_buf, sizeof ( in_buf ), NULL, 0,
 	 &bytes_returned, ( LPOVERLAPPED ) NULL ) )
@@ -296,14 +477,21 @@ command_decl ( cmd_attach )
   return 0;
 }
 
-command_decl ( cmd_detach )
+static
+command_decl (
+  cmd_detach
+ )
 {
   winvblock__uint32 disk_num;
-
   winvblock__uint8 in_buf[sizeof ( mount__filedisk ) + 1024];
   DWORD bytes_returned;
 
-  sscanf ( argv[2], "%d", ( int * )&disk_num );
+  if ( opt_disknum.value == NULL )
+    {
+      printf ( "-d option required.  See -? for help.\n" );
+      return 1;
+    }
+  sscanf ( opt_disknum.value, "%d", ( int * )&disk_num );
   printf ( "Detaching file-backed disk %d\n", ( int )disk_num );
   memcpy ( &in_buf, &disk_num, 4 );
   if ( !DeviceIoControl
@@ -327,41 +515,57 @@ main (
   HANDLE boot_bus = NULL;
   int status = 1;
 
-  if ( argc < 2 )
+  cmdline_options ( argc, argv );
+  /*
+   * Check for invalid option
+   */
+  if ( invalid_opt != NULL )
     {
-      cmd_help ( NULL, 0, NULL );
-      goto err_too_few_args;
+      printf ( "Use -? for help.  Invalid option: %s\n", invalid_opt );
+      goto err_bad_cmd;
     }
-
-  if ( strcmp ( argv[1], "scan" ) == 0 )
+  /*
+   * Check for cry for help
+   */
+  if ( opt_h1.value || opt_h2.value )
+    goto do_cmd;
+  /*
+   * Check for no command
+   */
+  if ( opt_cmd.value == NULL )
+    goto do_cmd;
+  /*
+   * Check given command
+   */
+  if ( strcmp ( opt_cmd.value, "scan" ) == 0 )
     {
       cmd = cmd_scan;
     }
-  else if ( strcmp ( argv[1], "show" ) == 0 )
+  if ( strcmp ( opt_cmd.value, "show" ) == 0 )
     {
       cmd = cmd_show;
     }
-  else if ( strcmp ( argv[1], "mount" ) == 0 )
+  if ( strcmp ( opt_cmd.value, "mount" ) == 0 )
     {
       cmd = cmd_mount;
     }
-  else if ( strcmp ( argv[1], "umount" ) == 0 )
+  if ( strcmp ( opt_cmd.value, "umount" ) == 0 )
     {
       cmd = cmd_umount;
     }
-  else if ( strcmp ( argv[1], "attach" ) == 0 )
+  if ( strcmp ( opt_cmd.value, "attach" ) == 0 )
     {
       cmd = cmd_attach;
     }
-  else if ( strcmp ( argv[1], "detach" ) == 0 )
+  if ( strcmp ( opt_cmd.value, "detach" ) == 0 )
     {
       cmd = cmd_detach;
     }
-  else
-    {
-      cmd_help ( NULL, 0, NULL );
-      goto err_bad_cmd;
-    }
+  /*
+   * Check for invalid command
+   */
+  if ( cmd == cmd_help )
+    goto do_cmd;
 
   boot_bus =
     CreateFile ( "\\\\.\\" winvblock__literal, GENERIC_READ | GENERIC_WRITE,
@@ -373,14 +577,14 @@ main (
       goto err_handle;
     }
 
-  status = cmd ( boot_bus, argc, argv );
+do_cmd:
+  status = cmd ( boot_bus );
 
-  CloseHandle ( boot_bus );
+  if ( boot_bus != NULL )
+    CloseHandle ( boot_bus );
 err_handle:
 
 err_bad_cmd:
-
-err_too_few_args:
 
   return status;
 }
