@@ -41,6 +41,8 @@ winvblock__def_struct ( filedisk__type )
   KSPIN_LOCK req_list_lock;
   KEVENT signal;
   disk__io_routine sync_io;
+  char *filepath;
+  UNICODE_STRING filepath_unicode;
 };
 
 extern irp__handler_decl (
@@ -86,5 +88,9 @@ extern filedisk__type_ptr filedisk__create_threaded (
  */
 #  define filedisk__get_ptr( dev_ptr ) \
   ( ( filedisk__type_ptr ) ( disk__get_ptr ( dev_ptr ) )->ext )
+
+extern void STDCALL filedisk__hot_swap_thread (
+  IN void *StartContext
+ );
 
 #endif				/* _filedisk_h */

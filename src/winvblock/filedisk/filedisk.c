@@ -26,6 +26,8 @@
 
 #include <stdio.h>
 #include <ntddk.h>
+#include <initguid.h>
+#include <ntddstor.h>
 
 #include "winvblock.h"
 #include "portable.h"
@@ -152,7 +154,7 @@ irp__handler_decl ( filedisk__attach )
 		      ( char * )&buf[sizeof ( mount__filedisk )] );
   status = RtlAnsiStringToUnicodeString ( &file_path2, &file_path1, TRUE );
   if ( !NT_SUCCESS ( status ) )
-    return status;
+    goto err_ansi_to_unicode;
   InitializeObjectAttributes ( &obj_attrs, &file_path2,
 			       OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, NULL,
 			       NULL );
@@ -165,11 +167,10 @@ irp__handler_decl ( filedisk__attach )
 		   FILE_SHARE_READ | FILE_SHARE_DELETE | FILE_SHARE_WRITE,
 		   FILE_OPEN,
 		   FILE_NON_DIRECTORY_FILE | FILE_RANDOM_ACCESS |
-		   FILE_NO_INTERMEDIATE_BUFFERING |
 		   FILE_SYNCHRONOUS_IO_NONALERT, NULL, 0 );
   RtlFreeUnicodeString ( &file_path2 );
   if ( !NT_SUCCESS ( status ) )
-    return status;
+    goto err_file_open;
 
   filedisk_ptr->file = file;
 
@@ -196,11 +197,8 @@ irp__handler_decl ( filedisk__attach )
     ZwQueryInformationFile ( file, &io_status, &info, sizeof ( info ),
 			     FileStandardInformation );
   if ( !NT_SUCCESS ( status ) )
-    {
-      ZwClose ( file );
-      free_filedisk ( filedisk_ptr->disk->device );
-      return status;
-    }
+    goto err_query_info;
+
   filedisk_ptr->disk->LBADiskSize =
     info.EndOfFile.QuadPart / filedisk_ptr->disk->SectorSize;
   filedisk_ptr->disk->Cylinders = params->cylinders;
@@ -222,6 +220,16 @@ irp__handler_decl ( filedisk__attach )
    */
   bus__add_child ( bus__boot (  ), filedisk_ptr->disk->device );
   return STATUS_SUCCESS;
+
+err_query_info:
+
+  ZwClose ( file );
+err_file_open:
+
+err_ansi_to_unicode:
+
+  free_filedisk ( filedisk_ptr->disk->device );
+  return status;
 }
 
 static
@@ -502,4 +510,201 @@ filedisk__create_threaded (
 err_nofiledisk:
 
   return NULL;
+}
+
+/**
+ * Find and hot-swap to a backing file
+ *
+ * @v filedisk_ptr      Points to the filedisk needing to hot-swap
+ * @ret                 TRUE once the new file has been established, or FALSE
+ *
+ * We search all filesystems for a particular filename, then swap
+ * to using it as the backing store.  This is currently useful for
+ * sector-mapped disks which should really have a file-in-use lock
+ * for the file they represent.  Once the backing file is established,
+ * we return TRUE.  Otherwise, we return FALSE and the hot-swap thread
+ * will keep trying.
+ */
+static winvblock__bool STDCALL
+hot_swap (
+  filedisk__type_ptr filedisk_ptr
+ )
+{
+  NTSTATUS status;
+  GUID vol_guid = GUID_DEVINTERFACE_VOLUME;
+  PWSTR sym_links;
+  PWCHAR pos;
+
+  /*
+   * Find the backing volume and use it.  We walk a list
+   * of unicode volume device names and check each one for the file
+   */
+  status = IoGetDeviceInterfaces ( &vol_guid, NULL, 0, &sym_links );
+  if ( !NT_SUCCESS ( status ) )
+    return FALSE;
+  pos = sym_links;
+  status = STATUS_UNSUCCESSFUL;
+  while ( *pos != UNICODE_NULL )
+    {
+      UNICODE_STRING path;
+      PFILE_OBJECT vol_file_obj;
+      PDEVICE_OBJECT vol_dev_obj;
+      UNICODE_STRING vol_dos_name;
+      UNICODE_STRING filepath;
+      static const WCHAR obj_path_prefix[] = L"\\??\\";
+      static const WCHAR path_sep = L'\\';
+      OBJECT_ATTRIBUTES obj_attrs;
+      HANDLE file = 0;
+      IO_STATUS_BLOCK io_status;
+
+      RtlInitUnicodeString ( &path, pos );
+      /*
+       * Get some object pointers for the volume
+       */
+      status =
+	IoGetDeviceObjectPointer ( &path, FILE_READ_DATA, &vol_file_obj,
+				   &vol_dev_obj );
+      if ( !NT_SUCCESS ( status ) )
+	goto err_obj_ptrs;
+      /*
+       * Get the DOS name
+       */
+      vol_dos_name.Buffer = NULL;
+      vol_dos_name.Length = vol_dos_name.MaximumLength = 0;
+      status =
+	RtlVolumeDeviceToDosName ( vol_file_obj->DeviceObject, &vol_dos_name );
+      if ( !NT_SUCCESS ( status ) )
+	goto err_dos_name;
+      /*
+       * Build the file path.  Ugh, what a mess
+       */
+      filepath.Length = filepath.MaximumLength =
+	sizeof ( obj_path_prefix ) - sizeof ( UNICODE_NULL ) +
+	vol_dos_name.Length + sizeof ( path_sep ) +
+	filedisk_ptr->filepath_unicode.Length;
+      filepath.Buffer = ExAllocatePool ( NonPagedPool, filepath.Length );
+      if ( filepath.Buffer == NULL )
+	{
+	  status = STATUS_UNSUCCESSFUL;
+	  goto err_alloc_buf;
+	}
+      {
+	char *buf = ( char * )filepath.Buffer;
+
+	RtlCopyMemory ( buf, obj_path_prefix,
+			sizeof ( obj_path_prefix ) - sizeof ( UNICODE_NULL ) );
+	buf += sizeof ( obj_path_prefix ) - sizeof ( UNICODE_NULL );
+	RtlCopyMemory ( buf, vol_dos_name.Buffer, vol_dos_name.Length );
+	buf += vol_dos_name.Length;
+	RtlCopyMemory ( buf, &path_sep, sizeof ( path_sep ) );
+	buf += sizeof ( path_sep );
+	RtlCopyMemory ( buf, filedisk_ptr->filepath_unicode.Buffer,
+			filedisk_ptr->filepath_unicode.Length );
+      }
+      InitializeObjectAttributes ( &obj_attrs, &filepath,
+				   OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE,
+				   NULL, NULL );
+      /*
+       * Look for the file on this volume
+       */
+      status =
+	ZwCreateFile ( &file, GENERIC_READ | GENERIC_WRITE, &obj_attrs,
+		       &io_status, NULL, FILE_ATTRIBUTE_NORMAL,
+		       FILE_SHARE_READ | FILE_SHARE_DELETE | FILE_SHARE_WRITE,
+		       FILE_OPEN,
+		       FILE_NON_DIRECTORY_FILE | FILE_RANDOM_ACCESS |
+		       FILE_SYNCHRONOUS_IO_NONALERT, NULL, 0 );
+      if ( !NT_SUCCESS ( status ) )
+	goto err_open;
+      /*
+       * We could open it.  Do the hot-swap
+       */
+      {
+	HANDLE old = filedisk_ptr->file;
+
+	filedisk_ptr->file = 0;
+	filedisk_ptr->offset.QuadPart = 0;
+	filedisk_ptr->file = file;
+	ZwClose ( old );
+      }
+      RtlFreeUnicodeString ( &filedisk_ptr->filepath_unicode );
+      filedisk_ptr->filepath_unicode.Length = 0;
+
+    err_open:
+
+      ExFreePool ( filepath.Buffer );
+    err_alloc_buf:
+
+      ExFreePool ( vol_dos_name.Buffer );
+    err_dos_name:
+
+      ObDereferenceObject ( vol_file_obj );
+    err_obj_ptrs:
+      /*
+       * Walk to the next terminator
+       */
+      while ( *pos != UNICODE_NULL )
+	pos++;
+      /*
+       * If everything succeeded, stop.  Otherwise try the next volume
+       */
+      if ( !NT_SUCCESS ( status ) )
+	pos++;
+    }
+  ExFreePool ( sym_links );
+  return NT_SUCCESS ( status ) ? TRUE : FALSE;
+}
+
+void STDCALL
+filedisk__hot_swap_thread (
+  IN void *StartContext
+ )
+{
+  filedisk__type_ptr filedisk_ptr = StartContext;
+  KEVENT signal;
+  LARGE_INTEGER timeout;
+
+  KeInitializeEvent ( &signal, SynchronizationEvent, FALSE );
+  /*
+   * Wake up at least every second
+   */
+  timeout.QuadPart = -10000000LL;
+  /*
+   * The hot-swap loop
+   */
+  while ( TRUE )
+    {
+      /*
+       * Wait for work-to-do signal or the timeout
+       */
+      KeWaitForSingleObject ( &signal, Executive, KernelMode, FALSE,
+			      &timeout );
+      if ( filedisk_ptr->file == NULL )
+	continue;
+      /*
+       * Are we supposed to hot-swap to a file?  Check ANSI filepath
+       */
+      if ( filedisk_ptr->filepath != NULL )
+	{
+	  ANSI_STRING tmp;
+	  NTSTATUS status;
+
+	  RtlInitAnsiString ( &tmp, filedisk_ptr->filepath );
+	  filedisk_ptr->filepath_unicode.Buffer = NULL;
+	  status =
+	    RtlAnsiStringToUnicodeString ( &filedisk_ptr->filepath_unicode,
+					   &tmp, TRUE );
+	  if ( NT_SUCCESS ( status ) )
+	    {
+	      ExFreePool ( filedisk_ptr->filepath );
+	      filedisk_ptr->filepath = NULL;
+	    }
+	}
+      /*
+       * Are we supposed to hot-swap to a file?  Check unicode filepath
+       */
+      if ( filedisk_ptr->filepath_unicode.Length )
+	if ( hot_swap ( filedisk_ptr ) )
+	  break;
+    }
 }

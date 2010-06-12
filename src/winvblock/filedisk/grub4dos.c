@@ -148,6 +148,7 @@ disk__io_decl (
       UNICODE_STRING path;
       OBJECT_ATTRIBUTES obj_attrs;
       IO_STATUS_BLOCK io_status;
+
       RtlInitUnicodeString ( &path, pos );
       InitializeObjectAttributes ( &obj_attrs, &path,
 				   OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE,
@@ -205,6 +206,102 @@ dud:
   return STATUS_NO_MEDIA_IN_DEVICE;
 }
 
+winvblock__def_struct ( drive_file_set )
+{
+  winvblock__uint8 int13_drive_num;
+  char *filepath;
+};
+
+static void STDCALL
+process_param_block (
+  const char *param_block,
+  drive_file_set_ptr sets
+ )
+{
+  const char *end = param_block + 2047;
+  const char sig[] = "#!GRUB4DOS";
+  const char ver[] = "v=1";
+  int i = 0;
+
+  /*
+   * Check signature
+   */
+  if ( !
+       ( RtlCompareMemory ( param_block, sig, sizeof ( sig ) ) ==
+	 sizeof ( sig ) ) )
+    {
+      DBG ( "RAM disk is not a parameter block.  Skipping.\n" );
+      return;
+    }
+  param_block += sizeof ( sig );
+  /*
+   * Looks like a parameter block someone passed from GRUB4DOS.
+   * Check the version
+   */
+  if ( !
+       ( RtlCompareMemory ( param_block, ver, sizeof ( ver ) ) ==
+	 sizeof ( ver ) ) )
+    {
+      DBG ( "Parameter block version unsupported.  Skipping.\n" );
+      return;
+    }
+  param_block += sizeof ( ver );
+  /*
+   * We are interested in {filepath, NUL, X} sets, where X is INT13h drive num
+   */
+  RtlZeroMemory ( sets, sizeof ( drive_file_set ) * 8 );
+  while ( param_block < end && i != 8 )
+    {
+      const char *walker = param_block;
+
+      /*
+       * Walk to ASCII NUL terminator
+       */
+      while ( walker != end && *walker )
+	walker++;
+      if ( walker == param_block || walker == end )
+	/*
+	 * End of filenames or run-away sequence
+	 */
+	break;
+      walker++;
+      /*
+       * Make a note of the filename.  Skip initial '/' or '\'
+       */
+      if ( *param_block == '/' || *param_block == '\\' )
+	param_block++;
+      sets[i].filepath = ExAllocatePool ( NonPagedPool, walker - param_block );
+      if ( sets[i].filepath == NULL )
+	{
+	  DBG ( "Could not store filename\n" );
+	  walker++;		/* Skip drive num */
+	  param_block = walker;
+	  continue;
+	}
+      RtlCopyMemory ( sets[i].filepath, param_block, walker - param_block );
+      /*
+       * Replace '/' with '\'
+       */
+      {
+	char *rep = sets[i].filepath;
+
+	while ( *rep )
+	  {
+	    if ( *rep == '/' )
+	      *rep = '\\';
+	    rep++;
+	  }
+      }
+      /*
+       * The next byte is expected to be the INT 13h drive num
+       */
+      sets[i].int13_drive_num = *walker;
+      walker++;
+      i++;
+      param_block = walker;
+    }
+}
+
 void
 filedisk_grub4dos__find (
   void
@@ -216,9 +313,12 @@ filedisk_grub4dos__find (
   winvblock__uint32 Int13Hook;
   safe_mbr_hook_ptr SafeMbrHookPtr;
   grub4dos__drive_mapping_ptr Grub4DosDriveMapSlotPtr;
-  winvblock__uint32 i = 8;
+  winvblock__uint32 i;
   winvblock__bool FoundGrub4DosMapping = FALSE;
   filedisk__type_ptr filedisk_ptr;
+  const char sig[] = "GRUB4DOS";
+  drive_file_set sets[8];	/* Matches disks to files */
+
   /*
    * Find a GRUB4DOS sector-mapped disk.  Start by looking at the
    * real-mode IDT and following the "SafeMBRHook" INT 0x13 hook
@@ -237,9 +337,13 @@ filedisk_grub4dos__find (
    */
   while ( SafeMbrHookPtr = get_safe_hook ( PhysicalMemory, InterruptVector ) )
     {
+      /*
+       * Check signature
+       */
       if ( !
-	   ( RtlCompareMemory ( SafeMbrHookPtr->VendorID, "GRUB4DOS", 8 ) ==
-	     8 ) )
+	   ( RtlCompareMemory
+	     ( SafeMbrHookPtr->VendorID, sig,
+	       sizeof ( sig ) - 1 ) == sizeof ( sig ) - 1 ) )
 	{
 	  DBG ( "Non-GRUB4DOS INT 0x13 Safe Hook\n" );
 	  InterruptVector = &SafeMbrHookPtr->PrevHook;
@@ -250,6 +354,38 @@ filedisk_grub4dos__find (
 					  ( ( ( winvblock__uint32 )
 					      InterruptVector->
 					      Segment ) << 4 ) + 0x20 );
+      /*
+       * Search for parameter blocks, which are disguised as
+       * GRUB4DOS RAM disk mappings for 2048-byte memory regions
+       */
+      i = 8;
+      while ( i-- )
+	{
+	  PHYSICAL_ADDRESS param_block_addr;
+	  char *param_block;
+
+	  if ( Grub4DosDriveMapSlotPtr[i].DestDrive != 0xff )
+	    continue;
+	  param_block_addr.QuadPart =
+	    Grub4DosDriveMapSlotPtr[i].SectorStart * 512;
+	  param_block = MmMapIoSpace ( param_block_addr, 2048, MmNonCached );
+	  if ( param_block == NULL )
+	    {
+	      DBG ( "Could not map potential G4D parameter block\n" );
+	      continue;
+	    }
+	  /*
+	   * Could be a parameter block.  Process it.  There can be only one
+	   */
+	  process_param_block ( param_block, sets );
+	  MmUnmapIoSpace ( param_block, 2048 );
+	  if ( sets[0].filepath != NULL )
+	    break;
+	}
+      /*
+       * Search for sector-mapped (typically file-backed) disks
+       */
+      i = 8;
       while ( i-- )
 	{
 	  if ( ( Grub4DosDriveMapSlotPtr[i].SectorCount == 0 )
@@ -277,7 +413,7 @@ filedisk_grub4dos__find (
 		Grub4DosDriveMapSlotPtr[i].SectorCount );
 	  /*
 	   * Create the threaded, file-backed disk.  Hook the
-	   * read/write routine so we can accessing the backing
+	   * read/write routine so we can accessing the backing disk
 	   * late(r) during the boot process
 	   */
 	  filedisk_ptr = filedisk__create_threaded (  );
@@ -288,6 +424,30 @@ filedisk_grub4dos__find (
 	    }
 	  sync_io = filedisk_ptr->sync_io;
 	  filedisk_ptr->sync_io = io;
+	  /*
+	   * Find an associated filename, if one exists
+	   */
+	  {
+	    int j = 8;
+
+	    while ( j-- )
+	      if ( sets[j].int13_drive_num ==
+		   Grub4DosDriveMapSlotPtr[i].SourceDrive
+		   && sets[j].filepath != NULL )
+		filedisk_ptr->filepath = sets[j].filepath;
+	    if ( filedisk_ptr->filepath != NULL )
+	      {
+		OBJECT_ATTRIBUTES obj_attrs;
+		HANDLE thread_handle;
+
+		InitializeObjectAttributes ( &obj_attrs, NULL,
+					     OBJ_KERNEL_HANDLE, NULL, NULL );
+		PsCreateSystemThread ( &thread_handle, THREAD_ALL_ACCESS,
+				       &obj_attrs, NULL, NULL,
+				       filedisk__hot_swap_thread,
+				       filedisk_ptr );
+	      }
+	  }
 	  /*
 	   * Possible precision loss
 	   */
