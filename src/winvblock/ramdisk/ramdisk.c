@@ -249,5 +249,5 @@ device__free_decl (
   ExInterlockedRemoveHeadList ( ramdisk_ptr->tracking.Blink,
 				&ramdisk_list_lock );
 
-  ExFreePool ( ramdisk_ptr );
+  wv_free(ramdisk_ptr);
 }

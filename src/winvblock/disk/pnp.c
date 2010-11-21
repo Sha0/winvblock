@@ -85,7 +85,7 @@ irp__handler_decl ( disk_pnp__query_id )
    */
 alloc_info:
 
-  ExFreePool ( string );
+  wv_free(string);
 alloc_string:
 
   Irp->IoStatus.Status = status;
@@ -152,7 +152,7 @@ irp__handler_decl ( disk_pnp__query_dev_text )
    */
 alloc_info:
 
-  ExFreePool ( string );
+  wv_free(string);
 alloc_string:
 
   Irp->IoStatus.Status = status;

@@ -140,7 +140,7 @@ irp__unreg_table (
 	   * Remove this link in the chain
 	   */
 	  handler_chain_ptr next = link[0]->next;
-	  ExFreePool ( *link );
+    wv_free(*link);
 	  *link = next;
 	  return TRUE;
 	}

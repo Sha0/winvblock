@@ -341,7 +341,7 @@ device__free_decl (
   ExInterlockedRemoveHeadList ( filedisk_ptr->tracking.Blink,
 				&filedisk_list_lock );
 
-  ExFreePool ( filedisk_ptr );
+  wv_free(filedisk_ptr);
 }
 
 /* Threaded read/write request */
@@ -404,7 +404,7 @@ thread (
 	  req = CONTAINING_RECORD ( walker, thread_req, list_entry );
 	  filedisk_ptr->sync_io ( req->dev_ptr, req->mode, req->start_sector,
 				  req->sector_count, req->buffer, req->irp );
-	  ExFreePool ( req );
+    wv_free(req);
 	}
     }
   /*
@@ -633,10 +633,10 @@ hot_swap (
 
     err_open:
 
-      ExFreePool ( filepath.Buffer );
+      wv_free(filepath.Buffer);
     err_alloc_buf:
 
-      ExFreePool ( vol_dos_name.Buffer );
+      wv_free(vol_dos_name.Buffer);
     err_dos_name:
 
       ObDereferenceObject ( vol_file_obj );
@@ -652,7 +652,7 @@ hot_swap (
       if ( !NT_SUCCESS ( status ) )
 	pos++;
     }
-  ExFreePool ( sym_links );
+  wv_free(sym_links);
   return NT_SUCCESS ( status ) ? TRUE : FALSE;
 }
 
@@ -697,7 +697,7 @@ filedisk__hot_swap_thread (
 					   &tmp, TRUE );
 	  if ( NT_SUCCESS ( status ) )
 	    {
-	      ExFreePool ( filedisk_ptr->filepath );
+        wv_free(filedisk_ptr->filepath);
 	      filedisk_ptr->filepath = NULL;
 	    }
 	}

@@ -26,4 +26,7 @@ void *wv_malloc(wv_size_t size);
 /* Allocate memory from paged memory pool. */
 void *wv_palloc(wv_size_t size);
 
+/* Free allocated memory. */
+void wv_free(void *ptr);
+
 #endif /* _wv_stdlib_h */

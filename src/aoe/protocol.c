@@ -329,7 +329,7 @@ Protocol_Send (
   if ( !NT_SUCCESS ( Status ) )
     {
       Error ( "Protocol_Send NdisAllocatePacket", Status );
-      ExFreePool ( DataBuffer );
+      wv_free(DataBuffer);
       return FALSE;
     }
 
@@ -339,7 +339,7 @@ Protocol_Send (
     {
       Error ( "Protocol_Send NdisAllocateBuffer", Status );
       NdisFreePacket ( Packet );
-      ExFreePool ( DataBuffer );
+      wv_free(DataBuffer);
       return FALSE;
     }
 
@@ -397,7 +397,7 @@ Protocol_SendComplete (
   if ( Buffer != NULL )
     {
       DataBuffer = MmGetSystemAddressForMdlSafe ( Buffer, HighPagePriority );
-      ExFreePool ( DataBuffer );
+      wv_free(DataBuffer);
       NdisFreeBuffer ( Buffer );
     }
   else
@@ -448,9 +448,9 @@ Protocol_TransferDataComplete (
   if ( Header != NULL && Data != NULL )
     aoe__reply ( Header->SourceMac, Header->DestinationMac, Data, DataSize );
   if ( Header != NULL )
-    ExFreePool ( Header );
+    wv_free(Header);
   if ( Data != NULL )
-    ExFreePool ( Data );
+    wv_free(Data);
   NdisFreePacket ( Packet );
 }
 
@@ -531,15 +531,15 @@ Protocol_Receive (
   RtlCopyMemory ( HeaderCopy, HeaderBuffer, HeaderBufferSize );
   if ((Data = wv_malloc(PacketSize)) == NULL) {
       DBG("wv_malloc HeaderData\n");
-      ExFreePool ( HeaderCopy );
+      wv_free(HeaderCopy);
       return NDIS_STATUS_NOT_ACCEPTED;
     }
   NdisAllocatePacket ( &Status, &Packet, Context->PacketPoolHandle );
   if ( !NT_SUCCESS ( Status ) )
     {
       Error ( "Protocol_Receive NdisAllocatePacket", Status );
-      ExFreePool ( Data );
-      ExFreePool ( HeaderCopy );
+      wv_free(Data);
+      wv_free(HeaderCopy);
       return NDIS_STATUS_NOT_ACCEPTED;
     }
 
@@ -549,8 +549,8 @@ Protocol_Receive (
     {
       Error ( "Protocol_Receive NdisAllocateBuffer (Data)", Status );
       NdisFreePacket ( Packet );
-      ExFreePool ( Data );
-      ExFreePool ( HeaderCopy );
+      wv_free(Data);
+      wv_free(HeaderCopy);
       return NDIS_STATUS_NOT_ACCEPTED;
     }
   NdisChainBufferAtFront ( Packet, Buffer );
@@ -563,8 +563,8 @@ Protocol_Receive (
       NdisUnchainBufferAtFront ( Packet, &Buffer );
       NdisFreeBuffer ( Buffer );
       NdisFreePacket ( Packet );
-      ExFreePool ( Data );
-      ExFreePool ( HeaderCopy );
+      wv_free(Data);
+      wv_free(HeaderCopy);
       return NDIS_STATUS_NOT_ACCEPTED;
     }
   NdisChainBufferAtBack ( Packet, Buffer );
@@ -658,7 +658,7 @@ Protocol_BindAdapter (
   if ( !NT_SUCCESS ( Status ) )
     {
       Error ( "Protocol_BindAdapter NdisAllocatePacketPool", Status );
-      ExFreePool ( Context );
+      wv_free(Context);
       *StatusOut = NDIS_STATUS_RESOURCES;
       return;
     }
@@ -668,7 +668,7 @@ Protocol_BindAdapter (
     {
       Error ( "Protocol_BindAdapter NdisAllocateBufferPool", Status );
       NdisFreePacketPool ( Context->PacketPoolHandle );
-      ExFreePool ( Context );
+      wv_free(Context);
       *StatusOut = NDIS_STATUS_RESOURCES;
       return;
     }
@@ -682,9 +682,9 @@ Protocol_BindAdapter (
       DBG ( "NdisOpenAdapter 0x%lx 0x%lx\n", Status, OpenErrorStatus );
       NdisFreePacketPool ( Context->PacketPoolHandle );
       NdisFreeBufferPool ( Context->BufferPoolHandle );
-      ExFreePool ( Context->AdapterName );
-      ExFreePool ( Context->DeviceName );
-      ExFreePool ( Context );
+      wv_free(Context->AdapterName);
+      wv_free(Context->DeviceName);
+      wv_free(Context);
       *StatusOut = Status;
       return;
     }
@@ -868,7 +868,7 @@ Protocol_UnbindAdapter (
     Error ( "ProtocolUnbindAdapter NdisCloseAdapter", Status );
   NdisFreePacketPool ( Context->PacketPoolHandle );
   NdisFreeBufferPool ( Context->BufferPoolHandle );
-  ExFreePool ( Context );
+  wv_free(Context);
   if ( Protocol_Globals_BindingContextList == NULL )
     KeSetEvent ( &Protocol_Globals_StopEvent, 0, FALSE );
   *StatusOut = NDIS_STATUS_SUCCESS;

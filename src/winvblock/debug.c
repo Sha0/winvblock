@@ -218,8 +218,8 @@ Debug_IrpEnd (
 
   DBG ( "IRP %d: %s -> 0x%08x\n", Record->Number, Record->DebugMessage,
 	Status );
-  ExFreePool ( Record->DebugMessage );
-  ExFreePool ( Record );
+  wv_free(Record->DebugMessage);
+  wv_free(Record);
 }
 
 static void STDCALL

@@ -30,6 +30,7 @@
 #include <ntddk.h>
 
 #include "winvblock.h"
+#include "wv_stdlib.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -308,7 +309,7 @@ Driver_Unload (
   if ( Driver_Globals_StateHandle != NULL )
     PoUnregisterSystemState ( Driver_Globals_StateHandle );
   bus__finalize (  );
-  ExFreePool ( os_load_opts );
+  wv_free(os_load_opts);
   Driver_Globals_Started = FALSE;
   DBG ( "Done\n" );
 }

@@ -372,7 +372,7 @@ setup_reg (
 		   ( L"ethernet", KeyValueInformation->Data,
 		     sizeof ( L"ethernet" ) ) == sizeof ( L"ethernet" ) )
 		Update = TRUE;
-	      ExFreePool ( KeyValueInformation );
+        wv_free(KeyValueInformation);
 	      if ( !NT_SUCCESS ( ZwClose ( SubKeyHandle ) ) )
 		{
 		  DBG ( "ZwClose InterfacesKey SubKeyHandle failed\n" );
@@ -380,7 +380,7 @@ setup_reg (
 		}
 	    }
 	}
-      ExFreePool ( InterfacesKeyString );
+      wv_free(InterfacesKeyString);
 
       if ( Update )
 	{
@@ -484,7 +484,7 @@ setup_reg (
 				  KeyValueInformation->Data,
 				  KeyValueInformation->DataLength );
 		}
-	      ExFreePool ( KeyValueInformation );
+        wv_free(KeyValueInformation);
 	    }
 	  else
 	    {
@@ -505,16 +505,16 @@ setup_reg (
 		   NewValueLength ) ) )
 	    {
 	      DBG ( "ZwSetValueKey failed\n" );
-	      ExFreePool ( NewValue );
+        wv_free(NewValue);
 	      goto e2_1;
 	    }
-	  ExFreePool ( NewValue );
+    wv_free(NewValue);
 	  if ( !NT_SUCCESS ( ZwClose ( SubKeyHandle ) ) )
 	    {
 	      DBG ( "ZwClose LinkageKey SubKeyHandle failed\n" );
 	      goto e2_0;
 	    }
-	  ExFreePool ( LinkageKeyString );
+    wv_free(LinkageKeyString);
 
 	  /*
 	   * Not sure where this comes from:
@@ -565,7 +565,7 @@ setup_reg (
 			     ResultLength, &ResultLength ) ) ) )
 		    {
 		      DBG ( "ZwQueryValueKey NdiKey 2 failed\n" );
-		      ExFreePool ( KeyValueInformation );
+          wv_free(KeyValueInformation);
 		      goto e3_1;
 		    }
 		  if ( !NT_SUCCESS ( ZwClose ( SubKeyHandle ) ) )
@@ -598,13 +598,13 @@ setup_reg (
 			KeyValueInformation->Data,
 			ZwLoadDriver ( &DriverServiceName ) );
 #endif
-		  ExFreePool ( DriverServiceNameString );
-		  ExFreePool ( KeyValueInformation );
+      wv_free(DriverServiceNameString);
+      wv_free(KeyValueInformation);
 		}
 	    }
-	  ExFreePool ( NdiKeyString );
+    wv_free(NdiKeyString);
 	}
-      ExFreePool ( KeyInformation );
+      wv_free(KeyInformation);
       SubkeyIndex++;
     }
   registry__close_key ( NetworkClassKeyHandle );
@@ -617,33 +617,33 @@ e3_1:
     DBG ( "ZwClose SubKeyHandle failed\n" );
 e3_0:
 
-  ExFreePool ( NdiKeyString );
+  wv_free(NdiKeyString);
   goto e0_2;
 e2_2:
 
-  ExFreePool ( KeyValueInformation );
+  wv_free(KeyValueInformation);
 e2_1:
 
   if ( !NT_SUCCESS ( ZwClose ( SubKeyHandle ) ) )
     DBG ( "ZwClose SubKeyHandle failed\n" );
 e2_0:
 
-  ExFreePool ( LinkageKeyString );
+  wv_free(LinkageKeyString);
   goto e0_2;
 e1_2:
 
-  ExFreePool ( KeyValueInformation );
+  wv_free(KeyValueInformation);
 e1_1:
 
   if ( !NT_SUCCESS ( ZwClose ( SubKeyHandle ) ) )
     DBG ( "ZwClose SubKeyHandle failed\n" );
 e1_0:
 
-  ExFreePool ( InterfacesKeyString );
+  wv_free(InterfacesKeyString);
   goto e0_2;
 e0_2:
 
-  ExFreePool ( KeyInformation );
+  wv_free(KeyInformation);
 e0_1:
 
   registry__close_key ( NetworkClassKeyHandle );
@@ -719,7 +719,7 @@ DriverEntry (
     );
   if (AoE_Globals_ProbeTag->packet_data == NULL) {
       DBG ( "Couldn't allocate AoE_Globals_ProbeTag->packet_data\n" );
-      ExFreePool ( AoE_Globals_ProbeTag );
+      wv_free(AoE_Globals_ProbeTag);
       return STATUS_INSUFFICIENT_RESOURCES;
     }
   AoE_Globals_ProbeTag->SendTime.QuadPart = 0LL;
@@ -847,7 +847,7 @@ unload (
   while ( Walker != NULL )
     {
       Next = Walker->next;
-      ExFreePool ( Walker );
+      wv_free(Walker);
       Walker = Next;
     }
   KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, Irql2 );
@@ -867,7 +867,7 @@ unload (
 		   0, FALSE );
       previous_disk_searcher = disk_searcher;
       disk_searcher = disk_searcher->next;
-      ExFreePool ( previous_disk_searcher );
+      wv_free(previous_disk_searcher);
     }
 
   /*
@@ -881,19 +881,19 @@ unload (
 	  tag->request_ptr->Irp->IoStatus.Information = 0;
 	  tag->request_ptr->Irp->IoStatus.Status = STATUS_CANCELLED;
 	  IoCompleteRequest ( tag->request_ptr->Irp, IO_NO_INCREMENT );
-	  ExFreePool ( tag->request_ptr );
+    wv_free(tag->request_ptr);
 	}
       if ( tag->next == NULL )
 	{
-	  ExFreePool ( tag->packet_data );
-	  ExFreePool ( tag );
+    wv_free(tag->packet_data);
+    wv_free(tag);
 	  tag = NULL;
 	}
       else
 	{
 	  tag = tag->next;
-	  ExFreePool ( tag->previous->packet_data );
-	  ExFreePool ( tag->previous );
+    wv_free(tag->previous->packet_data);
+    wv_free(tag->previous);
 	}
     }
   AoE_Globals_TagList = NULL;
@@ -902,8 +902,8 @@ unload (
   /*
    * Free the global probe tag and its AoE packet 
    */
-  ExFreePool ( AoE_Globals_ProbeTag->packet_data );
-  ExFreePool ( AoE_Globals_ProbeTag );
+  wv_free(AoE_Globals_ProbeTag->packet_data);
+  wv_free(AoE_Globals_ProbeTag);
 
   /*
    * Release the global spin-lock 
@@ -1124,8 +1124,8 @@ disk__init_decl (
 	      /*
 	       * Free our tag and its AoE packet 
 	       */
-	      ExFreePool ( tag->packet_data );
-	      ExFreePool ( tag );
+        wv_free(tag->packet_data);
+        wv_free(tag);
 	    }
 
 	  /*
@@ -1163,7 +1163,7 @@ disk__init_decl (
 		  /*
 		   * Free our disk search 
 		   */
-		  ExFreePool ( disk_search_walker );
+      wv_free(disk_search_walker);
 		}
 	      else
 		{
@@ -1209,7 +1209,7 @@ disk__init_decl (
       tag->PacketSize = sizeof ( packet );
       if ((tag->packet_data = wv_malloc(tag->PacketSize)) == NULL) {
 	  DBG ( "Couldn't allocate tag->packet_data\n" );
-	  ExFreePool ( tag );
+    wv_free(tag);
 	  tag = NULL;
 	  KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
 	  /*
@@ -1262,8 +1262,8 @@ disk__init_decl (
 	    break;
 	  default:
 	    DBG ( "Undefined search_state!!\n" );
-	    ExFreePool ( tag->packet_data );
-	    ExFreePool ( tag );
+      wv_free(tag->packet_data);
+      wv_free(tag);
 	    /*
 	     * TODO: Do we need to nullify tag here? 
 	     */
@@ -1377,10 +1377,10 @@ disk__io_decl (
 	    {
 	      previous_tag = tag;
 	      tag = tag->next;
-	      ExFreePool ( previous_tag->packet_data );
-	      ExFreePool ( previous_tag );
+        wv_free(previous_tag->packet_data);
+        wv_free(previous_tag);
 	    }
-	  ExFreePool ( request_ptr );
+    wv_free(request_ptr);
 	  irp->IoStatus.Information = 0;
 	  irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
 	  IoCompleteRequest ( irp, IO_NO_INCREMENT );
@@ -1414,16 +1414,16 @@ disk__io_decl (
 	   * We failed while allocating an AoE packet; free
 	   * the tags we built
 	   */
-	  ExFreePool ( tag );
+    wv_free(tag);
 	  tag = new_tag_list;
 	  while ( tag != NULL )
 	    {
 	      previous_tag = tag;
 	      tag = tag->next;
-	      ExFreePool ( previous_tag->packet_data );
-	      ExFreePool ( previous_tag );
+        wv_free(previous_tag->packet_data);
+        wv_free(previous_tag);
 	    }
-	  ExFreePool ( request_ptr );
+    wv_free(request_ptr);
 	  irp->IoStatus.Information = 0;
 	  irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
 	  IoCompleteRequest ( irp, IO_NO_INCREMENT );
@@ -1793,7 +1793,7 @@ aoe__reply (
 	      tag->request_ptr->SectorCount * disk_ptr->SectorSize;
 	    tag->request_ptr->Irp->IoStatus.Status = STATUS_SUCCESS;
 	    Driver_CompletePendingIrp ( tag->request_ptr->Irp );
-	    ExFreePool ( tag->request_ptr );
+      wv_free(tag->request_ptr);
 	  }
 	break;
       default:
@@ -1802,8 +1802,8 @@ aoe__reply (
     }
 
   KeSetEvent ( &AoE_Globals_ThreadSignalEvent, 0, FALSE );
-  ExFreePool ( tag->packet_data );
-  ExFreePool ( tag );
+  wv_free(tag->packet_data);
+  wv_free(tag);
   return STATUS_SUCCESS;
 }
 
@@ -2185,7 +2185,7 @@ irp__handler_decl (
 					   ( count *
 					     sizeof
 					     ( aoe__mount_target ) ) ) ) );
-  ExFreePool ( targets );
+  wv_free(targets);
 
   KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, irql );
   *completion_ptr = TRUE;
@@ -2252,7 +2252,7 @@ irp__handler_decl (
 					   ( count *
 					     sizeof
 					     ( aoe__mount_disk ) ) ) ) );
-  ExFreePool ( disks );
+  wv_free(disks);
   *completion_ptr = TRUE;
   return STATUS_SUCCESS;
 }
@@ -2399,5 +2399,5 @@ device__free_decl (
   ExInterlockedRemoveHeadList ( aoe_disk_ptr->tracking.Blink,
 				&aoe_disk_list_lock );
 
-  ExFreePool ( aoe_disk_ptr );
+  wv_free(aoe_disk_ptr);
 }

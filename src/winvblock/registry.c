@@ -143,7 +143,7 @@ registry__fetch_kvi (
   return STATUS_SUCCESS;
 
 err_zwqueryvaluekey:
-  ExFreePool ( kvi );
+  wv_free(kvi);
 err_kvi:
 err_zwqueryvaluekey_len:
   return status;
@@ -192,7 +192,7 @@ registry__fetch_sz (
   RtlCopyMemory ( *value, kvi->Data, kvi->DataLength );
 
 err_value:
-  ExFreePool ( kvi );
+  wv_free(kvi);
 err_fetchkvi:
   return status;
 }
@@ -266,7 +266,7 @@ registry__fetch_multi_sz (
     }
 
 err_value:
-  ExFreePool ( kvi );
+  wv_free(kvi);
 err_fetchkvi:
   return status;
 }

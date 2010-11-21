@@ -27,3 +27,8 @@ void *wv_malloc(wv_size_t size) {
 void *wv_palloc(wv_size_t size) {
     return ExAllocatePoolWithTag(PagedPool, size, 'EoAW');
   }
+
+void wv_free(void *ptr) {
+    ExFreePool(ptr);
+    return;
+  }

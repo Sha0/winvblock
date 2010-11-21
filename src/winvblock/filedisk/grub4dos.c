@@ -113,7 +113,7 @@ check_disk_match (
 
 err_read:
 
-  ExFreePool ( buf );
+  wv_free(buf);
 err_alloc:
 
   return status;
@@ -184,7 +184,7 @@ disk__io_decl (
 	pos++;
       pos++;
     }
-  ExFreePool ( sym_links );
+  wv_free(sym_links);
   /*
    * If we did not find the backing disk, we are a dud
    */
