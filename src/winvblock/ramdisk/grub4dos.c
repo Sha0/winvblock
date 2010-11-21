@@ -28,6 +28,7 @@
 #include <ntddk.h>
 
 #include "winvblock.h"
+#include "wv_string.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -72,10 +73,11 @@ ramdisk_grub4dos__find (
    */
   while ( SafeMbrHookPtr = get_safe_hook ( PhysicalMemory, InterruptVector ) )
     {
-      if ( !
-	   ( RtlCompareMemory ( SafeMbrHookPtr->VendorID, "GRUB4DOS", 8 ) ==
-	     8 ) )
-	{
+      if (!wv_memcmpeq(
+          SafeMbrHookPtr->VendorID,
+          "GRUB4DOS",
+          sizeof "GRUB4DOS" - 1
+        )) {
 	  DBG ( "Non-GRUB4DOS INT 0x13 Safe Hook\n" );
 	  InterruptVector = &SafeMbrHookPtr->PrevHook;
 	  continue;

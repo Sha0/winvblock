@@ -31,6 +31,7 @@
 
 #include "winvblock.h"
 #include "wv_stdlib.h"
+#include "wv_string.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -368,10 +369,11 @@ setup_reg (
 		  DBG ( "ZwQueryValueKey InterfacesKey 2 failed\n" );
 		  goto e1_2;
 		}
-	      if ( RtlCompareMemory
-		   ( L"ethernet", KeyValueInformation->Data,
-		     sizeof ( L"ethernet" ) ) == sizeof ( L"ethernet" ) )
-		Update = TRUE;
+        if (wv_memcmpeq(
+            L"ethernet",
+            KeyValueInformation->Data,
+            sizeof L"ethernet"
+          )) Update = TRUE;
         wv_free(KeyValueInformation);
 	      if ( !NT_SUCCESS ( ZwClose ( SubKeyHandle ) ) )
 		{
@@ -445,12 +447,11 @@ setup_reg (
 		      sizeof ( winvblock__literal_w ) / sizeof ( WCHAR ) );
 		    i++ )
 		{
-		  if ( RtlCompareMemory
-		       ( winvblock__literal_w,
-			 &( ( ( PWCHAR ) KeyValueInformation->Data )[i] ),
-			 sizeof ( winvblock__literal_w ) ) ==
-		       sizeof ( winvblock__literal_w ) )
-		    {
+      if (wv_memcmpeq(
+          winvblock__literal_w,
+          ((PWCHAR)KeyValueInformation->Data) + i,
+          sizeof winvblock__literal_w
+        )) {
 		      Found = TRUE;
 		      break;
 		    }
@@ -1535,12 +1536,10 @@ add_target (
   Walker = Last = AoE_Globals_TargetList;
   while ( Walker != NULL )
     {
-      if ( ( RtlCompareMemory ( &Walker->Target.ClientMac, ClientMac, 6 ) ==
-	     6 )
-	   && ( RtlCompareMemory ( &Walker->Target.ServerMac, ServerMac, 6 ) ==
-		6 ) && Walker->Target.Major == Major
-	   && Walker->Target.Minor == Minor )
-	{
+      if (wv_memcmpeq(&Walker->Target.ClientMac, ClientMac, 6) &&
+        wv_memcmpeq(&Walker->Target.ServerMac, ServerMac, 6) &&
+        Walker->Target.Major == Major
+        && Walker->Target.Minor == Minor) {
 	  if ( Walker->Target.LBASize != LBASize )
 	    {
 	      DBG ( "LBASize changed for e%d.%d " "(%I64u->%I64u)\n", Major,
@@ -1680,9 +1679,7 @@ aoe__reply (
   /*
    * If our tag was a discovery request, note the server 
    */
-  if ( RtlCompareMemory
-       ( aoe_disk_ptr->ServerMac, "\xff\xff\xff\xff\xff\xff", 6 ) == 6 )
-    {
+  if (wv_memcmpeq(aoe_disk_ptr->ServerMac, "\xff\xff\xff\xff\xff\xff", 6)) {
       RtlCopyMemory ( aoe_disk_ptr->ServerMac, SourceMac, 6 );
       DBG ( "Major: %d minor: %d found on server "
 	    "%02x:%02x:%02x:%02x:%02x:%02x\n", aoe_disk_ptr->Major,

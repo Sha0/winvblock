@@ -29,6 +29,7 @@
 #include <ntddk.h>
 
 #include "winvblock.h"
+#include "wv_string.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -65,8 +66,7 @@ get_safe_hook (
   DBG ( "INT 0x13 Offset: 0x%04x\n", InterruptVector->Offset );
   DBG ( "INT 0x13 Hook: 0x%08x\n", Int13Hook );
   DBG ( "INT 0x13 Safe Hook Signature: %s\n", Signature );
-  if ( !( RtlCompareMemory ( Signature, "$INT13SF", 8 ) == 8 ) )
-    {
+  if (!wv_memcmpeq(Signature, "$INT13SF", sizeof "$INT13SF" - 1)) {
       DBG ( "Invalid INT 0x13 Safe Hook Signature; End of chain\n" );
       return NULL;
     }

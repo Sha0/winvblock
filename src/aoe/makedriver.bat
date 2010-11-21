@@ -1,6 +1,6 @@
 @echo off
 
-set c=driver.c protocol.c aoe.rc wv_stdlib.c
+set c=driver.c protocol.c aoe.rc wv_stdlib.c wv_string.c
 
 set name=AoE%bits%
 

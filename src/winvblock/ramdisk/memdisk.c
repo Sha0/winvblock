@@ -28,6 +28,7 @@
 #include <ntddk.h>
 
 #include "winvblock.h"
+#include "wv_string.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -56,8 +57,7 @@ check_mbft (
       DBG ( "mBFT physical pointer too high!\n" );
       return FALSE;
     }
-  if ( !( RtlCompareMemory ( mBFT->Signature, "mBFT", 4 ) == 4 ) )
-    return FALSE;
+  if (!wv_memcmpeq(mBFT->Signature, "mBFT", sizeof "mBFT" - 1)) return FALSE;
   if ( Offset + mBFT->Length >= 0x100000 )
     {
       DBG ( "mBFT length out-of-bounds\n" );
@@ -144,10 +144,7 @@ memdisk__find (
    */
   while ( SafeMbrHookPtr = get_safe_hook ( PhysicalMemory, InterruptVector ) )
     {
-      if ( !
-	   ( RtlCompareMemory ( SafeMbrHookPtr->VendorID, "MEMDISK ", 8 ) ==
-	     8 ) )
-	{
+      if (!wv_memcmpeq(SafeMbrHookPtr->VendorID, "MEMDISK ", 8)) {
 	  DBG ( "Non-MEMDISK INT 0x13 Safe Hook\n" );
 	}
       else

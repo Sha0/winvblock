@@ -32,6 +32,7 @@
 
 #include "winvblock.h"
 #include "wv_stdlib.h"
+#include "wv_string.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -239,8 +240,7 @@ Protocol_SearchNIC (
 
   while ( Context != NULL )
     {
-      if ( RtlCompareMemory ( Mac, Context->Mac, 6 ) == 6 )
-	break;
+      if (wv_memcmpeq(Mac, Context->Mac, 6)) break;
       Context = Context->Next;
     }
   if ( Context != NULL )
@@ -257,8 +257,7 @@ Protocol_GetMTU (
 
   while ( Context != NULL )
     {
-      if ( RtlCompareMemory ( Mac, Context->Mac, 6 ) == 6 )
-	break;
+      if (wv_memcmpeq(Mac, Context->Mac, 6)) break;
       Context = Context->Next;
     }
   if ( Context == NULL )
@@ -284,8 +283,7 @@ Protocol_Send (
   DBG ( "Entry\n" );
 #endif
 
-  if ( RtlCompareMemory ( SourceMac, "\xff\xff\xff\xff\xff\xff", 6 ) == 6 )
-    {
+  if (wv_memcmpeq(SourceMac, "\xff\xff\xff\xff\xff\xff", 6)) {
       while ( Context != NULL )
 	{
 	  Protocol_Send ( Context->Mac, DestinationMac, Data, DataSize, NULL );
@@ -296,8 +294,7 @@ Protocol_Send (
 
   while ( Context != NULL )
     {
-      if ( RtlCompareMemory ( SourceMac, Context->Mac, 6 ) == 6 )
-	break;
+      if (wv_memcmpeq(SourceMac, Context->Mac, 6)) break;
       Context = Context->Next;
     }
   if ( Context == NULL )

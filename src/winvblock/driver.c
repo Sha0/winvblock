@@ -31,6 +31,7 @@
 
 #include "winvblock.h"
 #include "wv_stdlib.h"
+#include "wv_string.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -92,9 +93,7 @@ get_opt (
   our_opts = os_load_opts;
   while ( *our_opts != L'\0' )
     {
-      if ( RtlCompareMemory ( our_opts, our_sig, our_sig_len_bytes ) !=
-	   our_sig_len_bytes )
-	{
+      if (!wv_memcmpeq(our_opts, our_sig, our_sig_len_bytes)) {
 	  our_opts++;
 	  continue;
 	}
@@ -110,9 +109,7 @@ get_opt (
   opt_name_len_bytes = opt_name_len * sizeof ( WCHAR );
   while ( *the_opt != L'\0' && *the_opt != L' ' )
     {
-      if ( RtlCompareMemory ( the_opt, opt_name, opt_name_len_bytes ) !=
-	   opt_name_len_bytes )
-	{
+      if (!wv_memcmpeq(the_opt, opt_name, opt_name_len_bytes)) {
 	  while ( *the_opt != L'\0' && *the_opt != L' ' && *the_opt != L',' )
 	    the_opt++;
 	  continue;

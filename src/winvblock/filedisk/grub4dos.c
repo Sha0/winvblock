@@ -30,6 +30,7 @@
 
 #include "winvblock.h"
 #include "wv_stdlib.h"
+#include "wv_string.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -93,8 +94,7 @@ check_disk_match (
   /*
    * Examine .VHD fields for validity
    */
-  if ( RtlCompareMemory ( &buf->cookie, "conectix", sizeof ( buf->cookie ) ) !=
-       sizeof ( buf->cookie ) )
+  if (!wv_memcmpeq(&buf->cookie, "conectix", sizeof buf->cookie ))
     status = STATUS_UNSUCCESSFUL;
   if ( buf->file_ver.val != 0x10000 )
     status = STATUS_UNSUCCESSFUL;
@@ -227,10 +227,7 @@ process_param_block (
   /*
    * Check signature
    */
-  if ( !
-       ( RtlCompareMemory ( param_block, sig, sizeof ( sig ) ) ==
-	 sizeof ( sig ) ) )
-    {
+  if (!wv_memcmpeq(param_block, sig, sizeof sig)) {
       DBG ( "RAM disk is not a parameter block.  Skipping.\n" );
       return;
     }
@@ -239,10 +236,7 @@ process_param_block (
    * Looks like a parameter block someone passed from GRUB4DOS.
    * Check the version
    */
-  if ( !
-       ( RtlCompareMemory ( param_block, ver, sizeof ( ver ) ) ==
-	 sizeof ( ver ) ) )
-    {
+  if (!wv_memcmpeq(param_block, ver, sizeof ver)) {
       DBG ( "Parameter block version unsupported.  Skipping.\n" );
       return;
     }
@@ -341,11 +335,7 @@ filedisk_grub4dos__find (
       /*
        * Check signature
        */
-      if ( !
-	   ( RtlCompareMemory
-	     ( SafeMbrHookPtr->VendorID, sig,
-	       sizeof ( sig ) - 1 ) == sizeof ( sig ) - 1 ) )
-	{
+      if (!wv_memcmpeq(SafeMbrHookPtr->VendorID, sig, sizeof sig - 1)) {
 	  DBG ( "Non-GRUB4DOS INT 0x13 Safe Hook\n" );
 	  InterruptVector = &SafeMbrHookPtr->PrevHook;
 	  continue;
