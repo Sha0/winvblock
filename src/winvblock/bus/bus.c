@@ -29,6 +29,7 @@
 #include <ntddk.h>
 
 #include "winvblock.h"
+#include "wv_stdlib.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -354,7 +355,7 @@ bus__create (
    * Bus devices might be used for booting and should
    * not be allocated from a paged memory pool
    */
-  bus_ptr = ExAllocatePool ( NonPagedPool, sizeof ( bus__type ) );
+  bus_ptr = wv_malloc(sizeof *bus_ptr);
   if ( bus_ptr == NULL )
     goto err_nobus;
   RtlZeroMemory ( bus_ptr, sizeof ( bus__type ) );

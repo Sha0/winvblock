@@ -31,6 +31,7 @@
 #include <ntddndis.h>
 
 #include "winvblock.h"
+#include "wv_stdlib.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -314,12 +315,8 @@ Protocol_Send (
       return FALSE;
     }
 
-  if ( ( DataBuffer =
-	 ( PPROTOCOL_HEADER ) ExAllocatePool ( NonPagedPool,
-					       ( sizeof ( PROTOCOL_HEADER ) +
-						 DataSize ) ) ) == NULL )
-    {
-      DBG ( "ExAllocatePool DataBuffer\n" );
+  if ((DataBuffer = wv_malloc(sizeof *DataBuffer + DataSize)) == NULL) {
+      DBG("wv_malloc DataBuffer\n");
       return FALSE;
     }
 
@@ -527,20 +524,13 @@ Protocol_Receive (
       return NDIS_STATUS_SUCCESS;
     }
 
-  if ( ( HeaderCopy =
-	 ( winvblock__uint8_ptr ) ExAllocatePool ( NonPagedPool,
-						   HeaderBufferSize ) ) ==
-       NULL )
-    {
-      DBG ( "ExAllocatePool HeaderCopy\n" );
+  if ((HeaderCopy = wv_malloc(HeaderBufferSize)) == NULL) {
+      DBG("wv_malloc HeaderCopy\n");
       return NDIS_STATUS_NOT_ACCEPTED;
     }
   RtlCopyMemory ( HeaderCopy, HeaderBuffer, HeaderBufferSize );
-  if ( ( Data =
-	 ( winvblock__uint8_ptr ) ExAllocatePool ( NonPagedPool,
-						   PacketSize ) ) == NULL )
-    {
-      DBG ( "ExAllocatePool HeaderData\n" );
+  if ((Data = wv_malloc(PacketSize)) == NULL) {
+      DBG("wv_malloc HeaderData\n");
       ExFreePool ( HeaderCopy );
       return NDIS_STATUS_NOT_ACCEPTED;
     }
@@ -655,13 +645,8 @@ Protocol_BindAdapter (
   DBG ( "Entry\n" );
 #endif
 
-  if ( ( Context =
-	 ( NDIS_HANDLE ) ExAllocatePool ( NonPagedPool,
-					  sizeof
-					  ( PROTOCOL_BINDINGCONTEXT ) ) ) ==
-       NULL )
-    {
-      DBG ( "ExAllocatePool Context\n" );
+  if ((Context = wv_malloc(sizeof *Context)) == NULL) {
+      DBG("wv_malloc Context\n");
       *StatusOut = NDIS_STATUS_RESOURCES;
       return;
     }
@@ -712,12 +697,12 @@ Protocol_BindAdapter (
 	 NdisQueryAdapterInstanceName ( &AdapterInstanceName,
 					Context->BindingHandle ) ) )
     {
-      if ( ( Context->AdapterName =
-	     ( PWCHAR ) ExAllocatePool ( NonPagedPool,
-					 AdapterInstanceName.Length +
-					 sizeof ( WCHAR ) ) ) == NULL )
-	{
-	  DBG ( "ExAllocatePool AdapterName\n" );
+      Context->AdapterName = wv_malloc(
+          AdapterInstanceName.Length +
+          sizeof (WCHAR)
+        );
+      if (Context->AdapterName == NULL) {
+        DBG("wv_malloc AdapterName\n");
 	}
       else
 	{
@@ -736,12 +721,9 @@ Protocol_BindAdapter (
   Context->DeviceName = NULL;
   if ( DeviceName->Length > 0 )
     {
-      if ( ( Context->DeviceName =
-	     ( PWCHAR ) ExAllocatePool ( NonPagedPool,
-					 DeviceName->Length +
-					 sizeof ( WCHAR ) ) ) == NULL )
-	{
-	  DBG ( "ExAllocatePool DeviceName\n" );
+      Context->DeviceName = wv_malloc(DeviceName->Length + sizeof (WCHAR));
+      if (Context->DeviceName == NULL) {
+          DBG("wv_malloc DeviceName\n");
 	}
       else
 	{

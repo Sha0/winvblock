@@ -29,6 +29,7 @@
 #include <ntddk.h>
 
 #include "winvblock.h"
+#include "wv_stdlib.h"
 #include "portable.h"
 #include "irp.h"
 #include "device.h"
@@ -82,7 +83,7 @@ device__create (
    * Devices might be used for booting and should
    * not be allocated from a paged memory pool
    */
-  dev_ptr = ExAllocatePool ( NonPagedPool, sizeof ( device__type ) );
+  dev_ptr = wv_malloc(sizeof *dev_ptr);
   if ( dev_ptr == NULL )
     return NULL;
   RtlZeroMemory ( dev_ptr, sizeof ( device__type ) );

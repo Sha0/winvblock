@@ -31,6 +31,7 @@
 #include <initguid.h>
 
 #include "winvblock.h"
+#include "wv_stdlib.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -47,11 +48,10 @@ irp__handler_decl ( disk_pnp__query_id )
   disk__type_ptr disk_ptr;
 
   disk_ptr = disk__get_ptr ( dev_ptr );
-  string =
-    ( PWCHAR ) ExAllocatePool ( NonPagedPool, ( 512 * sizeof ( WCHAR ) ) );
+  string = wv_malloc(512 * sizeof *string);
   if ( string == NULL )
     {
-      DBG ( "ExAllocatePool IRP_MN_QUERY_ID\n" );
+      DBG("wv_malloc IRP_MN_QUERY_ID\n");
       status = STATUS_INSUFFICIENT_RESOURCES;
       goto alloc_string;
     }
@@ -70,12 +70,10 @@ irp__handler_decl ( disk_pnp__query_id )
       goto alloc_info;
     }
 
-  Irp->IoStatus.Information =
-    ( ULONG_PTR ) ExAllocatePool ( PagedPool,
-				   string_length * sizeof ( WCHAR ) );
+  Irp->IoStatus.Information = wv_palloc(string_length * sizeof *string);
   if ( Irp->IoStatus.Information == 0 )
     {
-      DBG ( "ExAllocatePool failed.\n" );
+      DBG("wv_palloc failed.\n");
       status = STATUS_INSUFFICIENT_RESOURCES;
       goto alloc_info;
     }
@@ -103,13 +101,12 @@ irp__handler_decl ( disk_pnp__query_dev_text )
   winvblock__uint32 string_length;
   disk__type_ptr disk_ptr;
 
-  string =
-    ( PWCHAR ) ExAllocatePool ( NonPagedPool, ( 512 * sizeof ( WCHAR ) ) );
+  string = wv_malloc(512 * sizeof *string);
   disk_ptr = disk__get_ptr ( dev_ptr );
 
   if ( string == NULL )
     {
-      DBG ( "ExAllocatePool IRP_MN_QUERY_DEVICE_TEXT\n" );
+      DBG("wv_malloc IRP_MN_QUERY_DEVICE_TEXT\n");
       status = STATUS_INSUFFICIENT_RESOURCES;
       goto alloc_string;
     }
@@ -119,12 +116,10 @@ irp__handler_decl ( disk_pnp__query_dev_text )
     {
       case DeviceTextDescription:
 	string_length = swprintf ( string, winvblock__literal_w L" Disk" ) + 1;
-	Irp->IoStatus.Information =
-	  ( ULONG_PTR ) ExAllocatePool ( PagedPool,
-					 string_length * sizeof ( WCHAR ) );
+  Irp->IoStatus.Information = wv_palloc(string_length * sizeof *string);
 	if ( Irp->IoStatus.Information == 0 )
 	  {
-	    DBG ( "ExAllocatePool DeviceTextDescription\n" );
+      DBG("wv_palloc DeviceTextDescription\n");
 	    status = STATUS_INSUFFICIENT_RESOURCES;
 	    goto alloc_info;
 	  }
@@ -136,12 +131,10 @@ irp__handler_decl ( disk_pnp__query_dev_text )
       case DeviceTextLocationInformation:
 	string_length =
 	  disk__query_id ( disk_ptr, BusQueryInstanceID, string );
-	Irp->IoStatus.Information =
-	  ( ULONG_PTR ) ExAllocatePool ( PagedPool,
-					 string_length * sizeof ( WCHAR ) );
+  Irp->IoStatus.Information = wv_palloc(string_length * sizeof *string);
 	if ( Irp->IoStatus.Information == 0 )
 	  {
-	    DBG ( "ExAllocatePool DeviceTextLocationInformation\n" );
+      DBG("wv_palloc DeviceTextLocationInformation\n");
 	    status = STATUS_INSUFFICIENT_RESOURCES;
 	    goto alloc_info;
 	  }
@@ -178,13 +171,10 @@ irp__handler_decl ( disk_pnp__query_dev_relations )
       status = Irp->IoStatus.Status;
       goto ret_path;
     }
-  dev_relations =
-    ( PDEVICE_RELATIONS ) ExAllocatePool ( PagedPool,
-					   sizeof ( DEVICE_RELATIONS ) +
-					   sizeof ( PDEVICE_OBJECT ) );
+  dev_relations = wv_palloc(sizeof *dev_relations + sizeof dev_ptr->Self);
   if ( dev_relations == NULL )
     {
-      DBG ( "ExAllocatePool IRP_MN_QUERY_DEVICE_RELATIONS\n" );
+      DBG("wv_palloc IRP_MN_QUERY_DEVICE_RELATIONS\n");
       status = STATUS_INSUFFICIENT_RESOURCES;
       goto alloc_dev_relations;
     }
@@ -214,12 +204,10 @@ irp__handler_decl ( disk_pnp__query_bus_info )
   PPNP_BUS_INFORMATION pnp_bus_info;
   NTSTATUS status;
 
-  pnp_bus_info =
-    ( PPNP_BUS_INFORMATION ) ExAllocatePool ( PagedPool,
-					      sizeof ( PNP_BUS_INFORMATION ) );
+  pnp_bus_info = wv_palloc(sizeof *pnp_bus_info);
   if ( pnp_bus_info == NULL )
     {
-      DBG ( "ExAllocatePool IRP_MN_QUERY_BUS_INFORMATION\n" );
+      DBG("wv_palloc IRP_MN_QUERY_BUS_INFORMATION\n");
       status = STATUS_INSUFFICIENT_RESOURCES;
       goto alloc_pnp_bus_info;
     }

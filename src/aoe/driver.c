@@ -30,6 +30,7 @@
 #include <ntddk.h>
 
 #include "winvblock.h"
+#include "wv_stdlib.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -302,12 +303,8 @@ setup_reg (
 	  DBG ( "ZwEnumerateKey 1 failed (%lx)\n", status );
 	  goto e0_1;
 	}
-      if ( ( KeyInformation =
-	     ( PKEY_BASIC_INFORMATION ) ExAllocatePool ( NonPagedPool,
-							 ResultLength ) ) ==
-	   NULL )
-	{
-	  DBG ( "ExAllocatePool KeyData failed\n" );
+      if ((KeyInformation = wv_malloc(ResultLength)) == NULL) {
+          DBG("wv_malloc KeyData failed\n");
 	  goto e0_1;
 	  registry__close_key ( NetworkClassKeyHandle );
 	}
@@ -323,12 +320,9 @@ setup_reg (
 
       InterfacesKeyStringLength =
 	KeyInformation->NameLength + sizeof ( InterfacesPath );
-      if ( ( InterfacesKeyString =
-	     ( PWCHAR ) ExAllocatePool ( NonPagedPool,
-					 InterfacesKeyStringLength ) ) ==
-	   NULL )
-	{
-	  DBG ( "ExAllocatePool InterfacesKeyString failed\n" );
+      InterfacesKeyString = wv_malloc(InterfacesKeyStringLength);
+      if (InterfacesKeyString == NULL) {
+          DBG("wv_malloc InterfacesKeyString failed\n");
 	  goto e0_2;
 	}
 
@@ -360,12 +354,8 @@ setup_reg (
 			status );
 		  goto e1_1;
 		}
-	      if ( ( KeyValueInformation =
-		     ( PKEY_VALUE_PARTIAL_INFORMATION )
-		     ExAllocatePool ( NonPagedPool, ResultLength ) ) == NULL )
-		{
-		  DBG ( "ExAllocatePool InterfacesKey "
-			"KeyValueData failed\n" );
+	      if ((KeyValueInformation = wv_malloc(ResultLength)) == NULL) {
+            DBG("wv_malloc InterfacesKey KeyValueData failed\n");
 		  goto e1_1;
 		}
 	      if ( !
@@ -396,12 +386,8 @@ setup_reg (
 	{
 	  LinkageKeyStringLength =
 	    KeyInformation->NameLength + sizeof ( LinkagePath );
-	  if ( ( LinkageKeyString =
-		 ( PWCHAR ) ExAllocatePool ( NonPagedPool,
-					     LinkageKeyStringLength ) ) ==
-	       NULL )
-	    {
-	      DBG ( "ExAllocatePool LinkageKeyString failed\n" );
+    if ((LinkageKeyString = wv_malloc(LinkageKeyStringLength)) == NULL) {
+        DBG("wv_malloc LinkageKeyString failed\n");
 	      goto e0_2;
 	    }
 	  RtlCopyMemory ( LinkageKeyString, KeyInformation->Name,
@@ -437,11 +423,8 @@ setup_reg (
 			status );
 		  goto e2_1;
 		}
-	      if ( ( KeyValueInformation =
-		     ( PKEY_VALUE_PARTIAL_INFORMATION )
-		     ExAllocatePool ( NonPagedPool, ResultLength ) ) == NULL )
-		{
-		  DBG ( "ExAllocatePool LinkageKey KeyValueData failed\n" );
+        if ((KeyValueInformation = wv_malloc(ResultLength)) == NULL) {
+            DBG("wv_malloc LinkageKey KeyValueData failed\n");
 		  goto e2_1;
 		}
 	      if ( !
@@ -476,12 +459,8 @@ setup_reg (
 	      if ( Found )
 		{
 		  NewValueLength = KeyValueInformation->DataLength;
-		  if ( ( NewValue =
-			 ( PWCHAR ) ExAllocatePool ( NonPagedPool,
-						     NewValueLength ) ) ==
-		       NULL )
-		    {
-		      DBG ( "ExAllocatePool NewValue 1 failed\n" );
+      if ((NewValue = wv_malloc(NewValueLength)) == NULL) {
+          DBG("wv_malloc NewValue 1 failed\n");
 		      goto e2_2;
 		    }
 		  RtlCopyMemory ( NewValue, KeyValueInformation->Data,
@@ -493,12 +472,8 @@ setup_reg (
 		  NewValueLength =
 		    KeyValueInformation->DataLength +
 		    sizeof ( winvblock__literal_w );
-		  if ( ( NewValue =
-			 ( PWCHAR ) ExAllocatePool ( NonPagedPool,
-						     NewValueLength ) ) ==
-		       NULL )
-		    {
-		      DBG ( "ExAllocatePool NewValue 2 failed\n" );
+      if ((NewValue = wv_malloc(NewValueLength)) == NULL) {
+          DBG("wv_malloc NewValue 2 failed\n");
 		      goto e2_2;
 		    }
 		  RtlCopyMemory ( NewValue, winvblock__literal_w,
@@ -516,11 +491,8 @@ setup_reg (
 	      Updated = TRUE;
 	      NewValueLength =
 		sizeof ( winvblock__literal_w ) + sizeof ( WCHAR );
-	      if ( ( NewValue =
-		     ( PWCHAR ) ExAllocatePool ( NonPagedPool,
-						 NewValueLength ) ) == NULL )
-		{
-		  DBG ( "ExAllocatePool NewValue 3 failed\n" );
+        if ((NewValue = wv_malloc(NewValueLength)) == NULL) {
+            DBG("wv_malloc NewValue 3 failed\n");
 		  goto e2_1;
 		}
 	      RtlZeroMemory ( NewValue, NewValueLength );
@@ -549,11 +521,8 @@ setup_reg (
 	   * start nic (
 	   */
 	  NdiKeyStringLength = KeyInformation->NameLength + sizeof ( NdiPath );
-	  if ( ( NdiKeyString =
-		 ( PWCHAR ) ExAllocatePool ( NonPagedPool,
-					     NdiKeyStringLength ) ) == NULL )
-	    {
-	      DBG ( "ExAllocatePool NdiKeyString failed\n" );
+    if ((NdiKeyString = wv_malloc(NdiKeyStringLength)) == NULL) {
+        DBG("wv_malloc NdiKeyString failed\n");
 	      goto e0_2;
 	    }
 	  RtlCopyMemory ( NdiKeyString, KeyInformation->Name,
@@ -584,12 +553,8 @@ setup_reg (
 			    status );
 		      goto e3_1;
 		    }
-		  if ( ( KeyValueInformation =
-			 ( PKEY_VALUE_PARTIAL_INFORMATION )
-			 ExAllocatePool ( NonPagedPool,
-					  ResultLength ) ) == NULL )
-		    {
-		      DBG ( "ExAllocatePool NdiKey KeyValueData failed\n" );
+      if ((KeyValueInformation = wv_malloc(ResultLength)) == NULL) {
+          DBG("wv_malloc NdiKey KeyValueData failed\n");
 		      goto e3_1;
 		    }
 		  if ( !
@@ -608,17 +573,13 @@ setup_reg (
 		      DBG ( "ZwClose NdiKey SubKeyHandle failed\n" );
 		      goto e3_0;
 		    }
-		  if ( ( DriverServiceNameString =
-			 ( PWCHAR ) ExAllocatePool ( NonPagedPool,
-						     sizeof
-						     ( DriverServiceNamePath )
-						     +
-						     KeyValueInformation->DataLength
-						     - sizeof ( WCHAR ) ) ) ==
-		       NULL )
-		    {
-		      DBG ( "ExAllocatePool DriverServiceNameString "
-			    "failed\n" );
+      DriverServiceNameString = wv_malloc(
+          sizeof DriverServiceNamePath +
+          KeyValueInformation->DataLength -
+          sizeof *DriverServiceNamePath
+        );
+      if (DriverServiceNameString == NULL) {
+          DBG("wv_malloc DriverServiceNameString failed\n");
 		      goto e3_0;
 		    }
 
@@ -739,10 +700,8 @@ DriverEntry (
   /*
    * Allocate and zero-fill the global probe tag 
    */
-  if ( ( AoE_Globals_ProbeTag =
-	 ( work_tag_ptr ) ExAllocatePool ( NonPagedPool,
-					   sizeof ( work_tag ) ) ) == NULL )
-    {
+  AoE_Globals_ProbeTag = wv_malloc(sizeof *AoE_Globals_ProbeTag);
+  if (AoE_Globals_ProbeTag == NULL) {
       DBG ( "Couldn't allocate probe tag; bye!\n" );
       return STATUS_INSUFFICIENT_RESOURCES;
     }
@@ -755,11 +714,10 @@ DriverEntry (
   /*
    * Allocate and zero-fill the probe tag's packet reference 
    */
-  if ( ( AoE_Globals_ProbeTag->packet_data =
-	 ( packet_ptr ) ExAllocatePool ( NonPagedPool,
-					 AoE_Globals_ProbeTag->
-					 PacketSize ) ) == NULL )
-    {
+  AoE_Globals_ProbeTag->packet_data = wv_malloc(
+      AoE_Globals_ProbeTag->PacketSize
+    );
+  if (AoE_Globals_ProbeTag->packet_data == NULL) {
       DBG ( "Couldn't allocate AoE_Globals_ProbeTag->packet_data\n" );
       ExFreePool ( AoE_Globals_ProbeTag );
       return STATUS_INSUFFICIENT_RESOURCES;
@@ -996,11 +954,7 @@ disk__init_decl (
   /*
    * Allocate our disk search 
    */
-  if ( ( disk_searcher =
-	 ( disk_search_ptr ) ExAllocatePool ( NonPagedPool,
-					      sizeof ( disk_search ) ) ) ==
-       NULL )
-    {
+  if ((disk_searcher = wv_malloc(sizeof *disk_searcher)) == NULL) {
       DBG ( "Couldn't allocate for disk_searcher; bye!\n" );
       return FALSE;
     }
@@ -1237,11 +1191,7 @@ disk__init_decl (
       /*
        * Establish our tag 
        */
-      if ( ( tag =
-	     ( work_tag_ptr ) ExAllocatePool ( NonPagedPool,
-					       sizeof ( work_tag ) ) ) ==
-	   NULL )
-	{
+      if ((tag = wv_malloc(sizeof *tag)) == NULL) {
 	  DBG ( "Couldn't allocate tag\n" );
 	  KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
 	  /*
@@ -1257,10 +1207,7 @@ disk__init_decl (
        * Establish our tag's AoE packet 
        */
       tag->PacketSize = sizeof ( packet );
-      if ( ( tag->packet_data =
-	     ( packet_ptr ) ExAllocatePool ( NonPagedPool,
-					     tag->PacketSize ) ) == NULL )
-	{
+      if ((tag->packet_data = wv_malloc(tag->PacketSize)) == NULL) {
 	  DBG ( "Couldn't allocate tag->packet_data\n" );
 	  ExFreePool ( tag );
 	  tag = NULL;
@@ -1394,10 +1341,7 @@ disk__io_decl (
   /*
    * Allocate and zero-fill our request 
    */
-  if ( ( request_ptr =
-	 ( io_req_ptr ) ExAllocatePool ( NonPagedPool,
-					 sizeof ( io_req ) ) ) == NULL )
-    {
+  if ((request_ptr = wv_malloc(sizeof *request_ptr)) == NULL) {
       DBG ( "Couldn't allocate for reques_ptr; bye!\n" );
       irp->IoStatus.Information = 0;
       irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
@@ -1423,11 +1367,7 @@ disk__io_decl (
       /*
        * Allocate each tag 
        */
-      if ( ( tag =
-	     ( work_tag_ptr ) ExAllocatePool ( NonPagedPool,
-					       sizeof ( work_tag ) ) ) ==
-	   NULL )
-	{
+      if ((tag = wv_malloc(sizeof *tag)) == NULL) {
 	  DBG ( "Couldn't allocate tag; bye!\n" );
 	  /*
 	   * We failed while allocating tags; free the ones we built 
@@ -1468,10 +1408,7 @@ disk__io_decl (
       tag->PacketSize = sizeof ( packet );
       if ( mode == disk__io_mode_write )
 	tag->PacketSize += tag->SectorCount * disk_ptr->SectorSize;
-      if ( ( tag->packet_data =
-	     ( packet_ptr ) ExAllocatePool ( NonPagedPool,
-					     tag->PacketSize ) ) == NULL )
-	{
+      if ((tag->packet_data = wv_malloc(tag->PacketSize)) == NULL) {
 	  DBG ( "Couldn't allocate tag->packet_data; bye!\n" );
 	  /*
 	   * We failed while allocating an AoE packet; free
@@ -1618,12 +1555,8 @@ add_target (
       Walker = Walker->next;
     }
 
-  if ( ( Walker =
-	 ( target_list_ptr ) ExAllocatePool ( NonPagedPool,
-					      sizeof ( target_list ) ) ) ==
-       NULL )
-    {
-      DBG ( "ExAllocatePool Target\n" );
+  if ((Walker = wv_malloc(sizeof *Walker)) == NULL) {
+      DBG("wv_malloc Walker\n");
       KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, Irql );
       return;
     }
@@ -2222,15 +2155,10 @@ irp__handler_decl (
       target_walker = target_walker->next;
     }
 
-  targets =
-    ( aoe__mount_targets_ptr ) ExAllocatePool ( NonPagedPool,
-						sizeof ( aoe__mount_targets ) +
-						( count *
-						  sizeof
-						  ( aoe__mount_target ) ) );
+  targets = wv_malloc(sizeof *targets + (count * sizeof targets->Target[0]));
   if ( targets == NULL )
     {
-      DBG ( "ExAllocatePool targets\n" );
+      DBG("wv_malloc targets\n");
       Irp->IoStatus.Information = 0;
       return STATUS_INSUFFICIENT_RESOURCES;
     }
@@ -2286,16 +2214,9 @@ irp__handler_decl (
       dev_walker = dev_walker->next_sibling_ptr;
     }
 
-  if ( ( disks =
-	 ( aoe__mount_disks_ptr ) ExAllocatePool ( NonPagedPool,
-						   sizeof ( aoe__mount_disks )
-						   +
-						   ( count *
-						     sizeof
-						     ( aoe__mount_disk ) ) ) )
-       == NULL )
-    {
-      DBG ( "ExAllocatePool disks\n" );
+  disks = wv_malloc(sizeof *disks + (count * sizeof disks->Disk[0]));
+  if (disks == NULL ) {
+      DBG("wv_malloc disks\n");
       Irp->IoStatus.Information = 0;
       return STATUS_INSUFFICIENT_RESOURCES;
     }
@@ -2422,7 +2343,7 @@ create_aoe_disk (
    * AoE disk devices might be used for booting and should
    * not be allocated from a paged memory pool
    */
-  aoe_disk_ptr = ExAllocatePool ( NonPagedPool, sizeof ( aoe_disk_type ) );
+  aoe_disk_ptr = wv_malloc(sizeof *aoe_disk_ptr);
   if ( aoe_disk_ptr == NULL )
     goto err_noaoedisk;
   RtlZeroMemory ( aoe_disk_ptr, sizeof ( aoe_disk_type ) );

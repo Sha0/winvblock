@@ -29,6 +29,7 @@
 #include <ntddk.h>
 
 #include "winvblock.h"
+#include "wv_stdlib.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -407,7 +408,7 @@ disk__create (
    * Disk devices might be used for booting and should
    * not be allocated from a paged memory pool
    */
-  disk_ptr = ExAllocatePool ( NonPagedPool, sizeof ( disk__type ) );
+  disk_ptr = wv_malloc(sizeof *disk_ptr);
   if ( disk_ptr == NULL )
     goto err_nodisk;
   RtlZeroMemory ( disk_ptr, sizeof ( disk__type ) );

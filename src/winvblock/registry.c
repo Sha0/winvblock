@@ -30,6 +30,7 @@
 #include <ntddk.h>
 
 #include "winvblock.h"
+#include "wv_stdlib.h"
 #include "portable.h"
 #include "debug.h"
 #include "irp.h"
@@ -120,11 +121,11 @@ registry__fetch_kvi (
   /*
    * Allocate value buffer 
    */
-  *kvi = ExAllocatePool ( NonPagedPool, kvi_len );
+  *kvi = wv_malloc(kvi_len);
   if ( !*kvi )
     {
       DBG ( "Could not allocate KVI for \"%S\": %x\n", value_name, status );
-      goto err_exallocatepoolwithtag_kvi;
+      goto err_kvi;
     }
 
   /*
@@ -143,7 +144,7 @@ registry__fetch_kvi (
 
 err_zwqueryvaluekey:
   ExFreePool ( kvi );
-err_exallocatepoolwithtag_kvi:
+err_kvi:
 err_zwqueryvaluekey_len:
   return status;
 }
@@ -180,17 +181,17 @@ registry__fetch_sz (
    * Allocate and populate string 
    */
   value_len = ( kvi->DataLength + sizeof ( value[0] ) );
-  *value = ExAllocatePool ( NonPagedPool, value_len );
+  *value = wv_malloc(value_len);
   if ( !*value )
     {
       DBG ( "Could not allocate value for \"%S\"\n", value_name );
       status = STATUS_UNSUCCESSFUL;
-      goto err_exallocatepoolwithtag_value;
+      goto err_value;
     }
   RtlZeroMemory ( *value, value_len );
   RtlCopyMemory ( *value, kvi->Data, kvi->DataLength );
 
-err_exallocatepoolwithtag_value:
+err_value:
   ExFreePool ( kvi );
 err_fetchkvi:
   return status;
@@ -245,12 +246,12 @@ registry__fetch_multi_sz (
   values_len =
     ( ( ( num_strings + 1 ) * sizeof ( values[0] ) ) + kvi->DataLength +
       sizeof ( values[0][0] ) );
-  *values = ExAllocatePool ( NonPagedPool, values_len );
+  *values = wv_malloc(values_len);
   if ( !*values )
     {
       DBG ( "Could not allocate value array for \"%S\"\n", value_name );
       status = STATUS_UNSUCCESSFUL;
-      goto err_exallocatepoolwithtag_value;
+      goto err_value;
     }
   RtlZeroMemory ( *values, values_len );
   string = ( ( LPWSTR ) ( *values + num_strings + 1 ) );
@@ -264,7 +265,7 @@ registry__fetch_multi_sz (
 	string++;
     }
 
-err_exallocatepoolwithtag_value:
+err_value:
   ExFreePool ( kvi );
 err_fetchkvi:
   return status;

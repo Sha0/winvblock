@@ -55,9 +55,6 @@ winvblock__def_type ( UINT16, winvblock__uint16 );
 winvblock__def_type ( BOOLEAN, winvblock__bool );
 typedef void *winvblock__any_ptr;
 
-/* ExAllocatePool() is deprecated now */
-#  define ExAllocatePool( x, y ) ExAllocatePoolWithTag ( x, y, 'klBV' )
-
 /* To export functions while serving as a library */
 #  ifdef PROJECT_BUS
 #    define winvblock__lib_func __declspec(dllexport)

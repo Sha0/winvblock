@@ -30,6 +30,7 @@
 #include <ntddstor.h>
 
 #include "winvblock.h"
+#include "wv_stdlib.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -267,7 +268,7 @@ filedisk__create (
    * File-backed disk devices might be used for booting and should
    * not be allocated from a paged memory pool
    */
-  filedisk_ptr = ExAllocatePool ( NonPagedPool, sizeof ( filedisk__type ) );
+  filedisk_ptr = wv_malloc(sizeof *filedisk_ptr);
   if ( filedisk_ptr == NULL )
     goto err_nofiledisk;
   RtlZeroMemory ( filedisk_ptr, sizeof ( filedisk__type ) );
@@ -424,7 +425,7 @@ disk__io_decl (
   /*
    * Allocate the request
    */
-  req = ExAllocatePool ( NonPagedPool, sizeof ( thread_req ) );
+  req = wv_malloc(sizeof *req);
   if ( req == NULL )
     {
       irp->IoStatus.Information = 0;
@@ -582,7 +583,7 @@ hot_swap (
 	sizeof ( obj_path_prefix ) - sizeof ( UNICODE_NULL ) +
 	vol_dos_name.Length + sizeof ( path_sep ) +
 	filedisk_ptr->filepath_unicode.Length;
-      filepath.Buffer = ExAllocatePool ( NonPagedPool, filepath.Length );
+      filepath.Buffer = wv_malloc(filepath.Length);
       if ( filepath.Buffer == NULL )
 	{
 	  status = STATUS_UNSUCCESSFUL;

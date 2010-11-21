@@ -28,6 +28,7 @@
 #include <ntddk.h>
 
 #include "winvblock.h"
+#include "wv_stdlib.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -84,7 +85,7 @@ irp__reg_table_s (
    * Allocate and attach a new link in the chain.
    * Maybe we should use a spin-lock for this
    */
-  new_link = ExAllocatePool ( NonPagedPool, sizeof ( handler_chain ) );
+  new_link = wv_malloc(sizeof *new_link);
   if ( new_link == NULL )
     {
       /*

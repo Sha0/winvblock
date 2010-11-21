@@ -29,6 +29,7 @@
 #include <ntddk.h>
 
 #include "winvblock.h"
+#include "wv_stdlib.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -137,11 +138,9 @@ irp__handler_decl ( bus_pnp__query_dev_relations )
       count++;
       walker = walker->next_sibling_ptr;
     }
-  dev_relations =
-    ( PDEVICE_RELATIONS ) ExAllocatePool ( NonPagedPool,
-					   sizeof ( DEVICE_RELATIONS ) +
-					   ( sizeof ( PDEVICE_OBJECT ) *
-					     count ) );
+  dev_relations = wv_malloc(
+      sizeof *dev_relations + (sizeof (PDEVICE_OBJECT) * count)
+    );
   if ( dev_relations == NULL )
     {
       Irp->IoStatus.Information = 0;

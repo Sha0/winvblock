@@ -29,6 +29,7 @@
 #include <ntddstor.h>
 
 #include "winvblock.h"
+#include "wv_stdlib.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -65,7 +66,7 @@ check_disk_match (
   /*
    * Allocate a buffer for testing for a MS .VHD footer
    */
-  buf = ExAllocatePool ( NonPagedPool, sizeof ( *buf ) );
+  buf = wv_malloc(sizeof *buf);
   if ( buf == NULL )
     {
       status = STATUS_INSUFFICIENT_RESOURCES;
@@ -270,7 +271,7 @@ process_param_block (
        */
       if ( *param_block == '/' || *param_block == '\\' )
 	param_block++;
-      sets[i].filepath = ExAllocatePool ( NonPagedPool, walker - param_block );
+      sets[i].filepath = wv_malloc(walker - param_block);
       if ( sets[i].filepath == NULL )
 	{
 	  DBG ( "Could not store filename\n" );

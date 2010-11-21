@@ -35,6 +35,7 @@
 #include <ndis.h>
 
 #include "winvblock.h"
+#include "wv_stdlib.h"
 #include "portable.h"
 #include "irp.h"
 #include "driver.h"
@@ -149,18 +150,12 @@ Debug_IrpStart (
    Temp;
   KIRQL Irql;
 
-  if ( ( DebugMessage =
-	 ( PCHAR ) ExAllocatePool ( NonPagedPool, 1024 ) ) == NULL )
-    {
-      DBG ( "ExAllocatePool DebugMessage\n" );
+  if ((DebugMessage = wv_malloc(1024)) == NULL) {
+      DBG("wv_malloc DebugMessage\n");
     }
   Debug_DecodeIrp ( DeviceObject, Irp, DebugMessage );
-  if ( ( Record =
-	 ( PDEBUG_IRPLIST ) ExAllocatePool ( NonPagedPool,
-					     sizeof ( DEBUG_IRPLIST ) ) ) ==
-       NULL )
-    {
-      DBG ( "ExAllocatePool Record\n" );
+  if ((Record = wv_malloc(sizeof *Record)) == NULL) {
+      DBG("wv_malloc Record\n");
       DBG ( "IRP %s\n", DebugMessage );
     }
   Record->Next = NULL;
