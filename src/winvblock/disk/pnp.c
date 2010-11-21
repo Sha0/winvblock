@@ -70,7 +70,9 @@ irp__handler_decl ( disk_pnp__query_id )
       goto alloc_info;
     }
 
-  Irp->IoStatus.Information = wv_palloc(string_length * sizeof *string);
+  Irp->IoStatus.Information = (ULONG_PTR) wv_palloc(
+      string_length * sizeof *string
+    );
   if ( Irp->IoStatus.Information == 0 )
     {
       DBG("wv_palloc failed.\n");
@@ -116,7 +118,9 @@ irp__handler_decl ( disk_pnp__query_dev_text )
     {
       case DeviceTextDescription:
 	string_length = swprintf ( string, winvblock__literal_w L" Disk" ) + 1;
-  Irp->IoStatus.Information = wv_palloc(string_length * sizeof *string);
+  Irp->IoStatus.Information = (ULONG_PTR) wv_palloc(
+      string_length * sizeof *string
+    );
 	if ( Irp->IoStatus.Information == 0 )
 	  {
       DBG("wv_palloc DeviceTextDescription\n");
@@ -131,7 +135,9 @@ irp__handler_decl ( disk_pnp__query_dev_text )
       case DeviceTextLocationInformation:
 	string_length =
 	  disk__query_id ( disk_ptr, BusQueryInstanceID, string );
-  Irp->IoStatus.Information = wv_palloc(string_length * sizeof *string);
+  Irp->IoStatus.Information = (ULONG_PTR) wv_palloc(
+      string_length * sizeof *string
+    );
 	if ( Irp->IoStatus.Information == 0 )
 	  {
       DBG("wv_palloc DeviceTextLocationInformation\n");
