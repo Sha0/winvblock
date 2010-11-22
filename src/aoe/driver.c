@@ -492,11 +492,10 @@ setup_reg (
 	      Updated = TRUE;
 	      NewValueLength =
 		sizeof ( winvblock__literal_w ) + sizeof ( WCHAR );
-        if ((NewValue = wv_malloc(NewValueLength)) == NULL) {
-            DBG("wv_malloc NewValue 3 failed\n");
+        if ((NewValue = wv_mallocz(NewValueLength)) == NULL) {
+            DBG("wv_mallocz NewValue 3 failed\n");
 		  goto e2_1;
 		}
-	      RtlZeroMemory ( NewValue, NewValueLength );
 	      RtlCopyMemory ( NewValue, winvblock__literal_w,
 			      sizeof ( winvblock__literal_w ) );
 	    }
@@ -701,12 +700,11 @@ DriverEntry (
   /*
    * Allocate and zero-fill the global probe tag 
    */
-  AoE_Globals_ProbeTag = wv_malloc(sizeof *AoE_Globals_ProbeTag);
+  AoE_Globals_ProbeTag = wv_mallocz(sizeof *AoE_Globals_ProbeTag);
   if (AoE_Globals_ProbeTag == NULL) {
       DBG ( "Couldn't allocate probe tag; bye!\n" );
       return STATUS_INSUFFICIENT_RESOURCES;
     }
-  RtlZeroMemory ( AoE_Globals_ProbeTag, sizeof ( work_tag ) );
 
   /*
    * Set up the probe tag's AoE packet reference 
@@ -715,7 +713,7 @@ DriverEntry (
   /*
    * Allocate and zero-fill the probe tag's packet reference 
    */
-  AoE_Globals_ProbeTag->packet_data = wv_malloc(
+  AoE_Globals_ProbeTag->packet_data = wv_mallocz(
       AoE_Globals_ProbeTag->PacketSize
     );
   if (AoE_Globals_ProbeTag->packet_data == NULL) {
@@ -724,8 +722,6 @@ DriverEntry (
       return STATUS_INSUFFICIENT_RESOURCES;
     }
   AoE_Globals_ProbeTag->SendTime.QuadPart = 0LL;
-  RtlZeroMemory ( AoE_Globals_ProbeTag->packet_data,
-		  AoE_Globals_ProbeTag->PacketSize );
 
   /*
    * Initialize the probe tag's AoE packet 
@@ -1192,7 +1188,7 @@ disk__init_decl (
       /*
        * Establish our tag 
        */
-      if ((tag = wv_malloc(sizeof *tag)) == NULL) {
+      if ((tag = wv_mallocz(sizeof *tag)) == NULL) {
 	  DBG ( "Couldn't allocate tag\n" );
 	  KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
 	  /*
@@ -1200,7 +1196,6 @@ disk__init_decl (
 	   */
 	  continue;
 	}
-      RtlZeroMemory ( tag, sizeof ( work_tag ) );
       tag->type = tag_type_search_drive;
       tag->device = disk_ptr->device;
 
@@ -1208,7 +1203,7 @@ disk__init_decl (
        * Establish our tag's AoE packet 
        */
       tag->PacketSize = sizeof ( packet );
-      if ((tag->packet_data = wv_malloc(tag->PacketSize)) == NULL) {
+      if ((tag->packet_data = wv_mallocz(tag->PacketSize)) == NULL) {
 	  DBG ( "Couldn't allocate tag->packet_data\n" );
     wv_free(tag);
 	  tag = NULL;
@@ -1218,7 +1213,6 @@ disk__init_decl (
 	   */
 	  continue;
 	}
-      RtlZeroMemory ( tag->packet_data, tag->PacketSize );
       tag->packet_data->Ver = AOEPROTOCOLVER;
       tag->packet_data->Major =
 	htons ( ( winvblock__uint16 ) aoe_disk_ptr->Major );
@@ -1342,14 +1336,13 @@ disk__io_decl (
   /*
    * Allocate and zero-fill our request 
    */
-  if ((request_ptr = wv_malloc(sizeof *request_ptr)) == NULL) {
+  if ((request_ptr = wv_mallocz(sizeof *request_ptr)) == NULL) {
       DBG ( "Couldn't allocate for reques_ptr; bye!\n" );
       irp->IoStatus.Information = 0;
       irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
       IoCompleteRequest ( irp, IO_NO_INCREMENT );
       return STATUS_INSUFFICIENT_RESOURCES;
     }
-  RtlZeroMemory ( request_ptr, sizeof ( io_req ) );
 
   /*
    * Initialize the request 
@@ -1368,7 +1361,7 @@ disk__io_decl (
       /*
        * Allocate each tag 
        */
-      if ((tag = wv_malloc(sizeof *tag)) == NULL) {
+      if ((tag = wv_mallocz(sizeof *tag)) == NULL) {
 	  DBG ( "Couldn't allocate tag; bye!\n" );
 	  /*
 	   * We failed while allocating tags; free the ones we built 
@@ -1391,7 +1384,6 @@ disk__io_decl (
       /*
        * Initialize each tag 
        */
-      RtlZeroMemory ( tag, sizeof ( work_tag ) );
       tag->type = tag_type_io;
       tag->request_ptr = request_ptr;
       tag->device = dev_ptr;
@@ -1409,7 +1401,7 @@ disk__io_decl (
       tag->PacketSize = sizeof ( packet );
       if ( mode == disk__io_mode_write )
 	tag->PacketSize += tag->SectorCount * disk_ptr->SectorSize;
-      if ((tag->packet_data = wv_malloc(tag->PacketSize)) == NULL) {
+      if ((tag->packet_data = wv_mallocz(tag->PacketSize)) == NULL) {
 	  DBG ( "Couldn't allocate tag->packet_data; bye!\n" );
 	  /*
 	   * We failed while allocating an AoE packet; free
@@ -1430,7 +1422,6 @@ disk__io_decl (
 	  IoCompleteRequest ( irp, IO_NO_INCREMENT );
 	  return STATUS_INSUFFICIENT_RESOURCES;
 	}
-      RtlZeroMemory ( tag->packet_data, tag->PacketSize );
       tag->packet_data->Ver = AOEPROTOCOLVER;
       tag->packet_data->Major =
 	htons ( ( winvblock__uint16 ) aoe_disk_ptr->Major );
@@ -2340,10 +2331,9 @@ create_aoe_disk (
    * AoE disk devices might be used for booting and should
    * not be allocated from a paged memory pool
    */
-  aoe_disk_ptr = wv_malloc(sizeof *aoe_disk_ptr);
+  aoe_disk_ptr = wv_mallocz(sizeof *aoe_disk_ptr);
   if ( aoe_disk_ptr == NULL )
     goto err_noaoedisk;
-  RtlZeroMemory ( aoe_disk_ptr, sizeof ( aoe_disk_type ) );
   /*
    * Track the new AoE disk in our global list
    */

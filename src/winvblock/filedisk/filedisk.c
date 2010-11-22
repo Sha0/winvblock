@@ -268,10 +268,9 @@ filedisk__create (
    * File-backed disk devices might be used for booting and should
    * not be allocated from a paged memory pool
    */
-  filedisk_ptr = wv_malloc(sizeof *filedisk_ptr);
+  filedisk_ptr = wv_mallocz(sizeof *filedisk_ptr);
   if ( filedisk_ptr == NULL )
     goto err_nofiledisk;
-  RtlZeroMemory ( filedisk_ptr, sizeof ( filedisk__type ) );
   /*
    * Track the new file-backed disk in our global list
    */

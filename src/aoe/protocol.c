@@ -694,17 +694,15 @@ Protocol_BindAdapter (
 	 NdisQueryAdapterInstanceName ( &AdapterInstanceName,
 					Context->BindingHandle ) ) )
     {
-      Context->AdapterName = wv_malloc(
+      Context->AdapterName = wv_mallocz(
           AdapterInstanceName.Length +
           sizeof (WCHAR)
         );
       if (Context->AdapterName == NULL) {
-        DBG("wv_malloc AdapterName\n");
+        DBG("wv_mallocz AdapterName\n");
 	}
       else
 	{
-	  RtlZeroMemory ( Context->AdapterName,
-			  AdapterInstanceName.Length + sizeof ( WCHAR ) );
 	  RtlCopyMemory ( Context->AdapterName, AdapterInstanceName.Buffer,
 			  AdapterInstanceName.Length );
 	}
@@ -718,14 +716,12 @@ Protocol_BindAdapter (
   Context->DeviceName = NULL;
   if ( DeviceName->Length > 0 )
     {
-      Context->DeviceName = wv_malloc(DeviceName->Length + sizeof (WCHAR));
+      Context->DeviceName = wv_mallocz(DeviceName->Length + sizeof (WCHAR));
       if (Context->DeviceName == NULL) {
           DBG("wv_malloc DeviceName\n");
 	}
       else
 	{
-	  RtlZeroMemory ( Context->DeviceName,
-			  DeviceName->Length + sizeof ( WCHAR ) );
 	  RtlCopyMemory ( Context->DeviceName, DeviceName->Buffer,
 			  DeviceName->Length );
 	}

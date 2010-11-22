@@ -83,10 +83,9 @@ device__create (
    * Devices might be used for booting and should
    * not be allocated from a paged memory pool
    */
-  dev_ptr = wv_malloc(sizeof *dev_ptr);
+  dev_ptr = wv_mallocz(sizeof *dev_ptr);
   if ( dev_ptr == NULL )
     return NULL;
-  RtlZeroMemory ( dev_ptr, sizeof ( device__type ) );
   /*
    * Track the new device in our global list
    */

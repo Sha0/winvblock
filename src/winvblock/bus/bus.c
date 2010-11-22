@@ -355,10 +355,9 @@ bus__create (
    * Bus devices might be used for booting and should
    * not be allocated from a paged memory pool
    */
-  bus_ptr = wv_malloc(sizeof *bus_ptr);
+  bus_ptr = wv_mallocz(sizeof *bus_ptr);
   if ( bus_ptr == NULL )
     goto err_nobus;
-  RtlZeroMemory ( bus_ptr, sizeof ( bus__type ) );
   /*
    * Track the new bus in our global list
    */

@@ -28,6 +28,16 @@ void *wv_palloc(wv_size_t size) {
     return ExAllocatePoolWithTag(PagedPool, size, 'klBV');
   }
 
+void *wv_mallocz(wv_size_t size) {
+    void *ptr = ExAllocatePoolWithTag(NonPagedPool, size, 'klBV');
+    return ptr ? RtlZeroMemory(ptr, size), ptr : ptr;
+  }
+
+void *wv_pallocz(wv_size_t size) {
+    void *ptr = ExAllocatePoolWithTag(PagedPool, size, 'klBV');
+    return ptr ? RtlZeroMemory(ptr, size), ptr : ptr;
+  }
+
 void wv_free(void *ptr) {
     ExFreePool(ptr);
     return;

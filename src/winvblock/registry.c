@@ -181,14 +181,13 @@ registry__fetch_sz (
    * Allocate and populate string 
    */
   value_len = ( kvi->DataLength + sizeof ( value[0] ) );
-  *value = wv_malloc(value_len);
+  *value = wv_mallocz(value_len);
   if ( !*value )
     {
       DBG ( "Could not allocate value for \"%S\"\n", value_name );
       status = STATUS_UNSUCCESSFUL;
       goto err_value;
     }
-  RtlZeroMemory ( *value, value_len );
   RtlCopyMemory ( *value, kvi->Data, kvi->DataLength );
 
 err_value:
@@ -246,14 +245,13 @@ registry__fetch_multi_sz (
   values_len =
     ( ( ( num_strings + 1 ) * sizeof ( values[0] ) ) + kvi->DataLength +
       sizeof ( values[0][0] ) );
-  *values = wv_malloc(values_len);
+  *values = wv_mallocz(values_len);
   if ( !*values )
     {
       DBG ( "Could not allocate value array for \"%S\"\n", value_name );
       status = STATUS_UNSUCCESSFUL;
       goto err_value;
     }
-  RtlZeroMemory ( *values, values_len );
   string = ( ( LPWSTR ) ( *values + num_strings + 1 ) );
   RtlCopyMemory ( string, kvi->Data, kvi->DataLength );
   for ( i = 0; i < num_strings; i++ )

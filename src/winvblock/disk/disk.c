@@ -408,10 +408,9 @@ disk__create (
    * Disk devices might be used for booting and should
    * not be allocated from a paged memory pool
    */
-  disk_ptr = wv_malloc(sizeof *disk_ptr);
+  disk_ptr = wv_mallocz(sizeof *disk_ptr);
   if ( disk_ptr == NULL )
     goto err_nodisk;
-  RtlZeroMemory ( disk_ptr, sizeof ( disk__type ) );
   /*
    * Track the new disk in our global list
    */

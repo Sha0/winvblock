@@ -177,10 +177,9 @@ ramdisk__create (
    * RAM disk devices might be used for booting and should
    * not be allocated from a paged memory pool
    */
-  ramdisk_ptr = wv_malloc(sizeof *ramdisk_ptr);
+  ramdisk_ptr = wv_mallocz(sizeof *ramdisk_ptr);
   if ( ramdisk_ptr == NULL )
     goto err_noramdisk;
-  RtlZeroMemory ( ramdisk_ptr, sizeof ( ramdisk__type ) );
   /*
    * Track the new RAM disk in our global list
    */

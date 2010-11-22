@@ -26,6 +26,12 @@ void *wv_malloc(wv_size_t size);
 /* Allocate memory from paged memory pool. */
 void *wv_palloc(wv_size_t size);
 
+/* Allocate memory from non-paged memory pool and fill with zero bits. */
+void *wv_mallocz(wv_size_t size);
+
+/* Allocate memory from paged memory pool and fill with zero bits. */
+void *wv_pallocz(wv_size_t size);
+
 /* Free allocated memory. */
 void wv_free(void *ptr);
 

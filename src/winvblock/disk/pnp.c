@@ -48,15 +48,13 @@ irp__handler_decl ( disk_pnp__query_id )
   disk__type_ptr disk_ptr;
 
   disk_ptr = disk__get_ptr ( dev_ptr );
-  string = wv_malloc(512 * sizeof *string);
+  string = wv_mallocz(512 * sizeof *string);
   if ( string == NULL )
     {
       DBG("wv_malloc IRP_MN_QUERY_ID\n");
       status = STATUS_INSUFFICIENT_RESOURCES;
       goto alloc_string;
     }
-  RtlZeroMemory ( string, ( 512 * sizeof ( WCHAR ) ) );
-
   /*
    * Invoke the specific disk class ID query 
    */
@@ -103,7 +101,7 @@ irp__handler_decl ( disk_pnp__query_dev_text )
   winvblock__uint32 string_length;
   disk__type_ptr disk_ptr;
 
-  string = wv_malloc(512 * sizeof *string);
+  string = wv_mallocz(512 * sizeof *string);
   disk_ptr = disk__get_ptr ( dev_ptr );
 
   if ( string == NULL )
@@ -112,7 +110,6 @@ irp__handler_decl ( disk_pnp__query_dev_text )
       status = STATUS_INSUFFICIENT_RESOURCES;
       goto alloc_string;
     }
-  RtlZeroMemory ( string, ( 512 * sizeof ( WCHAR ) ) );
 
   switch ( Stack->Parameters.QueryDeviceText.DeviceTextType )
     {
