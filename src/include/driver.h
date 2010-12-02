@@ -77,4 +77,6 @@ typedef NTSTATUS STDCALL (driver__dispatch_func)(
     IN PIRP
   );
 
+extern winvblock__lib_func driver__dispatch_func (driver__default_dispatch);
+
 #endif				/* _DRIVER_H */

@@ -32,8 +32,8 @@
 #include "wv_stdlib.h"
 #include "portable.h"
 #include "irp.h"
-#include "device.h"
 #include "driver.h"
+#include "device.h"
 #include "debug.h"
 
 static LIST_ENTRY dev_list;
@@ -94,6 +94,7 @@ device__create (
   /*
    * Populate non-zero device defaults
    */
+  dev_ptr->dispatch = driver__default_dispatch;
   dev_ptr->DriverObject = driver__obj_ptr;
   dev_ptr->ops.create_pdo = make_dev_pdo;
   dev_ptr->ops.free = free_dev;

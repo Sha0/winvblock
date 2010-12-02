@@ -250,15 +250,11 @@ static NTSTATUS STDCALL (driver_dispatch)(
     IN PIRP Irp
   ) {
   NTSTATUS status;
-  PIO_STACK_LOCATION Stack;
   device__type_ptr dev_ptr;
-  size_t irp_handler_index;
-  winvblock__bool completion = FALSE;
 
 #ifdef DEBUGIRPS
   Debug_IrpStart ( DeviceObject, Irp );
 #endif
-  Stack = IoGetCurrentIrpStackLocation ( Irp );
   dev_ptr = ( ( driver__dev_ext_ptr ) DeviceObject->DeviceExtension )->device;
 
   /*
@@ -266,7 +262,7 @@ static NTSTATUS STDCALL (driver_dispatch)(
    */
   if ( dev_ptr->State == Deleted )
     {
-      if ( Stack->MajorFunction == IRP_MJ_POWER )
+      if (IoGetCurrentIrpStackLocation(Irp)->MajorFunction == IRP_MJ_POWER)
 	PoStartNextPowerIrp ( Irp );
       Irp->IoStatus.Information = 0;
       Irp->IoStatus.Status = STATUS_NO_SUCH_DEVICE;
@@ -288,16 +284,33 @@ static NTSTATUS STDCALL (driver_dispatch)(
         );
       KeSetEvent(&dev_ptr->thread_wakeup, 0, FALSE);
       status = STATUS_PENDING;
-    } else
-      status = irp__process(DeviceObject, Irp, Stack, dev_ptr, &completion);
-
-#ifdef DEBUGIRPS
-  if ( status != STATUS_PENDING )
-    Debug_IrpEnd ( Irp, status );
-#endif
+    } else status = dev_ptr->dispatch(DeviceObject, Irp);
 
   return status;
 }
+
+/* Place-holder while implementing a dispatch routine per device class. */
+winvblock__lib_func NTSTATUS STDCALL (driver__default_dispatch)(
+    IN PDEVICE_OBJECT (dev),
+    IN PIRP (irp)
+  ) {
+    NTSTATUS (status);
+    winvblock__bool (completion) = FALSE;
+
+    status = irp__process(
+        dev,
+        irp,
+        IoGetCurrentIrpStackLocation(irp),
+        ((driver__dev_ext_ptr) dev->DeviceExtension)->device,
+        &completion
+      );
+    #ifdef DEBUGIRPS
+    if (status != STATUS_PENDING)
+      Debug_IrpEnd(irp, status);
+    #endif
+
+    return status;
+  }
 
 static void STDCALL
 Driver_Unload (

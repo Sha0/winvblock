@@ -183,6 +183,8 @@ typedef void STDCALL (device__thread_func)(IN void *);
 struct _device__type
 {
   winvblock__bool IsBus;	/* For debugging */
+  /* A device's IRP dispatch routine. */
+  driver__dispatch_func * (dispatch);
   /* The device's thread routine. */
   device__thread_func * (thread);
   /* The device's thread wakeup signal. */
