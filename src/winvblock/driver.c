@@ -288,7 +288,19 @@ Driver_Dispatch (
       return STATUS_NO_SUCH_DEVICE;
     }
 
-  status = irp__process ( DeviceObject, Irp, Stack, dev_ptr, &completion );
+  /* Enqueue the IRP for threaded devices, or process immediately. */
+  if (dev_ptr->thread) {
+      IoMarkIrpPending(Irp);
+      ExInterlockedInsertTailList(
+          &dev_ptr->irp_list,
+          /* Where IRPs can be linked. */
+          &Irp->Tail.Overlay.ListEntry,
+          &dev_ptr->irp_list_lock
+        );
+      KeSetEvent(&dev_ptr->thread_wakeup, 0, FALSE);
+      status = STATUS_PENDING;
+    } else
+      status = irp__process(DeviceObject, Irp, Stack, dev_ptr, &completion);
 
 #ifdef DEBUGIRPS
   if ( status != STATUS_PENDING )

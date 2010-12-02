@@ -189,5 +189,5 @@ device__free_decl (
    */
   ExInterlockedRemoveHeadList ( dev_ptr->tracking.Blink, &dev_list_lock );
 
-  ExFreePool ( dev_ptr );
+  wv_free(dev_ptr);
 }

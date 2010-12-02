@@ -177,10 +177,20 @@ winvblock__def_struct ( device__ops )
   device__free_routine free;
 };
 
+typedef void STDCALL (device__thread_func)(IN void *);
+
 /* Details common to all devices this driver works with */
 struct _device__type
 {
   winvblock__bool IsBus;	/* For debugging */
+  /* The device's thread routine. */
+  device__thread_func * (thread);
+  /* The device's thread wakeup signal. */
+  KEVENT (thread_wakeup);
+  /* The device's IRP queue. */
+  LIST_ENTRY (irp_list);
+  /* The device's IRP queue lock. */
+  KSPIN_LOCK (irp_list_lock);
   PDEVICE_OBJECT Self;
   PDEVICE_OBJECT Parent;
   PDRIVER_OBJECT DriverObject;
