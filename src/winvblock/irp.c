@@ -35,6 +35,9 @@
 #include "device.h"
 #include "debug.h"
 
+/* Forward declarations. */
+static device__thread_func (irp_thread);
+
 /*
  * An internal type.  A device extension will have a
  * pointer to this structure, but its type will be a void pointer
@@ -203,3 +206,50 @@ irp__handler_decl ( irp__process )
     }
   return status;
 }
+
+static void STDCALL (irp_thread)(IN void * (context)) {
+    device__type * (dev) = context;
+    LARGE_INTEGER (timeout);
+    PLIST_ENTRY (walker);
+
+    /* Wake up at least every second. */
+    timeout.QuadPart = -10000000LL;
+
+    /* While the device is active... */
+    while (dev->thread) {
+        /* Wait for the signal or the timeout. */
+        KeWaitForSingleObject(
+            &dev->thread_wakeup,
+            Executive,
+            KernelMode,
+            FALSE,
+            &timeout
+          );
+        KeResetEvent(&dev->thread_wakeup);
+        /* Process each IRP in the queue. */
+        while (walker = ExInterlockedRemoveHeadList(
+            &dev->irp_list,
+					  &dev->irp_list_lock
+          )) {
+            NTSTATUS (status);
+            PIRP (irp) = CONTAINING_RECORD(walker, IRP, Tail.Overlay.ListEntry);
+            winvblock__bool (completion) = FALSE;
+
+            /* Process the IRP. */
+            status = irp__process(
+                dev->Self,
+                irp,
+                IoGetCurrentIrpStackLocation(irp),
+                dev,
+                &completion
+              );
+            #ifdef DEBUGIRPS
+            if (status != STATUS_PENDING) Debug_IrpEnd(Irp, status);
+            #endif
+          } /* while walker */
+      } /* while active */
+    /* The device has finished. */
+    dev->ops.free(dev);
+
+    return;
+  }
