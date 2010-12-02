@@ -71,4 +71,10 @@ winvblock__def_struct ( driver__dev_ext )
   device__type_ptr device;
 };
 
+/* The prototype for a device IRP dispatch. */
+typedef NTSTATUS STDCALL (driver__dispatch_func)(
+    IN PDEVICE_OBJECT,
+    IN PIRP
+  );
+
 #endif				/* _DRIVER_H */

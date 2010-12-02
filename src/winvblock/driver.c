@@ -44,16 +44,9 @@
 #include "ramdisk.h"
 #include "debug.h"
 
-/* in this file */
-static NTSTATUS STDCALL Driver_DispatchNotSupported (
-  IN PDEVICE_OBJECT DeviceObject,
-  IN PIRP Irp
- );
-
-static NTSTATUS STDCALL Driver_Dispatch (
-  IN PDEVICE_OBJECT DeviceObject,
-  IN PIRP Irp
- );
+/* Forward declarations. */
+static driver__dispatch_func (driver_dispatch_not_supported);
+static driver__dispatch_func (driver_dispatch);
 
 static void STDCALL Driver_Unload (
   IN PDRIVER_OBJECT DriverObject
@@ -176,14 +169,14 @@ DriverEntry (
    * this driver handles
    */
   for ( i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++ )
-    DriverObject->MajorFunction[i] = Driver_DispatchNotSupported;
-  DriverObject->MajorFunction[IRP_MJ_PNP] = Driver_Dispatch;
-  DriverObject->MajorFunction[IRP_MJ_POWER] = Driver_Dispatch;
-  DriverObject->MajorFunction[IRP_MJ_CREATE] = Driver_Dispatch;
-  DriverObject->MajorFunction[IRP_MJ_CLOSE] = Driver_Dispatch;
-  DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = Driver_Dispatch;
-  DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = Driver_Dispatch;
-  DriverObject->MajorFunction[IRP_MJ_SCSI] = Driver_Dispatch;
+    DriverObject->MajorFunction[i] = driver_dispatch_not_supported;
+  DriverObject->MajorFunction[IRP_MJ_PNP] = driver_dispatch;
+  DriverObject->MajorFunction[IRP_MJ_POWER] = driver_dispatch;
+  DriverObject->MajorFunction[IRP_MJ_CREATE] = driver_dispatch;
+  DriverObject->MajorFunction[IRP_MJ_CLOSE] = driver_dispatch;
+  DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = driver_dispatch;
+  DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = driver_dispatch;
+  DriverObject->MajorFunction[IRP_MJ_SCSI] = driver_dispatch;
   /*
    * Set the driver Unload callback
    */
@@ -202,16 +195,14 @@ DriverEntry (
   return STATUS_SUCCESS;
 }
 
-static NTSTATUS STDCALL
-Driver_DispatchNotSupported (
-  IN PDEVICE_OBJECT DeviceObject,
-  IN PIRP Irp
- )
-{
-  Irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
-  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-  return Irp->IoStatus.Status;
-}
+static NTSTATUS STDCALL (driver_dispatch_not_supported)(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp
+  ) {
+    Irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
+    IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+    return Irp->IoStatus.Status;
+  }
 
 static
 irp__handler_decl (
@@ -254,12 +245,10 @@ irp__handling driver__handling_table[] = {
 
 size_t driver__handling_table_size = sizeof ( driver__handling_table );
 
-static NTSTATUS STDCALL
-Driver_Dispatch (
-  IN PDEVICE_OBJECT DeviceObject,
-  IN PIRP Irp
- )
-{
+static NTSTATUS STDCALL (driver_dispatch)(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp
+  ) {
   NTSTATUS status;
   PIO_STACK_LOCATION Stack;
   device__type_ptr dev_ptr;
