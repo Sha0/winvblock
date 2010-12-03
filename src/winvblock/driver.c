@@ -204,11 +204,14 @@ static NTSTATUS STDCALL (driver_dispatch_not_supported)(
     return Irp->IoStatus.Status;
   }
 
-static
-irp__handler_decl (
-  create_close
- )
-{
+/* Handle IRP_MJ_CREATE and IRP_MJ_CLOSE */
+extern winvblock__lib_func NTSTATUS STDCALL (driver__create_close)(
+    IN PDEVICE_OBJECT (DeviceObject),
+    IN PIRP (Irp),
+    IN PIO_STACK_LOCATION (Stack),
+    IN struct _device__type * (dev_ptr),
+    OUT winvblock__bool_ptr (completion_ptr)
+  ) {
   NTSTATUS status = STATUS_SUCCESS;
 
   Irp->IoStatus.Status = status;
@@ -217,33 +220,20 @@ irp__handler_decl (
   return status;
 }
 
-static
-irp__handler_decl (
-  not_supported
- )
-{
+/* IRP is not understood. */
+extern winvblock__lib_func NTSTATUS STDCALL (driver__not_supported)(
+    IN PDEVICE_OBJECT (DeviceObject),
+    IN PIRP (Irp),
+    IN PIO_STACK_LOCATION (Stack),
+    IN struct _device__type * (dev_ptr),
+    OUT winvblock__bool_ptr (completion_ptr)
+  ) {
   NTSTATUS status = STATUS_NOT_SUPPORTED;
   Irp->IoStatus.Status = status;
   IoCompleteRequest ( Irp, IO_NO_INCREMENT );
   *completion_ptr = TRUE;
   return status;
 }
-
-irp__handling driver__handling_table[] = {
-  /*
-   * Major, minor, any major?, any minor?, handler
-   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   * Note that the fall-through case must come FIRST!
-   * Why? It sets completion to true, so others won't be called
-   */
-  {0, 0, TRUE, TRUE, not_supported}
-  ,
-  {IRP_MJ_CLOSE, 0, FALSE, TRUE, create_close}
-  ,
-  {IRP_MJ_CREATE, 0, FALSE, TRUE, create_close}
-};
-
-size_t driver__handling_table_size = sizeof ( driver__handling_table );
 
 static NTSTATUS STDCALL (driver_dispatch)(
     IN PDEVICE_OBJECT DeviceObject,
@@ -296,6 +286,17 @@ winvblock__lib_func NTSTATUS STDCALL (driver__default_dispatch)(
   ) {
     NTSTATUS (status);
     winvblock__bool (completion) = FALSE;
+    static const irp__handling (handling_table)[] = {
+        /*
+         * Major, minor, any major?, any minor?, handler
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         * Note that the fall-through case must come FIRST!
+         * Why? It sets completion to true, so others won't be called.
+         */
+        {             0, 0,  TRUE, TRUE, driver__not_supported },
+        {  IRP_MJ_CLOSE, 0, FALSE, TRUE,  driver__create_close },
+        { IRP_MJ_CREATE, 0, FALSE, TRUE,  driver__create_close },
+      };
 
     status = irp__process(
         dev,
@@ -304,6 +305,15 @@ winvblock__lib_func NTSTATUS STDCALL (driver__default_dispatch)(
         ((driver__dev_ext_ptr) dev->DeviceExtension)->device,
         &completion
       );
+    /* Fall through to some driver defaults, if needed. */
+    if (status == STATUS_NOT_SUPPORTED && !completion)
+      status = irp__process_with_table(
+          dev,
+          irp,
+          handling_table,
+          sizeof handling_table,
+          &completion
+        );
     #ifdef DEBUGIRPS
     if (status != STATUS_PENDING)
       Debug_IrpEnd(irp, status);

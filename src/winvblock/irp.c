@@ -168,7 +168,7 @@ irp__unreg_table (
 winvblock__lib_func NTSTATUS STDCALL (irp__process_with_table)(
     IN PDEVICE_OBJECT (dev),
     IN PIRP (irp),
-    irp__handling * (table),
+    const irp__handling * (table),
     size_t (table_size),
     winvblock__bool * (completion)
   ) {

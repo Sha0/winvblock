@@ -40,8 +40,6 @@
 
 #  define POOLSIZE 2048
 
-extern irp__handling driver__handling_table[];
-extern size_t driver__handling_table_size;
 extern PDRIVER_OBJECT driver__obj_ptr;
 
 extern winvblock__lib_func void STDCALL Driver_CompletePendingIrp (
@@ -78,5 +76,7 @@ typedef NTSTATUS STDCALL (driver__dispatch_func)(
   );
 
 extern winvblock__lib_func driver__dispatch_func (driver__default_dispatch);
+extern winvblock__lib_func irp__handler_decl (driver__not_supported);
+extern winvblock__lib_func irp__handler_decl (driver__create_close);
 
 #endif				/* _DRIVER_H */

@@ -98,11 +98,6 @@ device__create (
   dev_ptr->DriverObject = driver__obj_ptr;
   dev_ptr->ops.create_pdo = make_dev_pdo;
   dev_ptr->ops.free = free_dev;
-  /*
-   * Register the default driver IRP handling table
-   */
-  irp__reg_table_s ( &dev_ptr->irp_handler_chain, driver__handling_table,
-		     driver__handling_table_size );
 
   return dev_ptr;
 }
@@ -179,10 +174,6 @@ device__free_decl (
   free_dev
  )
 {
-  /*
-   * Un-register the default driver IRP handling table
-   */
-  irp__unreg_table ( &dev_ptr->irp_handler_chain, driver__handling_table );
   /*
    * Track the device deletion in our global list.  Unfortunately,
    * for now we have faith that a device won't be deleted twice and
