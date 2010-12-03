@@ -26,6 +26,7 @@
  */
 
 #include <ntddk.h>
+#include <stdlib.h>
 
 #include "winvblock.h"
 #include "wv_stdlib.h"
@@ -155,6 +156,58 @@ irp__unreg_table (
 }
 
 /**
+ * Walk a mini IRP handling table and process matches.
+ *
+ * @v dev               The device to process.
+ * @v irp               The IRP to process.
+ * @v table             The mini IRP handling table to use to process the IRP.
+ * @v table_size        The size of the mini IRP handling table, in bytes.
+ * @v completion        Points to a boolean which is TRUE at IRP completion.
+ * @ret                 STATUS_NOT_SUPPORTED for an unhandled IRP.
+ */
+winvblock__lib_func NTSTATUS STDCALL (irp__process_with_table)(
+    IN PDEVICE_OBJECT (dev),
+    IN PIRP (irp),
+    irp__handling * (table),
+    size_t (table_size),
+    winvblock__bool * (completion)
+  ) {
+    int (index);
+    PIO_STACK_LOCATION (io_stack_loc);
+    winvblock__bool (handles_major), (handles_minor);
+    NTSTATUS (status) = STATUS_NOT_SUPPORTED;
+
+    /* We could assert this division. */
+    index = table_size / sizeof *table;
+
+    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    /* For each entry in the stack, in last-is-first order. */
+    while (index--) {
+        handles_major = (
+            (table[index].irp_major_func == io_stack_loc->MajorFunction) ||
+            table[index].any_major
+          );
+        handles_minor = (
+            (table[index].irp_minor_func == io_stack_loc->MinorFunction) ||
+            table[index].any_minor
+          );
+        if (handles_major && handles_minor) {
+            status = table[index].handler(
+                dev,
+                irp,
+                io_stack_loc,
+                ((driver__dev_ext_ptr) dev->DeviceExtension)->device,
+    				    completion
+              );
+            /* Do not process the IRP any further down the stack. */
+        	  if (*completion) break;
+          } /* if handles */
+      } /* while index */
+
+    return status;
+  }
+
+/**
  * Mini IRP handling strategy
  *
  */
@@ -167,41 +220,15 @@ irp__handler_decl ( irp__process )
 
   while ( link != NULL )
     {
-      /*
-       * Determine the table's mini IRP handler stack size
-       */
-      int handling_index = link->size / sizeof ( irp__handling );
-
-      /*
-       * For each entry in the stack, in last-is-first order
-       */
-      while ( handling_index-- )
-	{
-	  irp__handling handling;
-	  winvblock__bool handles_major,
-	   handles_minor;
-
-	  /*
-	   * Get the handling entry
-	   */
-	  handling = link->table[handling_index];
-
-	  handles_major = ( Stack->MajorFunction == handling.irp_major_func )
-	    || handling.any_major;
-	  handles_minor = ( Stack->MinorFunction == handling.irp_minor_func )
-	    || handling.any_minor;
-	  if ( handles_major && handles_minor )
-	    status =
-	      handling.handler ( DeviceObject, Irp, Stack, dev_ptr,
-				 completion_ptr );
-	  /*
-	   * Do not process the IRP any further down the stack
-	   */
-	  if ( *completion_ptr )
-	    break;
-	}
+      status = irp__process_with_table(
+          DeviceObject,
+          Irp,
+          link->table,
+          link->size,
+          completion_ptr
+        );
       if ( *completion_ptr )
-	break;
+        break;
       link = link->next;
     }
   return status;

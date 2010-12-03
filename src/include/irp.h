@@ -99,5 +99,12 @@ winvblock__lib_func winvblock__bool irp__unreg_table (
 extern irp__handler_decl (
   irp__process
  );
+extern winvblock__lib_func NTSTATUS STDCALL (irp__process_with_table)(
+    IN PDEVICE_OBJECT,
+    IN PIRP,
+    irp__handling *,
+    size_t,
+    winvblock__bool *
+  );
 
 #endif				/* _irp_h */
