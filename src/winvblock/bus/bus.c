@@ -162,26 +162,6 @@ irp__handler_decl (
   return PoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
 }
 
-static irp__handling handling_table[] = {
-  /*
-   * Major, minor, any major?, any minor?, handler
-   */
-  {IRP_MJ_SYSTEM_CONTROL, 0, FALSE, TRUE, sys_ctl}
-  ,
-  {IRP_MJ_POWER, 0, FALSE, TRUE, power}
-  ,
-  {IRP_MJ_DEVICE_CONTROL, 0, FALSE, TRUE, bus_dev_ctl__dispatch}
-  ,
-  {IRP_MJ_PNP, 0, FALSE, TRUE, bus_pnp__simple}
-  ,
-  {IRP_MJ_PNP, IRP_MN_START_DEVICE, FALSE, FALSE, bus_pnp__start_dev}
-  ,
-  {IRP_MJ_PNP, IRP_MN_REMOVE_DEVICE, FALSE, FALSE, bus_pnp__remove_dev}
-  ,
-  {IRP_MJ_PNP, IRP_MN_QUERY_DEVICE_RELATIONS, FALSE, FALSE,
-   bus_pnp__query_dev_relations}
-};
-
 NTSTATUS STDCALL
 Bus_GetDeviceCapabilities (
   IN PDEVICE_OBJECT DeviceObject,
@@ -330,6 +310,61 @@ attach_fdo (
   return STATUS_SUCCESS;
 }
 
+/* Bus dispatch routine. */
+static NTSTATUS STDCALL (bus_dispatch)(
+    IN PDEVICE_OBJECT (dev),
+    IN PIRP (irp)
+  ) {
+    NTSTATUS (status);
+    winvblock__bool (completion) = FALSE;
+    static const irp__handling (handling_table)[] = {
+        /*
+         * Major, minor, any major?, any minor?, handler
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         * Note that the fall-through case must come FIRST!
+         * Why? It sets completion to true, so others won't be called.
+         */
+        {                     0, 0,  TRUE, TRUE, driver__not_supported },
+        {          IRP_MJ_CLOSE, 0, FALSE, TRUE,  driver__create_close },
+        {         IRP_MJ_CREATE, 0, FALSE, TRUE,  driver__create_close },
+        { IRP_MJ_SYSTEM_CONTROL, 0, FALSE, TRUE,               sys_ctl },
+        {          IRP_MJ_POWER, 0, FALSE, TRUE,                 power },
+        { IRP_MJ_DEVICE_CONTROL, 0, FALSE, TRUE, bus_dev_ctl__dispatch },
+        {            IRP_MJ_PNP, 0, FALSE, TRUE,       bus_pnp__simple },
+        {            IRP_MJ_PNP, IRP_MN_START_DEVICE,
+                                    FALSE, FALSE,   bus_pnp__start_dev },
+        {            IRP_MJ_PNP, IRP_MN_REMOVE_DEVICE,
+                                    FALSE, FALSE,  bus_pnp__remove_dev },
+        {            IRP_MJ_PNP, IRP_MN_QUERY_DEVICE_RELATIONS,
+                                    FALSE, FALSE,
+                                          bus_pnp__query_dev_relations },
+      };
+
+    /* Try registered mini IRP handling tables first.  Deprecated. */
+    status = irp__process(
+        dev,
+        irp,
+        IoGetCurrentIrpStackLocation(irp),
+        ((driver__dev_ext_ptr) dev->DeviceExtension)->device,
+        &completion
+      );
+    /* Fall through to the bus defaults, if needed. */
+    if (status == STATUS_NOT_SUPPORTED && !completion)
+      status = irp__process_with_table(
+          dev,
+          irp,
+          handling_table,
+          sizeof handling_table,
+          &completion
+        );
+    #ifdef DEBUGIRPS
+    if (status != STATUS_PENDING)
+      Debug_IrpEnd(irp, status);
+    #endif
+
+    return status;
+  }
+
 /**
  * Create a new bus
  *
@@ -368,15 +403,12 @@ bus__create (
    */
   bus_ptr->device = dev_ptr;
   bus_ptr->prev_free = dev_ptr->ops.free;
+  dev_ptr->dispatch = bus_dispatch;
   dev_ptr->ops.create_pdo = create_pdo;
   dev_ptr->ops.free = free_bus;
   dev_ptr->ext = bus_ptr;
   dev_ptr->IsBus = TRUE;
   KeInitializeSpinLock ( &bus_ptr->SpinLock );
-  /*
-   * Register the default bus IRP handling table
-   */
-  irp__reg_table ( &dev_ptr->irp_handler_chain, handling_table );
 
   return bus_ptr;
 
@@ -508,10 +540,6 @@ device__free_decl (
  )
 {
   bus__type_ptr bus_ptr = bus__get_ptr ( dev_ptr );
-  /*
-   * Un-register the default bus IRP handling table
-   */
-  irp__unreg_table ( &dev_ptr->irp_handler_chain, handling_table );
   /*
    * Free the "inherited class"
    */
