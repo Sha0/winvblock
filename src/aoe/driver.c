@@ -52,12 +52,12 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject(
   );
 
 /* Forward declarations. */
-winvblock__def_struct(aoe_disk_type);
+struct aoe_disk_type;
 static void STDCALL thread(IN void *);
 irp__handler_decl(aoe__bus_dev_ctl_dispatch);
 static void process_abft(void);
 static void STDCALL unload(IN PDRIVER_OBJECT DriverObject);
-static aoe_disk_type_ptr create_aoe_disk(void);
+static struct aoe_disk_type * create_aoe_disk(void);
 static device__free_decl(free_aoe_disk);
 
 /** Tag types. */
@@ -169,7 +169,7 @@ enum _search_state
 winvblock__def_enum(search_state);
 
 /** The AoE disk type. */
-struct _aoe_disk_type
+struct aoe_disk_type
   {
     disk__type_ptr disk;
     winvblock__uint32 MTU;
@@ -214,7 +214,7 @@ static irp__handling handling_table[] =
 
 /* Yield a pointer to the AoE disk. */
 #define get_aoe_disk_ptr(dev_ptr) \
-((aoe_disk_type_ptr)(disk__get_ptr(dev_ptr))->ext)
+((struct aoe_disk_type *)(disk__get_ptr(dev_ptr))->ext)
 
 static winvblock__bool STDCALL setup_reg(OUT PNTSTATUS status_out)
   {
@@ -943,7 +943,7 @@ static disk__init_decl(init)
     KIRQL Irql, InnerIrql;
     LARGE_INTEGER MaxSectorsPerPacketSendTime;
     winvblock__uint32 MTU;
-    aoe_disk_type_ptr aoe_disk_ptr;
+    struct aoe_disk_type * aoe_disk_ptr;
   
     aoe_disk_ptr = get_aoe_disk_ptr ( disk_ptr->device );
     /*
@@ -1295,7 +1295,7 @@ static disk__io_decl(io)
     PHYSICAL_ADDRESS PhysicalAddress;
     winvblock__uint8_ptr PhysicalMemory;
     disk__type_ptr disk_ptr;
-    aoe_disk_type_ptr aoe_disk_ptr;
+    struct aoe_disk_type * aoe_disk_ptr;
   
     /*
      * Establish pointers to the disk and AoE disk
@@ -1582,7 +1582,7 @@ NTSTATUS STDCALL aoe__reply(
     winvblock__bool Found = FALSE;
     LARGE_INTEGER CurrentTime;
     disk__type_ptr disk_ptr;
-    aoe_disk_type_ptr aoe_disk_ptr;
+    struct aoe_disk_type * aoe_disk_ptr;
   
     /*
      * Discard non-responses 
@@ -1802,7 +1802,7 @@ static void STDCALL thread(IN void *StartContext)
     winvblock__uint32 Fails = 0;
     winvblock__uint32 RequestTimeout = 0;
     disk__type_ptr disk_ptr;
-    aoe_disk_type_ptr aoe_disk_ptr;
+    struct aoe_disk_type * aoe_disk_ptr;
   
     DBG ( "Entry\n" );
     ReportTime.QuadPart = 0LL;
@@ -1947,14 +1947,14 @@ static void STDCALL thread(IN void *StartContext)
 
 static disk__max_xfer_len_decl(max_xfer_len)
   {
-    aoe_disk_type_ptr aoe_disk_ptr = get_aoe_disk_ptr ( disk_ptr->device );
+    struct aoe_disk_type * aoe_disk_ptr = get_aoe_disk_ptr ( disk_ptr->device );
   
     return disk_ptr->SectorSize * aoe_disk_ptr->MaxSectorsPerPacket;
   }
 
 static disk__pnp_id_decl(query_id)
   {
-    aoe_disk_type_ptr aoe_disk_ptr = get_aoe_disk_ptr ( disk_ptr->device );
+    struct aoe_disk_type * aoe_disk_ptr = get_aoe_disk_ptr ( disk_ptr->device );
   
     switch ( query_type )
       {
@@ -2010,7 +2010,7 @@ static void process_abft(void)
     winvblock__uint32 Offset, Checksum, i;
     winvblock__bool FoundAbft = FALSE;
     abft AoEBootRecord;
-    aoe_disk_type_ptr aoe_disk_ptr;
+    struct aoe_disk_type * aoe_disk_ptr;
   
     /*
      * Find aBFT
@@ -2179,7 +2179,7 @@ static irp__handler_decl(show)
     while ( dev_walker != NULL )
       {
         disk__type_ptr disk_ptr = disk__get_ptr ( dev_walker );
-        aoe_disk_type_ptr aoe_disk_ptr = get_aoe_disk_ptr ( dev_walker );
+        struct aoe_disk_type * aoe_disk_ptr = get_aoe_disk_ptr ( dev_walker );
   
         disks->Disk[count].Disk = disk_ptr->DiskNumber;
         RtlCopyMemory ( &disks->Disk[count].ClientMac, &aoe_disk_ptr->ClientMac,
@@ -2210,7 +2210,7 @@ static irp__handler_decl(show)
 static irp__handler_decl(mount)
   {
     winvblock__uint8_ptr buffer = Irp->AssociatedIrp.SystemBuffer;
-    aoe_disk_type_ptr aoe_disk_ptr;
+    struct aoe_disk_type * aoe_disk_ptr;
   
     DBG ( "Got IOCTL_AOE_MOUNT for client: %02x:%02x:%02x:%02x:%02x:%02x "
   	"Major:%d Minor:%d\n", buffer[0], buffer[1], buffer[2], buffer[3],
@@ -2272,10 +2272,10 @@ irp__handler_decl(aoe__bus_dev_ctl_dispatch)
  * aoe_disk_type, track it in a global list, as well as populate the disk
  * with default values.
  */
-static aoe_disk_type_ptr create_aoe_disk(void)
+static struct aoe_disk_type * create_aoe_disk(void)
   {
     disk__type_ptr disk_ptr;
-    aoe_disk_type_ptr aoe_disk_ptr;
+    struct aoe_disk_type * aoe_disk_ptr;
   
     /*
      * Try to create a disk
@@ -2326,7 +2326,7 @@ static aoe_disk_type_ptr create_aoe_disk(void)
 static device__free_decl(free_aoe_disk )
   {
     disk__type_ptr disk_ptr = disk__get_ptr ( dev_ptr );
-    aoe_disk_type_ptr aoe_disk_ptr = get_aoe_disk_ptr ( dev_ptr );
+    struct aoe_disk_type * aoe_disk_ptr = get_aoe_disk_ptr ( dev_ptr );
     /*
      * Free the "inherited class".
      */
