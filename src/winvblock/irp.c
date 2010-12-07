@@ -21,8 +21,7 @@
 /**
  * @file
  *
- * Handling IRPs
- *
+ * Handling IRPs.
  */
 
 #include <ntddk.h>
@@ -208,31 +207,37 @@ winvblock__lib_func NTSTATUS STDCALL (irp__process_with_table)(
   }
 
 /**
- * Mini IRP handling strategy
+ * Mini IRP handling strategy.
  *
  */
-irp__handler_decl ( irp__process )
-{
-  NTSTATUS status = STATUS_NOT_SUPPORTED;
-  handler_chain_ptr link;
-
-  link = ( handler_chain_ptr ) dev_ptr->irp_handler_chain;
-
-  while ( link != NULL )
-    {
-      status = irp__process_with_table(
-          DeviceObject,
-          Irp,
-          link->table,
-          link->size,
-          completion_ptr
-        );
-      if ( *completion_ptr )
-        break;
-      link = link->next;
-    }
-  return status;
-}
+NTSTATUS STDCALL irp__process(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
+  {
+    NTSTATUS status = STATUS_NOT_SUPPORTED;
+    handler_chain_ptr link;
+  
+    link = ( handler_chain_ptr ) dev_ptr->irp_handler_chain;
+  
+    while ( link != NULL )
+      {
+        status = irp__process_with_table(
+            DeviceObject,
+            Irp,
+            link->table,
+            link->size,
+            completion_ptr
+          );
+        if ( *completion_ptr )
+          break;
+        link = link->next;
+      }
+    return status;
+  }
 
 static void STDCALL (irp_thread)(IN void * (context)) {
     device__type * (dev) = context;

@@ -20,8 +20,7 @@
 /**
  * @file
  *
- * File-backed disk specifics
- *
+ * File-backed disk specifics.
  */
 
 #include <stdio.h>
@@ -131,7 +130,13 @@ disk__pnp_id_decl (
     }
 }
 
-irp__handler_decl ( filedisk__attach )
+NTSTATUS STDCALL filedisk__attach(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   ANSI_STRING file_path1;
   winvblock__uint8_ptr buf = Irp->AssociatedIrp.SystemBuffer;

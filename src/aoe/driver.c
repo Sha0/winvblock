@@ -54,7 +54,7 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject(
 /* Forward declarations. */
 struct aoe_disk_type;
 static void STDCALL thread(IN void *);
-irp__handler_decl(aoe__bus_dev_ctl_dispatch);
+irp__handler aoe__bus_dev_ctl_dispatch;
 static void process_abft(void);
 static void STDCALL unload(IN PDRIVER_OBJECT DriverObject);
 static struct aoe_disk_type * create_aoe_disk(void);
@@ -2090,7 +2090,13 @@ static void process_abft(void)
       }
   }
 
-static irp__handler_decl(scan)
+static NTSTATUS STDCALL scan(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
   {
     KIRQL irql;
     winvblock__uint32 count;
@@ -2146,7 +2152,13 @@ static irp__handler_decl(scan)
   
   }
 
-static irp__handler_decl(show)
+static NTSTATUS STDCALL show(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
   {
     winvblock__uint32 count;
     device__type_ptr dev_walker;
@@ -2207,7 +2219,13 @@ static irp__handler_decl(show)
     return STATUS_SUCCESS;
   }
 
-static irp__handler_decl(mount)
+static NTSTATUS STDCALL mount(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
   {
     winvblock__uint8_ptr buffer = Irp->AssociatedIrp.SystemBuffer;
     struct aoe_disk_type * aoe_disk_ptr;
@@ -2238,7 +2256,13 @@ static irp__handler_decl(mount)
     return STATUS_SUCCESS;
   }
 
-irp__handler_decl(aoe__bus_dev_ctl_dispatch)
+NTSTATUS STDCALL aoe__bus_dev_ctl_dispatch(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
   {
     NTSTATUS status = STATUS_NOT_SUPPORTED;
   

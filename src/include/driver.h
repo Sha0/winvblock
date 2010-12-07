@@ -24,8 +24,7 @@
 /**
  * @file
  *
- * Driver specifics
- *
+ * Driver specifics.
  */
 
 #  include "portable.h"
@@ -76,7 +75,7 @@ typedef NTSTATUS STDCALL (driver__dispatch_func)(
   );
 
 extern winvblock__lib_func driver__dispatch_func (driver__default_dispatch);
-extern winvblock__lib_func irp__handler_decl (driver__not_supported);
-extern winvblock__lib_func irp__handler_decl (driver__create_close);
+extern winvblock__lib_func irp__handler driver__not_supported;
+extern winvblock__lib_func irp__handler driver__create_close;
 
 #endif				/* _DRIVER_H */

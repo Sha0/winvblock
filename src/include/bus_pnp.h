@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -24,21 +24,12 @@
 /**
  * @file
  *
- * Bus PnP IRP handling
- *
+ * Bus PnP IRP handling.
  */
 
-extern irp__handler_decl (
-  bus_pnp__start_dev
- );
-extern irp__handler_decl (
-  bus_pnp__remove_dev
- );
-extern irp__handler_decl (
-  bus_pnp__query_dev_relations
- );
-extern irp__handler_decl (
-  bus_pnp__simple
- );
+extern irp__handler bus_pnp__start_dev;
+extern irp__handler bus_pnp__remove_dev;
+extern irp__handler bus_pnp__query_dev_relations;
+extern irp__handler bus_pnp__simple;
 
 #endif				/* _BUS_PNP_H */

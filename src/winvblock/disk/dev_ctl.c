@@ -22,8 +22,7 @@
 /**
  * @file
  *
- * Disk Device Control IRP handling
- *
+ * Disk Device Control IRP handling.
  */
 
 #include <ntddk.h>
@@ -43,10 +42,13 @@
 #include "disk.h"
 #include "debug.h"
 
-static
-irp__handler_decl (
-  storage_query_prop
- )
+static NTSTATUS STDCALL storage_query_prop(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   NTSTATUS status = STATUS_INVALID_PARAMETER;
   PSTORAGE_PROPERTY_QUERY storage_prop_query = Irp->AssociatedIrp.SystemBuffer;
@@ -119,10 +121,13 @@ irp__handler_decl (
   return status;
 }
 
-static
-irp__handler_decl (
-  disk_get_drive_geom
- )
+static NTSTATUS STDCALL disk_get_drive_geom(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   winvblock__uint32 copy_size;
   DISK_GEOMETRY disk_geom;
@@ -143,10 +148,13 @@ irp__handler_decl (
   return STATUS_SUCCESS;
 }
 
-static
-irp__handler_decl (
-  scsi_get_address
- )
+static NTSTATUS STDCALL scsi_get_address(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   winvblock__uint32 copy_size;
   SCSI_ADDRESS scsi_address;
@@ -167,7 +175,13 @@ irp__handler_decl (
   return STATUS_SUCCESS;
 }
 
-irp__handler_decl ( disk_dev_ctl__dispatch )
+NTSTATUS STDCALL disk_dev_ctl__dispatch(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   NTSTATUS status;
 

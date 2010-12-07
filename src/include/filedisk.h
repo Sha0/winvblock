@@ -22,8 +22,7 @@
 /**
  * @file
  *
- * File-backed disk specifics
- *
+ * File-backed disk specifics.
  */
 
 winvblock__def_struct ( filedisk__type )
@@ -45,9 +44,7 @@ winvblock__def_struct ( filedisk__type )
   UNICODE_STRING filepath_unicode;
 };
 
-extern irp__handler_decl (
-  filedisk__attach
- );
+extern irp__handler filedisk__attach;
 
 /**
  * Initialize the global, file-backed disk-common environment

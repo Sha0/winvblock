@@ -22,8 +22,7 @@
 /**
  * @file
  *
- * Disk device specifics
- *
+ * Disk device specifics.
  */
 
 #include <ntddk.h>
@@ -99,22 +98,28 @@ disk__close_decl ( default_close )
   return;
 }
 
-static
-irp__handler_decl (
-  power
- )
-{
-  PoStartNextPowerIrp ( Irp );
-  Irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
-  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-  *completion_ptr = TRUE;
-  return STATUS_NOT_SUPPORTED;
-}
+static NTSTATUS STDCALL power(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
+  {
+    PoStartNextPowerIrp ( Irp );
+    Irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
+    IoCompleteRequest ( Irp, IO_NO_INCREMENT );
+    *completion_ptr = TRUE;
+    return STATUS_NOT_SUPPORTED;
+  }
 
-static
-irp__handler_decl (
-  sys_ctl
- )
+static NTSTATUS STDCALL sys_ctl(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   NTSTATUS status = Irp->IoStatus.Status;
   IoCompleteRequest ( Irp, IO_NO_INCREMENT );
@@ -123,10 +128,10 @@ irp__handler_decl (
 }
 
 /**
- * Create a disk PDO filled with the given disk parameters
+ * Create a disk PDO filled with the given disk parameters.
  *
- * @v dev_ptr           Populate PDO dev. ext. space from these details
- * @ret dev_obj_ptr     Points to the new PDO, or is NULL upon failure
+ * @v dev_ptr           Populate PDO dev. ext. space from these details.
+ * @ret dev_obj_ptr     Points to the new PDO, or is NULL upon failure.
  *
  * Returns a Physical Device Object pointer on success, NULL for failure.
  */

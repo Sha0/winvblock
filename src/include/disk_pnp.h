@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -24,27 +24,14 @@
 /**
  * @file
  *
- * Disk PnP IRP handling
- *
+ * Disk PnP IRP handling.
  */
 
-extern irp__handler_decl (
-  disk_pnp__query_id
- );
-extern irp__handler_decl (
-  disk_pnp__query_dev_text
- );
-extern irp__handler_decl (
-  disk_pnp__query_dev_relations
- );
-extern irp__handler_decl (
-  disk_pnp__query_bus_info
- );
-extern irp__handler_decl (
-  disk_pnp__query_capabilities
- );
-extern irp__handler_decl (
-  disk_pnp__simple
- );
+extern irp__handler disk_pnp__query_id;
+extern irp__handler disk_pnp__query_dev_text;
+extern irp__handler disk_pnp__query_dev_relations;
+extern irp__handler disk_pnp__query_bus_info;
+extern irp__handler disk_pnp__query_capabilities;
+extern irp__handler disk_pnp__simple;
 
 #endif				/* _DISK_PNP_H */

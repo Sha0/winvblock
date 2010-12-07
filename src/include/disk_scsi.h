@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -24,12 +24,9 @@
 /**
  * @file
  *
- * Disk SCSI IRP handling
- *
+ * Disk SCSI IRP handling.
  */
 
-extern irp__handler_decl (
-  disk_scsi__dispatch
- );
+extern irp__handler disk_scsi__dispatch;
 
 #endif				/* _DISK_SCSI_H */

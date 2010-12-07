@@ -22,8 +22,7 @@
 /**
  * @file
  *
- * Disk PnP IRP handling
- *
+ * Disk PnP IRP handling.
  */
 
 #include <stdio.h>
@@ -40,7 +39,13 @@
 #include "bus.h"
 #include "debug.h"
 
-irp__handler_decl ( disk_pnp__query_id )
+NTSTATUS STDCALL disk_pnp__query_id(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   NTSTATUS status;
   PWCHAR string;
@@ -94,7 +99,13 @@ alloc_string:
   return status;
 }
 
-irp__handler_decl ( disk_pnp__query_dev_text )
+NTSTATUS STDCALL disk_pnp__query_dev_text(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   PWCHAR string;
   NTSTATUS status;
@@ -164,7 +175,13 @@ alloc_string:
   return status;
 }
 
-irp__handler_decl ( disk_pnp__query_dev_relations )
+NTSTATUS STDCALL disk_pnp__query_dev_relations(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   NTSTATUS status;
   PDEVICE_RELATIONS dev_relations;
@@ -202,7 +219,13 @@ ret_path:
 DEFINE_GUID ( GUID_BUS_TYPE_INTERNAL, 0x2530ea73L, 0x086b, 0x11d1, 0xa0, 0x9f,
 	      0x00, 0xc0, 0x4f, 0xc3, 0x40, 0xb1 );
 
-irp__handler_decl ( disk_pnp__query_bus_info )
+NTSTATUS STDCALL disk_pnp__query_bus_info(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   PPNP_BUS_INFORMATION pnp_bus_info;
   NTSTATUS status;
@@ -231,7 +254,13 @@ alloc_pnp_bus_info:
   return status;
 }
 
-irp__handler_decl ( disk_pnp__query_capabilities )
+NTSTATUS STDCALL disk_pnp__query_capabilities(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   PDEVICE_CAPABILITIES DeviceCapabilities =
     Stack->Parameters.DeviceCapabilities.Capabilities;
@@ -298,7 +327,13 @@ ret_path:
   return status;
 }
 
-irp__handler_decl ( disk_pnp__simple )
+NTSTATUS STDCALL disk_pnp__simple(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   NTSTATUS status;
   disk__type_ptr disk_ptr;

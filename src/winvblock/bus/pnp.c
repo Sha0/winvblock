@@ -22,8 +22,7 @@
 /**
  * @file
  *
- * Bus PnP IRP handling
- *
+ * Bus PnP IRP handling.
  */
 
 #include <ntddk.h>
@@ -50,7 +49,13 @@ Bus_IoCompletionRoutine (
   return STATUS_MORE_PROCESSING_REQUIRED;
 }
 
-irp__handler_decl ( bus_pnp__start_dev )
+NTSTATUS STDCALL bus_pnp__start_dev(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   NTSTATUS status;
   KEVENT event;
@@ -80,7 +85,13 @@ irp__handler_decl ( bus_pnp__start_dev )
   return status;
 }
 
-irp__handler_decl ( bus_pnp__remove_dev )
+NTSTATUS STDCALL bus_pnp__remove_dev(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   NTSTATUS status;
   bus__type_ptr bus_ptr;
@@ -112,7 +123,13 @@ irp__handler_decl ( bus_pnp__remove_dev )
   return status;
 }
 
-irp__handler_decl ( bus_pnp__query_dev_relations )
+NTSTATUS STDCALL bus_pnp__query_dev_relations(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   NTSTATUS status;
   bus__type_ptr bus_ptr;
@@ -171,7 +188,13 @@ irp__handler_decl ( bus_pnp__query_dev_relations )
   return status;
 }
 
-irp__handler_decl ( bus_pnp__simple )
+NTSTATUS STDCALL bus_pnp__simple(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   NTSTATUS status;
   bus__type_ptr bus_ptr;

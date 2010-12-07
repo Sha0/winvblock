@@ -22,8 +22,7 @@
 /**
  * @file
  *
- * Bus specifics
- *
+ * Bus specifics.
  */
 
 #include <ntddk.h>
@@ -138,29 +137,35 @@ bus__add_child (
   return TRUE;
 }
 
-static
-irp__handler_decl (
-  sys_ctl
- )
-{
-  bus__type_ptr bus_ptr = bus__get_ptr ( dev_ptr );
-  DBG ( "...\n" );
-  IoSkipCurrentIrpStackLocation ( Irp );
-  *completion_ptr = TRUE;
-  return IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
-}
+static NTSTATUS STDCALL sys_ctl(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
+  {
+    bus__type_ptr bus_ptr = bus__get_ptr ( dev_ptr );
+    DBG ( "...\n" );
+    IoSkipCurrentIrpStackLocation ( Irp );
+    *completion_ptr = TRUE;
+    return IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
+  }
 
-static
-irp__handler_decl (
-  power
- )
-{
-  bus__type_ptr bus_ptr = bus__get_ptr ( dev_ptr );
-  PoStartNextPowerIrp ( Irp );
-  IoSkipCurrentIrpStackLocation ( Irp );
-  *completion_ptr = TRUE;
-  return PoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
-}
+static NTSTATUS STDCALL power(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
+  {
+    bus__type_ptr bus_ptr = bus__get_ptr ( dev_ptr );
+    PoStartNextPowerIrp ( Irp );
+    IoSkipCurrentIrpStackLocation ( Irp );
+    *completion_ptr = TRUE;
+    return PoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
+  }
 
 NTSTATUS STDCALL
 Bus_GetDeviceCapabilities (

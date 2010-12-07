@@ -22,8 +22,7 @@
 /**
  * @file
  *
- * Disk SCSI IRP handling
- *
+ * Disk SCSI IRP handling.
  */
 
 #include <ntddk.h>
@@ -347,7 +346,13 @@ scsi_op (
   return STATUS_SUCCESS;
 }
 
-irp__handler_decl ( disk_scsi__dispatch )
+NTSTATUS STDCALL disk_scsi__dispatch(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   NTSTATUS status = STATUS_SUCCESS;
   disk__type_ptr disk_ptr;

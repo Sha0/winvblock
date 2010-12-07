@@ -22,8 +22,7 @@
 /**
  * @file
  *
- * Bus Device Control IRP handling
- *
+ * Bus Device Control IRP handling.
  */
 
 #include <ntddk.h>
@@ -39,10 +38,13 @@
 #include "debug.h"
 #include "filedisk.h"
 
-static
-irp__handler_decl (
-  disk_detach
- )
+static NTSTATUS STDCALL disk_detach(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   winvblock__uint8_ptr buffer = Irp->AssociatedIrp.SystemBuffer;
   device__type_ptr dev_walker;
@@ -95,7 +97,13 @@ irp__handler_decl (
   return STATUS_SUCCESS;
 }
 
-irp__handler_decl ( bus_dev_ctl__dispatch )
+NTSTATUS STDCALL bus_dev_ctl__dispatch(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct _device__type * dev_ptr,
+    OUT winvblock__bool_ptr completion_ptr
+  )
 {
   NTSTATUS status;
   switch ( Stack->Parameters.DeviceIoControl.IoControlCode )

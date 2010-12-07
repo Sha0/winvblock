@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -24,12 +24,9 @@
 /**
  * @file
  *
- * Bus Device Control IRP handling
- *
+ * Bus Device Control IRP handling.
  */
 
-extern irp__handler_decl (
-  bus_dev_ctl__dispatch
- );
+extern irp__handler bus_dev_ctl__dispatch;
 
 #endif				/* _BUS_DEV_CTL_H */

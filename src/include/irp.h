@@ -23,31 +23,20 @@
 /**
  * @file
  *
- * Handling IRPs
- *
+ * Handling IRPs.
  */
 
 /* An unfortunate forward declaration.  Definition resolved in device.h */
 winvblock__def_struct ( device__type );
 
-/* We have lots of these, so offer a convenience macro for declarations */
-#  define irp__handler_decl( x ) \
-\
-NTSTATUS STDCALL                                \
-x (                                             \
-  IN PDEVICE_OBJECT DeviceObject,               \
-  IN PIRP Irp,                                  \
-  IN PIO_STACK_LOCATION Stack,                  \
-  IN struct _device__type *dev_ptr,             \
-  OUT winvblock__bool_ptr completion_ptr        \
- )
-/*
- * Function pointer for an IRP handler.
- * 'indent' mangles this, so it looks weird
- */
-typedef irp__handler_decl (
-   ( *irp__handler )
- );
+/* We have lots of these, so offer a typedef for declarations. */
+typedef NTSTATUS STDCALL irp__handler(
+    IN PDEVICE_OBJECT,
+    IN PIRP,
+    IN PIO_STACK_LOCATION,
+    IN struct _device__type *,
+    OUT winvblock__bool_ptr
+  );
 
 winvblock__def_struct ( irp__handling )
 {
@@ -55,7 +44,7 @@ winvblock__def_struct ( irp__handling )
   winvblock__uint8 irp_minor_func;
   winvblock__bool any_major;
   winvblock__bool any_minor;
-  irp__handler handler;
+  irp__handler * handler;
 };
 
 winvblock__def_type ( winvblock__any_ptr, irp__handler_chain );
@@ -96,9 +85,7 @@ winvblock__lib_func winvblock__bool irp__unreg_table (
   IN irp__handling_ptr table
  );
 
-extern irp__handler_decl (
-  irp__process
- );
+extern irp__handler irp__process;
 extern winvblock__lib_func NTSTATUS STDCALL (irp__process_with_table)(
     IN PDEVICE_OBJECT,
     IN PIRP,
