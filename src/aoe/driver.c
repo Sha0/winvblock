@@ -58,7 +58,7 @@ irp__handler aoe__bus_dev_ctl_dispatch;
 static void process_abft(void);
 static void STDCALL unload(IN PDRIVER_OBJECT DriverObject);
 static struct aoe_disk_type * create_aoe_disk(void);
-static device__free_decl(free_aoe_disk);
+static device__free_func free_aoe_disk;
 
 /** Tag types. */
 enum _tag_type
@@ -180,7 +180,7 @@ struct aoe_disk_type
     winvblock__uint32 MaxSectorsPerPacket;
     winvblock__uint32 Timeout;
     search_state search_state;
-    device__free_routine prev_free;
+    device__free_func * prev_free;
     LIST_ENTRY tracking;
   };
 
@@ -2347,7 +2347,7 @@ static struct aoe_disk_type * create_aoe_disk(void)
  *
  * @v dev_ptr           Points to the AoE disk device to delete.
  */
-static device__free_decl(free_aoe_disk )
+static void STDCALL free_aoe_disk(IN device__type_ptr dev_ptr)
   {
     disk__type_ptr disk_ptr = disk__get_ptr ( dev_ptr );
     struct aoe_disk_type * aoe_disk_ptr = get_aoe_disk_ptr ( dev_ptr );

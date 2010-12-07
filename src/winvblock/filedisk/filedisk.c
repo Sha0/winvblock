@@ -40,12 +40,12 @@
 #include "filedisk.h"
 #include "debug.h"
 
+/* Globals. */
 static LIST_ENTRY filedisk_list;
 static KSPIN_LOCK filedisk_list_lock;
-/* Forward declaration */
-static device__free_decl (
-  free_filedisk
- );
+
+/* Forward declarations. */
+static device__free_func free_filedisk;
 
 static
 disk__io_decl (
@@ -322,31 +322,30 @@ filedisk__init (
 }
 
 /**
- * Default file-backed disk deletion operation
+ * Default file-backed disk deletion operation.
  *
- * @v dev_ptr           Points to the file-backed disk device to delete
+ * @v dev_ptr           Points to the file-backed disk device to delete.
  */
-static
-device__free_decl (
-  free_filedisk
- )
-{
-  disk__type_ptr disk_ptr = disk__get_ptr ( dev_ptr );
-  filedisk__type_ptr filedisk_ptr = filedisk__get_ptr ( dev_ptr );
-  /*
-   * Free the "inherited class"
-   */
-  filedisk_ptr->prev_free ( dev_ptr );
-  /*
-   * Track the file-backed disk deletion in our global list.  Unfortunately,
-   * for now we have faith that a file-backed disk won't be deleted twice and
-   * result in a race condition.  Something to keep in mind...
-   */
-  ExInterlockedRemoveHeadList ( filedisk_ptr->tracking.Blink,
-				&filedisk_list_lock );
-
-  wv_free(filedisk_ptr);
-}
+static void STDCALL free_filedisk(IN device__type_ptr dev_ptr)
+  {
+    disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
+    filedisk__type_ptr filedisk_ptr = filedisk__get_ptr(dev_ptr);
+    /*
+     * Free the "inherited class".
+     */
+    filedisk_ptr->prev_free(dev_ptr);
+    /*
+     * Track the file-backed disk deletion in our global list.  Unfortunately,
+     * for now we have faith that a file-backed disk won't be deleted twice and
+     * result in a race condition.  Something to keep in mind...
+     */
+    ExInterlockedRemoveHeadList(
+        filedisk_ptr->tracking.Blink,
+        &filedisk_list_lock
+      );
+  
+    wv_free(filedisk_ptr);
+  }
 
 /* Threaded read/write request */
 winvblock__def_struct ( thread_req )
@@ -456,20 +455,17 @@ disk__io_decl (
 }
 
 /**
- * Threaded, file-backed disk deletion operation
+ * Threaded, file-backed disk deletion operation.
  *
- * @v dev_ptr           Points to the file-backed disk device to delete
+ * @v dev_ptr           Points to the file-backed disk device to delete.
  */
-static
-device__free_decl (
-  free_threaded_filedisk
- )
-{
-  /*
-   * Queue the tear-down and return.  The thread will catch this on timeout
-   */
-  dev_ptr->ops.free = NULL;
-}
+static void STDCALL free_threaded_filedisk(IN device__type_ptr dev_ptr)
+  {
+    /*
+     * Queue the tear-down and return.  The thread will catch this on timeout.
+     */
+    dev_ptr->ops.free = NULL;
+  }
 
 /**
  * Create a new threaded, file-backed disk

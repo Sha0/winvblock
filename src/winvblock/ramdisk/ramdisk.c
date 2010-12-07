@@ -20,8 +20,7 @@
 /**
  * @file
  *
- * RAM disk specifics
- *
+ * RAM disk specifics.
  */
 
 #include <stdio.h>
@@ -43,12 +42,12 @@
 #define ramdisk_get_ptr( dev_ptr ) \
   ( ( ramdisk__type_ptr ) ( disk__get_ptr ( dev_ptr ) )->ext )
 
+/* Globals. */
 static LIST_ENTRY ramdisk_list;
 static KSPIN_LOCK ramdisk_list_lock;
-/* Forward declaration */
-static device__free_decl (
-  free_ramdisk
- );
+
+/* Forward declarations. */
+static device__free_func free_ramdisk;
 
 /* With thanks to karyonix, who makes FiraDisk */
 static __inline void STDCALL
@@ -225,28 +224,25 @@ ramdisk__init (
 }
 
 /**
- * Default RAM disk deletion operation
+ * Default RAM disk deletion operation.
  *
- * @v dev_ptr           Points to the RAM disk device to delete
+ * @v dev_ptr           Points to the RAM disk device to delete.
  */
-static
-device__free_decl (
-  free_ramdisk
- )
-{
-  disk__type_ptr disk_ptr = disk__get_ptr ( dev_ptr );
-  ramdisk__type_ptr ramdisk_ptr = ramdisk_get_ptr ( dev_ptr );
-  /*
-   * Free the "inherited class"
-   */
-  ramdisk_ptr->prev_free ( dev_ptr );
-  /*
-   * Track the RAM disk deletion in our global list.  Unfortunately,
-   * for now we have faith that a RAM disk won't be deleted twice and
-   * result in a race condition.  Something to keep in mind...
-   */
-  ExInterlockedRemoveHeadList ( ramdisk_ptr->tracking.Blink,
-				&ramdisk_list_lock );
-
-  wv_free(ramdisk_ptr);
-}
+static void STDCALL free_ramdisk(IN device__type_ptr dev_ptr)
+  {
+    disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
+    ramdisk__type_ptr ramdisk_ptr = ramdisk_get_ptr(dev_ptr);
+    /* Free the "inherited class". */
+    ramdisk_ptr->prev_free(dev_ptr);
+    /*
+     * Track the RAM disk deletion in our global list.  Unfortunately,
+     * for now we have faith that a RAM disk won't be deleted twice and
+     * result in a race condition.  Something to keep in mind...
+     */
+    ExInterlockedRemoveHeadList(
+        ramdisk_ptr->tracking.Blink,
+  			&ramdisk_list_lock
+      );
+  
+    wv_free(ramdisk_ptr);
+  }

@@ -24,8 +24,7 @@
 /**
  * @file
  *
- * Device specifics
- *
+ * Device specifics.
  */
 
 #  include "portable.h"
@@ -120,31 +119,17 @@ extern winvblock__lib_func device__close_decl (
  );
 
 /**
- * Device deletion routine
+ * Device deletion routine.
  *
- * @v dev_ptr           Points to the device to delete
+ * @v dev_ptr           Points to the device to delete.
  */
-#  define device__free_decl( x ) \
-\
-void STDCALL \
-x ( \
-  IN device__type_ptr dev_ptr \
- )
-/*
- * Function pointer for a device deletion routine.
- * 'indent' mangles this, so it looks weird
- */
-typedef device__free_decl (
-   ( *device__free_routine )
- );
+typedef void STDCALL device__free_func(IN device__type_ptr);
 /**
- * Delete a device
+ * Delete a device.
  *
- * @v dev_ptr           Points to the device to delete
+ * @v dev_ptr           Points to the device to delete.
  */
-extern winvblock__lib_func device__free_decl (
-  device__free
- );
+extern winvblock__lib_func device__free_func device__free;
 
 /**
  * Initialize the global, device-common environment
@@ -174,7 +159,7 @@ winvblock__def_struct ( device__ops )
   device__create_pdo_routine create_pdo;
   device__init_routine init;
   device__close_routine close;
-  device__free_routine free;
+  device__free_func * free;
 };
 
 typedef void STDCALL (device__thread_func)(IN void *);

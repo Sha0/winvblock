@@ -24,8 +24,7 @@
 /**
  * @file
  *
- * Disk device specifics
- *
+ * Disk device specifics.
  */
 
 enum _disk__media
@@ -188,7 +187,7 @@ struct _disk__type
   winvblock__uint32 Sectors;
   winvblock__uint32 SectorSize;
   winvblock__uint32 SpecialFileCount;
-  device__free_routine prev_free;
+  device__free_func * prev_free;
   LIST_ENTRY tracking;
   winvblock__any_ptr ext;
 };

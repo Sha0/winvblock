@@ -22,8 +22,7 @@
 /**
  * @file
  *
- * RAM disk specifics
- *
+ * RAM disk specifics.
  */
 
 winvblock__def_struct ( ramdisk__type )
@@ -31,7 +30,7 @@ winvblock__def_struct ( ramdisk__type )
   disk__type_ptr disk;
   winvblock__uint32 DiskBuf;
   winvblock__uint32 DiskSize;
-  device__free_routine prev_free;
+  device__free_func * prev_free;
   LIST_ENTRY tracking;
 };
 

@@ -22,8 +22,7 @@
 /**
  * @file
  *
- * Device specifics
- *
+ * Device specifics.
  */
 
 #include <ntddk.h>
@@ -39,9 +38,7 @@
 static LIST_ENTRY dev_list;
 static KSPIN_LOCK dev_list_lock;
 /* Forward declarations */
-static device__free_decl (
-  free_dev
- );
+static device__free_func free_dev;
 static device__create_pdo_decl (
   make_dev_pdo
  );
@@ -149,37 +146,29 @@ device__close_decl (
 }
 
 /**
- * Delete a device
+ * Delete a device.
  *
- * @v dev_ptr           Points to the device to delete
+ * @v dev_ptr           Points to the device to delete.
  */
-winvblock__lib_func
-device__free_decl (
-  device__free
- )
-{
-  /*
-   * Call the device's free routine
-   */
-  dev_ptr->ops.free ( dev_ptr );
-}
+winvblock__lib_func void STDCALL device__free(IN device__type_ptr dev_ptr)
+  {
+    /* Call the device's free routine. */
+    dev_ptr->ops.free(dev_ptr);
+  }
 
 /**
- * Default device deletion operation
+ * Default device deletion operation.
  *
- * @v dev_ptr           Points to the device to delete
+ * @v dev_ptr           Points to the device to delete.
  */
-static
-device__free_decl (
-  free_dev
- )
-{
-  /*
-   * Track the device deletion in our global list.  Unfortunately,
-   * for now we have faith that a device won't be deleted twice and
-   * result in a race condition.  Something to keep in mind...
-   */
-  ExInterlockedRemoveHeadList ( dev_ptr->tracking.Blink, &dev_list_lock );
-
-  wv_free(dev_ptr);
-}
+static void STDCALL free_dev(IN device__type_ptr dev_ptr)
+  {
+    /*
+     * Track the device deletion in our global list.  Unfortunately,
+     * for now we have faith that a device won't be deleted twice and
+     * result in a race condition.  Something to keep in mind...
+     */
+    ExInterlockedRemoveHeadList(dev_ptr->tracking.Blink, &dev_list_lock);
+  
+    wv_free(dev_ptr);
+  }

@@ -24,8 +24,7 @@
 /**
  * @file
  *
- * Bus specifics
- *
+ * Bus specifics.
  */
 
 winvblock__def_struct ( bus__type )
@@ -38,7 +37,7 @@ winvblock__def_struct ( bus__type )
   KSPIN_LOCK SpinLock;
   LIST_ENTRY tracking;
   winvblock__any_ptr ext;
-  device__free_routine prev_free;
+  device__free_func * prev_free;
   UNICODE_STRING dev_name;
   UNICODE_STRING dos_dev_name;
   winvblock__bool named;

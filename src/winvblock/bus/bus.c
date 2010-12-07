@@ -38,13 +38,13 @@
 #include "bus_dev_ctl.h"
 #include "debug.h"
 
+/* Globals. */
 static PDEVICE_OBJECT boot_bus_fdo = NULL;
 static LIST_ENTRY bus_list;
 static KSPIN_LOCK bus_list_lock;
-/* Forward declarations */
-static device__free_decl (
-  free_bus
- );
+
+/* Forward declarations. */
+static device__free_func free_bus;
 static device__create_pdo_decl (
   create_pdo
  );
@@ -535,29 +535,26 @@ bus__init (
 }
 
 /**
- * Default bus deletion operation
+ * Default bus deletion operation.
  *
- * @v dev_ptr           Points to the bus device to delete
+ * @v dev_ptr           Points to the bus device to delete.
  */
-static
-device__free_decl (
-  free_bus
- )
-{
-  bus__type_ptr bus_ptr = bus__get_ptr ( dev_ptr );
-  /*
-   * Free the "inherited class"
-   */
-  bus_ptr->prev_free ( dev_ptr );
-  /*
-   * Track the bus deletion in our global list.  Unfortunately,
-   * for now we have faith that a bus won't be deleted twice and
-   * result in a race condition.  Something to keep in mind...
-   */
-  ExInterlockedRemoveHeadList ( bus_ptr->tracking.Blink, &bus_list_lock );
-
-  wv_free(bus_ptr);
-}
+static void STDCALL free_bus(IN device__type_ptr dev_ptr)
+  {
+    bus__type_ptr bus_ptr = bus__get_ptr ( dev_ptr );
+    /*
+     * Free the "inherited class"
+     */
+    bus_ptr->prev_free ( dev_ptr );
+    /*
+     * Track the bus deletion in our global list.  Unfortunately,
+     * for now we have faith that a bus won't be deleted twice and
+     * result in a race condition.  Something to keep in mind...
+     */
+    ExInterlockedRemoveHeadList ( bus_ptr->tracking.Blink, &bus_list_lock );
+  
+    wv_free(bus_ptr);
+  }
 
 /**
  * Get a pointer to the boot bus device

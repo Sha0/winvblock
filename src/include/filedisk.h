@@ -30,7 +30,7 @@ winvblock__def_struct ( filedisk__type )
   disk__type_ptr disk;
   HANDLE file;
   winvblock__uint32 hash;
-  device__free_routine prev_free;
+  device__free_func * prev_free;
   LIST_ENTRY tracking;
   LARGE_INTEGER offset;
   /*

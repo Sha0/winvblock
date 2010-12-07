@@ -50,16 +50,16 @@ __divdi3 (
 }
 #endif
 
+/* Globals. */
 static winvblock__uint32 next_disk = 0;
 static LIST_ENTRY disk_list;
 static KSPIN_LOCK disk_list_lock;
 winvblock__bool disk__removable[disk__media_count] = { TRUE, FALSE, TRUE };
 PWCHAR disk__compat_ids[disk__media_count] =
   { L"GenSFloppy", L"GenDisk", L"GenCdRom" };
-/* Forward declaration */
-static device__free_decl (
-  free_disk
- );
+
+/* Forward declarations. */
+static device__free_func free_disk;
 
 static
 disk__max_xfer_len_decl (
@@ -492,29 +492,24 @@ disk__init (
 }
 
 /**
- * Default disk deletion operation
+ * Default disk deletion operation.
  *
- * @v dev_ptr           Points to the disk device to delete
+ * @v dev_ptr           Points to the disk device to delete.
  */
-static
-device__free_decl (
-  free_disk
- )
-{
-  disk__type_ptr disk_ptr = disk__get_ptr ( dev_ptr );
-  /*
-   * Free the "inherited class"
-   */
-  disk_ptr->prev_free ( dev_ptr );
-  /*
-   * Track the disk deletion in our global list.  Unfortunately,
-   * for now we have faith that a disk won't be deleted twice and
-   * result in a race condition.  Something to keep in mind...
-   */
-  ExInterlockedRemoveHeadList ( disk_ptr->tracking.Blink, &disk_list_lock );
-
-  wv_free(disk_ptr);
-}
+static void STDCALL free_disk(IN device__type_ptr dev_ptr)
+  {
+    disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
+    /* Free the "inherited class". */
+    disk_ptr->prev_free(dev_ptr);
+    /*
+     * Track the disk deletion in our global list.  Unfortunately,
+     * for now we have faith that a disk won't be deleted twice and
+     * result in a race condition.  Something to keep in mind...
+     */
+    ExInterlockedRemoveHeadList(disk_ptr->tracking.Blink, &disk_list_lock);
+  
+    wv_free(disk_ptr);
+  }
 
 /* See header for details */
 disk__io_decl ( disk__io )
