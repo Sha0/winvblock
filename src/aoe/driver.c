@@ -72,7 +72,7 @@ enum aoe__tag_type_
 #endif
 
 /** AoE packet. */
-winvblock__def_struct(packet)
+struct aoe__packet_
   {
     winvblock__uint8 ReservedFlag:2;
     winvblock__uint8 ErrorFlag:1;
@@ -136,7 +136,7 @@ winvblock__def_struct(work_tag)
     device__type_ptr device;
     io_req_ptr request_ptr;
     winvblock__uint32 Id;
-    packet_ptr packet_data;
+    struct aoe__packet_ * packet_data;
     winvblock__uint32 PacketSize;
     LARGE_INTEGER FirstSendTime;
     LARGE_INTEGER SendTime;
@@ -752,7 +752,7 @@ NTSTATUS STDCALL DriverEntry(
       }
   
     /* Set up the probe tag's AoE packet reference. */
-    AoE_Globals_ProbeTag->PacketSize = sizeof ( packet );
+    AoE_Globals_ProbeTag->PacketSize = sizeof (struct aoe__packet_);
     /* Allocate and zero-fill the probe tag's packet reference. */
     AoE_Globals_ProbeTag->packet_data = wv_mallocz(
         AoE_Globals_ProbeTag->PacketSize
@@ -1203,7 +1203,7 @@ static disk__init_decl(init)
         /*
          * Establish our tag's AoE packet 
          */
-        tag->PacketSize = sizeof ( packet );
+        tag->PacketSize = sizeof (struct aoe__packet_);
         if ((tag->packet_data = wv_mallocz(tag->PacketSize)) == NULL) {
   	  DBG ( "Couldn't allocate tag->packet_data\n" );
       wv_free(tag);
@@ -1394,7 +1394,7 @@ static disk__io_decl(io)
         /*
          * Allocate and initialize each tag's AoE packet 
          */
-        tag->PacketSize = sizeof ( packet );
+        tag->PacketSize = sizeof (struct aoe__packet_);
         if ( mode == disk__io_mode_write )
   	tag->PacketSize += tag->SectorCount * disk_ptr->SectorSize;
         if ((tag->packet_data = wv_mallocz(tag->PacketSize)) == NULL) {
@@ -1578,7 +1578,7 @@ NTSTATUS STDCALL aoe__reply(
     IN winvblock__uint32 DataSize
   )
   {
-    packet_ptr reply = ( packet_ptr ) Data;
+    struct aoe__packet_ * reply = (struct aoe__packet_ *) Data;
     LONGLONG LBASize;
     work_tag_ptr tag;
     KIRQL Irql;
@@ -1718,7 +1718,7 @@ NTSTATUS STDCALL aoe__reply(
   		search_state_get_max_sectors_per_packet;
   	      break;
   	    case search_state_getting_max_sectors_per_packet:
-  	      DataSize -= sizeof ( packet );
+  	      DataSize -= sizeof (struct aoe__packet_);
   	      if ( DataSize <
   		   ( aoe_disk_ptr->MaxSectorsPerPacket *
   		     disk_ptr->SectorSize ) )
@@ -1730,7 +1730,7 @@ NTSTATUS STDCALL aoe__reply(
   		  aoe_disk_ptr->search_state = search_state_done;
   		}
   	      else if ( aoe_disk_ptr->MTU <
-  			( sizeof ( packet ) +
+  			( sizeof (struct aoe__packet_) +
   			  ( ( aoe_disk_ptr->MaxSectorsPerPacket +
   			      1 ) * disk_ptr->SectorSize ) ) )
   		{
