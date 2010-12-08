@@ -45,7 +45,7 @@ static KSPIN_LOCK bus__list_lock_;
 
 /* Forward declarations. */
 static device__free_func bus__free_;
-static device__create_pdo_decl(create_pdo);
+static device__create_pdo_decl(bus__create_pdo_);
 
 /**
  * Tear down the global, bus-common environment.
@@ -375,7 +375,7 @@ winvblock__lib_func bus__type_ptr bus__create(void) {
     bus_ptr->device = dev_ptr;
     bus_ptr->prev_free = dev_ptr->ops.free;
     dev_ptr->dispatch = bus_dispatch;
-    dev_ptr->ops.create_pdo = create_pdo;
+    dev_ptr->ops.create_pdo = bus__create_pdo_;
     dev_ptr->ops.free = bus__free_;
     dev_ptr->ext = bus_ptr;
     dev_ptr->IsBus = TRUE;
@@ -399,7 +399,7 @@ winvblock__lib_func bus__type_ptr bus__create(void) {
  *
  * Returns a Physical Device Object pointer on success, NULL for failure.
  */
-static device__create_pdo_decl(create_pdo) {
+static device__create_pdo_decl(bus__create_pdo_) {
     PDEVICE_OBJECT pdo_ptr = NULL;
     bus__type_ptr bus_ptr;
     NTSTATUS status;
@@ -476,7 +476,7 @@ NTSTATUS bus__init(void) {
       );
     boot_bus_ptr->named = TRUE;
     /* Create the PDO, which also attaches the FDO *sigh*. */
-    if (create_pdo(boot_bus_ptr->device) == NULL) {
+    if (bus__create_pdo_(boot_bus_ptr->device) == NULL) {
         return STATUS_UNSUCCESSFUL;
       }
     bus__boot_fdo_ = boot_bus_ptr->device->Self;
