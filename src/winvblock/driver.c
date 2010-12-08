@@ -43,10 +43,12 @@
 #include "ramdisk.h"
 #include "debug.h"
 
+/* Exported. */
+PDRIVER_OBJECT driver__obj_ptr = NULL;
+
 /* Globals. */
 static void * driver__state_handle_;
-static winvblock__bool Driver_Globals_Started = FALSE;
-PDRIVER_OBJECT driver__obj_ptr = NULL;
+static winvblock__bool driver__started_ = FALSE;
 
 /* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters. */
 LPWSTR os_load_opts = NULL;
@@ -128,7 +130,7 @@ NTSTATUS STDCALL DriverEntry(
         return STATUS_NOT_SUPPORTED;
       }
     driver__obj_ptr = DriverObject;
-    if (Driver_Globals_Started)
+    if (driver__started_)
       return STATUS_SUCCESS;
     Debug_Initialize();
     status = registry__note_os_load_opts(&os_load_opts);
@@ -165,7 +167,7 @@ NTSTATUS STDCALL DriverEntry(
     filedisk__init();           /* TODO: Check for error. */
     ramdisk__init();            /* TODO: Check for error. */
 
-    Driver_Globals_Started = TRUE;
+    driver__started_ = TRUE;
     DBG("Exit\n");
     return STATUS_SUCCESS;
   }
@@ -302,7 +304,7 @@ static void STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
       PoUnregisterSystemState(driver__state_handle_);
     bus__module_shutdown();
     wv_free(os_load_opts);
-    Driver_Globals_Started = FALSE;
+    driver__started_ = FALSE;
     DBG("Done\n");
   }
 
