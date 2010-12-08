@@ -198,7 +198,7 @@ static struct aoe__work_tag_ * aoe__tag_list_ = NULL;
 static struct aoe__work_tag_ * aoe__tag_list_last_ = NULL;
 static struct aoe__work_tag_ * aoe__probe_tag_ = NULL;
 static struct aoe__disk_search_ * aoe__disk_search_list_ = NULL;
-static LONG AoE_Globals_OutstandingTags = 0;
+static LONG aoe__outstanding_tags_ = 0;
 static HANDLE AoE_Globals_ThreadHandle;
 static winvblock__bool AoE_Globals_Started = FALSE;
 static LIST_ENTRY aoe_disk_list;
@@ -1116,9 +1116,9 @@ static disk__init_decl(init)
   		 * Remove our tag from the list 
   		 */
   		tag->next->previous = tag->previous;
-  	      AoE_Globals_OutstandingTags--;
-  	      if ( AoE_Globals_OutstandingTags < 0 )
-  		DBG ( "AoE_Globals_OutstandingTags < 0!!\n" );
+  	      aoe__outstanding_tags_--;
+  	      if ( aoe__outstanding_tags_ < 0 )
+  		DBG ( "aoe__outstanding_tags_ < 0!!\n" );
   	      /*
   	       * Free our tag and its AoE packet 
   	       */
@@ -1647,9 +1647,9 @@ NTSTATUS STDCALL aoe__reply(
   	aoe__tag_list_last_ = tag->previous;
         else
   	tag->next->previous = tag->previous;
-        AoE_Globals_OutstandingTags--;
-        if ( AoE_Globals_OutstandingTags < 0 )
-  	DBG ( "AoE_Globals_OutstandingTags < 0!!\n" );
+        aoe__outstanding_tags_--;
+        if ( aoe__outstanding_tags_ < 0 )
+  	DBG ( "aoe__outstanding_tags_ < 0!!\n" );
         KeSetEvent ( &aoe__thread_sig_evt_, 0, FALSE );
       }
     KeReleaseSpinLock ( &aoe__spinlock_, Irql );
@@ -1836,8 +1836,8 @@ static void STDCALL aoe__thread_(IN void *StartContext)
         if ( CurrentTime.QuadPart > ( ReportTime.QuadPart + 10000000LL ) )
   	{
   	  DBG ( "Sends: %d  Resends: %d  ResendFails: %d  Fails: %d  "
-  		"AoE_Globals_OutstandingTags: %d  RequestTimeout: %d\n", Sends,
-  		Resends, ResendFails, Fails, AoE_Globals_OutstandingTags,
+  		"aoe__outstanding_tags_: %d  RequestTimeout: %d\n", Sends,
+  		Resends, ResendFails, Fails, aoe__outstanding_tags_,
   		RequestTimeout );
   	  Sends = 0;
   	  Resends = 0;
@@ -1882,13 +1882,13 @@ static void STDCALL aoe__thread_(IN void *StartContext)
   	  RequestTimeout = aoe_disk_ptr->Timeout;
   	  if ( tag->Id == 0 )
   	    {
-  	      if ( AoE_Globals_OutstandingTags <= 64 )
+  	      if ( aoe__outstanding_tags_ <= 64 )
   		{
   		  /*
-  		   * if ( AoE_Globals_OutstandingTags <= 102400 ) { 
+  		   * if ( aoe__outstanding_tags_ <= 102400 ) { 
   		   */
-  		  if ( AoE_Globals_OutstandingTags < 0 )
-  		    DBG ( "AoE_Globals_OutstandingTags < 0!!\n" );
+  		  if ( aoe__outstanding_tags_ < 0 )
+  		    DBG ( "aoe__outstanding_tags_ < 0!!\n" );
   		  tag->Id = NextTagId++;
   		  if ( NextTagId == 0 )
   		    NextTagId++;
@@ -1900,7 +1900,7 @@ static void STDCALL aoe__thread_(IN void *StartContext)
   		    {
   		      KeQuerySystemTime ( &tag->FirstSendTime );
   		      KeQuerySystemTime ( &tag->SendTime );
-  		      AoE_Globals_OutstandingTags++;
+  		      aoe__outstanding_tags_++;
   		      Sends++;
   		    }
   		  else
