@@ -199,7 +199,7 @@ static struct aoe__work_tag_ * aoe__tag_list_last_ = NULL;
 static struct aoe__work_tag_ * aoe__probe_tag_ = NULL;
 static struct aoe__disk_search_ * aoe__disk_search_list_ = NULL;
 static LONG aoe__outstanding_tags_ = 0;
-static HANDLE AoE_Globals_ThreadHandle;
+static HANDLE aoe__thread_handle_;
 static winvblock__bool AoE_Globals_Started = FALSE;
 static LIST_ENTRY aoe_disk_list;
 static KSPIN_LOCK aoe_disk_list_lock;
@@ -785,7 +785,7 @@ NTSTATUS STDCALL DriverEntry(
   
     /* Create global thread. */
     if (!NT_SUCCESS(Status = PsCreateSystemThread(
-        &AoE_Globals_ThreadHandle,
+        &aoe__thread_handle_,
         THREAD_ALL_ACCESS,
   			&ObjectAttributes,
         NULL,
@@ -797,11 +797,11 @@ NTSTATUS STDCALL DriverEntry(
   
     if ( !NT_SUCCESS
          ( Status =
-  	 ObReferenceObjectByHandle ( AoE_Globals_ThreadHandle,
+  	 ObReferenceObjectByHandle ( aoe__thread_handle_,
   				     THREAD_ALL_ACCESS, NULL, KernelMode,
   				     &ThreadObject, NULL ) ) )
       {
-        ZwClose ( AoE_Globals_ThreadHandle );
+        ZwClose ( aoe__thread_handle_ );
         Error ( "ObReferenceObjectByHandle", Status );
         aoe__stop_ = TRUE;
         KeSetEvent ( &aoe__thread_sig_evt_, 0, FALSE );
@@ -850,10 +850,10 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
         /* Wait until the event has been signalled. */
         if ( !NT_SUCCESS
   	   ( Status =
-  	     ZwWaitForSingleObject ( AoE_Globals_ThreadHandle, FALSE,
+  	     ZwWaitForSingleObject ( aoe__thread_handle_, FALSE,
   				     NULL ) ) )
   	Error ( "AoE_Stop ZwWaitForSingleObject", Status );
-        ZwClose ( AoE_Globals_ThreadHandle );
+        ZwClose ( aoe__thread_handle_ );
       }
   
     /* Free the target list. */
