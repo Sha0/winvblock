@@ -201,7 +201,7 @@ static struct aoe__disk_search_ * aoe__disk_search_list_ = NULL;
 static LONG aoe__outstanding_tags_ = 0;
 static HANDLE aoe__thread_handle_;
 static winvblock__bool aoe__started_ = FALSE;
-static LIST_ENTRY aoe_disk_list;
+static LIST_ENTRY aoe__disk_list_;
 static KSPIN_LOCK aoe__disk_list_lock_;
 
 static irp__handling handling_table[] =
@@ -725,7 +725,7 @@ NTSTATUS STDCALL DriverEntry(
     if ( aoe__started_ )
       return STATUS_SUCCESS;
     /* Initialize the global list of AoE disks. */
-    InitializeListHead ( &aoe_disk_list );
+    InitializeListHead ( &aoe__disk_list_ );
     KeInitializeSpinLock ( &aoe__disk_list_lock_ );
     /* Setup the Registry. */
     if ( !NT_SUCCESS ( setup_reg ( &Status ) ) )
@@ -2326,7 +2326,7 @@ static struct aoe__disk_type_ * aoe__create_disk_(void)
       goto err_noaoedisk;
     /* Track the new AoE disk in our global list. */
     ExInterlockedInsertTailList(
-        &aoe_disk_list,
+        &aoe__disk_list_,
         &aoe_disk_ptr->tracking,
   			&aoe__disk_list_lock_
       );
