@@ -130,7 +130,7 @@ struct aoe__io_req_
   };
 
 /** A work item "tag". */
-winvblock__def_struct(work_tag)
+struct aoe__work_tag_
   {
     enum aoe__tag_type_ type;
     device__type_ptr device;
@@ -142,15 +142,15 @@ winvblock__def_struct(work_tag)
     LARGE_INTEGER SendTime;
     winvblock__uint32 BufferOffset;
     winvblock__uint32 SectorCount;
-    work_tag_ptr next;
-    work_tag_ptr previous;
+    struct aoe__work_tag_ * next;
+    struct aoe__work_tag_ * previous;
   };
 
 /** A disk search. */
 winvblock__def_struct(disk_search)
   {
     device__type_ptr device;
-    work_tag_ptr tag;
+    struct aoe__work_tag_ * tag;
     disk_search_ptr next;
   };
 
@@ -195,9 +195,9 @@ static KSPIN_LOCK AoE_Globals_TargetListSpinLock;
 static winvblock__bool AoE_Globals_Stop = FALSE;
 static KSPIN_LOCK AoE_Globals_SpinLock;
 static KEVENT AoE_Globals_ThreadSignalEvent;
-static work_tag_ptr AoE_Globals_TagList = NULL;
-static work_tag_ptr AoE_Globals_TagListLast = NULL;
-static work_tag_ptr AoE_Globals_ProbeTag = NULL;
+static struct aoe__work_tag_ * AoE_Globals_TagList = NULL;
+static struct aoe__work_tag_ * AoE_Globals_TagListLast = NULL;
+static struct aoe__work_tag_ * AoE_Globals_ProbeTag = NULL;
 static disk_search_ptr AoE_Globals_DiskSearchList = NULL;
 static LONG AoE_Globals_OutstandingTags = 0;
 static HANDLE AoE_Globals_ThreadHandle;
@@ -833,7 +833,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
   {
     NTSTATUS Status;
     disk_search_ptr disk_searcher, previous_disk_searcher;
-    work_tag_ptr tag;
+    struct aoe__work_tag_ * tag;
     KIRQL Irql, Irql2;
     target_list_ptr Walker, Next;
   
@@ -942,7 +942,7 @@ static disk__init_decl(init)
   {
     disk_search_ptr disk_searcher, disk_search_walker, previous_disk_searcher;
     LARGE_INTEGER Timeout, CurrentTime;
-    work_tag_ptr tag, tag_walker;
+    struct aoe__work_tag_ * tag, * tag_walker;
     KIRQL Irql, InnerIrql;
     LARGE_INTEGER MaxSectorsPerPacketSendTime;
     winvblock__uint32 MTU;
@@ -1292,7 +1292,7 @@ static disk__init_decl(init)
 static disk__io_decl(io)
   {
     struct aoe__io_req_ * request_ptr;
-    work_tag_ptr tag, new_tag_list = NULL, previous_tag = NULL;
+    struct aoe__work_tag_ * tag, * new_tag_list = NULL, * previous_tag = NULL;
     KIRQL Irql;
     winvblock__uint32 i;
     PHYSICAL_ADDRESS PhysicalAddress;
@@ -1580,7 +1580,7 @@ NTSTATUS STDCALL aoe__reply(
   {
     struct aoe__packet_ * reply = (struct aoe__packet_ *) Data;
     LONGLONG LBASize;
-    work_tag_ptr tag;
+    struct aoe__work_tag_ * tag;
     KIRQL Irql;
     winvblock__bool Found = FALSE;
     LARGE_INTEGER CurrentTime;
@@ -1797,7 +1797,7 @@ static void STDCALL aoe__thread_(IN void *StartContext)
   {
     LARGE_INTEGER Timeout, CurrentTime, ProbeTime, ReportTime;
     winvblock__uint32 NextTagId = 1;
-    work_tag_ptr tag;
+    struct aoe__work_tag_ * tag;
     KIRQL Irql;
     winvblock__uint32 Sends = 0;
     winvblock__uint32 Resends = 0;
