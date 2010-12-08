@@ -202,7 +202,7 @@ static LONG aoe__outstanding_tags_ = 0;
 static HANDLE aoe__thread_handle_;
 static winvblock__bool aoe__started_ = FALSE;
 static LIST_ENTRY aoe_disk_list;
-static KSPIN_LOCK aoe_disk_list_lock;
+static KSPIN_LOCK aoe__disk_list_lock_;
 
 static irp__handling handling_table[] =
   {
@@ -726,7 +726,7 @@ NTSTATUS STDCALL DriverEntry(
       return STATUS_SUCCESS;
     /* Initialize the global list of AoE disks. */
     InitializeListHead ( &aoe_disk_list );
-    KeInitializeSpinLock ( &aoe_disk_list_lock );
+    KeInitializeSpinLock ( &aoe__disk_list_lock_ );
     /* Setup the Registry. */
     if ( !NT_SUCCESS ( setup_reg ( &Status ) ) )
       {
@@ -2328,7 +2328,7 @@ static struct aoe__disk_type_ * aoe__create_disk_(void)
     ExInterlockedInsertTailList(
         &aoe_disk_list,
         &aoe_disk_ptr->tracking,
-  			&aoe_disk_list_lock
+  			&aoe__disk_list_lock_
       );
     /* Populate non-zero device defaults. */
     aoe_disk_ptr->disk = disk_ptr;
@@ -2369,7 +2369,7 @@ static void STDCALL aoe__free_disk_(IN device__type_ptr dev_ptr)
      */
     ExInterlockedRemoveHeadList(
         aoe_disk_ptr->tracking.Blink,
-  			&aoe_disk_list_lock
+  			&aoe__disk_list_lock_
       );
   
     wv_free(aoe_disk_ptr);
