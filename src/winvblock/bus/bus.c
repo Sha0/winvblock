@@ -477,6 +477,8 @@ NTSTATUS bus__module_init(void) {
     KeInitializeSpinLock(&bus__list_lock_);
     /* We handle AddDevice call-backs for the driver. */
     driver__obj_ptr->DriverExtension->AddDevice = attach_fdo;
+    bus__module_up_ = TRUE;
+
     /* Establish the boot bus (required for booting from a WinVBlock disk). */
     boot_bus_ptr = bus__create();
     if (boot_bus_ptr == NULL)
@@ -497,7 +499,6 @@ NTSTATUS bus__module_init(void) {
       }
     bus__boot_fdo_ = boot_bus_ptr->device->Self;
 
-    bus__module_up_ = TRUE;
     return STATUS_SUCCESS;
   }
 
