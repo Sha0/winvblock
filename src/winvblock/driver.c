@@ -245,7 +245,7 @@ static NTSTATUS STDCALL (driver_dispatch)(
 #ifdef DEBUGIRPS
   Debug_IrpStart ( DeviceObject, Irp );
 #endif
-  dev_ptr = ( ( driver__dev_ext_ptr ) DeviceObject->DeviceExtension )->device;
+  dev_ptr = device__get(DeviceObject);
 
   /*
    * We handle IRP_MJ_POWER as an exception 
@@ -302,7 +302,7 @@ winvblock__lib_func NTSTATUS STDCALL (driver__default_dispatch)(
         dev,
         irp,
         IoGetCurrentIrpStackLocation(irp),
-        ((driver__dev_ext_ptr) dev->DeviceExtension)->device,
+        device__get(dev),
         &completion
       );
     /* Fall through to some driver defaults, if needed. */

@@ -229,8 +229,7 @@ Debug_DecodeIrp (
   IN PCHAR DebugMessage
  )
 {
-  device__type_ptr dev_ptr =
-    ( ( driver__dev_ext_ptr ) DeviceObject->DeviceExtension )->device;
+  device__type_ptr dev_ptr = device__get(DeviceObject);
   PIO_STACK_LOCATION Stack = IoGetCurrentIrpStackLocation ( Irp );
   PSCSI_REQUEST_BLOCK Srb;
   PCDB Cdb;

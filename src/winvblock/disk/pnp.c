@@ -266,7 +266,6 @@ NTSTATUS STDCALL disk_pnp__query_capabilities(
     Stack->Parameters.DeviceCapabilities.Capabilities;
   NTSTATUS status;
   disk__type_ptr disk_ptr;
-  driver__dev_ext_ptr bus_dev_ext_ptr;
   bus__type_ptr bus_ptr;
   DEVICE_CAPABILITIES ParentDeviceCapabilities;
 
@@ -277,8 +276,7 @@ NTSTATUS STDCALL disk_pnp__query_capabilities(
       goto ret_path;
     }
   disk_ptr = disk__get_ptr ( dev_ptr );
-  bus_dev_ext_ptr = ( driver__dev_ext_ptr ) dev_ptr->Parent->DeviceExtension;
-  bus_ptr = bus__get_ptr ( bus_dev_ext_ptr->device );
+  bus_ptr = bus__get_ptr(device__get(dev_ptr->Parent));
   status =
     Bus_GetDeviceCapabilities ( bus_ptr->LowerDeviceObject,
 				&ParentDeviceCapabilities );

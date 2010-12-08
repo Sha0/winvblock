@@ -172,3 +172,15 @@ static void STDCALL free_dev(IN device__type_ptr dev_ptr)
   
     wv_free(dev_ptr);
   }
+
+/**
+ * Get a device from a DEVICE_OBJECT.
+ *
+ * @v dev_obj           Points to the DEVICE_OBJECT to get the device from.
+ * @ret                 Returns a pointer to the device on success, else NULL.
+ */
+winvblock__lib_func device__type_ptr device__get(PDEVICE_OBJECT dev_obj)
+  {
+    driver__dev_ext_ptr dev_ext = dev_obj->DeviceExtension;
+    return dev_ext->device;
+  }

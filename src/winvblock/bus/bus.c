@@ -350,7 +350,7 @@ static NTSTATUS STDCALL (bus_dispatch)(
         dev,
         irp,
         IoGetCurrentIrpStackLocation(irp),
-        ((driver__dev_ext_ptr) dev->DeviceExtension)->device,
+        device__get(dev),
         &completion
       );
     /* Fall through to the bus defaults, if needed. */
@@ -557,22 +557,16 @@ static void STDCALL free_bus(IN device__type_ptr dev_ptr)
   }
 
 /**
- * Get a pointer to the boot bus device
+ * Get a pointer to the boot bus device.
  *
- * @ret         A pointer to the boot bus, or NULL
+ * @ret         A pointer to the boot bus, or NULL.
  */
-winvblock__lib_func bus__type_ptr
-bus__boot (
-  void
- )
-{
-  driver__dev_ext_ptr dev_ext_ptr;
-
-  if ( !boot_bus_fdo )
-    {
-      DBG ( "No boot bus device!\n" );
-      return NULL;
-    }
-  dev_ext_ptr = ( driver__dev_ext_ptr ) boot_bus_fdo->DeviceExtension;
-  return bus__get_ptr ( dev_ext_ptr->device );
-}
+winvblock__lib_func bus__type_ptr bus__boot(void)
+  {
+    if ( !boot_bus_fdo )
+      {
+        DBG ( "No boot bus device!\n" );
+        return NULL;
+      }
+    return bus__get_ptr(device__get(boot_bus_fdo));
+  }
