@@ -27,55 +27,44 @@
  * Driver specifics.
  */
 
-#  include "portable.h"
+#include "portable.h"
 
 /* For testing and debugging */
-#  if 0
-#    define RIS
-#    define DEBUGIRPS
-#    define DEBUGMOSTPROTOCOLCALLS
-#    define DEBUGALLPROTOCOLCALLS
-#  endif
+#if 0
+#  define RIS
+#  define DEBUGIRPS
+#  define DEBUGMOSTPROTOCOLCALLS
+#  define DEBUGALLPROTOCOLCALLS
+#endif
 
-#  define POOLSIZE 2048
+#define POOLSIZE 2048
 
 extern PDRIVER_OBJECT driver__obj_ptr;
-
-extern winvblock__lib_func void STDCALL Driver_CompletePendingIrp (
-  IN PIRP Irp
- );
-/*
- * Note the exception to the function naming convention
- */
-extern winvblock__lib_func NTSTATUS STDCALL Error (
-  IN PCHAR Message,
-  IN NTSTATUS Status
- );
-/*
- * Note the exception to the function naming convention
- */
-extern NTSTATUS STDCALL DriverEntry (
-  IN PDRIVER_OBJECT DriverObject,
-  IN PUNICODE_STRING RegistryPath
- );
+extern winvblock__lib_func void STDCALL Driver_CompletePendingIrp(IN PIRP);
+/* Note the exception to the function naming convention. */
+extern winvblock__lib_func NTSTATUS STDCALL Error(IN PCHAR, IN NTSTATUS);
+/* Note the exception to the function naming convention. */
+extern NTSTATUS STDCALL DriverEntry(
+    IN PDRIVER_OBJECT,
+    IN PUNICODE_STRING
+  );
 
 /* An unfortunate forward declaration.  Definition resolved in device.h */
-winvblock__def_struct ( device__type );
+winvblock__def_struct(device__type);
 
 /* The physical/function device object's (PDO's/FDO's) DeviceExtension */
-winvblock__def_struct ( driver__dev_ext )
-{
-  device__type_ptr device;
-};
+winvblock__def_struct(driver__dev_ext) {
+    device__type_ptr device;
+  };
 
 /* The prototype for a device IRP dispatch. */
-typedef NTSTATUS STDCALL (driver__dispatch_func)(
+typedef NTSTATUS STDCALL driver__dispatch_func(
     IN PDEVICE_OBJECT,
     IN PIRP
   );
 
-extern winvblock__lib_func driver__dispatch_func (driver__default_dispatch);
+extern winvblock__lib_func driver__dispatch_func driver__default_dispatch;
 extern winvblock__lib_func irp__handler driver__not_supported;
 extern winvblock__lib_func irp__handler driver__create_close;
 
-#endif				/* _DRIVER_H */
+#endif	/* _DRIVER_H */
