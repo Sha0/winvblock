@@ -197,7 +197,7 @@ static KEVENT aoe__thread_sig_evt_;
 static struct aoe__work_tag_ * aoe__tag_list_ = NULL;
 static struct aoe__work_tag_ * aoe__tag_list_last_ = NULL;
 static struct aoe__work_tag_ * aoe__probe_tag_ = NULL;
-static struct aoe__disk_search_ * AoE_Globals_DiskSearchList = NULL;
+static struct aoe__disk_search_ * aoe__disk_search_list_ = NULL;
 static LONG AoE_Globals_OutstandingTags = 0;
 static HANDLE AoE_Globals_ThreadHandle;
 static winvblock__bool AoE_Globals_Started = FALSE;
@@ -871,7 +871,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
     KeAcquireSpinLock ( &aoe__spinlock_, &Irql );
   
     /* Free disk searches in the global disk search list. */
-    disk_searcher = AoE_Globals_DiskSearchList;
+    disk_searcher = aoe__disk_search_list_;
     while ( disk_searcher != NULL )
       {
         KeSetEvent ( &( disk__get_ptr ( disk_searcher->device )->SearchEvent ),
@@ -973,13 +973,13 @@ static disk__init_decl(init)
     /*
      * Add our disk search to the global list of disk searches 
      */
-    if ( AoE_Globals_DiskSearchList == NULL )
+    if ( aoe__disk_search_list_ == NULL )
       {
-        AoE_Globals_DiskSearchList = disk_searcher;
+        aoe__disk_search_list_ = disk_searcher;
       }
     else
       {
-        disk_search_walker = AoE_Globals_DiskSearchList;
+        disk_search_walker = aoe__disk_search_list_;
         while ( disk_search_walker->next )
   	disk_search_walker = disk_search_walker->next;
         disk_search_walker->next = disk_searcher;
@@ -1129,16 +1129,16 @@ static disk__init_decl(init)
   	  /*
   	   * Disk search clean-up 
   	   */
-  	  if ( AoE_Globals_DiskSearchList == NULL )
+  	  if ( aoe__disk_search_list_ == NULL )
   	    {
-  	      DBG ( "AoE_Globals_DiskSearchList == NULL!!\n" );
+  	      DBG ( "aoe__disk_search_list_ == NULL!!\n" );
   	    }
   	  else
   	    {
   	      /*
   	       * Find our disk search in the global list of disk searches 
   	       */
-  	      disk_search_walker = AoE_Globals_DiskSearchList;
+  	      disk_search_walker = aoe__disk_search_list_;
   	      while ( disk_search_walker
   		      && disk_search_walker->device != disk_ptr->device )
   		{
@@ -1151,8 +1151,8 @@ static disk__init_decl(init)
   		   * We found our disk search.  If it's the first one in
   		   * the list, adjust the list and remove it
   		   */
-  		  if ( disk_search_walker == AoE_Globals_DiskSearchList )
-  		    AoE_Globals_DiskSearchList = disk_search_walker->next;
+  		  if ( disk_search_walker == aoe__disk_search_list_ )
+  		    aoe__disk_search_list_ = disk_search_walker->next;
   		  else
   		    /*
   		     * Just remove it 
@@ -1165,7 +1165,7 @@ static disk__init_decl(init)
   		}
   	      else
   		{
-  		  DBG ( "Disk not found in AoE_Globals_DiskSearchList!!\n" );
+  		  DBG ( "Disk not found in aoe__disk_search_list_!!\n" );
   		}
   	    }
   
