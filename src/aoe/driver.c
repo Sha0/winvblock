@@ -119,7 +119,7 @@ struct aoe__packet_
 #endif
 
 /** An I/O request. */
-winvblock__def_struct(io_req)
+struct aoe__io_req_
   {
     disk__io_mode Mode;
     winvblock__uint32 SectorCount;
@@ -134,7 +134,7 @@ winvblock__def_struct(work_tag)
   {
     enum aoe__tag_type_ type;
     device__type_ptr device;
-    io_req_ptr request_ptr;
+    struct aoe__io_req_ * request_ptr;
     winvblock__uint32 Id;
     struct aoe__packet_ * packet_data;
     winvblock__uint32 PacketSize;
@@ -1291,7 +1291,7 @@ static disk__init_decl(init)
 
 static disk__io_decl(io)
   {
-    io_req_ptr request_ptr;
+    struct aoe__io_req_ * request_ptr;
     work_tag_ptr tag, new_tag_list = NULL, previous_tag = NULL;
     KIRQL Irql;
     winvblock__uint32 i;
