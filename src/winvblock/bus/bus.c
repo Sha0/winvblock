@@ -44,7 +44,7 @@ static LIST_ENTRY bus__list_;
 static KSPIN_LOCK bus__list_lock_;
 
 /* Forward declarations. */
-static device__free_func free_bus;
+static device__free_func bus__free_;
 static device__create_pdo_decl(create_pdo);
 
 /**
@@ -376,7 +376,7 @@ winvblock__lib_func bus__type_ptr bus__create(void) {
     bus_ptr->prev_free = dev_ptr->ops.free;
     dev_ptr->dispatch = bus_dispatch;
     dev_ptr->ops.create_pdo = create_pdo;
-    dev_ptr->ops.free = free_bus;
+    dev_ptr->ops.free = bus__free_;
     dev_ptr->ext = bus_ptr;
     dev_ptr->IsBus = TRUE;
     KeInitializeSpinLock(&bus_ptr->SpinLock);
@@ -489,7 +489,7 @@ NTSTATUS bus__init(void) {
  *
  * @v dev_ptr           Points to the bus device to delete.
  */
-static void STDCALL free_bus(IN device__type_ptr dev_ptr) {
+static void STDCALL bus__free_(IN device__type_ptr dev_ptr) {
     bus__type_ptr bus_ptr = bus__get(dev_ptr);
     /* Free the "inherited class". */
     bus_ptr->prev_free(dev_ptr);
