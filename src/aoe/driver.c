@@ -147,11 +147,11 @@ struct aoe__work_tag_
   };
 
 /** A disk search. */
-winvblock__def_struct(disk_search)
+struct aoe__disk_search_
   {
     device__type_ptr device;
     struct aoe__work_tag_ * tag;
-    disk_search_ptr next;
+    struct aoe__disk_search_ * next;
   };
 
 enum _search_state
@@ -198,7 +198,7 @@ static KEVENT AoE_Globals_ThreadSignalEvent;
 static struct aoe__work_tag_ * AoE_Globals_TagList = NULL;
 static struct aoe__work_tag_ * AoE_Globals_TagListLast = NULL;
 static struct aoe__work_tag_ * AoE_Globals_ProbeTag = NULL;
-static disk_search_ptr AoE_Globals_DiskSearchList = NULL;
+static struct aoe__disk_search_ * AoE_Globals_DiskSearchList = NULL;
 static LONG AoE_Globals_OutstandingTags = 0;
 static HANDLE AoE_Globals_ThreadHandle;
 static winvblock__bool AoE_Globals_Started = FALSE;
@@ -832,7 +832,7 @@ NTSTATUS STDCALL DriverEntry(
 static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
   {
     NTSTATUS Status;
-    disk_search_ptr disk_searcher, previous_disk_searcher;
+    struct aoe__disk_search_ * disk_searcher, * previous_disk_searcher;
     struct aoe__work_tag_ * tag;
     KIRQL Irql, Irql2;
     target_list_ptr Walker, Next;
@@ -940,7 +940,8 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
  */
 static disk__init_decl(init)
   {
-    disk_search_ptr disk_searcher, disk_search_walker, previous_disk_searcher;
+    struct aoe__disk_search_
+      * disk_searcher, * disk_search_walker, * previous_disk_searcher;
     LARGE_INTEGER Timeout, CurrentTime;
     struct aoe__work_tag_ * tag, * tag_walker;
     KIRQL Irql, InnerIrql;
