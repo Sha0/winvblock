@@ -193,7 +193,7 @@ static struct aoe__target_list_ * aoe__target_list_ = NULL;
 static KSPIN_LOCK aoe__target_list_spinlock_;
 static winvblock__bool aoe__stop_ = FALSE;
 static KSPIN_LOCK aoe__spinlock_;
-static KEVENT AoE_Globals_ThreadSignalEvent;
+static KEVENT aoe__thread_sig_evt_;
 static struct aoe__work_tag_ * AoE_Globals_TagList = NULL;
 static struct aoe__work_tag_ * AoE_Globals_TagListLast = NULL;
 static struct aoe__work_tag_ * AoE_Globals_ProbeTag = NULL;
@@ -776,7 +776,7 @@ NTSTATUS STDCALL DriverEntry(
   
     /* Initialize global spin-lock and global thread signal event. */
     KeInitializeSpinLock ( &aoe__spinlock_ );
-    KeInitializeEvent ( &AoE_Globals_ThreadSignalEvent, SynchronizationEvent,
+    KeInitializeEvent ( &aoe__thread_sig_evt_, SynchronizationEvent,
   		      FALSE );
   
     /* Initialize object attributes. */
@@ -804,7 +804,7 @@ NTSTATUS STDCALL DriverEntry(
         ZwClose ( AoE_Globals_ThreadHandle );
         Error ( "ObReferenceObjectByHandle", Status );
         aoe__stop_ = TRUE;
-        KeSetEvent ( &AoE_Globals_ThreadSignalEvent, 0, FALSE );
+        KeSetEvent ( &aoe__thread_sig_evt_, 0, FALSE );
       }
   
     {
@@ -846,7 +846,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
     if ( !aoe__stop_ )
       {
         aoe__stop_ = TRUE;
-        KeSetEvent ( &AoE_Globals_ThreadSignalEvent, 0, FALSE );
+        KeSetEvent ( &aoe__thread_sig_evt_, 0, FALSE );
         /* Wait until the event has been signalled. */
         if ( !NT_SUCCESS
   	   ( Status =
@@ -1502,7 +1502,7 @@ static disk__io_decl(io)
     IoMarkIrpPending ( irp );
   
     KeReleaseSpinLock ( &aoe__spinlock_, Irql );
-    KeSetEvent ( &AoE_Globals_ThreadSignalEvent, 0, FALSE );
+    KeSetEvent ( &aoe__thread_sig_evt_, 0, FALSE );
     return STATUS_PENDING;
   }
 
@@ -1650,7 +1650,7 @@ NTSTATUS STDCALL aoe__reply(
         AoE_Globals_OutstandingTags--;
         if ( AoE_Globals_OutstandingTags < 0 )
   	DBG ( "AoE_Globals_OutstandingTags < 0!!\n" );
-        KeSetEvent ( &AoE_Globals_ThreadSignalEvent, 0, FALSE );
+        KeSetEvent ( &aoe__thread_sig_evt_, 0, FALSE );
       }
     KeReleaseSpinLock ( &aoe__spinlock_, Irql );
   
@@ -1782,7 +1782,7 @@ NTSTATUS STDCALL aoe__reply(
   	break;
       }
   
-    KeSetEvent ( &AoE_Globals_ThreadSignalEvent, 0, FALSE );
+    KeSetEvent ( &aoe__thread_sig_evt_, 0, FALSE );
     wv_free(tag->packet_data);
     wv_free(tag);
     return STATUS_SUCCESS;
@@ -1820,9 +1820,9 @@ static void STDCALL aoe__thread_(IN void *StartContext)
          * 100.000 * 100ns = 10.000.000 ns = 10ms
          */
         Timeout.QuadPart = -100000LL;
-        KeWaitForSingleObject ( &AoE_Globals_ThreadSignalEvent, Executive,
+        KeWaitForSingleObject ( &aoe__thread_sig_evt_, Executive,
   			      KernelMode, FALSE, &Timeout );
-        KeResetEvent ( &AoE_Globals_ThreadSignalEvent );
+        KeResetEvent ( &aoe__thread_sig_evt_ );
         if ( aoe__stop_ )
   	{
   	  DBG ( "Stopping...\n" );
