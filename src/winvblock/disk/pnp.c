@@ -266,7 +266,7 @@ NTSTATUS STDCALL disk_pnp__query_capabilities(
     Stack->Parameters.DeviceCapabilities.Capabilities;
   NTSTATUS status;
   disk__type_ptr disk_ptr;
-  bus__type_ptr bus_ptr;
+  struct bus__type * bus_ptr;
   DEVICE_CAPABILITIES ParentDeviceCapabilities;
 
   if ( DeviceCapabilities->Version != 1

@@ -71,7 +71,7 @@ void bus__finalize(void) {
  * @ret                 TRUE for success, FALSE for failure.
  */
 winvblock__lib_func winvblock__bool STDCALL bus__add_child(
-    IN OUT bus__type_ptr bus_ptr,
+    IN OUT struct bus__type * bus_ptr,
     IN OUT device__type_ptr dev_ptr
   ) {
     /**
@@ -128,7 +128,7 @@ static NTSTATUS STDCALL sys_ctl(
     IN struct _device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   ) {
-    bus__type_ptr bus_ptr = bus__get(dev_ptr);
+    struct bus__type * bus_ptr = bus__get(dev_ptr);
     DBG("...\n");
     IoSkipCurrentIrpStackLocation(Irp);
     *completion_ptr = TRUE;
@@ -142,7 +142,7 @@ static NTSTATUS STDCALL power(
     IN struct _device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   ) {
-    bus__type_ptr bus_ptr = bus__get(dev_ptr);
+    struct bus__type * bus_ptr = bus__get(dev_ptr);
     PoStartNextPowerIrp(Irp);
     IoSkipCurrentIrpStackLocation(Irp);
     *completion_ptr = TRUE;
@@ -208,7 +208,7 @@ static NTSTATUS STDCALL attach_fdo(
     IN PDEVICE_OBJECT PhysicalDeviceObject
   ) {
     PLIST_ENTRY walker;
-    bus__type_ptr bus_ptr;
+    struct bus__type * bus_ptr;
     NTSTATUS status;
     PUNICODE_STRING dev_name = NULL;
     PDEVICE_OBJECT fdo = NULL;
@@ -218,7 +218,7 @@ static NTSTATUS STDCALL attach_fdo(
     /* Search for the associated bus. */
     walker = bus__list_.Flink;
     while (walker != &bus__list_) {
-        bus_ptr = CONTAINING_RECORD(walker, bus__type, tracking);
+        bus_ptr = CONTAINING_RECORD(walker, struct bus__type, tracking);
         if (bus_ptr->PhysicalDeviceObject == PhysicalDeviceObject)
           break;
         walker = walker->Flink;
@@ -354,9 +354,9 @@ static NTSTATUS STDCALL bus_dispatch(
  *
  * See the header file for additional details.
  */
-winvblock__lib_func bus__type_ptr bus__create(void) {
+winvblock__lib_func struct bus__type * bus__create(void) {
     device__type_ptr dev_ptr;
-    bus__type_ptr bus_ptr;
+    struct bus__type * bus_ptr;
   
     /* Try to create a device. */
     dev_ptr = device__create();
@@ -401,7 +401,7 @@ winvblock__lib_func bus__type_ptr bus__create(void) {
  */
 static device__create_pdo_decl(bus__create_pdo_) {
     PDEVICE_OBJECT pdo_ptr = NULL;
-    bus__type_ptr bus_ptr;
+    struct bus__type * bus_ptr;
     NTSTATUS status;
   
     /* Note the bus device needing a PDO. */
@@ -409,7 +409,7 @@ static device__create_pdo_decl(bus__create_pdo_) {
         DBG("No device passed\n");
         return NULL;
       }
-    bus_ptr = (bus__type_ptr) dev_ptr->ext;
+    bus_ptr = bus__get(dev_ptr);
     /* Always create the root-enumerated bus device. */
     IoReportDetectedDevice(
         driver__obj_ptr,
@@ -454,7 +454,7 @@ static device__create_pdo_decl(bus__create_pdo_) {
  * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure.
  */
 NTSTATUS bus__init(void) {
-    bus__type_ptr boot_bus_ptr;
+    struct bus__type * boot_bus_ptr;
   
     /* Initialize the global list of devices. */
     InitializeListHead(&bus__list_);
@@ -490,7 +490,7 @@ NTSTATUS bus__init(void) {
  * @v dev_ptr           Points to the bus device to delete.
  */
 static void STDCALL bus__free_(IN device__type_ptr dev_ptr) {
-    bus__type_ptr bus_ptr = bus__get(dev_ptr);
+    struct bus__type * bus_ptr = bus__get(dev_ptr);
     /* Free the "inherited class". */
     bus_ptr->prev_free(dev_ptr);
     /*
@@ -508,7 +508,7 @@ static void STDCALL bus__free_(IN device__type_ptr dev_ptr) {
  *
  * @ret         A pointer to the boot bus, or NULL.
  */
-winvblock__lib_func bus__type_ptr bus__boot(void) {
+winvblock__lib_func struct bus__type * bus__boot(void) {
     if (!bus__boot_fdo_) {
         DBG("No boot bus device!\n");
         return NULL;
@@ -521,6 +521,6 @@ winvblock__lib_func bus__type_ptr bus__boot(void) {
  *
  * @v dev       A pointer to a device.
  */
-extern winvblock__lib_func bus__type_ptr bus__get(device__type_ptr dev) {
+extern winvblock__lib_func struct bus__type * bus__get(device__type_ptr dev) {
     return dev->ext;
   }

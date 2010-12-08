@@ -27,7 +27,7 @@
  * Bus specifics.
  */
 
-winvblock__def_struct(bus__type) {
+struct bus__type {
     device__type_ptr device;
     PDEVICE_OBJECT LowerDeviceObject;
     PDEVICE_OBJECT PhysicalDeviceObject;
@@ -69,7 +69,7 @@ extern void bus__finalize(void);
  * bus__type, track it in a global list, as well as populate the bus
  * with default values.
  */
-extern winvblock__lib_func bus__type_ptr bus__create(void);
+extern winvblock__lib_func struct bus__type * bus__create(void);
 
 /**
  * Add a child node to the bus.
@@ -80,7 +80,7 @@ extern winvblock__lib_func bus__type_ptr bus__create(void);
  * Returns TRUE for success, FALSE for failure.
  */
 extern winvblock__lib_func winvblock__bool STDCALL bus__add_child(
-    IN OUT bus__type_ptr bus_ptr,
+    IN OUT struct bus__type * bus_ptr,
     IN device__type_ptr dev_ptr
   );
 
@@ -89,8 +89,8 @@ extern winvblock__lib_func winvblock__bool STDCALL bus__add_child(
  *
  * @ret         A pointer to the bus device's extension space, or NULL.
  */
-extern winvblock__lib_func bus__type_ptr bus__boot(void);
+extern winvblock__lib_func struct bus__type * bus__boot(void);
 
-extern winvblock__lib_func bus__type_ptr bus__get(device__type_ptr dev);
+extern winvblock__lib_func struct bus__type * bus__get(device__type_ptr dev);
 
 #endif  /* _BUS_H */

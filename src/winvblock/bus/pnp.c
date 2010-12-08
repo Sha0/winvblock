@@ -59,7 +59,7 @@ NTSTATUS STDCALL bus_pnp__start_dev(
 {
   NTSTATUS status;
   KEVENT event;
-  bus__type_ptr bus_ptr;
+  struct bus__type * bus_ptr;
 
   bus_ptr = bus__get(dev_ptr);
   KeInitializeEvent ( &event, NotificationEvent, FALSE );
@@ -94,7 +94,7 @@ NTSTATUS STDCALL bus_pnp__remove_dev(
   )
 {
   NTSTATUS status;
-  bus__type_ptr bus_ptr;
+  struct bus__type * bus_ptr;
   device__type_ptr walker,
    next;
 
@@ -132,7 +132,7 @@ NTSTATUS STDCALL bus_pnp__query_dev_relations(
   )
 {
   NTSTATUS status;
-  bus__type_ptr bus_ptr;
+  struct bus__type * bus_ptr;
   winvblock__uint32 count;
   device__type_ptr walker;
   PDEVICE_RELATIONS dev_relations;
@@ -197,7 +197,7 @@ NTSTATUS STDCALL bus_pnp__simple(
   )
 {
   NTSTATUS status;
-  bus__type_ptr bus_ptr;
+  struct bus__type * bus_ptr;
 
   bus_ptr = bus__get(dev_ptr);
   switch ( Stack->MinorFunction )

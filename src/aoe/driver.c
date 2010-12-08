@@ -810,7 +810,7 @@ NTSTATUS STDCALL DriverEntry(
       }
   
     {
-      bus__type_ptr bus_ptr = bus__boot (  );
+      struct bus__type * bus_ptr = bus__boot();
       if ( !bus_ptr )
         {
   	DBG ( "Unable to register for IOCTLs!\n" );
@@ -917,7 +917,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
     /* Release the global spin-lock. */
     KeReleaseSpinLock ( &aoe__spinlock_, Irql );
     {
-      bus__type_ptr bus_ptr = bus__boot (  );
+      struct bus__type * bus_ptr = bus__boot();
       if ( !bus_ptr )
         {
   	DBG ( "Unable to un-register IOCTLs!\n" );
@@ -2176,7 +2176,7 @@ static NTSTATUS STDCALL show(
   {
     winvblock__uint32 count;
     device__type_ptr dev_walker;
-    bus__type_ptr bus_ptr;
+    struct bus__type * bus_ptr;
     aoe__mount_disks_ptr disks;
   
     DBG ( "Got IOCTL_AOE_SHOW...\n" );
