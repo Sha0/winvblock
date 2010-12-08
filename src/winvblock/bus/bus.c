@@ -41,7 +41,7 @@
 /* Globals. */
 static PDEVICE_OBJECT bus__boot_fdo_ = NULL;
 static LIST_ENTRY bus_list;
-static KSPIN_LOCK bus_list_lock;
+static KSPIN_LOCK bus__list_lock_;
 
 /* Forward declarations. */
 static device__free_func free_bus;
@@ -370,7 +370,7 @@ winvblock__lib_func bus__type_ptr bus__create(void) {
     if (bus_ptr == NULL)
       goto err_nobus;
     /* Track the new bus in our global list. */
-    ExInterlockedInsertTailList(&bus_list, &bus_ptr->tracking, &bus_list_lock);
+    ExInterlockedInsertTailList(&bus_list, &bus_ptr->tracking, &bus__list_lock_);
     /* Populate non-zero device defaults. */
     bus_ptr->device = dev_ptr;
     bus_ptr->prev_free = dev_ptr->ops.free;
@@ -458,7 +458,7 @@ NTSTATUS bus__init(void) {
   
     /* Initialize the global list of devices. */
     InitializeListHead(&bus_list);
-    KeInitializeSpinLock(&bus_list_lock);
+    KeInitializeSpinLock(&bus__list_lock_);
     /* We handle AddDevice call-backs for the driver. */
     driver__obj_ptr->DriverExtension->AddDevice = attach_fdo;
     /* Establish the boot bus (required for booting from a WinVBlock disk). */
@@ -498,7 +498,7 @@ static void STDCALL free_bus(IN device__type_ptr dev_ptr) {
      * for now we have faith that a bus won't be deleted twice and
      * result in a race condition.  Something to keep in mind...
      */
-    ExInterlockedRemoveHeadList(bus_ptr->tracking.Blink, &bus_list_lock);
+    ExInterlockedRemoveHeadList(bus_ptr->tracking.Blink, &bus__list_lock_);
 
     wv_free(bus_ptr);
   }
