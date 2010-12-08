@@ -211,8 +211,10 @@ static irp__handling handling_table[] =
   };
 
 /* Yield a pointer to the AoE disk. */
-#define get_aoe_disk_ptr(dev_ptr) \
-((struct aoe__disk_type_ *)(disk__get_ptr(dev_ptr))->ext)
+static struct aoe__disk_type_ * aoe__get_(device__type_ptr dev_ptr)
+  {
+    return disk__get_ptr(dev_ptr)->ext;
+  }
 
 static winvblock__bool STDCALL setup_reg(OUT PNTSTATUS status_out)
   {
@@ -948,7 +950,7 @@ static disk__init_decl(init)
     winvblock__uint32 MTU;
     struct aoe__disk_type_ * aoe_disk_ptr;
   
-    aoe_disk_ptr = get_aoe_disk_ptr ( disk_ptr->device );
+    aoe_disk_ptr = aoe__get_ ( disk_ptr->device );
     /*
      * Allocate our disk search 
      */
@@ -1304,7 +1306,7 @@ static disk__io_decl(io)
      * Establish pointers to the disk and AoE disk
      */
     disk_ptr = disk__get_ptr ( dev_ptr );
-    aoe_disk_ptr = get_aoe_disk_ptr ( dev_ptr );
+    aoe_disk_ptr = aoe__get_ ( dev_ptr );
   
     if ( aoe__stop_ )
       {
@@ -1658,7 +1660,7 @@ NTSTATUS STDCALL aoe__reply(
      * Establish pointers to the disk device and AoE disk
      */
     disk_ptr = disk__get_ptr ( tag->device );
-    aoe_disk_ptr = get_aoe_disk_ptr ( tag->device );
+    aoe_disk_ptr = aoe__get_ ( tag->device );
   
     /*
      * If our tag was a discovery request, note the server 
@@ -1877,7 +1879,7 @@ static void STDCALL aoe__thread_(IN void *StartContext)
   	   * Establish pointers to the disk and AoE disk
   	   */
   	  disk_ptr = disk__get_ptr ( tag->device );
-  	  aoe_disk_ptr = get_aoe_disk_ptr ( tag->device );
+  	  aoe_disk_ptr = aoe__get_ ( tag->device );
   
   	  RequestTimeout = aoe_disk_ptr->Timeout;
   	  if ( tag->Id == 0 )
@@ -1950,14 +1952,14 @@ static void STDCALL aoe__thread_(IN void *StartContext)
 
 static disk__max_xfer_len_decl(max_xfer_len)
   {
-    struct aoe__disk_type_ * aoe_disk_ptr = get_aoe_disk_ptr(disk_ptr->device);
+    struct aoe__disk_type_ * aoe_disk_ptr = aoe__get_(disk_ptr->device);
   
     return disk_ptr->SectorSize * aoe_disk_ptr->MaxSectorsPerPacket;
   }
 
 static disk__pnp_id_decl(query_id)
   {
-    struct aoe__disk_type_ * aoe_disk_ptr = get_aoe_disk_ptr(disk_ptr->device);
+    struct aoe__disk_type_ * aoe_disk_ptr = aoe__get_(disk_ptr->device);
   
     switch ( query_type )
       {
@@ -2203,7 +2205,7 @@ static NTSTATUS STDCALL show(
     while ( dev_walker != NULL )
       {
         disk__type_ptr disk_ptr = disk__get_ptr ( dev_walker );
-        struct aoe__disk_type_ * aoe_disk_ptr = get_aoe_disk_ptr(dev_walker);
+        struct aoe__disk_type_ * aoe_disk_ptr = aoe__get_(dev_walker);
   
         disks->Disk[count].Disk = disk_ptr->DiskNumber;
         RtlCopyMemory ( &disks->Disk[count].ClientMac, &aoe_disk_ptr->ClientMac,
@@ -2359,7 +2361,7 @@ static struct aoe__disk_type_ * aoe__create_disk_(void)
 static void STDCALL aoe__free_disk_(IN device__type_ptr dev_ptr)
   {
     disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
-    struct aoe__disk_type_ * aoe_disk_ptr = get_aoe_disk_ptr(dev_ptr);
+    struct aoe__disk_type_ * aoe_disk_ptr = aoe__get_(dev_ptr);
     /* Free the "inherited class". */
     aoe_disk_ptr->prev_free(dev_ptr);
     /*
