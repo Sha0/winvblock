@@ -42,6 +42,7 @@
 static PDEVICE_OBJECT bus__boot_fdo_ = NULL;
 static LIST_ENTRY bus__list_;
 static KSPIN_LOCK bus__list_lock_;
+winvblock__bool bus__module_up_ = FALSE;
 
 /* Forward declarations. */
 static device__free_func bus__free_;
@@ -60,7 +61,9 @@ void bus__module_shutdown(void) {
       );
     IoDeleteSymbolicLink(&DosDeviceName);
     bus__boot_fdo_ = NULL;
+    bus__module_up_ = FALSE;
     DBG("Exit\n");
+    return;
   }
 
 /**
@@ -74,14 +77,16 @@ winvblock__lib_func winvblock__bool STDCALL bus__add_child(
     IN OUT struct bus__type * bus_ptr,
     IN OUT device__type_ptr dev_ptr
   ) {
-    /**
-     * @v dev_obj_ptr         The new node's device object.
-     * @v walker              Walks the child nodes.
-     */
+    /* The new node's device object. */
     PDEVICE_OBJECT dev_obj_ptr;
+    /* Walks the child nodes. */
     device__type_ptr walker;
   
     DBG("Entry\n");
+    if (!bus__module_up_) {
+        DBG("Bus module not initialized.\n");
+        return FALSE;
+      }
     if ((bus_ptr == NULL) || (dev_ptr == NULL)) {
         DBG("No bus or no device!\n");
         return FALSE;
@@ -352,7 +357,10 @@ static NTSTATUS STDCALL bus_dispatch(
  *
  * @ret bus_ptr         The address of a new bus, or NULL for failure.
  *
- * See the header file for additional details.
+ * This function should not be confused with a PDO creation routine, which is
+ * actually implemented for each device type.  This routine will allocate a
+ * bus__type, track it in a global list, as well as populate the bus
+ * with default values.
  */
 winvblock__lib_func struct bus__type * bus__create(void) {
     device__type_ptr dev_ptr;
@@ -481,6 +489,7 @@ NTSTATUS bus__module_init(void) {
       }
     bus__boot_fdo_ = boot_bus_ptr->device->Self;
 
+    bus__module_up_ = TRUE;
     return STATUS_SUCCESS;
   }
 
