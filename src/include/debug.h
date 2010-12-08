@@ -36,7 +36,7 @@
 #    undef DBG
 #  endif
 /* Uncomment to enable */
-#  if 1
+#  if 0
 #    define DBG( ... ) \
 \
 xDbgPrint ( __FILE__, ( const PCHAR )__FUNCTION__, \
