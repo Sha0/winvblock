@@ -44,7 +44,7 @@
 #include "debug.h"
 
 /* Globals. */
-static void * Driver_Globals_StateHandle;
+static void * driver__state_handle_;
 static winvblock__bool Driver_Globals_Started = FALSE;
 PDRIVER_OBJECT driver__obj_ptr = NULL;
 
@@ -135,9 +135,9 @@ NTSTATUS STDCALL DriverEntry(
     if (!NT_SUCCESS(status))
       return Error("registry__note_os_load_opts", status);
 
-    Driver_Globals_StateHandle = NULL;
+    driver__state_handle_ = NULL;
 
-    if ((Driver_Globals_StateHandle = PoRegisterSystemState(
+    if ((driver__state_handle_ = PoRegisterSystemState(
         NULL,
         ES_CONTINUOUS
       )) == NULL) {
@@ -298,8 +298,8 @@ winvblock__lib_func NTSTATUS STDCALL driver__default_dispatch(
   }
 
 static void STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
-    if (Driver_Globals_StateHandle != NULL)
-      PoUnregisterSystemState(Driver_Globals_StateHandle);
+    if (driver__state_handle_ != NULL)
+      PoUnregisterSystemState(driver__state_handle_);
     bus__module_shutdown();
     wv_free(os_load_opts);
     Driver_Globals_Started = FALSE;
