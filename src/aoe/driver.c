@@ -192,7 +192,7 @@ struct aoe__target_list_
 static struct aoe__target_list_ * aoe__target_list_ = NULL;
 static KSPIN_LOCK aoe__target_list_spinlock_;
 static winvblock__bool aoe__stop_ = FALSE;
-static KSPIN_LOCK AoE_Globals_SpinLock;
+static KSPIN_LOCK aoe__spinlock_;
 static KEVENT AoE_Globals_ThreadSignalEvent;
 static struct aoe__work_tag_ * AoE_Globals_TagList = NULL;
 static struct aoe__work_tag_ * AoE_Globals_TagListLast = NULL;
@@ -775,7 +775,7 @@ NTSTATUS STDCALL DriverEntry(
     KeInitializeSpinLock ( &aoe__target_list_spinlock_ );
   
     /* Initialize global spin-lock and global thread signal event. */
-    KeInitializeSpinLock ( &AoE_Globals_SpinLock );
+    KeInitializeSpinLock ( &aoe__spinlock_ );
     KeInitializeEvent ( &AoE_Globals_ThreadSignalEvent, SynchronizationEvent,
   		      FALSE );
   
@@ -868,7 +868,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
     KeReleaseSpinLock ( &aoe__target_list_spinlock_, Irql2 );
   
     /* Wait until we have the global spin-lock. */
-    KeAcquireSpinLock ( &AoE_Globals_SpinLock, &Irql );
+    KeAcquireSpinLock ( &aoe__spinlock_, &Irql );
   
     /* Free disk searches in the global disk search list. */
     disk_searcher = AoE_Globals_DiskSearchList;
@@ -913,7 +913,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
     wv_free(AoE_Globals_ProbeTag);
   
     /* Release the global spin-lock. */
-    KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
+    KeReleaseSpinLock ( &aoe__spinlock_, Irql );
     {
       bus__type_ptr bus_ptr = bus__boot (  );
       if ( !bus_ptr )
@@ -968,7 +968,7 @@ static disk__init_decl(init)
     /*
      * Wait until we have the global spin-lock 
      */
-    KeAcquireSpinLock ( &AoE_Globals_SpinLock, &Irql );
+    KeAcquireSpinLock ( &aoe__spinlock_, &Irql );
   
     /*
      * Add our disk search to the global list of disk searches 
@@ -988,7 +988,7 @@ static disk__init_decl(init)
     /*
      * Release the global spin-lock 
      */
-    KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
+    KeReleaseSpinLock ( &aoe__spinlock_, Irql );
   
     /*
      * We go through all the states until the disk is ready for use 
@@ -1084,7 +1084,7 @@ static disk__init_decl(init)
   	  /*
   	   * We've finished the disk search; perform clean-up 
   	   */
-  	  KeAcquireSpinLock ( &AoE_Globals_SpinLock, &InnerIrql );
+  	  KeAcquireSpinLock ( &aoe__spinlock_, &InnerIrql );
   
   	  /*
   	   * Tag clean-up: Find out if our tag is in the global tag list 
@@ -1172,7 +1172,7 @@ static disk__init_decl(init)
   	  /*
   	   * Release global and device extension spin-locks 
   	   */
-  	  KeReleaseSpinLock ( &AoE_Globals_SpinLock, InnerIrql );
+  	  KeReleaseSpinLock ( &aoe__spinlock_, InnerIrql );
   	  KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
   
   	  DBG ( "Disk size: %I64uM cylinders: %I64u heads: %u "
@@ -1272,7 +1272,7 @@ static disk__init_decl(init)
          * Enqueue our tag 
          */
         tag->next = NULL;
-        KeAcquireSpinLock ( &AoE_Globals_SpinLock, &InnerIrql );
+        KeAcquireSpinLock ( &aoe__spinlock_, &InnerIrql );
         if ( AoE_Globals_TagList == NULL )
   	{
   	  AoE_Globals_TagList = tag;
@@ -1284,7 +1284,7 @@ static disk__init_decl(init)
   	  tag->previous = AoE_Globals_TagListLast;
   	}
         AoE_Globals_TagListLast = tag;
-        KeReleaseSpinLock ( &AoE_Globals_SpinLock, InnerIrql );
+        KeReleaseSpinLock ( &aoe__spinlock_, InnerIrql );
         KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
       }
   }
@@ -1478,7 +1478,7 @@ static disk__io_decl(io)
     /*
      * Wait until we have the global spin-lock 
      */
-    KeAcquireSpinLock ( &AoE_Globals_SpinLock, &Irql );
+    KeAcquireSpinLock ( &aoe__spinlock_, &Irql );
   
     /*
      * Enqueue our request's tag list to the global tag list 
@@ -1501,7 +1501,7 @@ static disk__io_decl(io)
     irp->IoStatus.Status = STATUS_PENDING;
     IoMarkIrpPending ( irp );
   
-    KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
+    KeReleaseSpinLock ( &aoe__spinlock_, Irql );
     KeSetEvent ( &AoE_Globals_ThreadSignalEvent, 0, FALSE );
     return STATUS_PENDING;
   }
@@ -1607,14 +1607,14 @@ NTSTATUS STDCALL aoe__reply(
     /*
      * Wait until we have the global spin-lock 
      */
-    KeAcquireSpinLock ( &AoE_Globals_SpinLock, &Irql );
+    KeAcquireSpinLock ( &aoe__spinlock_, &Irql );
   
     /*
      * Search for request tag 
      */
     if ( AoE_Globals_TagList == NULL )
       {
-        KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
+        KeReleaseSpinLock ( &aoe__spinlock_, Irql );
         return STATUS_SUCCESS;
       }
     tag = AoE_Globals_TagList;
@@ -1631,7 +1631,7 @@ NTSTATUS STDCALL aoe__reply(
       }
     if ( !Found )
       {
-        KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
+        KeReleaseSpinLock ( &aoe__spinlock_, Irql );
         return STATUS_SUCCESS;
       }
     else
@@ -1652,7 +1652,7 @@ NTSTATUS STDCALL aoe__reply(
   	DBG ( "AoE_Globals_OutstandingTags < 0!!\n" );
         KeSetEvent ( &AoE_Globals_ThreadSignalEvent, 0, FALSE );
       }
-    KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
+    KeReleaseSpinLock ( &aoe__spinlock_, Irql );
   
     /*
      * Establish pointers to the disk device and AoE disk
@@ -1864,10 +1864,10 @@ static void STDCALL aoe__thread_(IN void *StartContext)
   	  KeQuerySystemTime ( &AoE_Globals_ProbeTag->SendTime );
   	}
   
-        KeAcquireSpinLock ( &AoE_Globals_SpinLock, &Irql );
+        KeAcquireSpinLock ( &aoe__spinlock_, &Irql );
         if ( AoE_Globals_TagList == NULL )
   	{
-  	  KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
+  	  KeReleaseSpinLock ( &aoe__spinlock_, Irql );
   	  continue;
   	}
         tag = AoE_Globals_TagList;
@@ -1943,7 +1943,7 @@ static void STDCALL aoe__thread_(IN void *StartContext)
   	      break;
   	    }
   	}
-        KeReleaseSpinLock ( &AoE_Globals_SpinLock, Irql );
+        KeReleaseSpinLock ( &aoe__spinlock_, Irql );
       }
     DBG ( "Exit\n" );
   }
