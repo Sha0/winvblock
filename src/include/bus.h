@@ -47,12 +47,7 @@ extern NTSTATUS STDCALL bus__get_dev_capabilities(
     IN PDEVICE_CAPABILITIES
   );
 
-/**
- * Initialize the global, bus-common environment.
- *
- * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure.
- */
-extern NTSTATUS bus__init(void);
+extern NTSTATUS bus__module_init(void);
 
 /**
  * Tear down the global, bus-common environment.

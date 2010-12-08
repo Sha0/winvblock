@@ -453,7 +453,7 @@ static device__create_pdo_decl(bus__create_pdo_) {
  *
  * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure.
  */
-NTSTATUS bus__init(void) {
+NTSTATUS bus__module_init(void) {
     struct bus__type * boot_bus_ptr;
   
     /* Initialize the global list of devices. */

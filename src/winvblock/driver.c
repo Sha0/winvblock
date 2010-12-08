@@ -185,7 +185,7 @@ DriverEntry (
    * Initialize various modules
    */
   device__init (  );		/* TODO: Check for error */
-  bus__init (  );		/* TODO: Check for error */
+  bus__module_init();		/* TODO: Check for error */
   disk__init (  );		/* TODO: Check for error */
   filedisk__init (  );		/* TODO: Check for error */
   ramdisk__init (  );		/* TODO: Check for error */
