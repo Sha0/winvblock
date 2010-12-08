@@ -55,7 +55,7 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject(
 struct aoe__disk_type_;
 static void STDCALL aoe__thread_(IN void *);
 irp__handler aoe__bus_dev_ctl_dispatch;
-static void process_abft(void);
+static void aoe__process_abft_(void);
 static void STDCALL unload(IN PDRIVER_OBJECT DriverObject);
 static struct aoe__disk_type_ * create_aoe_disk(void);
 static device__free_func free_aoe_disk;
@@ -820,7 +820,7 @@ NTSTATUS STDCALL DriverEntry(
         }
     }
     DriverObject->DriverUnload = unload;
-    process_abft (  );
+    aoe__process_abft_();
     AoE_Globals_Started = TRUE;
     DBG ( "Exit\n" );
     return Status;
@@ -2006,7 +2006,7 @@ disk__close_decl(close)
     return;
   }
 
-static void process_abft(void)
+static void aoe__process_abft_(void)
   {
     PHYSICAL_ADDRESS PhysicalAddress;
     winvblock__uint8_ptr PhysicalMemory;
@@ -2015,81 +2015,90 @@ static void process_abft(void)
     abft AoEBootRecord;
     struct aoe__disk_type_ * aoe_disk_ptr;
   
-    /*
-     * Find aBFT
-     */
+    /* Find aBFT. */
     PhysicalAddress.QuadPart = 0LL;
-    PhysicalMemory = MmMapIoSpace ( PhysicalAddress, 0xa0000, MmNonCached );
-    if ( !PhysicalMemory )
+    PhysicalMemory = MmMapIoSpace(PhysicalAddress, 0xa0000, MmNonCached);
+    if (!PhysicalMemory)
       {
-        DBG ( "Could not map low memory\n" );
+        DBG("Could not map low memory\n");
       }
-    else
+      else
       {
-        for ( Offset = 0; Offset < 0xa0000; Offset += 0x10 )
-  	{
-  	  if ( ( ( abft_ptr ) & PhysicalMemory[Offset] )->Signature ==
-  	       0x54464261 )
-  	    {
-  	      Checksum = 0;
-  	      for ( i = 0;
-  		    i < ( ( abft_ptr ) & PhysicalMemory[Offset] )->Length;
-  		    i++ )
-  		Checksum += PhysicalMemory[Offset + i];
-  	      if ( Checksum & 0xff )
-  		continue;
-  	      if ( ( ( abft_ptr ) & PhysicalMemory[Offset] )->Revision != 1 )
-  		{
-  		  DBG ( "Found aBFT with mismatched revision v%d at "
-  			"segment 0x%4x. want v1.\n",
-  			( ( abft_ptr ) & PhysicalMemory[Offset] )->Revision,
-  			( Offset / 0x10 ) );
-  		  continue;
-  		}
-  	      DBG ( "Found aBFT at segment: 0x%04x\n", ( Offset / 0x10 ) );
-  	      RtlCopyMemory ( &AoEBootRecord, &PhysicalMemory[Offset],
-  			      sizeof ( abft ) );
-  	      FoundAbft = TRUE;
-  	      break;
-  	    }
-  	}
-        MmUnmapIoSpace ( PhysicalMemory, 0xa0000 );
+        for (Offset = 0; Offset < 0xa0000; Offset += 0x10)
+        	{
+        	  if (((abft_ptr) (PhysicalMemory + Offset))->Signature ==
+        	    0x54464261)
+        	    {
+        	      Checksum = 0;
+        	      for (i = 0;
+                  i < ((abft_ptr) (PhysicalMemory + Offset))->Length;
+        		      i++)
+              		Checksum += PhysicalMemory[Offset + i];
+        	      if (Checksum & 0xff)
+              		continue;
+        	      if (((abft_ptr) (PhysicalMemory + Offset))->Revision != 1)
+              		{
+              		  DBG(
+                        "Found aBFT with mismatched revision v%d at "
+                          "segment 0x%4x. want v1.\n",
+                			  ((abft_ptr) (PhysicalMemory + Offset))->Revision,
+                			  (Offset / 0x10)
+                      );
+              		  continue;
+              		}
+        	      DBG("Found aBFT at segment: 0x%04x\n", (Offset / 0x10 ));
+        	      RtlCopyMemory(
+                    &AoEBootRecord,
+                    PhysicalMemory + Offset,
+        			      sizeof (abft)
+                  );
+        	      FoundAbft = TRUE;
+        	      break;
+        	    }
+        	}
+        MmUnmapIoSpace(PhysicalMemory, 0xa0000);
       }
-  
-  #ifdef RIS
+
+    #ifdef RIS
     FoundAbft = TRUE;
-    RtlCopyMemory ( AoEBootRecord.ClientMac, "\x00\x0c\x29\x34\x69\x34", 6 );
+    RtlCopyMemory(AoEBootRecord.ClientMac, "\x00\x0c\x29\x34\x69\x34", 6);
     AoEBootRecord.Major = 0;
     AoEBootRecord.Minor = 10;
-  #endif
-  
-    if ( FoundAbft )
+    #endif
+
+    if (FoundAbft)
       {
-        aoe_disk_ptr = create_aoe_disk (  );
-        if ( aoe_disk_ptr == NULL )
-  	{
-  	  DBG ( "Could not create AoE disk from aBFT!\n" );
-  	  return;
-  	}
-        DBG ( "Attaching AoE disk from client NIC "
-  	    "%02x:%02x:%02x:%02x:%02x:%02x to major: %d minor: %d\n",
-  	    AoEBootRecord.ClientMac[0], AoEBootRecord.ClientMac[1],
-  	    AoEBootRecord.ClientMac[2], AoEBootRecord.ClientMac[3],
-  	    AoEBootRecord.ClientMac[4], AoEBootRecord.ClientMac[5],
-  	    AoEBootRecord.Major, AoEBootRecord.Minor );
-        RtlCopyMemory ( aoe_disk_ptr->ClientMac, AoEBootRecord.ClientMac, 6 );
-        RtlFillMemory ( aoe_disk_ptr->ServerMac, 6, 0xff );
+        aoe_disk_ptr = create_aoe_disk();
+        if(aoe_disk_ptr == NULL)
+        	{
+        	  DBG("Could not create AoE disk from aBFT!\n");
+        	  return;
+        	}
+        DBG(
+            "Attaching AoE disk from client NIC "
+  	          "%02x:%02x:%02x:%02x:%02x:%02x to major: %d minor: %d\n",
+  	        AoEBootRecord.ClientMac[0],
+            AoEBootRecord.ClientMac[1],
+  	        AoEBootRecord.ClientMac[2],
+            AoEBootRecord.ClientMac[3],
+  	        AoEBootRecord.ClientMac[4],
+            AoEBootRecord.ClientMac[5],
+  	        AoEBootRecord.Major,
+            AoEBootRecord.Minor
+          );
+        RtlCopyMemory(aoe_disk_ptr->ClientMac, AoEBootRecord.ClientMac, 6);
+        RtlFillMemory(aoe_disk_ptr->ServerMac, 6, 0xff);
         aoe_disk_ptr->Major = AoEBootRecord.Major;
         aoe_disk_ptr->Minor = AoEBootRecord.Minor;
         aoe_disk_ptr->MaxSectorsPerPacket = 1;
-        aoe_disk_ptr->Timeout = 200000;	/* 20 ms. */
+        aoe_disk_ptr->Timeout = 200000;	        /* 20 ms. */
         aoe_disk_ptr->disk->BootDrive = TRUE;
         aoe_disk_ptr->disk->media = disk__media_hard;
-        bus__add_child ( bus__boot (  ), aoe_disk_ptr->disk->device );
+        bus__add_child(bus__boot(), aoe_disk_ptr->disk->device);
       }
-    else
+      else
       {
-        DBG ( "No aBFT found\n" );
+        DBG("No aBFT found\n");
       }
   }
 
