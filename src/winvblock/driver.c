@@ -49,9 +49,8 @@ PDRIVER_OBJECT driver__obj_ptr = NULL;
 /* Globals. */
 static void * driver__state_handle_;
 static winvblock__bool driver__started_ = FALSE;
-
 /* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters. */
-LPWSTR os_load_opts = NULL;
+static LPWSTR driver__os_load_opts_ = NULL;
 
 /* Forward declarations. */
 static driver__dispatch_func driver_dispatch_not_supported;
@@ -68,11 +67,11 @@ static LPWSTR STDCALL get_opt(IN LPWSTR opt_name) {
       };
     size_t opt_name_len, opt_name_len_bytes;
 
-    if (!os_load_opts || !opt_name)
+    if (!driver__os_load_opts_ || !opt_name)
       return NULL;
 
     /* Find /WINVBLOCK= options. */
-    our_opts = os_load_opts;
+    our_opts = driver__os_load_opts_;
     while (*our_opts != L'\0') {
         if (!wv_memcmpeq(our_opts, our_sig, our_sig_len_bytes)) {
             our_opts++;
@@ -133,9 +132,9 @@ NTSTATUS STDCALL DriverEntry(
     if (driver__started_)
       return STATUS_SUCCESS;
     Debug_Initialize();
-    status = registry__note_os_load_opts(&os_load_opts);
+    status = registry__note_os_load_opts(&driver__os_load_opts_);
     if (!NT_SUCCESS(status))
-      return Error("registry__note_os_load_opts", status);
+      return Error("registry__note_driver__os_load_opts", status);
 
     driver__state_handle_ = NULL;
 
@@ -303,7 +302,7 @@ static void STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
     if (driver__state_handle_ != NULL)
       PoUnregisterSystemState(driver__state_handle_);
     bus__module_shutdown();
-    wv_free(os_load_opts);
+    wv_free(driver__os_load_opts_);
     driver__started_ = FALSE;
     DBG("Done\n");
   }
