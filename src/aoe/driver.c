@@ -189,7 +189,7 @@ struct aoe__target_list_
   };
 
 /** Private globals. */
-static struct aoe__target_list_ * AoE_Globals_TargetList = NULL;
+static struct aoe__target_list_ * aoe__target_list_ = NULL;
 static KSPIN_LOCK aoe__target_list_spinlock_;
 static winvblock__bool AoE_Globals_Stop = FALSE;
 static KSPIN_LOCK AoE_Globals_SpinLock;
@@ -858,7 +858,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
   
     /* Free the target list. */
     KeAcquireSpinLock ( &aoe__target_list_spinlock_, &Irql2 );
-    Walker = AoE_Globals_TargetList;
+    Walker = aoe__target_list_;
     while ( Walker != NULL )
       {
         Next = Walker->next;
@@ -1518,7 +1518,7 @@ static void STDCALL add_target(
     KIRQL Irql;
   
     KeAcquireSpinLock ( &aoe__target_list_spinlock_, &Irql );
-    Walker = Last = AoE_Globals_TargetList;
+    Walker = Last = aoe__target_list_;
     while ( Walker != NULL )
       {
         if (wv_memcmpeq(&Walker->Target.ClientMac, ClientMac, 6) &&
@@ -1554,7 +1554,7 @@ static void STDCALL add_target(
   
     if ( Last == NULL )
       {
-        AoE_Globals_TargetList = Walker;
+        aoe__target_list_ = Walker;
       }
     else
       {
@@ -2119,7 +2119,7 @@ static NTSTATUS STDCALL scan(
     KeAcquireSpinLock ( &aoe__target_list_spinlock_, &irql );
   
     count = 0;
-    target_walker = AoE_Globals_TargetList;
+    target_walker = aoe__target_list_;
     while ( target_walker != NULL )
       {
         count++;
@@ -2138,7 +2138,7 @@ static NTSTATUS STDCALL scan(
     targets->Count = count;
   
     count = 0;
-    target_walker = AoE_Globals_TargetList;
+    target_walker = aoe__target_list_;
     while ( target_walker != NULL )
       {
         RtlCopyMemory ( &targets->Target[count], &target_walker->Target,
