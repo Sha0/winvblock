@@ -149,7 +149,7 @@ static NTSTATUS STDCALL power(
     return PoCallDriver(bus_ptr->LowerDeviceObject, Irp);
   }
 
-NTSTATUS STDCALL Bus_GetDeviceCapabilities(
+NTSTATUS STDCALL bus__get_dev_capabilities(
     IN PDEVICE_OBJECT DeviceObject,
     IN PDEVICE_CAPABILITIES DeviceCapabilities
   ) {

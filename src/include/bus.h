@@ -42,9 +42,9 @@ struct bus__type {
     winvblock__bool named;
   };
 
-extern NTSTATUS STDCALL Bus_GetDeviceCapabilities(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PDEVICE_CAPABILITIES DeviceCapabilities
+extern NTSTATUS STDCALL bus__get_dev_capabilities(
+    IN PDEVICE_OBJECT,
+    IN PDEVICE_CAPABILITIES
   );
 
 /**
