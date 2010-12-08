@@ -200,7 +200,7 @@ static struct aoe__work_tag_ * aoe__probe_tag_ = NULL;
 static struct aoe__disk_search_ * aoe__disk_search_list_ = NULL;
 static LONG aoe__outstanding_tags_ = 0;
 static HANDLE aoe__thread_handle_;
-static winvblock__bool AoE_Globals_Started = FALSE;
+static winvblock__bool aoe__started_ = FALSE;
 static LIST_ENTRY aoe_disk_list;
 static KSPIN_LOCK aoe_disk_list_lock;
 
@@ -722,7 +722,7 @@ NTSTATUS STDCALL DriverEntry(
   
     DBG ( "Entry\n" );
   
-    if ( AoE_Globals_Started )
+    if ( aoe__started_ )
       return STATUS_SUCCESS;
     /* Initialize the global list of AoE disks. */
     InitializeListHead ( &aoe_disk_list );
@@ -820,7 +820,7 @@ NTSTATUS STDCALL DriverEntry(
     }
     DriverObject->DriverUnload = aoe__unload_;
     aoe__process_abft_();
-    AoE_Globals_Started = TRUE;
+    aoe__started_ = TRUE;
     DBG ( "Exit\n" );
     return Status;
   }
@@ -838,7 +838,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
   
     DBG ( "Entry\n" );
     /* If we're not already started, there's nothing to do. */
-    if ( !AoE_Globals_Started )
+    if ( !aoe__started_ )
       return;
     /* Stop the AoE protocol. */
     Protocol_Stop (  );
@@ -926,7 +926,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
   			   handling_table );
         }
     }
-    AoE_Globals_Started = FALSE;
+    aoe__started_ = FALSE;
     DBG ( "Exit\n" );
   }
 
