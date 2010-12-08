@@ -191,5 +191,9 @@ struct _device__type
 };
 
 extern winvblock__lib_func device__type_ptr device__get(PDEVICE_OBJECT);
+extern winvblock__lib_func device__type_ptr device__set(
+    PDEVICE_OBJECT,
+    device__type_ptr
+  );
 
 #endif				/* _device_h */

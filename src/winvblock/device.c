@@ -184,3 +184,19 @@ winvblock__lib_func device__type_ptr device__get(PDEVICE_OBJECT dev_obj)
     driver__dev_ext_ptr dev_ext = dev_obj->DeviceExtension;
     return dev_ext->device;
   }
+
+/**
+ * Set the device for a DEVICE_OBJECT.
+ *
+ * @v dev_obj           Points to the DEVICE_OBJECT to set the device for.
+ * @v dev               Points to the device to associate with.
+ */
+winvblock__lib_func device__type_ptr device__set(
+    PDEVICE_OBJECT dev_obj,
+    device__type_ptr dev
+  )
+  {
+    driver__dev_ext_ptr dev_ext = dev_obj->DeviceExtension;
+    dev_ext->device = dev;
+    return;
+  }

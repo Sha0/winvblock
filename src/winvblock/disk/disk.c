@@ -179,7 +179,7 @@ device__create_pdo_decl (
   /*
    * Set associations for the PDO, device, disk
    */
-  ( ( driver__dev_ext_ptr ) dev_obj_ptr->DeviceExtension )->device = dev_ptr;
+  device__set(dev_obj_ptr, dev_ptr);
   dev_ptr->Self = dev_obj_ptr;
   KeInitializeEvent ( &disk_ptr->SearchEvent, SynchronizationEvent, FALSE );
   KeInitializeSpinLock ( &disk_ptr->SpinLock );

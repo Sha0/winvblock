@@ -195,7 +195,7 @@ winvblock__lib_func NTSTATUS STDCALL (irp__process_with_table)(
                 dev,
                 irp,
                 io_stack_loc,
-                ((driver__dev_ext_ptr) dev->DeviceExtension)->device,
+                device__get(dev),
     				    completion
               );
             /* Do not process the IRP any further down the stack. */

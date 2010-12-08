@@ -286,7 +286,7 @@ attach_fdo (
    * Set associations for the bus, device, FDO, PDO
    */
   dev_ptr = bus_ptr->device;
-  ( ( driver__dev_ext_ptr ) fdo->DeviceExtension )->device = dev_ptr;
+  device__set(fdo, dev_ptr);
   dev_ptr->Self = fdo;
 
   bus_ptr->PhysicalDeviceObject = PhysicalDeviceObject;
