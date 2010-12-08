@@ -191,7 +191,7 @@ struct aoe__target_list_
 /** Private globals. */
 static struct aoe__target_list_ * aoe__target_list_ = NULL;
 static KSPIN_LOCK aoe__target_list_spinlock_;
-static winvblock__bool AoE_Globals_Stop = FALSE;
+static winvblock__bool aoe__stop_ = FALSE;
 static KSPIN_LOCK AoE_Globals_SpinLock;
 static KEVENT AoE_Globals_ThreadSignalEvent;
 static struct aoe__work_tag_ * AoE_Globals_TagList = NULL;
@@ -803,7 +803,7 @@ NTSTATUS STDCALL DriverEntry(
       {
         ZwClose ( AoE_Globals_ThreadHandle );
         Error ( "ObReferenceObjectByHandle", Status );
-        AoE_Globals_Stop = TRUE;
+        aoe__stop_ = TRUE;
         KeSetEvent ( &AoE_Globals_ThreadSignalEvent, 0, FALSE );
       }
   
@@ -843,9 +843,9 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
     /* Stop the AoE protocol. */
     Protocol_Stop (  );
     /* If we're not already shutting down, signal the event. */
-    if ( !AoE_Globals_Stop )
+    if ( !aoe__stop_ )
       {
-        AoE_Globals_Stop = TRUE;
+        aoe__stop_ = TRUE;
         KeSetEvent ( &AoE_Globals_ThreadSignalEvent, 0, FALSE );
         /* Wait until the event has been signalled. */
         if ( !NT_SUCCESS
@@ -1007,7 +1007,7 @@ static disk__init_decl(init)
         Timeout.QuadPart = -500000LL;
         KeWaitForSingleObject ( &disk_ptr->SearchEvent, Executive, KernelMode,
   			      FALSE, &Timeout );
-        if ( AoE_Globals_Stop )
+        if ( aoe__stop_ )
   	{
   	  DBG ( "AoE is shutting down; bye!\n" );
   	  return FALSE;
@@ -1306,7 +1306,7 @@ static disk__io_decl(io)
     disk_ptr = disk__get_ptr ( dev_ptr );
     aoe_disk_ptr = get_aoe_disk_ptr ( dev_ptr );
   
-    if ( AoE_Globals_Stop )
+    if ( aoe__stop_ )
       {
         /*
          * Shutting down AoE; we can't service this request 
@@ -1823,7 +1823,7 @@ static void STDCALL aoe__thread_(IN void *StartContext)
         KeWaitForSingleObject ( &AoE_Globals_ThreadSignalEvent, Executive,
   			      KernelMode, FALSE, &Timeout );
         KeResetEvent ( &AoE_Globals_ThreadSignalEvent );
-        if ( AoE_Globals_Stop )
+        if ( aoe__stop_ )
   	{
   	  DBG ( "Stopping...\n" );
   	  PsTerminateSystemThread ( STATUS_SUCCESS );
