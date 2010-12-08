@@ -196,7 +196,7 @@ static KSPIN_LOCK aoe__spinlock_;
 static KEVENT aoe__thread_sig_evt_;
 static struct aoe__work_tag_ * aoe__tag_list_ = NULL;
 static struct aoe__work_tag_ * aoe__tag_list_last_ = NULL;
-static struct aoe__work_tag_ * AoE_Globals_ProbeTag = NULL;
+static struct aoe__work_tag_ * aoe__probe_tag_ = NULL;
 static struct aoe__disk_search_ * AoE_Globals_DiskSearchList = NULL;
 static LONG AoE_Globals_OutstandingTags = 0;
 static HANDLE AoE_Globals_ThreadHandle;
@@ -744,32 +744,32 @@ NTSTATUS STDCALL DriverEntry(
         return Status;
       }
     /* Allocate and zero-fill the global probe tag. */
-    AoE_Globals_ProbeTag = wv_mallocz(sizeof *AoE_Globals_ProbeTag);
-    if (AoE_Globals_ProbeTag == NULL) {
+    aoe__probe_tag_ = wv_mallocz(sizeof *aoe__probe_tag_);
+    if (aoe__probe_tag_ == NULL) {
         DBG ( "Couldn't allocate probe tag; bye!\n" );
         return STATUS_INSUFFICIENT_RESOURCES;
       }
   
     /* Set up the probe tag's AoE packet reference. */
-    AoE_Globals_ProbeTag->PacketSize = sizeof (struct aoe__packet_);
+    aoe__probe_tag_->PacketSize = sizeof (struct aoe__packet_);
     /* Allocate and zero-fill the probe tag's packet reference. */
-    AoE_Globals_ProbeTag->packet_data = wv_mallocz(
-        AoE_Globals_ProbeTag->PacketSize
+    aoe__probe_tag_->packet_data = wv_mallocz(
+        aoe__probe_tag_->PacketSize
       );
-    if (AoE_Globals_ProbeTag->packet_data == NULL) {
-        DBG ( "Couldn't allocate AoE_Globals_ProbeTag->packet_data\n" );
-        wv_free(AoE_Globals_ProbeTag);
+    if (aoe__probe_tag_->packet_data == NULL) {
+        DBG ( "Couldn't allocate aoe__probe_tag_->packet_data\n" );
+        wv_free(aoe__probe_tag_);
         return STATUS_INSUFFICIENT_RESOURCES;
       }
-    AoE_Globals_ProbeTag->SendTime.QuadPart = 0LL;
+    aoe__probe_tag_->SendTime.QuadPart = 0LL;
   
     /* Initialize the probe tag's AoE packet. */
-    AoE_Globals_ProbeTag->packet_data->Ver = AOEPROTOCOLVER;
-    AoE_Globals_ProbeTag->packet_data->Major =
+    aoe__probe_tag_->packet_data->Ver = AOEPROTOCOLVER;
+    aoe__probe_tag_->packet_data->Major =
       htons ( ( winvblock__uint16 ) - 1 );
-    AoE_Globals_ProbeTag->packet_data->Minor = ( winvblock__uint8 ) - 1;
-    AoE_Globals_ProbeTag->packet_data->Cmd = 0xec;	/* IDENTIFY DEVICE */
-    AoE_Globals_ProbeTag->packet_data->Count = 1;
+    aoe__probe_tag_->packet_data->Minor = ( winvblock__uint8 ) - 1;
+    aoe__probe_tag_->packet_data->Cmd = 0xec;	/* IDENTIFY DEVICE */
+    aoe__probe_tag_->packet_data->Count = 1;
   
     /* Initialize global target-list spinlock. */
     KeInitializeSpinLock ( &aoe__target_list_spinlock_ );
@@ -909,8 +909,8 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
     aoe__tag_list_last_ = NULL;
   
     /* Free the global probe tag and its AoE packet. */
-    wv_free(AoE_Globals_ProbeTag->packet_data);
-    wv_free(AoE_Globals_ProbeTag);
+    wv_free(aoe__probe_tag_->packet_data);
+    wv_free(aoe__probe_tag_);
   
     /* Release the global spin-lock. */
     KeReleaseSpinLock ( &aoe__spinlock_, Irql );
@@ -1596,7 +1596,7 @@ NTSTATUS STDCALL aoe__reply(
     /*
      * If the response matches our probe, add the AoE disk device 
      */
-    if ( AoE_Globals_ProbeTag->Id == reply->Tag )
+    if ( aoe__probe_tag_->Id == reply->Tag )
       {
         RtlCopyMemory ( &LBASize, &reply->Data[200], sizeof ( LONGLONG ) );
         add_target ( DestinationMac, SourceMac, ntohs ( reply->Major ),
@@ -1790,7 +1790,7 @@ NTSTATUS STDCALL aoe__reply(
 
 void aoe__reset_probe(void)
   {
-    AoE_Globals_ProbeTag->SendTime.QuadPart = 0LL;
+    aoe__probe_tag_->SendTime.QuadPart = 0LL;
   }
 
 static void STDCALL aoe__thread_(IN void *StartContext)
@@ -1850,18 +1850,18 @@ static void STDCALL aoe__thread_(IN void *StartContext)
          * TODO: Make the below value a #defined constant 
          */
         if ( CurrentTime.QuadPart >
-  	   ( AoE_Globals_ProbeTag->SendTime.QuadPart + 100000000LL ) )
+  	   ( aoe__probe_tag_->SendTime.QuadPart + 100000000LL ) )
   	{
-  	  AoE_Globals_ProbeTag->Id = NextTagId++;
+  	  aoe__probe_tag_->Id = NextTagId++;
   	  if ( NextTagId == 0 )
   	    NextTagId++;
-  	  AoE_Globals_ProbeTag->packet_data->Tag = AoE_Globals_ProbeTag->Id;
+  	  aoe__probe_tag_->packet_data->Tag = aoe__probe_tag_->Id;
   	  Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
   			  "\xff\xff\xff\xff\xff\xff",
-  			  ( winvblock__uint8_ptr ) AoE_Globals_ProbeTag->
-  			  packet_data, AoE_Globals_ProbeTag->PacketSize,
+  			  ( winvblock__uint8_ptr ) aoe__probe_tag_->
+  			  packet_data, aoe__probe_tag_->PacketSize,
   			  NULL );
-  	  KeQuerySystemTime ( &AoE_Globals_ProbeTag->SendTime );
+  	  KeQuerySystemTime ( &aoe__probe_tag_->SendTime );
   	}
   
         KeAcquireSpinLock ( &aoe__spinlock_, &Irql );
