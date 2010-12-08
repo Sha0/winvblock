@@ -50,7 +50,7 @@ static device__create_pdo_decl(bus__create_pdo_);
 /**
  * Tear down the global, bus-common environment.
  */
-void bus__finalize(void) {
+void bus__module_shutdown(void) {
     UNICODE_STRING DosDeviceName;
   
     DBG("Entry\n");

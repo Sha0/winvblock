@@ -48,11 +48,7 @@ extern NTSTATUS STDCALL bus__get_dev_capabilities(
   );
 
 extern NTSTATUS bus__module_init(void);
-
-/**
- * Tear down the global, bus-common environment.
- */
-extern void bus__finalize(void);
+extern void bus__module_shutdown(void);
 
 /**
  * Create a new bus.

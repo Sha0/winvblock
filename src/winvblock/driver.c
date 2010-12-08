@@ -322,18 +322,14 @@ winvblock__lib_func NTSTATUS STDCALL (driver__default_dispatch)(
     return status;
   }
 
-static void STDCALL
-Driver_Unload (
-  IN PDRIVER_OBJECT DriverObject
- )
-{
-  if ( Driver_Globals_StateHandle != NULL )
-    PoUnregisterSystemState ( Driver_Globals_StateHandle );
-  bus__finalize (  );
-  wv_free(os_load_opts);
-  Driver_Globals_Started = FALSE;
-  DBG ( "Done\n" );
-}
+static void STDCALL Driver_Unload(IN PDRIVER_OBJECT DriverObject) {
+    if (Driver_Globals_StateHandle != NULL)
+      PoUnregisterSystemState(Driver_Globals_StateHandle);
+    bus__module_shutdown();
+    wv_free(os_load_opts);
+    Driver_Globals_Started = FALSE;
+    DBG("Done\n");
+  }
 
 winvblock__lib_func void STDCALL
 Driver_CompletePendingIrp (
