@@ -195,7 +195,7 @@ static winvblock__bool aoe__stop_ = FALSE;
 static KSPIN_LOCK aoe__spinlock_;
 static KEVENT aoe__thread_sig_evt_;
 static struct aoe__work_tag_ * AoE_Globals_TagList = NULL;
-static struct aoe__work_tag_ * AoE_Globals_TagListLast = NULL;
+static struct aoe__work_tag_ * aoe__tag_list_last_ = NULL;
 static struct aoe__work_tag_ * AoE_Globals_ProbeTag = NULL;
 static struct aoe__disk_search_ * AoE_Globals_DiskSearchList = NULL;
 static LONG AoE_Globals_OutstandingTags = 0;
@@ -906,7 +906,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
   	}
       }
     AoE_Globals_TagList = NULL;
-    AoE_Globals_TagListLast = NULL;
+    aoe__tag_list_last_ = NULL;
   
     /* Free the global probe tag and its AoE packet. */
     wv_free(AoE_Globals_ProbeTag->packet_data);
@@ -1110,7 +1110,7 @@ static disk__init_decl(init)
   	       * point to the penultimate tag
   	       */
   	      if ( tag->next == NULL )
-  		AoE_Globals_TagListLast = tag->previous;
+  		aoe__tag_list_last_ = tag->previous;
   	      else
   		/*
   		 * Remove our tag from the list 
@@ -1280,10 +1280,10 @@ static disk__init_decl(init)
   	}
         else
   	{
-  	  AoE_Globals_TagListLast->next = tag;
-  	  tag->previous = AoE_Globals_TagListLast;
+  	  aoe__tag_list_last_->next = tag;
+  	  tag->previous = aoe__tag_list_last_;
   	}
-        AoE_Globals_TagListLast = tag;
+        aoe__tag_list_last_ = tag;
         KeReleaseSpinLock ( &aoe__spinlock_, InnerIrql );
         KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
       }
@@ -1483,19 +1483,19 @@ static disk__io_decl(io)
     /*
      * Enqueue our request's tag list to the global tag list 
      */
-    if ( AoE_Globals_TagListLast == NULL )
+    if ( aoe__tag_list_last_ == NULL )
       {
         AoE_Globals_TagList = new_tag_list;
       }
     else
       {
-        AoE_Globals_TagListLast->next = new_tag_list;
-        new_tag_list->previous = AoE_Globals_TagListLast;
+        aoe__tag_list_last_->next = new_tag_list;
+        new_tag_list->previous = aoe__tag_list_last_;
       }
     /*
      * Adjust the global list to reflect our last tag 
      */
-    AoE_Globals_TagListLast = tag;
+    aoe__tag_list_last_ = tag;
   
     irp->IoStatus.Information = 0;
     irp->IoStatus.Status = STATUS_PENDING;
@@ -1644,7 +1644,7 @@ NTSTATUS STDCALL aoe__reply(
         else
   	tag->previous->next = tag->next;
         if ( tag->next == NULL )
-  	AoE_Globals_TagListLast = tag->previous;
+  	aoe__tag_list_last_ = tag->previous;
         else
   	tag->next->previous = tag->previous;
         AoE_Globals_OutstandingTags--;
