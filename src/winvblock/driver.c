@@ -48,15 +48,13 @@ static void * Driver_Globals_StateHandle;
 static winvblock__bool Driver_Globals_Started = FALSE;
 PDRIVER_OBJECT driver__obj_ptr = NULL;
 
-/* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters */
+/* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters. */
 LPWSTR os_load_opts = NULL;
 
 /* Forward declarations. */
 static driver__dispatch_func driver_dispatch_not_supported;
 static driver__dispatch_func driver_dispatch;
-static void STDCALL Driver_Unload(
-    IN PDRIVER_OBJECT DriverObject
-  );
+static void STDCALL driver__unload_(IN PDRIVER_OBJECT);
 
 static LPWSTR STDCALL get_opt(IN LPWSTR opt_name) {
     LPWSTR our_opts, the_opt;
@@ -159,7 +157,7 @@ NTSTATUS STDCALL DriverEntry(
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = driver_dispatch;
     DriverObject->MajorFunction[IRP_MJ_SCSI] = driver_dispatch;
     /* Set the driver Unload callback. */
-    DriverObject->DriverUnload = Driver_Unload;
+    DriverObject->DriverUnload = driver__unload_;
     /* Initialize various modules. */
     device__init();             /* TODO: Check for error. */
     bus__module_init();         /* TODO: Check for error. */
@@ -299,7 +297,7 @@ winvblock__lib_func NTSTATUS STDCALL driver__default_dispatch(
     return status;
   }
 
-static void STDCALL Driver_Unload(IN PDRIVER_OBJECT DriverObject) {
+static void STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
     if (Driver_Globals_StateHandle != NULL)
       PoUnregisterSystemState(Driver_Globals_StateHandle);
     bus__module_shutdown();
