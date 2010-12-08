@@ -54,7 +54,7 @@ static LPWSTR driver__os_load_opts_ = NULL;
 
 /* Forward declarations. */
 static driver__dispatch_func driver__dispatch_not_supported_;
-static driver__dispatch_func driver_dispatch;
+static driver__dispatch_func driver__dispatch_;
 static void STDCALL driver__unload_(IN PDRIVER_OBJECT);
 
 static LPWSTR STDCALL get_opt(IN LPWSTR opt_name) {
@@ -150,13 +150,13 @@ NTSTATUS STDCALL DriverEntry(
      */
     for (i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++)
       DriverObject->MajorFunction[i] = driver__dispatch_not_supported_;
-    DriverObject->MajorFunction[IRP_MJ_PNP] = driver_dispatch;
-    DriverObject->MajorFunction[IRP_MJ_POWER] = driver_dispatch;
-    DriverObject->MajorFunction[IRP_MJ_CREATE] = driver_dispatch;
-    DriverObject->MajorFunction[IRP_MJ_CLOSE] = driver_dispatch;
-    DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = driver_dispatch;
-    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = driver_dispatch;
-    DriverObject->MajorFunction[IRP_MJ_SCSI] = driver_dispatch;
+    DriverObject->MajorFunction[IRP_MJ_PNP] = driver__dispatch_;
+    DriverObject->MajorFunction[IRP_MJ_POWER] = driver__dispatch_;
+    DriverObject->MajorFunction[IRP_MJ_CREATE] = driver__dispatch_;
+    DriverObject->MajorFunction[IRP_MJ_CLOSE] = driver__dispatch_;
+    DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = driver__dispatch_;
+    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = driver__dispatch_;
+    DriverObject->MajorFunction[IRP_MJ_SCSI] = driver__dispatch_;
     /* Set the driver Unload callback. */
     DriverObject->DriverUnload = driver__unload_;
     /* Initialize various modules. */
@@ -212,7 +212,7 @@ extern winvblock__lib_func NTSTATUS STDCALL driver__not_supported(
     return status;
   }
 
-static NTSTATUS STDCALL driver_dispatch(
+static NTSTATUS STDCALL driver__dispatch_(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp
   ) {
