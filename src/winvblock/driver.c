@@ -53,7 +53,7 @@ static winvblock__bool driver__started_ = FALSE;
 static LPWSTR driver__os_load_opts_ = NULL;
 
 /* Forward declarations. */
-static driver__dispatch_func driver_dispatch_not_supported;
+static driver__dispatch_func driver__dispatch_not_supported_;
 static driver__dispatch_func driver_dispatch;
 static void STDCALL driver__unload_(IN PDRIVER_OBJECT);
 
@@ -149,7 +149,7 @@ NTSTATUS STDCALL DriverEntry(
      * this driver handles.
      */
     for (i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++)
-      DriverObject->MajorFunction[i] = driver_dispatch_not_supported;
+      DriverObject->MajorFunction[i] = driver__dispatch_not_supported_;
     DriverObject->MajorFunction[IRP_MJ_PNP] = driver_dispatch;
     DriverObject->MajorFunction[IRP_MJ_POWER] = driver_dispatch;
     DriverObject->MajorFunction[IRP_MJ_CREATE] = driver_dispatch;
@@ -171,7 +171,7 @@ NTSTATUS STDCALL DriverEntry(
     return STATUS_SUCCESS;
   }
 
-static NTSTATUS STDCALL driver_dispatch_not_supported(
+static NTSTATUS STDCALL driver__dispatch_not_supported_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
