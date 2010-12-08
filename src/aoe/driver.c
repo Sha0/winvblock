@@ -2181,7 +2181,7 @@ static NTSTATUS STDCALL show(
   
     DBG ( "Got IOCTL_AOE_SHOW...\n" );
   
-    bus_ptr = bus__get_ptr ( dev_ptr );
+    bus_ptr = bus__get(dev_ptr);
     dev_walker = bus_ptr->first_child_ptr;
     count = 0;
     while ( dev_walker != NULL )

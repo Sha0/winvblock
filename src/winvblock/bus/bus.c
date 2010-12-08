@@ -145,7 +145,7 @@ static NTSTATUS STDCALL sys_ctl(
     OUT winvblock__bool_ptr completion_ptr
   )
   {
-    bus__type_ptr bus_ptr = bus__get_ptr ( dev_ptr );
+    bus__type_ptr bus_ptr = bus__get(dev_ptr);
     DBG ( "...\n" );
     IoSkipCurrentIrpStackLocation ( Irp );
     *completion_ptr = TRUE;
@@ -160,7 +160,7 @@ static NTSTATUS STDCALL power(
     OUT winvblock__bool_ptr completion_ptr
   )
   {
-    bus__type_ptr bus_ptr = bus__get_ptr ( dev_ptr );
+    bus__type_ptr bus_ptr = bus__get(dev_ptr);
     PoStartNextPowerIrp ( Irp );
     IoSkipCurrentIrpStackLocation ( Irp );
     *completion_ptr = TRUE;
@@ -541,7 +541,7 @@ bus__init (
  */
 static void STDCALL free_bus(IN device__type_ptr dev_ptr)
   {
-    bus__type_ptr bus_ptr = bus__get_ptr ( dev_ptr );
+    bus__type_ptr bus_ptr = bus__get(dev_ptr);
     /*
      * Free the "inherited class"
      */
@@ -568,5 +568,15 @@ winvblock__lib_func bus__type_ptr bus__boot(void)
         DBG ( "No boot bus device!\n" );
         return NULL;
       }
-    return bus__get_ptr(device__get(boot_bus_fdo));
+    return bus__get(device__get(boot_bus_fdo));
+  }
+
+/**
+ * Get a bus from a device.
+ *
+ * @v dev       A pointer to a device.
+ */
+extern winvblock__lib_func bus__type_ptr bus__get(device__type_ptr dev)
+  {
+    return dev->ext;
   }

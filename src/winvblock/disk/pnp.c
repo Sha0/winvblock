@@ -276,7 +276,7 @@ NTSTATUS STDCALL disk_pnp__query_capabilities(
       goto ret_path;
     }
   disk_ptr = disk__get_ptr ( dev_ptr );
-  bus_ptr = bus__get_ptr(device__get(dev_ptr->Parent));
+  bus_ptr = bus__get(device__get(dev_ptr->Parent));
   status =
     Bus_GetDeviceCapabilities ( bus_ptr->LowerDeviceObject,
 				&ParentDeviceCapabilities );

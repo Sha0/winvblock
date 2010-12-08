@@ -92,17 +92,12 @@ extern winvblock__lib_func winvblock__bool STDCALL bus__add_child (
  );
 
 /**
- * Get a pointer to the bus device's extension space
+ * Get a pointer to the bus device's extension space.
  *
- * @ret         A pointer to the bus device's extension space, or NULL
+ * @ret         A pointer to the bus device's extension space, or NULL.
  */
-extern winvblock__lib_func bus__type_ptr bus__boot (
-  void
- );
+extern winvblock__lib_func bus__type_ptr bus__boot(void);
 
-/*
- * Yield a pointer to the bus
- */
-#  define bus__get_ptr( dev_ptr ) ( ( bus__type_ptr ) dev_ptr->ext )
+extern winvblock__lib_func bus__type_ptr bus__get(device__type_ptr dev);
 
 #endif				/* _bus_h */

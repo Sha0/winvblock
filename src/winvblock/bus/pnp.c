@@ -61,7 +61,7 @@ NTSTATUS STDCALL bus_pnp__start_dev(
   KEVENT event;
   bus__type_ptr bus_ptr;
 
-  bus_ptr = bus__get_ptr ( dev_ptr );
+  bus_ptr = bus__get(dev_ptr);
   KeInitializeEvent ( &event, NotificationEvent, FALSE );
   IoCopyCurrentIrpStackLocationToNext ( Irp );
   IoSetCompletionRoutine ( Irp,
@@ -103,7 +103,7 @@ NTSTATUS STDCALL bus_pnp__remove_dev(
   Irp->IoStatus.Information = 0;
   Irp->IoStatus.Status = STATUS_SUCCESS;
   IoSkipCurrentIrpStackLocation ( Irp );
-  bus_ptr = bus__get_ptr ( dev_ptr );
+  bus_ptr = bus__get(dev_ptr);
   status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
   walker = bus_ptr->first_child_ptr;
   while ( walker != NULL )
@@ -137,7 +137,7 @@ NTSTATUS STDCALL bus_pnp__query_dev_relations(
   device__type_ptr walker;
   PDEVICE_RELATIONS dev_relations;
 
-  bus_ptr = bus__get_ptr ( dev_ptr );
+  bus_ptr = bus__get(dev_ptr);
   if ( Stack->Parameters.QueryDeviceRelations.Type != BusRelations
        || Irp->IoStatus.Information )
     {
@@ -199,7 +199,7 @@ NTSTATUS STDCALL bus_pnp__simple(
   NTSTATUS status;
   bus__type_ptr bus_ptr;
 
-  bus_ptr = bus__get_ptr ( dev_ptr );
+  bus_ptr = bus__get(dev_ptr);
   switch ( Stack->MinorFunction )
     {
       case IRP_MN_QUERY_PNP_DEVICE_STATE:
