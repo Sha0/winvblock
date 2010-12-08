@@ -190,7 +190,7 @@ struct aoe__target_list_
 
 /** Private globals. */
 static struct aoe__target_list_ * AoE_Globals_TargetList = NULL;
-static KSPIN_LOCK AoE_Globals_TargetListSpinLock;
+static KSPIN_LOCK aoe__target_list_spinlock_;
 static winvblock__bool AoE_Globals_Stop = FALSE;
 static KSPIN_LOCK AoE_Globals_SpinLock;
 static KEVENT AoE_Globals_ThreadSignalEvent;
@@ -772,7 +772,7 @@ NTSTATUS STDCALL DriverEntry(
     AoE_Globals_ProbeTag->packet_data->Count = 1;
   
     /* Initialize global target-list spinlock. */
-    KeInitializeSpinLock ( &AoE_Globals_TargetListSpinLock );
+    KeInitializeSpinLock ( &aoe__target_list_spinlock_ );
   
     /* Initialize global spin-lock and global thread signal event. */
     KeInitializeSpinLock ( &AoE_Globals_SpinLock );
@@ -857,7 +857,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
       }
   
     /* Free the target list. */
-    KeAcquireSpinLock ( &AoE_Globals_TargetListSpinLock, &Irql2 );
+    KeAcquireSpinLock ( &aoe__target_list_spinlock_, &Irql2 );
     Walker = AoE_Globals_TargetList;
     while ( Walker != NULL )
       {
@@ -865,7 +865,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
         wv_free(Walker);
         Walker = Next;
       }
-    KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, Irql2 );
+    KeReleaseSpinLock ( &aoe__target_list_spinlock_, Irql2 );
   
     /* Wait until we have the global spin-lock. */
     KeAcquireSpinLock ( &AoE_Globals_SpinLock, &Irql );
@@ -1517,7 +1517,7 @@ static void STDCALL add_target(
     struct aoe__target_list_ * Walker, * Last;
     KIRQL Irql;
   
-    KeAcquireSpinLock ( &AoE_Globals_TargetListSpinLock, &Irql );
+    KeAcquireSpinLock ( &aoe__target_list_spinlock_, &Irql );
     Walker = Last = AoE_Globals_TargetList;
     while ( Walker != NULL )
       {
@@ -1532,7 +1532,7 @@ static void STDCALL add_target(
   	      Walker->Target.LBASize = LBASize;
   	    }
   	  KeQuerySystemTime ( &Walker->Target.ProbeTime );
-  	  KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, Irql );
+  	  KeReleaseSpinLock ( &aoe__target_list_spinlock_, Irql );
   	  return;
   	}
         Last = Walker;
@@ -1541,7 +1541,7 @@ static void STDCALL add_target(
   
     if ((Walker = wv_malloc(sizeof *Walker)) == NULL) {
         DBG("wv_malloc Walker\n");
-        KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, Irql );
+        KeReleaseSpinLock ( &aoe__target_list_spinlock_, Irql );
         return;
       }
     Walker->next = NULL;
@@ -1560,7 +1560,7 @@ static void STDCALL add_target(
       {
         Last->next = Walker;
       }
-    KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, Irql );
+    KeReleaseSpinLock ( &aoe__target_list_spinlock_, Irql );
   }
 
 /**
@@ -2116,7 +2116,7 @@ static NTSTATUS STDCALL scan(
     aoe__mount_targets_ptr targets;
   
     DBG ( "Got IOCTL_AOE_SCAN...\n" );
-    KeAcquireSpinLock ( &AoE_Globals_TargetListSpinLock, &irql );
+    KeAcquireSpinLock ( &aoe__target_list_spinlock_, &irql );
   
     count = 0;
     target_walker = AoE_Globals_TargetList;
@@ -2158,7 +2158,7 @@ static NTSTATUS STDCALL scan(
   					     ( aoe__mount_target ) ) ) ) );
     wv_free(targets);
   
-    KeReleaseSpinLock ( &AoE_Globals_TargetListSpinLock, irql );
+    KeReleaseSpinLock ( &aoe__target_list_spinlock_, irql );
     *completion_ptr = TRUE;
     return STATUS_SUCCESS;
   
