@@ -58,7 +58,7 @@ irp__handler aoe__bus_dev_ctl_dispatch;
 static void aoe__process_abft_(void);
 static void STDCALL aoe__unload_(IN PDRIVER_OBJECT);
 static struct aoe__disk_type_ * create_aoe_disk(void);
-static device__free_func free_aoe_disk;
+static device__free_func aoe__free_disk_;
 
 /** Tag types. */
 enum aoe__tag_type_
@@ -2336,7 +2336,7 @@ static struct aoe__disk_type_ * create_aoe_disk(void)
      */
     aoe_disk_ptr->disk = disk_ptr;
     aoe_disk_ptr->prev_free = disk_ptr->device->ops.free;
-    disk_ptr->device->ops.free = free_aoe_disk;
+    disk_ptr->device->ops.free = aoe__free_disk_;
     disk_ptr->disk_ops.io = io;
     disk_ptr->disk_ops.max_xfer_len = max_xfer_len;
     disk_ptr->disk_ops.pnp_id = query_id;
@@ -2359,21 +2359,21 @@ static struct aoe__disk_type_ * create_aoe_disk(void)
  *
  * @v dev_ptr           Points to the AoE disk device to delete.
  */
-static void STDCALL free_aoe_disk(IN device__type_ptr dev_ptr)
+static void STDCALL aoe__free_disk_(IN device__type_ptr dev_ptr)
   {
-    disk__type_ptr disk_ptr = disk__get_ptr ( dev_ptr );
-    struct aoe__disk_type_ * aoe_disk_ptr = get_aoe_disk_ptr ( dev_ptr );
-    /*
-     * Free the "inherited class".
-     */
-    aoe_disk_ptr->prev_free ( dev_ptr );
+    disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
+    struct aoe__disk_type_ * aoe_disk_ptr = get_aoe_disk_ptr(dev_ptr);
+    /* Free the "inherited class". */
+    aoe_disk_ptr->prev_free(dev_ptr);
     /*
      * Track the AoE disk deletion in our global list.  Unfortunately,
      * for now we have faith that an AoE disk won't be deleted twice and
      * result in a race condition.  Something to keep in mind...
      */
-    ExInterlockedRemoveHeadList ( aoe_disk_ptr->tracking.Blink,
-  				&aoe_disk_list_lock );
+    ExInterlockedRemoveHeadList(
+        aoe_disk_ptr->tracking.Blink,
+  			&aoe_disk_list_lock
+      );
   
     wv_free(aoe_disk_ptr);
   }
