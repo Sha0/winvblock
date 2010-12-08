@@ -40,7 +40,7 @@
 
 /* Globals. */
 static PDEVICE_OBJECT bus__boot_fdo_ = NULL;
-static LIST_ENTRY bus_list;
+static LIST_ENTRY bus__list_;
 static KSPIN_LOCK bus__list_lock_;
 
 /* Forward declarations. */
@@ -216,15 +216,15 @@ static NTSTATUS STDCALL attach_fdo(
   
     DBG("Entry\n");
     /* Search for the associated bus. */
-    walker = bus_list.Flink;
-    while (walker != &bus_list) {
+    walker = bus__list_.Flink;
+    while (walker != &bus__list_) {
         bus_ptr = CONTAINING_RECORD(walker, bus__type, tracking);
         if (bus_ptr->PhysicalDeviceObject == PhysicalDeviceObject)
           break;
         walker = walker->Flink;
       }
     /* If we get back to the list head, we need to create a bus. */
-    if (walker == &bus_list) {
+    if (walker == &bus__list_) {
         DBG("No bus->PDO association.  Creating a new bus\n");
         bus_ptr = bus__create();
         if (bus_ptr == NULL) {
@@ -370,7 +370,7 @@ winvblock__lib_func bus__type_ptr bus__create(void) {
     if (bus_ptr == NULL)
       goto err_nobus;
     /* Track the new bus in our global list. */
-    ExInterlockedInsertTailList(&bus_list, &bus_ptr->tracking, &bus__list_lock_);
+    ExInterlockedInsertTailList(&bus__list_, &bus_ptr->tracking, &bus__list_lock_);
     /* Populate non-zero device defaults. */
     bus_ptr->device = dev_ptr;
     bus_ptr->prev_free = dev_ptr->ops.free;
@@ -457,7 +457,7 @@ NTSTATUS bus__init(void) {
     bus__type_ptr boot_bus_ptr;
   
     /* Initialize the global list of devices. */
-    InitializeListHead(&bus_list);
+    InitializeListHead(&bus__list_);
     KeInitializeSpinLock(&bus__list_lock_);
     /* We handle AddDevice call-backs for the driver. */
     driver__obj_ptr->DriverExtension->AddDevice = attach_fdo;
