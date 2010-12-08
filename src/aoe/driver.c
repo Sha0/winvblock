@@ -53,7 +53,7 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject(
 
 /* Forward declarations. */
 struct aoe__disk_type_;
-static void STDCALL thread(IN void *);
+static void STDCALL aoe__thread_(IN void *);
 irp__handler aoe__bus_dev_ctl_dispatch;
 static void process_abft(void);
 static void STDCALL unload(IN PDRIVER_OBJECT DriverObject);
@@ -785,11 +785,15 @@ NTSTATUS STDCALL DriverEntry(
   			       NULL, NULL );
   
     /* Create global thread. */
-    if ( !NT_SUCCESS
-         ( Status =
-  	 PsCreateSystemThread ( &AoE_Globals_ThreadHandle, THREAD_ALL_ACCESS,
-  				&ObjectAttributes, NULL, NULL, thread,
-  				NULL ) ) )
+    if (!NT_SUCCESS(Status = PsCreateSystemThread(
+        &AoE_Globals_ThreadHandle,
+        THREAD_ALL_ACCESS,
+  			&ObjectAttributes,
+        NULL,
+        NULL,
+        aoe__thread_,
+  			NULL
+      )))
       return Error ( "PsCreateSystemThread", Status );
   
     if ( !NT_SUCCESS
@@ -1789,7 +1793,7 @@ void aoe__reset_probe(void)
     AoE_Globals_ProbeTag->SendTime.QuadPart = 0LL;
   }
 
-static void STDCALL thread(IN void *StartContext)
+static void STDCALL aoe__thread_(IN void *StartContext)
   {
     LARGE_INTEGER Timeout, CurrentTime, ProbeTime, ReportTime;
     winvblock__uint32 NextTagId = 1;
