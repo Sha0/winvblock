@@ -61,12 +61,11 @@ static struct aoe_disk_type * create_aoe_disk(void);
 static device__free_func free_aoe_disk;
 
 /** Tag types. */
-enum _tag_type
+enum aoe__tag_type_
   {
-    tag_type_io,
-    tag_type_search_drive
+    aoe__tag_type_io_,
+    aoe__tag_type_search_drive_
   };
-winvblock__def_enum(tag_type);
 
 #ifdef _MSC_VER
 #  pragma pack(1)
@@ -133,7 +132,7 @@ winvblock__def_struct(io_req)
 /** A work item "tag". */
 winvblock__def_struct(work_tag)
   {
-    tag_type type;
+    enum aoe__tag_type_ type;
     device__type_ptr device;
     io_req_ptr request_ptr;
     winvblock__uint32 Id;
@@ -1194,7 +1193,7 @@ static disk__init_decl(init)
   	   */
   	  continue;
   	}
-        tag->type = tag_type_search_drive;
+        tag->type = aoe__tag_type_search_drive_;
         tag->device = disk_ptr->device;
   
         /*
@@ -1377,7 +1376,7 @@ static disk__io_decl(io)
         /*
          * Initialize each tag 
          */
-        tag->type = tag_type_io;
+        tag->type = aoe__tag_type_io_;
         tag->request_ptr = request_ptr;
         tag->device = dev_ptr;
         request_ptr->TagCount++;
@@ -1681,7 +1680,7 @@ NTSTATUS STDCALL aoe__reply(
   
     switch ( tag->type )
       {
-        case tag_type_search_drive:
+        case aoe__tag_type_search_drive_:
   	KeAcquireSpinLock ( &disk_ptr->SpinLock, &Irql );
   	switch ( aoe_disk_ptr->search_state )
   	  {
@@ -1753,7 +1752,7 @@ NTSTATUS STDCALL aoe__reply(
   	KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
   	KeSetEvent ( &disk_ptr->SearchEvent, 0, FALSE );
   	break;
-        case tag_type_io:
+        case aoe__tag_type_io_:
   	/*
   	 * If the reply is in response to a read request, get our data! 
   	 */
