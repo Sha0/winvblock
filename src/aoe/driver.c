@@ -194,7 +194,7 @@ static KSPIN_LOCK aoe__target_list_spinlock_;
 static winvblock__bool aoe__stop_ = FALSE;
 static KSPIN_LOCK aoe__spinlock_;
 static KEVENT aoe__thread_sig_evt_;
-static struct aoe__work_tag_ * AoE_Globals_TagList = NULL;
+static struct aoe__work_tag_ * aoe__tag_list_ = NULL;
 static struct aoe__work_tag_ * aoe__tag_list_last_ = NULL;
 static struct aoe__work_tag_ * AoE_Globals_ProbeTag = NULL;
 static struct aoe__disk_search_ * AoE_Globals_DiskSearchList = NULL;
@@ -882,7 +882,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
       }
   
     /* Cancel and free all tags in the global tag list. */
-    tag = AoE_Globals_TagList;
+    tag = aoe__tag_list_;
     while ( tag != NULL )
       {
         if ( tag->request_ptr != NULL && --tag->request_ptr->TagCount == 0 )
@@ -905,7 +905,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
       wv_free(tag->previous);
   	}
       }
-    AoE_Globals_TagList = NULL;
+    aoe__tag_list_ = NULL;
     aoe__tag_list_last_ = NULL;
   
     /* Free the global probe tag and its AoE packet. */
@@ -1089,7 +1089,7 @@ static disk__init_decl(init)
   	  /*
   	   * Tag clean-up: Find out if our tag is in the global tag list 
   	   */
-  	  tag_walker = AoE_Globals_TagList;
+  	  tag_walker = aoe__tag_list_;
   	  while ( tag_walker != NULL && tag_walker != tag )
   	    tag_walker = tag_walker->next;
   	  if ( tag_walker != NULL )
@@ -1099,7 +1099,7 @@ static disk__init_decl(init)
   	       * the list to point the the next tag
   	       */
   	      if ( tag->previous == NULL )
-  		AoE_Globals_TagList = tag->next;
+  		aoe__tag_list_ = tag->next;
   	      else
   		/*
   		 * Remove our tag from the list 
@@ -1273,9 +1273,9 @@ static disk__init_decl(init)
          */
         tag->next = NULL;
         KeAcquireSpinLock ( &aoe__spinlock_, &InnerIrql );
-        if ( AoE_Globals_TagList == NULL )
+        if ( aoe__tag_list_ == NULL )
   	{
-  	  AoE_Globals_TagList = tag;
+  	  aoe__tag_list_ = tag;
   	  tag->previous = NULL;
   	}
         else
@@ -1485,7 +1485,7 @@ static disk__io_decl(io)
      */
     if ( aoe__tag_list_last_ == NULL )
       {
-        AoE_Globals_TagList = new_tag_list;
+        aoe__tag_list_ = new_tag_list;
       }
     else
       {
@@ -1612,12 +1612,12 @@ NTSTATUS STDCALL aoe__reply(
     /*
      * Search for request tag 
      */
-    if ( AoE_Globals_TagList == NULL )
+    if ( aoe__tag_list_ == NULL )
       {
         KeReleaseSpinLock ( &aoe__spinlock_, Irql );
         return STATUS_SUCCESS;
       }
-    tag = AoE_Globals_TagList;
+    tag = aoe__tag_list_;
     while ( tag != NULL )
       {
         if ( ( tag->Id == reply->Tag )
@@ -1640,7 +1640,7 @@ NTSTATUS STDCALL aoe__reply(
          * Remove the tag from the global tag list 
          */
         if ( tag->previous == NULL )
-  	AoE_Globals_TagList = tag->next;
+  	aoe__tag_list_ = tag->next;
         else
   	tag->previous->next = tag->next;
         if ( tag->next == NULL )
@@ -1865,12 +1865,12 @@ static void STDCALL aoe__thread_(IN void *StartContext)
   	}
   
         KeAcquireSpinLock ( &aoe__spinlock_, &Irql );
-        if ( AoE_Globals_TagList == NULL )
+        if ( aoe__tag_list_ == NULL )
   	{
   	  KeReleaseSpinLock ( &aoe__spinlock_, Irql );
   	  continue;
   	}
-        tag = AoE_Globals_TagList;
+        tag = aoe__tag_list_;
         while ( tag != NULL )
   	{
   	  /*
@@ -1937,7 +1937,7 @@ static void STDCALL aoe__thread_(IN void *StartContext)
   		}
   	    }
   	  tag = tag->next;
-  	  if ( tag == AoE_Globals_TagList )
+  	  if ( tag == aoe__tag_list_ )
   	    {
   	      DBG ( "Taglist Cyclic!!\n" );
   	      break;
