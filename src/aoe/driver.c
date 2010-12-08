@@ -57,7 +57,7 @@ static void STDCALL aoe__thread_(IN void *);
 irp__handler aoe__bus_dev_ctl_dispatch;
 static void aoe__process_abft_(void);
 static void STDCALL aoe__unload_(IN PDRIVER_OBJECT);
-static struct aoe__disk_type_ * create_aoe_disk(void);
+static struct aoe__disk_type_ * aoe__create_disk_(void);
 static device__free_func aoe__free_disk_;
 
 /** Tag types. */
@@ -2068,7 +2068,7 @@ static void aoe__process_abft_(void)
 
     if (FoundAbft)
       {
-        aoe_disk_ptr = create_aoe_disk();
+        aoe_disk_ptr = aoe__create_disk_();
         if(aoe_disk_ptr == NULL)
         	{
         	  DBG("Could not create AoE disk from aBFT!\n");
@@ -2246,7 +2246,7 @@ static NTSTATUS STDCALL mount(
   	"Major:%d Minor:%d\n", buffer[0], buffer[1], buffer[2], buffer[3],
   	buffer[4], buffer[5], *( winvblock__uint16_ptr ) ( &buffer[6] ),
   	( winvblock__uint8 ) buffer[8] );
-    aoe_disk_ptr = create_aoe_disk (  );
+    aoe_disk_ptr = aoe__create_disk_();
     if ( aoe_disk_ptr == NULL )
       {
         DBG ( "Could not create AoE disk!\n" );
@@ -2308,32 +2308,29 @@ NTSTATUS STDCALL aoe__bus_dev_ctl_dispatch(
  * aoe__disk_type_, track it in a global list, as well as populate the disk
  * with default values.
  */
-static struct aoe__disk_type_ * create_aoe_disk(void)
+static struct aoe__disk_type_ * aoe__create_disk_(void)
   {
     disk__type_ptr disk_ptr;
     struct aoe__disk_type_ * aoe_disk_ptr;
   
-    /*
-     * Try to create a disk
-     */
-    disk_ptr = disk__create (  );
-    if ( disk_ptr == NULL )
+    /* Try to create a disk. */
+    disk_ptr = disk__create();
+    if (disk_ptr == NULL)
       goto err_nodisk;
     /*
      * AoE disk devices might be used for booting and should
-     * not be allocated from a paged memory pool
+     * not be allocated from a paged memory pool.
      */
     aoe_disk_ptr = wv_mallocz(sizeof *aoe_disk_ptr);
-    if ( aoe_disk_ptr == NULL )
+    if (aoe_disk_ptr == NULL)
       goto err_noaoedisk;
-    /*
-     * Track the new AoE disk in our global list
-     */
-    ExInterlockedInsertTailList ( &aoe_disk_list, &aoe_disk_ptr->tracking,
-  				&aoe_disk_list_lock );
-    /*
-     * Populate non-zero device defaults
-     */
+    /* Track the new AoE disk in our global list. */
+    ExInterlockedInsertTailList(
+        &aoe_disk_list,
+        &aoe_disk_ptr->tracking,
+  			&aoe_disk_list_lock
+      );
+    /* Populate non-zero device defaults. */
     aoe_disk_ptr->disk = disk_ptr;
     aoe_disk_ptr->prev_free = disk_ptr->device->ops.free;
     disk_ptr->device->ops.free = aoe__free_disk_;
@@ -2346,10 +2343,10 @@ static struct aoe__disk_type_ * create_aoe_disk(void)
   
     return aoe_disk_ptr;
   
-  err_noaoedisk:
+    err_noaoedisk:
   
-    device__free ( disk_ptr->device );
-  err_nodisk:
+    device__free(disk_ptr->device);
+    err_nodisk:
   
     return NULL;
   }
