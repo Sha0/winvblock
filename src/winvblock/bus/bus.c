@@ -39,7 +39,7 @@
 #include "debug.h"
 
 /* Globals. */
-static PDEVICE_OBJECT boot_bus_fdo = NULL;
+static PDEVICE_OBJECT bus__boot_fdo_ = NULL;
 static LIST_ENTRY bus_list;
 static KSPIN_LOCK bus_list_lock;
 
@@ -59,7 +59,7 @@ void bus__finalize(void) {
         L"\\DosDevices\\" winvblock__literal_w
       );
     IoDeleteSymbolicLink(&DosDeviceName);
-    boot_bus_fdo = NULL;
+    bus__boot_fdo_ = NULL;
     DBG("Exit\n");
   }
 
@@ -479,7 +479,7 @@ NTSTATUS bus__init(void) {
     if (create_pdo(boot_bus_ptr->device) == NULL) {
         return STATUS_UNSUCCESSFUL;
       }
-    boot_bus_fdo = boot_bus_ptr->device->Self;
+    bus__boot_fdo_ = boot_bus_ptr->device->Self;
 
     return STATUS_SUCCESS;
   }
@@ -509,11 +509,11 @@ static void STDCALL free_bus(IN device__type_ptr dev_ptr) {
  * @ret         A pointer to the boot bus, or NULL.
  */
 winvblock__lib_func bus__type_ptr bus__boot(void) {
-    if (!boot_bus_fdo) {
+    if (!bus__boot_fdo_) {
         DBG("No boot bus device!\n");
         return NULL;
       }
-    return bus__get(device__get(boot_bus_fdo));
+    return bus__get(device__get(bus__boot_fdo_));
   }
 
 /**
