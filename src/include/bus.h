@@ -42,11 +42,11 @@ struct bus__type {
     winvblock__bool named;
   };
 
+/* Exports. */
 extern NTSTATUS STDCALL bus__get_dev_capabilities(
     IN PDEVICE_OBJECT,
     IN PDEVICE_CAPABILITIES
   );
-
 extern NTSTATUS bus__module_init(void);
 extern void bus__module_shutdown(void);
 extern winvblock__lib_func struct bus__type * bus__create(void);
@@ -54,14 +54,7 @@ extern winvblock__lib_func winvblock__bool STDCALL bus__add_child(
     IN OUT struct bus__type *,
     IN device__type_ptr
   );
-
-/**
- * Get a pointer to the bus device's extension space.
- *
- * @ret         A pointer to the bus device's extension space, or NULL.
- */
 extern winvblock__lib_func struct bus__type * bus__boot(void);
-
-extern winvblock__lib_func struct bus__type * bus__get(device__type_ptr dev);
+extern winvblock__lib_func struct bus__type * bus__get(device__type_ptr);
 
 #endif  /* _BUS_H */

@@ -53,7 +53,7 @@ static device__create_pdo_decl(bus__create_pdo_);
  */
 void bus__module_shutdown(void) {
     UNICODE_STRING DosDeviceName;
-  
+
     DBG("Entry\n");
     RtlInitUnicodeString(
         &DosDeviceName,
@@ -81,7 +81,7 @@ winvblock__lib_func winvblock__bool STDCALL bus__add_child(
     PDEVICE_OBJECT dev_obj_ptr;
     /* Walks the child nodes. */
     device__type_ptr walker;
-  
+
     DBG("Entry\n");
     if (!bus__module_up_) {
         DBG("Bus module not initialized.\n");
@@ -98,7 +98,7 @@ winvblock__lib_func winvblock__bool STDCALL bus__add_child(
         device__free(dev_ptr);
         return FALSE;
       }
-  
+
     dev_ptr->Parent = bus_ptr->device->Self;
     /*
      * Initialize the device.  For disks, this routine is responsible for
@@ -164,13 +164,13 @@ NTSTATUS STDCALL bus__get_dev_capabilities(
     PDEVICE_OBJECT targetObject;
     PIO_STACK_LOCATION irpStack;
     PIRP pnpIrp;
-  
+
     RtlZeroMemory(DeviceCapabilities, sizeof (DEVICE_CAPABILITIES));
     DeviceCapabilities->Size = sizeof (DEVICE_CAPABILITIES);
     DeviceCapabilities->Version = 1;
     DeviceCapabilities->Address = -1;
     DeviceCapabilities->UINumber = -1;
-  
+
     KeInitializeEvent(&pnpEvent, NotificationEvent, FALSE);
     targetObject = IoGetAttachedDeviceReference(DeviceObject);
     pnpIrp = IoBuildSynchronousFsdRequest(
@@ -218,7 +218,7 @@ static NTSTATUS STDCALL attach_fdo(
     PUNICODE_STRING dev_name = NULL;
     PDEVICE_OBJECT fdo = NULL;
     device__type_ptr dev_ptr;
-  
+
     DBG("Entry\n");
     /* Search for the associated bus. */
     walker = bus__list_.Flink;
@@ -268,12 +268,12 @@ static NTSTATUS STDCALL attach_fdo(
         device__free(bus_ptr->device);
         return Error("IoCreateSymbolicLink", status);
       }
-  
+
     /* Set associations for the bus, device, FDO, PDO. */
     dev_ptr = bus_ptr->device;
     device__set(fdo, dev_ptr);
     dev_ptr->Self = fdo;
-  
+
     bus_ptr->PhysicalDeviceObject = PhysicalDeviceObject;
     fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
     fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
@@ -365,7 +365,11 @@ static NTSTATUS STDCALL bus_dispatch(
 winvblock__lib_func struct bus__type * bus__create(void) {
     device__type_ptr dev_ptr;
     struct bus__type * bus_ptr;
-  
+
+    if (!bus__module_up_) {
+        DBG("Bus module not initialized.\n");
+        return NULL;
+      }
     /* Try to create a device. */
     dev_ptr = device__create();
     if (dev_ptr == NULL)
@@ -378,7 +382,11 @@ winvblock__lib_func struct bus__type * bus__create(void) {
     if (bus_ptr == NULL)
       goto err_nobus;
     /* Track the new bus in our global list. */
-    ExInterlockedInsertTailList(&bus__list_, &bus_ptr->tracking, &bus__list_lock_);
+    ExInterlockedInsertTailList(
+        &bus__list_,
+        &bus_ptr->tracking,
+        &bus__list_lock_
+      );
     /* Populate non-zero device defaults. */
     bus_ptr->device = dev_ptr;
     bus_ptr->prev_free = dev_ptr->ops.free;
@@ -411,7 +419,7 @@ static device__create_pdo_decl(bus__create_pdo_) {
     PDEVICE_OBJECT pdo_ptr = NULL;
     struct bus__type * bus_ptr;
     NTSTATUS status;
-  
+
     /* Note the bus device needing a PDO. */
     if (dev_ptr == NULL) {
         DBG("No device passed\n");
@@ -463,7 +471,7 @@ static device__create_pdo_decl(bus__create_pdo_) {
  */
 NTSTATUS bus__module_init(void) {
     struct bus__type * boot_bus_ptr;
-  
+
     /* Initialize the global list of devices. */
     InitializeListHead(&bus__list_);
     KeInitializeSpinLock(&bus__list_lock_);
@@ -529,6 +537,7 @@ winvblock__lib_func struct bus__type * bus__boot(void) {
  * Get a bus from a device.
  *
  * @v dev       A pointer to a device.
+ * @ret         A pointer to the device's associated bus.
  */
 extern winvblock__lib_func struct bus__type * bus__get(device__type_ptr dev) {
     return dev->ext;
