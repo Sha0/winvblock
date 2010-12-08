@@ -56,7 +56,7 @@ struct aoe__disk_type_;
 static void STDCALL aoe__thread_(IN void *);
 irp__handler aoe__bus_dev_ctl_dispatch;
 static void aoe__process_abft_(void);
-static void STDCALL unload(IN PDRIVER_OBJECT DriverObject);
+static void STDCALL aoe__unload_(IN PDRIVER_OBJECT);
 static struct aoe__disk_type_ * create_aoe_disk(void);
 static device__free_func free_aoe_disk;
 
@@ -819,7 +819,7 @@ NTSTATUS STDCALL DriverEntry(
   	irp__reg_table ( &bus_ptr->device->irp_handler_chain, handling_table );
         }
     }
-    DriverObject->DriverUnload = unload;
+    DriverObject->DriverUnload = aoe__unload_;
     aoe__process_abft_();
     AoE_Globals_Started = TRUE;
     DBG ( "Exit\n" );
@@ -829,7 +829,7 @@ NTSTATUS STDCALL DriverEntry(
 /**
  * Stop AoE operations.
  */
-static void STDCALL unload(IN PDRIVER_OBJECT DriverObject)
+static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
   {
     NTSTATUS Status;
     disk_search_ptr disk_searcher, previous_disk_searcher;
