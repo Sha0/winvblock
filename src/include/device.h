@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _device_h
-#  define _device_h
+#ifndef _DEVICE_H
+#  define _DEVICE_H
 
 /**
  * @file
@@ -191,9 +191,6 @@ struct _device__type
 };
 
 extern winvblock__lib_func device__type_ptr device__get(PDEVICE_OBJECT);
-extern winvblock__lib_func device__type_ptr device__set(
-    PDEVICE_OBJECT,
-    device__type_ptr
-  );
+extern winvblock__lib_func void device__set(PDEVICE_OBJECT, device__type_ptr);
 
-#endif				/* _device_h */
+#endif  /* _DEVICE_H */
