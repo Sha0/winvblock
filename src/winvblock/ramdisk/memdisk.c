@@ -110,7 +110,7 @@ check_mbft (
   ramdisk_ptr->disk->Heads = mBFT->mdi.heads;
   ramdisk_ptr->disk->Sectors = mBFT->mdi.sectors;
   ramdisk_ptr->disk->BootDrive = TRUE;
-  bus__add_child ( bus__boot (  ), ramdisk_ptr->disk->device );
+  bus__add_child(driver__bus(), ramdisk_ptr->disk->device);
   AssociatedHook->Flags = 1;
   return TRUE;
 }

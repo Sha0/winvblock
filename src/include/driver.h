@@ -39,18 +39,19 @@
 
 #define POOLSIZE 2048
 
+/* An unfortunate forward declaration.  Definition resolved in device.h */
+winvblock__def_struct(device__type);
+
 extern PDRIVER_OBJECT driver__obj_ptr;
 extern winvblock__lib_func void STDCALL Driver_CompletePendingIrp(IN PIRP);
 /* Note the exception to the function naming convention. */
 extern winvblock__lib_func NTSTATUS STDCALL Error(IN PCHAR, IN NTSTATUS);
+extern winvblock__lib_func struct bus__type * driver__bus(void);
 /* Note the exception to the function naming convention. */
 extern NTSTATUS STDCALL DriverEntry(
     IN PDRIVER_OBJECT,
     IN PUNICODE_STRING
   );
-
-/* An unfortunate forward declaration.  Definition resolved in device.h */
-winvblock__def_struct(device__type);
 
 /* The physical/function device object's (PDO's/FDO's) DeviceExtension */
 winvblock__def_struct(driver__dev_ext) {

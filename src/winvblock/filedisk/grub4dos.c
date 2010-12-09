@@ -493,7 +493,7 @@ filedisk_grub4dos__find (
 	    Grub4DosDriveMapSlotPtr[i].SourceDrive;
 	  filedisk_ptr->disk->BootDrive = TRUE;
 	  FoundGrub4DosMapping = TRUE;
-	  bus__add_child ( bus__boot (  ), filedisk_ptr->disk->device );
+	  bus__add_child(driver__bus(), filedisk_ptr->disk->device);
 	}
       InterruptVector = &SafeMbrHookPtr->PrevHook;
     }

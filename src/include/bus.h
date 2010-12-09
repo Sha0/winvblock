@@ -54,7 +54,6 @@ extern winvblock__lib_func winvblock__bool STDCALL bus__add_child(
     IN OUT struct bus__type *,
     IN device__type_ptr
   );
-extern winvblock__lib_func struct bus__type * bus__boot(void);
 extern winvblock__lib_func struct bus__type * bus__get(device__type_ptr);
 
 #endif  /* _BUS_H */

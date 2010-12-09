@@ -39,7 +39,6 @@
 #include "debug.h"
 
 /* Globals. */
-static PDEVICE_OBJECT bus__boot_fdo_ = NULL;
 static LIST_ENTRY bus__list_;
 static KSPIN_LOCK bus__list_lock_;
 winvblock__bool bus__module_up_ = FALSE;
@@ -52,15 +51,8 @@ static device__create_pdo_func bus__create_pdo_;
  * Tear down the global, bus-common environment.
  */
 void bus__module_shutdown(void) {
-    UNICODE_STRING DosDeviceName;
 
     DBG("Entry\n");
-    RtlInitUnicodeString(
-        &DosDeviceName,
-        L"\\DosDevices\\" winvblock__literal_w
-      );
-    IoDeleteSymbolicLink(&DosDeviceName);
-    bus__boot_fdo_ = NULL;
     bus__module_up_ = FALSE;
     DBG("Exit\n");
     return;
@@ -410,57 +402,69 @@ winvblock__lib_func struct bus__type * bus__create(void) {
 /**
  * Create a bus PDO.
  *
- * @v dev_ptr           Populate PDO dev. ext. space from these details.
- * @ret pdo_ptr         Points to the new PDO, or is NULL upon failure.
+ * @v dev               Populate PDO dev. ext. space from these details.
+ * @ret pdo             Points to the new PDO, or is NULL upon failure.
  *
  * Returns a Physical Device Object pointer on success, NULL for failure.
  */
-static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN device__type_ptr dev_ptr) {
-    PDEVICE_OBJECT pdo_ptr = NULL;
-    struct bus__type * bus_ptr;
+static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN device__type_ptr dev) {
+    PDEVICE_OBJECT pdo = NULL;
+    struct bus__type * bus;
     NTSTATUS status;
 
     /* Note the bus device needing a PDO. */
-    if (dev_ptr == NULL) {
+    if (dev == NULL) {
         DBG("No device passed\n");
         return NULL;
       }
-    bus_ptr = bus__get(dev_ptr);
-    /* Always create the root-enumerated bus device. */
-    IoReportDetectedDevice(
-        driver__obj_ptr,
-        InterfaceTypeUndefined,
-        -1,
-        -1,
-        NULL,
-        NULL,
+    bus = bus__get(dev);
+    /* Create the PDO. */
+    status = IoCreateDevice(
+        dev->DriverObject,
+        sizeof (driver__dev_ext),
+        &bus->dev_name,
+        FILE_DEVICE_CONTROLLER,
+        FILE_DEVICE_SECURE_OPEN,
         FALSE,
-        &pdo_ptr
+        &pdo
       );
-    if (pdo_ptr == NULL) {
-        DBG("IoReportDetectedDevice() went wrong!\n");
-        return NULL;
+    if (pdo == NULL) {
+        DBG("IoCreateDevice() failed!\n");
+        goto err_pdo;
       }
-    /* We have a PDO.  Note it in the bus. */
-    bus_ptr->PhysicalDeviceObject = pdo_ptr;
-    /*
-     * Attach FDO to PDO. *sigh*  Note that we do not own the PDO,
-     * so we must associate the bus structure with the FDO, instead.
-     * Consider that the AddDevice()/attach_fdo() routine takes two parameters,
-     * neither of which are guaranteed to be owned by a caller in this driver.
-     * Since attach_fdo() associates a bus device, it is forced to walk our
-     * global list of bus devices.  Otherwise, it would be easy to pass it here
-     */
-    status = attach_fdo(driver__obj_ptr, pdo_ptr);
+    /* DosDevice symlink. */
+    if (bus->named) {
+        status = IoCreateSymbolicLink(
+            &bus->dos_dev_name,
+            &bus->dev_name
+          );
+      }
     if (!NT_SUCCESS(status)) {
-        DBG("attach_fdo() went wrong!\n");
-        goto err_add_dev;
+        DBG("IoCreateSymbolicLink");
+        goto err_name;
       }
-    return pdo_ptr;
 
-    err_add_dev:
+    /* Set associations for the bus, device, PDO. */
+    device__set(pdo, dev);
+    dev->Self = bus->PhysicalDeviceObject = pdo;
 
-    IoDeleteDevice(pdo_ptr);
+    /* Set some DEVICE_OBJECT status. */
+    pdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
+    pdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
+    pdo->Flags &= ~DO_DEVICE_INITIALIZING;
+    #ifdef RIS
+    dev->State = Started;
+    #endif
+
+    return pdo;
+
+    err_name:
+
+    IoDeleteDevice(pdo);
+    err_pdo:
+
+    /* Destroy the caller's device! */
+    device__free(dev);
     return NULL;
   }
 
@@ -478,26 +482,6 @@ NTSTATUS bus__module_init(void) {
     /* We handle AddDevice call-backs for the driver. */
     driver__obj_ptr->DriverExtension->AddDevice = attach_fdo;
     bus__module_up_ = TRUE;
-
-    /* Establish the boot bus (required for booting from a WinVBlock disk). */
-    boot_bus_ptr = bus__create();
-    if (boot_bus_ptr == NULL)
-      return STATUS_UNSUCCESSFUL;
-    /* In booting, he has a name.  His name is WinVBlock. */
-    RtlInitUnicodeString(
-        &boot_bus_ptr->dev_name,
-        L"\\Device\\" winvblock__literal_w
-      );
-    RtlInitUnicodeString(
-        &boot_bus_ptr->dos_dev_name,
-        L"\\DosDevices\\" winvblock__literal_w
-      );
-    boot_bus_ptr->named = TRUE;
-    /* Create the PDO, which also attaches the FDO *sigh*. */
-    if (bus__create_pdo_(boot_bus_ptr->device) == NULL) {
-        return STATUS_UNSUCCESSFUL;
-      }
-    bus__boot_fdo_ = boot_bus_ptr->device->Self;
 
     return STATUS_SUCCESS;
   }
@@ -519,19 +503,6 @@ static void STDCALL bus__free_(IN device__type_ptr dev_ptr) {
     ExInterlockedRemoveHeadList(bus_ptr->tracking.Blink, &bus__list_lock_);
 
     wv_free(bus_ptr);
-  }
-
-/**
- * Get a pointer to the boot bus device.
- *
- * @ret         A pointer to the boot bus, or NULL.
- */
-winvblock__lib_func struct bus__type * bus__boot(void) {
-    if (!bus__boot_fdo_) {
-        DBG("No boot bus device!\n");
-        return NULL;
-      }
-    return bus__get(device__get(bus__boot_fdo_));
   }
 
 /**

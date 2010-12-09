@@ -224,7 +224,7 @@ NTSTATUS STDCALL filedisk__attach(
   /*
    * FIXME: Check for error below!
    */
-  bus__add_child ( bus__boot (  ), filedisk_ptr->disk->device );
+  bus__add_child(driver__bus(), filedisk_ptr->disk->device);
   return STATUS_SUCCESS;
 
 err_query_info:

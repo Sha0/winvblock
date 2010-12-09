@@ -49,6 +49,7 @@ PDRIVER_OBJECT driver__obj_ptr = NULL;
 /* Globals. */
 static void * driver__state_handle_;
 static winvblock__bool driver__started_ = FALSE;
+static PDEVICE_OBJECT driver__bus_fdo_ = NULL;
 /* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters. */
 static LPWSTR driver__os_load_opts_ = NULL;
 
@@ -112,6 +113,77 @@ static LPWSTR STDCALL get_opt(IN LPWSTR opt_name) {
     return the_opt;
   }
 
+/* Create the root-enumerated, main bus device. */
+NTSTATUS STDCALL driver__create_bus_(void) {
+    struct bus__type * bus;
+    NTSTATUS status;
+    PDEVICE_OBJECT bus_pdo = NULL;
+
+    bus = bus__create();
+    if (!bus) {
+        DBG("bus__create() failed for the main bus.\n");
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto err_bus;
+      }
+    /* In booting, he has a name.  His name is WinVBlock. */
+    RtlInitUnicodeString(
+        &bus->dev_name,
+        L"\\Device\\" winvblock__literal_w
+      );
+    RtlInitUnicodeString(
+        &bus->dos_dev_name,
+        L"\\DosDevices\\" winvblock__literal_w
+      );
+    bus->named = TRUE;
+    /* Create the PDO. */
+    IoReportDetectedDevice(
+        driver__obj_ptr,
+        InterfaceTypeUndefined,
+        -1,
+        -1,
+        NULL,
+        NULL,
+        FALSE,
+        &bus_pdo
+      );
+    if (bus_pdo == NULL) {
+        DBG("IoReportDetectedDevice() went wrong!  Exiting.\n");
+        status = STATUS_UNSUCCESSFUL;
+        goto err_driver_bus;
+      }
+    /* We have a PDO.  Note it.  We need this in order to attach the FDO. */
+    bus->PhysicalDeviceObject = bus_pdo;
+    /*
+     * Attach FDO to PDO. *sigh*  Note that we do not own the PDO,
+     * so we must associate the bus structure with the FDO, instead.
+     * Consider that the AddDevice()/attach_fdo() routine takes two parameters,
+     * neither of which are guaranteed to be owned by a caller in this driver.
+     * Since attach_fdo() associates a bus device, it is forced to walk our
+     * global list of bus devices.  Otherwise, it would be easy to pass it here
+     */
+    status = driver__obj_ptr->DriverExtension->AddDevice(
+        driver__obj_ptr,
+        bus_pdo
+      );
+    if (!NT_SUCCESS(status)) {
+        DBG("attach_fdo() went wrong!\n");
+        goto err_add_dev;
+      }
+    /* Bus created, PDO created, FDO attached.  All done. */
+    driver__bus_fdo_ = bus->device->Self;
+    return STATUS_SUCCESS;
+
+    err_add_dev:
+
+    IoDeleteDevice(bus_pdo);
+    err_driver_bus:
+
+    device__free(bus->device);
+    err_bus:
+
+    return status;
+  }
+
 /*
  * Note the exception to the function naming convention.
  * TODO: See if a Makefile change is good enough.
@@ -166,9 +238,23 @@ NTSTATUS STDCALL DriverEntry(
     filedisk__init();           /* TODO: Check for error. */
     ramdisk__init();            /* TODO: Check for error. */
 
+    /*
+     * Always create the root-enumerated, main bus device.
+     * This is required in order to boot from a WinVBlock disk.
+     */
+    status = driver__create_bus_();
+    if(!NT_SUCCESS(status))
+      goto err_bus;
+
     driver__started_ = TRUE;
     DBG("Exit\n");
     return STATUS_SUCCESS;
+
+    err_bus:
+
+    driver__unload_(DriverObject);
+    DBG("Exit due to failure\n");
+    return status;
   }
 
 static NTSTATUS STDCALL driver__dispatch_not_supported_(
@@ -299,8 +385,17 @@ winvblock__lib_func NTSTATUS STDCALL driver__default_dispatch(
   }
 
 static void STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
+    UNICODE_STRING DosDeviceName;
+
+    DBG("Unloading...\n");
     if (driver__state_handle_ != NULL)
       PoUnregisterSystemState(driver__state_handle_);
+    RtlInitUnicodeString(
+        &DosDeviceName,
+        L"\\DosDevices\\" winvblock__literal_w
+      );
+    IoDeleteSymbolicLink(&DosDeviceName);
+    driver__bus_fdo_ = NULL;
     bus__module_shutdown();
     wv_free(driver__os_load_opts_);
     driver__started_ = FALSE;
@@ -321,4 +416,17 @@ winvblock__lib_func NTSTATUS STDCALL Error(
   ) {
     DBG("%s: 0x%08x\n", Message, Status);
     return Status;
+  }
+
+/**
+ * Get a pointer to the driver bus device.
+ *
+ * @ret         A pointer to the driver bus, or NULL.
+ */
+winvblock__lib_func struct bus__type * driver__bus(void) {
+    if (!driver__bus_fdo_) {
+        DBG("No driver bus device!\n");
+        return NULL;
+      }
+    return bus__get(device__get(driver__bus_fdo_));
   }
