@@ -27,22 +27,21 @@
  * Device specifics.
  */
 
-#  include "portable.h"
+#include "portable.h"
 
-enum _device__state
-{
-  NotStarted,
-  Started,
-  StopPending,
-  Stopped,
-  RemovePending,
-  SurpriseRemovePending,
-  Deleted
-};
-winvblock__def_enum ( device__state );
+enum _device__state {
+    NotStarted,
+    Started,
+    StopPending,
+    Stopped,
+    RemovePending,
+    SurpriseRemovePending,
+    Deleted
+  };
+winvblock__def_enum(device__state);
 
-/* Forward declaration */
-winvblock__def_struct ( device__type );
+/* Forward declaration. */
+winvblock__def_struct(device__type);
 
 /**
  * Device PDO creation routine
@@ -50,27 +49,9 @@ winvblock__def_struct ( device__type );
  * @v dev_ptr           The device whose PDO should be created
  * @ret pdo_ptr         Points to the new PDO, or is NULL upon failure
  */
-#  define device__create_pdo_decl( x ) \
-\
-PDEVICE_OBJECT STDCALL \
-x ( \
-  IN device__type_ptr dev_ptr \
- )
-/*
- * Function pointer for a device PDO creation routine.
- * 'indent' mangles this, so it looks weird
- */
-typedef device__create_pdo_decl (
-   ( *device__create_pdo_routine )
- );
-/**
- * Create a device PDO
- *
- * @v dev_ptr           Points to the device that needs a PDO
- */
-extern winvblock__lib_func device__create_pdo_decl (
-  device__create_pdo
- );
+typedef PDEVICE_OBJECT STDCALL device__create_pdo_func(IN device__type_ptr);
+
+extern winvblock__lib_func device__create_pdo_func device__create_pdo;
 
 /**
  * Device initialization routine
@@ -154,13 +135,12 @@ extern winvblock__lib_func device__type_ptr device__create (
   void
  );
 
-winvblock__def_struct ( device__ops )
-{
-  device__create_pdo_routine create_pdo;
-  device__init_routine init;
-  device__close_routine close;
-  device__free_func * free;
-};
+winvblock__def_struct(device__ops) {
+    device__create_pdo_func * create_pdo;
+    device__init_routine init;
+    device__close_routine close;
+    device__free_func * free;
+  };
 
 typedef void STDCALL (device__thread_func)(IN void *);
 

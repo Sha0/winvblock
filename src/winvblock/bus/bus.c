@@ -46,7 +46,7 @@ winvblock__bool bus__module_up_ = FALSE;
 
 /* Forward declarations. */
 static device__free_func bus__free_;
-static device__create_pdo_decl(bus__create_pdo_);
+static device__create_pdo_func bus__create_pdo_;
 
 /**
  * Tear down the global, bus-common environment.
@@ -415,7 +415,7 @@ winvblock__lib_func struct bus__type * bus__create(void) {
  *
  * Returns a Physical Device Object pointer on success, NULL for failure.
  */
-static device__create_pdo_decl(bus__create_pdo_) {
+static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN device__type_ptr dev_ptr) {
     PDEVICE_OBJECT pdo_ptr = NULL;
     struct bus__type * bus_ptr;
     NTSTATUS status;

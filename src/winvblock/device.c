@@ -39,9 +39,7 @@ static LIST_ENTRY dev_list;
 static KSPIN_LOCK dev_list_lock;
 /* Forward declarations */
 static device__free_func free_dev;
-static device__create_pdo_decl (
-  make_dev_pdo
- );
+static device__create_pdo_func make_dev_pdo;
 
 /**
  * Initialize the global, device-common environment
@@ -100,34 +98,29 @@ device__create (
 }
 
 /**
- * Create a device PDO
+ * Create a device PDO.
  *
- * @v dev_ptr           Points to the device that needs a PDO
+ * @v dev_ptr           Points to the device that needs a PDO.
  */
-winvblock__lib_func
-device__create_pdo_decl (
-  device__create_pdo
- )
-{
-  return dev_ptr->ops.create_pdo ( dev_ptr );
-}
+winvblock__lib_func PDEVICE_OBJECT STDCALL device__create_pdo(
+    IN device__type_ptr dev_ptr
+  ) {
+    return dev_ptr->ops.create_pdo(dev_ptr);
+  }
 
 /**
- * Default PDO creation operation
+ * Default PDO creation operation.
  *
- * @v dev_ptr           Points to the device that needs a PDO
+ * @v dev_ptr           Points to the device that needs a PDO.
+ * @ret NULL            Reports failure, no matter what.
  *
  * This function does nothing, since it doesn't make sense to create a PDO
  * for an unknown type of device.
  */
-static
-device__create_pdo_decl (
-  make_dev_pdo
- )
-{
-  DBG ( "No specific PDO creation operation for this device!\n" );
-  return NULL;
-}
+static PDEVICE_OBJECT STDCALL make_dev_pdo(IN device__type_ptr dev_ptr) {
+    DBG("No specific PDO creation operation for this device!\n");
+    return NULL;
+  }
 
 /**
  * Close a device
