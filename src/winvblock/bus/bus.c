@@ -344,6 +344,11 @@ static NTSTATUS STDCALL bus_dispatch(
     return status;
   }
 
+/* Initialize a bus. */
+static winvblock__bool STDCALL bus__init_(IN device__type_ptr dev) {
+    return TRUE;
+  }
+
 /**
  * Create a new bus.
  *
@@ -384,6 +389,7 @@ winvblock__lib_func struct bus__type * bus__create(void) {
     bus_ptr->prev_free = dev_ptr->ops.free;
     dev_ptr->dispatch = bus_dispatch;
     dev_ptr->ops.create_pdo = bus__create_pdo_;
+    dev_ptr->ops.init = bus__init_;
     dev_ptr->ops.free = bus__free_;
     dev_ptr->ext = bus_ptr;
     dev_ptr->IsBus = TRUE;
