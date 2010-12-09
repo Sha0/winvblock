@@ -221,11 +221,14 @@ NTSTATUS STDCALL filedisk__attach(
     while ( *path_iterator )
       filedisk_ptr->hash += *path_iterator++;
   }
-  /*
-   * FIXME: Check for error below!
-   */
-  bus__add_child(driver__bus(), filedisk_ptr->disk->device);
+  /* Add the filedisk to the bus. */
+  if (!bus__add_child(driver__bus(), filedisk_ptr->disk->device)) {
+      status = STATUS_UNSUCCESSFUL;
+      goto err_add_child;
+    }
   return STATUS_SUCCESS;
+
+  err_add_child:
 
 err_query_info:
 

@@ -473,8 +473,6 @@ static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN device__type_ptr dev) {
     IoDeleteDevice(pdo);
     err_pdo:
 
-    /* Destroy the caller's device! */
-    device__free(dev);
     return NULL;
   }
 
