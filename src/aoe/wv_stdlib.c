@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, originally derived from WinAoE.
  *
@@ -21,20 +21,20 @@
 #include "wv_stdlib.h"
 
 void *wv_malloc(wv_size_t size) {
-    return ExAllocatePoolWithTag(NonPagedPool, size, 'klBV');
+    return ExAllocatePoolWithTag(NonPagedPool, size, 'EoAW');
   }
 
 void *wv_palloc(wv_size_t size) {
-    return ExAllocatePoolWithTag(PagedPool, size, 'klBV');
+    return ExAllocatePoolWithTag(PagedPool, size, 'EoAW');
   }
 
 void *wv_mallocz(wv_size_t size) {
-    void *ptr = ExAllocatePoolWithTag(NonPagedPool, size, 'klBV');
+    void *ptr = ExAllocatePoolWithTag(NonPagedPool, size, 'EoAW');
     return ptr ? RtlZeroMemory(ptr, size), ptr : ptr;
   }
 
 void *wv_pallocz(wv_size_t size) {
-    void *ptr = ExAllocatePoolWithTag(PagedPool, size, 'klBV');
+    void *ptr = ExAllocatePoolWithTag(PagedPool, size, 'EoAW');
     return ptr ? RtlZeroMemory(ptr, size), ptr : ptr;
   }
 

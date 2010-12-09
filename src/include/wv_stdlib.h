@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, originally derived from WinAoE.
  *
@@ -16,9 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _wv_stdlib_h
-#  define _wv_stdlib_h
-#  include "wv_stddef.h"
+#ifndef _WV_STDLIB_H
+#  define _WV_STDLIB_H
+
+#include "wv_stddef.h"
 
 /* Allocate memory from non-paged memory pool. */
 void *wv_malloc(wv_size_t size);
@@ -35,4 +36,4 @@ void *wv_pallocz(wv_size_t size);
 /* Free allocated memory. */
 void wv_free(void *ptr);
 
-#endif /* _wv_stdlib_h */
+#endif  /* _WV_STDLIB_H */
