@@ -44,33 +44,21 @@ winvblock__def_enum(device__state);
 winvblock__def_struct(device__type);
 
 /**
- * Device PDO creation routine
+ * Device PDO creation routine.
  *
- * @v dev_ptr           The device whose PDO should be created
- * @ret pdo_ptr         Points to the new PDO, or is NULL upon failure
+ * @v dev               The device whose PDO should be created.
+ * @ret pdo             Points to the new PDO, or is NULL upon failure.
  */
 typedef PDEVICE_OBJECT STDCALL device__create_pdo_func(IN device__type_ptr);
 
 extern winvblock__lib_func device__create_pdo_func device__create_pdo;
 
 /**
- * Device initialization routine
+ * Device initialization routine.
  *
- * @v dev_ptr           The device being initialized
+ * @v dev               The device being initialized.
  */
-#  define device__init_decl( x ) \
-\
-winvblock__bool STDCALL \
-x ( \
-  IN device__type_ptr dev_ptr \
- )
-/*
- * Function pointer for a device initialization routine.
- * 'indent' mangles this, so it looks weird
- */
-typedef device__init_decl (
-   ( *device__init_routine )
- );
+typedef winvblock__bool STDCALL device__init_func(IN device__type_ptr);
 
 /**
  * Device close routine
@@ -137,7 +125,7 @@ extern winvblock__lib_func device__type_ptr device__create (
 
 winvblock__def_struct(device__ops) {
     device__create_pdo_func * create_pdo;
-    device__init_routine init;
+    device__init_func * init;
     device__close_routine close;
     device__free_func * free;
   };

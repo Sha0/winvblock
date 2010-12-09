@@ -69,14 +69,11 @@ disk__max_xfer_len_decl (
   return 1024 * 1024;
 }
 
-static
-device__init_decl (
-  init
- )
-{
-  disk__type_ptr disk_ptr = disk__get_ptr ( dev_ptr );
-  return disk_ptr->disk_ops.init ( disk_ptr );
-}
+/* Initialize a disk. */
+static winvblock__bool STDCALL disk__init_(IN device__type_ptr dev) {
+    disk__type_ptr disk_ptr = disk__get_ptr(dev);
+    return disk_ptr->disk_ops.init(disk_ptr);
+  }
 
 disk__init_decl ( default_init )
 {
@@ -454,7 +451,7 @@ disk__create (
   dev_ptr->ops.close = close;
   dev_ptr->ops.create_pdo = create_pdo;
   dev_ptr->ops.free = free_disk;
-  dev_ptr->ops.init = init;
+  dev_ptr->ops.init = disk__init_;
   dev_ptr->ext = disk_ptr;
   KeInitializeSpinLock ( &disk_ptr->SpinLock );
 
