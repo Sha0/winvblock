@@ -126,10 +126,12 @@ static NTSTATUS STDCALL sys_ctl(
     OUT winvblock__bool_ptr completion_ptr
   ) {
     struct bus__type * bus_ptr = bus__get(dev_ptr);
+    PDEVICE_OBJECT lower = bus_ptr->LowerDeviceObject;
+
     DBG("...\n");
     IoSkipCurrentIrpStackLocation(Irp);
     *completion_ptr = TRUE;
-    return IoCallDriver(bus_ptr->LowerDeviceObject, Irp);
+    return lower ? IoCallDriver(lower, Irp) : STATUS_SUCCESS;
   }
 
 static NTSTATUS STDCALL power(
@@ -140,10 +142,12 @@ static NTSTATUS STDCALL power(
     OUT winvblock__bool_ptr completion_ptr
   ) {
     struct bus__type * bus_ptr = bus__get(dev_ptr);
+    PDEVICE_OBJECT lower = bus_ptr->LowerDeviceObject;
+
     PoStartNextPowerIrp(Irp);
     IoSkipCurrentIrpStackLocation(Irp);
     *completion_ptr = TRUE;
-    return PoCallDriver(bus_ptr->LowerDeviceObject, Irp);
+    return lower ? PoCallDriver(lower, Irp) : STATUS_SUCCESS;
   }
 
 NTSTATUS STDCALL bus__get_dev_capabilities(

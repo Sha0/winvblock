@@ -268,6 +268,7 @@ NTSTATUS STDCALL disk_pnp__query_capabilities(
   disk__type_ptr disk_ptr;
   struct bus__type * bus_ptr;
   DEVICE_CAPABILITIES ParentDeviceCapabilities;
+  PDEVICE_OBJECT bus_lower;
 
   if ( DeviceCapabilities->Version != 1
        || DeviceCapabilities->Size < sizeof ( DEVICE_CAPABILITIES ) )
@@ -277,10 +278,18 @@ NTSTATUS STDCALL disk_pnp__query_capabilities(
     }
   disk_ptr = disk__get_ptr ( dev_ptr );
   bus_ptr = bus__get(device__get(dev_ptr->Parent));
-  status = bus__get_dev_capabilities(
-      bus_ptr->LowerDeviceObject,
-			&ParentDeviceCapabilities
-    );
+  bus_lower = bus_ptr->LowerDeviceObject;
+  if (bus_lower) {
+      status = bus__get_dev_capabilities(
+          bus_lower,
+		    	&ParentDeviceCapabilities
+        );
+    } else {
+      status = bus__get_dev_capabilities(
+          bus_ptr->device->Self,
+		    	&ParentDeviceCapabilities
+        );
+    }      
   if ( !NT_SUCCESS ( status ) )
     goto ret_path;
 

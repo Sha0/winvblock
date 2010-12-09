@@ -59,15 +59,19 @@ NTSTATUS STDCALL bus_pnp__start_dev(
 {
   NTSTATUS status;
   KEVENT event;
-  struct bus__type * bus_ptr;
+  struct bus__type * bus_ptr = bus__get(dev_ptr);
+  PDEVICE_OBJECT lower = bus_ptr->LowerDeviceObject;
 
-  bus_ptr = bus__get(dev_ptr);
+  if (!lower) {
+      *completion_ptr = TRUE;
+      return STATUS_SUCCESS;
+    }
   KeInitializeEvent ( &event, NotificationEvent, FALSE );
   IoCopyCurrentIrpStackLocationToNext ( Irp );
   IoSetCompletionRoutine ( Irp,
 			   ( PIO_COMPLETION_ROUTINE ) Bus_IoCompletionRoutine,
 			   ( void * )&event, TRUE, TRUE, TRUE );
-  status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
+  status = IoCallDriver ( lower, Irp );
   if ( status == STATUS_PENDING )
     {
       DBG ( "Locked\n" );
@@ -97,6 +101,7 @@ NTSTATUS STDCALL bus_pnp__remove_dev(
   struct bus__type * bus_ptr;
   device__type_ptr walker,
    next;
+  PDEVICE_OBJECT lower;
 
   dev_ptr->OldState = dev_ptr->State;
   dev_ptr->State = Deleted;
@@ -116,7 +121,9 @@ NTSTATUS STDCALL bus_pnp__remove_dev(
     }
   bus_ptr->Children = 0;
   bus_ptr->first_child_ptr = NULL;
-  IoDetachDevice ( bus_ptr->LowerDeviceObject );
+  lower = bus_ptr->LowerDeviceObject;
+  if (lower)
+    IoDetachDevice(lower);
   IoDeleteDevice ( dev_ptr->Self );
   device__free ( dev_ptr );
   *completion_ptr = TRUE;
@@ -136,14 +143,18 @@ NTSTATUS STDCALL bus_pnp__query_dev_relations(
   winvblock__uint32 count;
   device__type_ptr walker;
   PDEVICE_RELATIONS dev_relations;
+  PDEVICE_OBJECT lower;
 
   bus_ptr = bus__get(dev_ptr);
+  lower = bus_ptr->LowerDeviceObject;
   if ( Stack->Parameters.QueryDeviceRelations.Type != BusRelations
        || Irp->IoStatus.Information )
     {
       status = Irp->IoStatus.Status;
-      IoSkipCurrentIrpStackLocation ( Irp );
-      status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
+      if (lower) {
+          IoSkipCurrentIrpStackLocation(Irp);
+          status = IoCallDriver(lower, Irp);
+        }
       *completion_ptr = TRUE;
       return status;
     }
@@ -161,10 +172,12 @@ NTSTATUS STDCALL bus_pnp__query_dev_relations(
   if ( dev_relations == NULL )
     {
       Irp->IoStatus.Information = 0;
-      status = STATUS_INSUFFICIENT_RESOURCES;
+      status = STATUS_SUCCESS;
       Irp->IoStatus.Status = status;
-      IoSkipCurrentIrpStackLocation ( Irp );
-      status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
+      if (lower) {
+          IoSkipCurrentIrpStackLocation ( Irp );
+          status = IoCallDriver(lower, Irp);
+        }
       *completion_ptr = TRUE;
       return status;
     }
@@ -182,8 +195,10 @@ NTSTATUS STDCALL bus_pnp__query_dev_relations(
   Irp->IoStatus.Information = ( ULONG_PTR ) dev_relations;
   status = STATUS_SUCCESS;
   Irp->IoStatus.Status = status;
-  IoSkipCurrentIrpStackLocation ( Irp );
-  status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
+  if (lower) {
+      IoSkipCurrentIrpStackLocation ( Irp );
+      status = IoCallDriver(lower, Irp);
+    }
   *completion_ptr = TRUE;
   return status;
 }
@@ -198,8 +213,10 @@ NTSTATUS STDCALL bus_pnp__simple(
 {
   NTSTATUS status;
   struct bus__type * bus_ptr;
+  PDEVICE_OBJECT lower;
 
   bus_ptr = bus__get(dev_ptr);
+  lower = bus_ptr->LowerDeviceObject;
   switch ( Stack->MinorFunction )
     {
       case IRP_MN_QUERY_PNP_DEVICE_STATE:
@@ -239,8 +256,10 @@ NTSTATUS STDCALL bus_pnp__simple(
     }
 
   Irp->IoStatus.Status = status;
-  IoSkipCurrentIrpStackLocation ( Irp );
-  status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
+  if (lower) {
+      IoSkipCurrentIrpStackLocation(Irp);
+      status = IoCallDriver(lower, Irp);
+    }
   *completion_ptr = TRUE;
   return status;
 }
