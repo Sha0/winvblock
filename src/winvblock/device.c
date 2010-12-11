@@ -37,7 +37,7 @@
 
 /* Forward declarations. */
 static device__free_func device__free_dev_;
-static device__create_pdo_func make_dev_pdo;
+static device__create_pdo_func device__make_pdo_;
 
 /**
  * Create a new device.
@@ -62,7 +62,7 @@ winvblock__lib_func struct device__type * device__create(void) {
     /* Populate non-zero device defaults. */
     dev->dispatch = driver__default_dispatch;
     dev->DriverObject = driver__obj_ptr;
-    dev->ops.create_pdo = make_dev_pdo;
+    dev->ops.create_pdo = device__make_pdo_;
     dev->ops.free = device__free_dev_;
 
     return dev;
@@ -88,7 +88,7 @@ winvblock__lib_func PDEVICE_OBJECT STDCALL device__create_pdo(
  * This function does nothing, since it doesn't make sense to create a PDO
  * for an unknown type of device.
  */
-static PDEVICE_OBJECT STDCALL make_dev_pdo(IN struct device__type * dev) {
+static PDEVICE_OBJECT STDCALL device__make_pdo_(IN struct device__type * dev) {
     DBG("No specific PDO creation operation for this device!\n");
     return NULL;
   }
