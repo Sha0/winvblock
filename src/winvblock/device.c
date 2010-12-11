@@ -35,24 +35,9 @@
 #include "device.h"
 #include "debug.h"
 
-static LIST_ENTRY dev_list;
-static KSPIN_LOCK dev_list_lock;
 /* Forward declarations. */
 static device__free_func free_dev;
 static device__create_pdo_func make_dev_pdo;
-
-/**
- * Initialize the global, device-common environment.
- *
- * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure.
- */
-STDCALL NTSTATUS device__init(void) {
-    /* Initialize the global list of devices. */
-    InitializeListHead(&dev_list);
-    KeInitializeSpinLock(&dev_list_lock);
-
-    return STATUS_SUCCESS;
-  }
 
 /**
  * Create a new device.
@@ -74,12 +59,6 @@ winvblock__lib_func struct device__type * device__create(void) {
     dev = wv_mallocz(sizeof *dev);
     if (dev == NULL)
       return NULL;
-    /* Track the new device in our global list. */
-    ExInterlockedInsertTailList(
-        &dev_list,
-        &dev->tracking,
-  			&dev_list_lock
-      );
     /* Populate non-zero device defaults. */
     dev->dispatch = driver__default_dispatch;
     dev->DriverObject = driver__obj_ptr;
@@ -143,13 +122,6 @@ winvblock__lib_func void STDCALL device__free(IN struct device__type * dev) {
  * @v dev               Points to the device to delete.
  */
 static void STDCALL free_dev(IN struct device__type * dev) {
-    /*
-     * Track the device deletion in our global list.  Unfortunately,
-     * for now we have faith that a device won't be deleted twice and
-     * result in a race condition.  Something to keep in mind...
-     */
-    ExInterlockedRemoveHeadList(dev->tracking.Blink, &dev_list_lock);
-  
     wv_free(dev);
   }
 

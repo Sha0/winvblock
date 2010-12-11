@@ -77,13 +77,6 @@ typedef void STDCALL device__free_func(IN struct device__type *);
 
 extern winvblock__lib_func device__free_func device__free;
 
-/**
- * Initialize the global, device-common environment.
- *
- * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure.
- */
-extern STDCALL NTSTATUS device__init(void);
-
 extern winvblock__lib_func struct device__type * device__create(void);
 
 winvblock__def_struct(device__ops) {

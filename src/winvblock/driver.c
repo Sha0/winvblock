@@ -315,7 +315,6 @@ NTSTATUS STDCALL DriverEntry(
     /* Set the driver AddDevice callback. */
     DriverObject->DriverExtension->AddDevice = driver__attach_fdo_;
     /* Initialize various modules. */
-    device__init();             /* TODO: Check for error. */
     disk__init();               /* TODO: Check for error. */
     filedisk__init();           /* TODO: Check for error. */
     ramdisk__init();            /* TODO: Check for error. */
