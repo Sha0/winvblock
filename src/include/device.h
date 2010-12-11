@@ -38,7 +38,7 @@ enum device__state {
   };
 
 /* Forward declaration. */
-winvblock__def_struct(device__type);
+struct device__type;
 
 /**
  * Device PDO creation routine.
@@ -46,7 +46,9 @@ winvblock__def_struct(device__type);
  * @v dev               The device whose PDO should be created.
  * @ret pdo             Points to the new PDO, or is NULL upon failure.
  */
-typedef PDEVICE_OBJECT STDCALL device__create_pdo_func(IN device__type_ptr);
+typedef PDEVICE_OBJECT STDCALL device__create_pdo_func(
+    IN struct device__type *
+  );
 
 extern winvblock__lib_func device__create_pdo_func device__create_pdo;
 
@@ -55,7 +57,7 @@ extern winvblock__lib_func device__create_pdo_func device__create_pdo;
  *
  * @v dev               The device being initialized.
  */
-typedef winvblock__bool STDCALL device__init_func(IN device__type_ptr);
+typedef winvblock__bool STDCALL device__init_func(IN struct device__type *);
 
 /**
  * Device close routine
@@ -66,7 +68,7 @@ typedef winvblock__bool STDCALL device__init_func(IN device__type_ptr);
 \
 void STDCALL \
 x ( \
-  IN device__type_ptr dev_ptr \
+  IN struct device__type * dev_ptr \
  )
 /*
  * Function pointer for a device close routine.
@@ -89,7 +91,7 @@ extern winvblock__lib_func device__close_decl (
  *
  * @v dev_ptr           Points to the device to delete.
  */
-typedef void STDCALL device__free_func(IN device__type_ptr);
+typedef void STDCALL device__free_func(IN struct device__type *);
 /**
  * Delete a device.
  *
@@ -116,7 +118,7 @@ extern STDCALL NTSTATUS device__init (
  * device__type, track it in a global list, as well as populate the device
  * with default values.
  */
-extern winvblock__lib_func device__type_ptr device__create (
+extern winvblock__lib_func struct device__type * device__create (
   void
  );
 
@@ -130,7 +132,7 @@ winvblock__def_struct(device__ops) {
 typedef void STDCALL (device__thread_func)(IN void *);
 
 /* Details common to all devices this driver works with */
-struct _device__type
+struct device__type
 {
   winvblock__bool IsBus;	/* For debugging */
   /* A device's IRP dispatch routine. */
@@ -149,13 +151,16 @@ struct _device__type
   enum device__state state;
   enum device__state old_state;
   irp__handler_chain irp_handler_chain;
-  device__type_ptr next_sibling_ptr;
+  struct device__type * next_sibling_ptr;
   device__ops ops;
   LIST_ENTRY tracking;
   winvblock__any_ptr ext;
 };
 
-extern winvblock__lib_func device__type_ptr device__get(PDEVICE_OBJECT);
-extern winvblock__lib_func void device__set(PDEVICE_OBJECT, device__type_ptr);
+extern winvblock__lib_func struct device__type * device__get(PDEVICE_OBJECT);
+extern winvblock__lib_func void device__set(
+    PDEVICE_OBJECT,
+    struct device__type *
+  );
 
 #endif  /* _DEVICE_H */

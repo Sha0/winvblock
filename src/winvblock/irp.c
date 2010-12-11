@@ -214,7 +214,7 @@ NTSTATUS STDCALL irp__process(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
   {
@@ -240,7 +240,7 @@ NTSTATUS STDCALL irp__process(
   }
 
 static void STDCALL (irp_thread)(IN void * (context)) {
-    device__type * (dev) = context;
+    struct device__type * dev = context;
     LARGE_INTEGER (timeout);
     PLIST_ENTRY (walker);
 

@@ -42,12 +42,12 @@ static NTSTATUS STDCALL disk_detach(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
 {
   winvblock__uint8_ptr buffer = Irp->AssociatedIrp.SystemBuffer;
-  device__type_ptr dev_walker;
+  struct device__type * dev_walker;
   disk__type_ptr disk_walker = NULL,
     prev_disk_walker;
   struct bus__type * bus_ptr;
@@ -101,7 +101,7 @@ NTSTATUS STDCALL bus_dev_ctl__dispatch(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
 {

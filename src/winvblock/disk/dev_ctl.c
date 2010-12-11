@@ -46,7 +46,7 @@ static NTSTATUS STDCALL storage_query_prop(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
 {
@@ -125,7 +125,7 @@ static NTSTATUS STDCALL disk_get_drive_geom(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
 {
@@ -152,7 +152,7 @@ static NTSTATUS STDCALL scsi_get_address(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
 {
@@ -179,7 +179,7 @@ NTSTATUS STDCALL disk_dev_ctl__dispatch(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
 {

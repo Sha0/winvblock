@@ -134,7 +134,7 @@ NTSTATUS STDCALL filedisk__attach(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
 {
@@ -329,7 +329,7 @@ filedisk__init (
  *
  * @v dev_ptr           Points to the file-backed disk device to delete.
  */
-static void STDCALL free_filedisk(IN device__type_ptr dev_ptr)
+static void STDCALL free_filedisk(IN struct device__type * dev_ptr)
   {
     disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
     filedisk__type_ptr filedisk_ptr = filedisk__get_ptr(dev_ptr);
@@ -354,7 +354,7 @@ static void STDCALL free_filedisk(IN device__type_ptr dev_ptr)
 winvblock__def_struct ( thread_req )
 {
   LIST_ENTRY list_entry;
-  device__type_ptr dev_ptr;
+  struct device__type * dev_ptr;
   disk__io_mode mode;
   LONGLONG start_sector;
   winvblock__uint32 sector_count;
@@ -462,7 +462,7 @@ disk__io_decl (
  *
  * @v dev_ptr           Points to the file-backed disk device to delete.
  */
-static void STDCALL free_threaded_filedisk(IN device__type_ptr dev_ptr)
+static void STDCALL free_threaded_filedisk(IN struct device__type * dev_ptr)
   {
     /*
      * Queue the tear-down and return.  The thread will catch this on timeout.

@@ -51,12 +51,12 @@ static device__create_pdo_func bus__create_pdo_;
  */
 winvblock__lib_func winvblock__bool STDCALL bus__add_child(
     IN OUT struct bus__type * bus_ptr,
-    IN OUT device__type_ptr dev_ptr
+    IN OUT struct device__type * dev_ptr
   ) {
     /* The new node's device object. */
     PDEVICE_OBJECT dev_obj_ptr;
     /* Walks the child nodes. */
-    device__type_ptr walker;
+    struct device__type * walker;
 
     DBG("Entry\n");
     if ((bus_ptr == NULL) || (dev_ptr == NULL)) {
@@ -102,7 +102,7 @@ static NTSTATUS STDCALL bus__sys_ctl_(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   ) {
     struct bus__type * bus_ptr = bus__get(dev_ptr);
@@ -118,7 +118,7 @@ static NTSTATUS STDCALL power(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   ) {
     struct bus__type * bus_ptr = bus__get(dev_ptr);
@@ -240,7 +240,7 @@ static NTSTATUS STDCALL bus_dispatch(
   }
 
 /* Initialize a bus. */
-static winvblock__bool STDCALL bus__init_(IN device__type_ptr dev) {
+static winvblock__bool STDCALL bus__init_(IN struct device__type * dev) {
     return TRUE;
   }
 
@@ -255,7 +255,7 @@ static winvblock__bool STDCALL bus__init_(IN device__type_ptr dev) {
  * with default values.
  */
 winvblock__lib_func struct bus__type * bus__create(void) {
-    device__type_ptr dev_ptr;
+    struct device__type * dev_ptr;
     struct bus__type * bus_ptr;
 
     /* Try to create a device. */
@@ -298,7 +298,7 @@ winvblock__lib_func struct bus__type * bus__create(void) {
  *
  * Returns a Physical Device Object pointer on success, NULL for failure.
  */
-static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN device__type_ptr dev) {
+static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN struct device__type * dev) {
     PDEVICE_OBJECT pdo = NULL;
     struct bus__type * bus;
     NTSTATUS status;
@@ -362,7 +362,7 @@ static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN device__type_ptr dev) {
  *
  * @v dev_ptr           Points to the bus device to delete.
  */
-static void STDCALL bus__free_(IN device__type_ptr dev_ptr) {
+static void STDCALL bus__free_(IN struct device__type * dev_ptr) {
     struct bus__type * bus_ptr = bus__get(dev_ptr);
     /* Free the "inherited class". */
     bus_ptr->prev_free(dev_ptr);
@@ -376,6 +376,8 @@ static void STDCALL bus__free_(IN device__type_ptr dev_ptr) {
  * @v dev       A pointer to a device.
  * @ret         A pointer to the device's associated bus.
  */
-extern winvblock__lib_func struct bus__type * bus__get(device__type_ptr dev) {
+extern winvblock__lib_func struct bus__type * bus__get(
+    struct device__type * dev
+  ) {
     return dev->ext;
   }

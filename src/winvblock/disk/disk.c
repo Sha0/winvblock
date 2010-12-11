@@ -70,7 +70,7 @@ disk__max_xfer_len_decl (
 }
 
 /* Initialize a disk. */
-static winvblock__bool STDCALL disk__init_(IN device__type_ptr dev) {
+static winvblock__bool STDCALL disk__init_(IN struct device__type * dev) {
     disk__type_ptr disk_ptr = disk__get_ptr(dev);
     return disk_ptr->disk_ops.init(disk_ptr);
   }
@@ -99,7 +99,7 @@ static NTSTATUS STDCALL power(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
   {
@@ -114,7 +114,7 @@ static NTSTATUS STDCALL sys_ctl(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
 {
@@ -132,7 +132,7 @@ static NTSTATUS STDCALL sys_ctl(
  *
  * Returns a Physical Device Object pointer on success, NULL for failure.
  */
-static PDEVICE_OBJECT STDCALL create_pdo(IN device__type_ptr dev_ptr) {
+static PDEVICE_OBJECT STDCALL create_pdo(IN struct device__type * dev_ptr) {
     /**
      * @v disk_ptr          Used for pointing to disk details
      * @v status            Status of last operation
@@ -418,7 +418,7 @@ disk__create (
   void
  )
 {
-  device__type_ptr dev_ptr;
+  struct device__type * dev_ptr;
   disk__type_ptr disk_ptr;
 
   /*
@@ -489,7 +489,7 @@ disk__init (
  *
  * @v dev_ptr           Points to the disk device to delete.
  */
-static void STDCALL free_disk(IN device__type_ptr dev_ptr)
+static void STDCALL free_disk(IN struct device__type * dev_ptr)
   {
     disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
     /* Free the "inherited class". */

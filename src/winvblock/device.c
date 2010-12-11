@@ -67,12 +67,8 @@ device__init (
  *
  * See the header file for additional details
  */
-winvblock__lib_func device__type_ptr
-device__create (
-  void
- )
-{
-  device__type_ptr dev_ptr;
+winvblock__lib_func struct device__type * device__create(void) {
+  struct device__type * dev_ptr;
 
   /*
    * Devices might be used for booting and should
@@ -103,7 +99,7 @@ device__create (
  * @v dev_ptr           Points to the device that needs a PDO.
  */
 winvblock__lib_func PDEVICE_OBJECT STDCALL device__create_pdo(
-    IN device__type_ptr dev_ptr
+    IN struct device__type * dev_ptr
   ) {
     return dev_ptr->ops.create_pdo(dev_ptr);
   }
@@ -117,7 +113,7 @@ winvblock__lib_func PDEVICE_OBJECT STDCALL device__create_pdo(
  * This function does nothing, since it doesn't make sense to create a PDO
  * for an unknown type of device.
  */
-static PDEVICE_OBJECT STDCALL make_dev_pdo(IN device__type_ptr dev_ptr) {
+static PDEVICE_OBJECT STDCALL make_dev_pdo(IN struct device__type * dev_ptr) {
     DBG("No specific PDO creation operation for this device!\n");
     return NULL;
   }
@@ -143,7 +139,7 @@ device__close_decl (
  *
  * @v dev_ptr           Points to the device to delete.
  */
-winvblock__lib_func void STDCALL device__free(IN device__type_ptr dev_ptr)
+winvblock__lib_func void STDCALL device__free(IN struct device__type * dev_ptr)
   {
     /* Call the device's free routine. */
     dev_ptr->ops.free(dev_ptr);
@@ -154,7 +150,7 @@ winvblock__lib_func void STDCALL device__free(IN device__type_ptr dev_ptr)
  *
  * @v dev_ptr           Points to the device to delete.
  */
-static void STDCALL free_dev(IN device__type_ptr dev_ptr)
+static void STDCALL free_dev(IN struct device__type * dev_ptr)
   {
     /*
      * Track the device deletion in our global list.  Unfortunately,
@@ -172,7 +168,7 @@ static void STDCALL free_dev(IN device__type_ptr dev_ptr)
  * @v dev_obj           Points to the DEVICE_OBJECT to get the device from.
  * @ret                 Returns a pointer to the device on success, else NULL.
  */
-winvblock__lib_func device__type_ptr device__get(PDEVICE_OBJECT dev_obj)
+winvblock__lib_func struct device__type * device__get(PDEVICE_OBJECT dev_obj)
   {
     driver__dev_ext_ptr dev_ext = dev_obj->DeviceExtension;
     return dev_ext->device;
@@ -186,7 +182,7 @@ winvblock__lib_func device__type_ptr device__get(PDEVICE_OBJECT dev_obj)
  */
 winvblock__lib_func void device__set(
     PDEVICE_OBJECT dev_obj,
-    device__type_ptr dev
+    struct device__type * dev
   ) {
     driver__dev_ext_ptr dev_ext = dev_obj->DeviceExtension;
     dev_ext->device = dev;

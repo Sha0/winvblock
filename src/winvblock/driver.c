@@ -124,7 +124,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     struct bus__type * bus;
     PUNICODE_STRING dev_name = NULL;
     PDEVICE_OBJECT fdo = NULL;
-    device__type_ptr dev_ptr;
+    struct device__type * dev_ptr;
 
     DBG("Entry\n");
     /* Do we alreay have our main bus? */
@@ -353,7 +353,7 @@ extern winvblock__lib_func NTSTATUS STDCALL driver__create_close(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
     IN PIO_STACK_LOCATION stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   ) {
     NTSTATUS status = STATUS_SUCCESS;
@@ -369,7 +369,7 @@ extern winvblock__lib_func NTSTATUS STDCALL driver__not_supported(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
     IN PIO_STACK_LOCATION stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   ) {
     NTSTATUS status = STATUS_NOT_SUPPORTED;
@@ -385,7 +385,7 @@ static NTSTATUS STDCALL driver__dispatch_(
     IN PIRP Irp
   ) {
     NTSTATUS status;
-    device__type_ptr dev_ptr;
+    struct device__type * dev_ptr;
 
     #ifdef DEBUGIRPS
     Debug_IrpStart(DeviceObject, Irp);

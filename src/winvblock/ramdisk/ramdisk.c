@@ -228,7 +228,7 @@ ramdisk__init (
  *
  * @v dev_ptr           Points to the RAM disk device to delete.
  */
-static void STDCALL free_ramdisk(IN device__type_ptr dev_ptr)
+static void STDCALL free_ramdisk(IN struct device__type * dev_ptr)
   {
     disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
     ramdisk__type_ptr ramdisk_ptr = ramdisk_get_ptr(dev_ptr);

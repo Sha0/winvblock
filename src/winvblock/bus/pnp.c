@@ -53,7 +53,7 @@ NTSTATUS STDCALL bus_pnp__start_dev(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
 {
@@ -93,14 +93,13 @@ NTSTATUS STDCALL bus_pnp__remove_dev(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
 {
   NTSTATUS status;
   struct bus__type * bus_ptr;
-  device__type_ptr walker,
-   next;
+  struct device__type * walker, * next;
   PDEVICE_OBJECT lower;
 
   dev_ptr->old_state = dev_ptr->state;
@@ -134,14 +133,14 @@ NTSTATUS STDCALL bus_pnp__query_dev_relations(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
 {
   NTSTATUS status;
   struct bus__type * bus_ptr;
   winvblock__uint32 count;
-  device__type_ptr walker;
+  struct device__type * walker;
   PDEVICE_RELATIONS dev_relations;
   PDEVICE_OBJECT lower;
 
@@ -207,7 +206,7 @@ NTSTATUS STDCALL bus_pnp__simple(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
 {

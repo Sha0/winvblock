@@ -65,7 +65,7 @@ winvblock__def_struct ( disk__type );
 \
 NTSTATUS STDCALL \
 x ( \
-  IN device__type_ptr dev_ptr, \
+  IN struct device__type * dev_ptr, \
   IN disk__io_mode mode, \
   IN LONGLONG start_sector, \
   IN winvblock__uint32 sector_count, \
@@ -173,7 +173,7 @@ winvblock__def_struct ( disk__ops )
 
 struct _disk__type
 {
-  device__type_ptr device;
+  struct device__type * device;
   KEVENT SearchEvent;
   KSPIN_LOCK SpinLock;
   winvblock__bool BootDrive;

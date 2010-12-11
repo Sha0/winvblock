@@ -27,14 +27,14 @@
  */
 
 /* An unfortunate forward declaration.  Definition resolved in device.h */
-winvblock__def_struct ( device__type );
+struct device__type;
 
 /* We have lots of these, so offer a typedef for declarations. */
 typedef NTSTATUS STDCALL irp__handler(
     IN PDEVICE_OBJECT,
     IN PIRP,
     IN PIO_STACK_LOCATION,
-    IN struct _device__type *,
+    IN struct device__type *,
     OUT winvblock__bool_ptr
   );
 

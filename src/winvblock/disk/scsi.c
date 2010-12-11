@@ -117,7 +117,7 @@ typedef struct _DISK_CDB16
 \
 NTSTATUS STDCALL                                \
 x (                                             \
-  IN struct _device__type *dev_ptr,             \
+  IN struct device__type * dev_ptr,             \
   IN PIRP Irp,                                  \
   IN disk__type_ptr disk_ptr,                   \
   IN PSCSI_REQUEST_BLOCK Srb,                   \
@@ -350,7 +350,7 @@ NTSTATUS STDCALL disk_scsi__dispatch(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
 {

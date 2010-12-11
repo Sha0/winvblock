@@ -133,7 +133,7 @@ struct aoe__io_req_
 struct aoe__work_tag_
   {
     enum aoe__tag_type_ type;
-    device__type_ptr device;
+    struct device__type * device;
     struct aoe__io_req_ * request_ptr;
     winvblock__uint32 Id;
     struct aoe__packet_ * packet_data;
@@ -149,7 +149,7 @@ struct aoe__work_tag_
 /** A disk search. */
 struct aoe__disk_search_
   {
-    device__type_ptr device;
+    struct device__type * device;
     struct aoe__work_tag_ * tag;
     struct aoe__disk_search_ * next;
   };
@@ -211,7 +211,7 @@ static irp__handling handling_table[] =
   };
 
 /* Yield a pointer to the AoE disk. */
-static struct aoe__disk_type_ * aoe__get_(device__type_ptr dev_ptr)
+static struct aoe__disk_type_ * aoe__get_(struct device__type * dev_ptr)
   {
     return disk__get_ptr(dev_ptr)->ext;
   }
@@ -2108,7 +2108,7 @@ static NTSTATUS STDCALL scan(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
   {
@@ -2170,12 +2170,12 @@ static NTSTATUS STDCALL show(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
   {
     winvblock__uint32 count;
-    device__type_ptr dev_walker;
+    struct device__type * dev_walker;
     struct bus__type * bus_ptr;
     aoe__mount_disks_ptr disks;
   
@@ -2237,7 +2237,7 @@ static NTSTATUS STDCALL mount(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
   {
@@ -2274,7 +2274,7 @@ NTSTATUS STDCALL aoe__bus_dev_ctl_dispatch(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
-    IN struct _device__type * dev_ptr,
+    IN struct device__type * dev_ptr,
     OUT winvblock__bool_ptr completion_ptr
   )
   {
@@ -2358,7 +2358,7 @@ static struct aoe__disk_type_ * aoe__create_disk_(void)
  *
  * @v dev_ptr           Points to the AoE disk device to delete.
  */
-static void STDCALL aoe__free_disk_(IN device__type_ptr dev_ptr)
+static void STDCALL aoe__free_disk_(IN struct device__type * dev_ptr)
   {
     disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
     struct aoe__disk_type_ * aoe_disk_ptr = aoe__get_(dev_ptr);

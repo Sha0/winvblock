@@ -28,11 +28,11 @@
  */
 
 struct bus__type {
-    device__type_ptr device;
+    struct device__type * device;
     PDEVICE_OBJECT LowerDeviceObject;
     PDEVICE_OBJECT PhysicalDeviceObject;
     winvblock__uint32 Children;
-    device__type_ptr first_child_ptr;
+    struct device__type * first_child_ptr;
     KSPIN_LOCK SpinLock;
     LIST_ENTRY tracking;
     winvblock__any_ptr ext;
@@ -52,8 +52,8 @@ extern void bus__module_shutdown(void);
 extern winvblock__lib_func struct bus__type * bus__create(void);
 extern winvblock__lib_func winvblock__bool STDCALL bus__add_child(
     IN OUT struct bus__type *,
-    IN device__type_ptr
+    IN struct device__type *
   );
-extern winvblock__lib_func struct bus__type * bus__get(device__type_ptr);
+extern winvblock__lib_func struct bus__type * bus__get(struct device__type *);
 
 #endif  /* _BUS_H */
