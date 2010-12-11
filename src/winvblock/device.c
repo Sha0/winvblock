@@ -36,7 +36,7 @@
 #include "debug.h"
 
 /* Forward declarations. */
-static device__free_func free_dev;
+static device__free_func device__free_dev_;
 static device__create_pdo_func make_dev_pdo;
 
 /**
@@ -63,7 +63,7 @@ winvblock__lib_func struct device__type * device__create(void) {
     dev->dispatch = driver__default_dispatch;
     dev->DriverObject = driver__obj_ptr;
     dev->ops.create_pdo = make_dev_pdo;
-    dev->ops.free = free_dev;
+    dev->ops.free = device__free_dev_;
 
     return dev;
   }
@@ -121,7 +121,7 @@ winvblock__lib_func void STDCALL device__free(IN struct device__type * dev) {
  *
  * @v dev               Points to the device to delete.
  */
-static void STDCALL free_dev(IN struct device__type * dev) {
+static void STDCALL device__free_dev_(IN struct device__type * dev) {
     wv_free(dev);
   }
 
