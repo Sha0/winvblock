@@ -37,83 +37,79 @@
 
 static LIST_ENTRY dev_list;
 static KSPIN_LOCK dev_list_lock;
-/* Forward declarations */
+/* Forward declarations. */
 static device__free_func free_dev;
 static device__create_pdo_func make_dev_pdo;
 
 /**
- * Initialize the global, device-common environment
+ * Initialize the global, device-common environment.
  *
- * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
+ * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure.
  */
-STDCALL NTSTATUS
-device__init (
-  void
- )
-{
-  /*
-   * Initialize the global list of devices
-   */
-  InitializeListHead ( &dev_list );
-  KeInitializeSpinLock ( &dev_list_lock );
+STDCALL NTSTATUS device__init(void) {
+    /* Initialize the global list of devices. */
+    InitializeListHead(&dev_list);
+    KeInitializeSpinLock(&dev_list_lock);
 
-  return STATUS_SUCCESS;
-}
+    return STATUS_SUCCESS;
+  }
 
 /**
- * Create a new device
+ * Create a new device.
  *
- * @ret dev_ptr         The address of a new device, or NULL for failure
+ * @ret dev             The address of a new device, or NULL for failure.
  *
- * See the header file for additional details
+ * This function should not be confused with a PDO creation routine, which is
+ * actually implemented for each device type.  This routine will allocate a
+ * device__type, track it in a global list, as well as populate the device
+ * with default values.
  */
 winvblock__lib_func struct device__type * device__create(void) {
-  struct device__type * dev_ptr;
+    struct device__type * dev;
 
-  /*
-   * Devices might be used for booting and should
-   * not be allocated from a paged memory pool
-   */
-  dev_ptr = wv_mallocz(sizeof *dev_ptr);
-  if ( dev_ptr == NULL )
-    return NULL;
-  /*
-   * Track the new device in our global list
-   */
-  ExInterlockedInsertTailList ( &dev_list, &dev_ptr->tracking,
-				&dev_list_lock );
-  /*
-   * Populate non-zero device defaults
-   */
-  dev_ptr->dispatch = driver__default_dispatch;
-  dev_ptr->DriverObject = driver__obj_ptr;
-  dev_ptr->ops.create_pdo = make_dev_pdo;
-  dev_ptr->ops.free = free_dev;
+    /*
+     * Devices might be used for booting and should
+     * not be allocated from a paged memory pool.
+     */
+    dev = wv_mallocz(sizeof *dev);
+    if (dev == NULL)
+      return NULL;
+    /* Track the new device in our global list. */
+    ExInterlockedInsertTailList(
+        &dev_list,
+        &dev->tracking,
+  			&dev_list_lock
+      );
+    /* Populate non-zero device defaults. */
+    dev->dispatch = driver__default_dispatch;
+    dev->DriverObject = driver__obj_ptr;
+    dev->ops.create_pdo = make_dev_pdo;
+    dev->ops.free = free_dev;
 
-  return dev_ptr;
-}
+    return dev;
+  }
 
 /**
  * Create a device PDO.
  *
- * @v dev_ptr           Points to the device that needs a PDO.
+ * @v dev               Points to the device that needs a PDO.
  */
 winvblock__lib_func PDEVICE_OBJECT STDCALL device__create_pdo(
-    IN struct device__type * dev_ptr
+    IN struct device__type * dev
   ) {
-    return dev_ptr->ops.create_pdo(dev_ptr);
+    return dev->ops.create_pdo(dev);
   }
 
 /**
  * Default PDO creation operation.
  *
- * @v dev_ptr           Points to the device that needs a PDO.
+ * @v dev               Points to the device that needs a PDO.
  * @ret NULL            Reports failure, no matter what.
  *
  * This function does nothing, since it doesn't make sense to create a PDO
  * for an unknown type of device.
  */
-static PDEVICE_OBJECT STDCALL make_dev_pdo(IN struct device__type * dev_ptr) {
+static PDEVICE_OBJECT STDCALL make_dev_pdo(IN struct device__type * dev) {
     DBG("No specific PDO creation operation for this device!\n");
     return NULL;
   }
@@ -121,42 +117,40 @@ static PDEVICE_OBJECT STDCALL make_dev_pdo(IN struct device__type * dev_ptr) {
 /**
  * Close a device.
  *
- * @v dev_ptr           Points to the device to close.
+ * @v dev               Points to the device to close.
  */
 winvblock__lib_func void STDCALL device__close(
-    IN struct device__type * dev_ptr
+    IN struct device__type * dev
   ) {
     /* Call the device's close routine. */
-    dev_ptr->ops.close(dev_ptr);
+    dev->ops.close(dev);
     return;
   }
 
 /**
  * Delete a device.
  *
- * @v dev_ptr           Points to the device to delete.
+ * @v dev               Points to the device to delete.
  */
-winvblock__lib_func void STDCALL device__free(IN struct device__type * dev_ptr)
-  {
+winvblock__lib_func void STDCALL device__free(IN struct device__type * dev) {
     /* Call the device's free routine. */
-    dev_ptr->ops.free(dev_ptr);
+    dev->ops.free(dev);
   }
 
 /**
  * Default device deletion operation.
  *
- * @v dev_ptr           Points to the device to delete.
+ * @v dev               Points to the device to delete.
  */
-static void STDCALL free_dev(IN struct device__type * dev_ptr)
-  {
+static void STDCALL free_dev(IN struct device__type * dev) {
     /*
      * Track the device deletion in our global list.  Unfortunately,
      * for now we have faith that a device won't be deleted twice and
      * result in a race condition.  Something to keep in mind...
      */
-    ExInterlockedRemoveHeadList(dev_ptr->tracking.Blink, &dev_list_lock);
+    ExInterlockedRemoveHeadList(dev->tracking.Blink, &dev_list_lock);
   
-    wv_free(dev_ptr);
+    wv_free(dev);
   }
 
 /**
@@ -165,8 +159,7 @@ static void STDCALL free_dev(IN struct device__type * dev_ptr)
  * @v dev_obj           Points to the DEVICE_OBJECT to get the device from.
  * @ret                 Returns a pointer to the device on success, else NULL.
  */
-winvblock__lib_func struct device__type * device__get(PDEVICE_OBJECT dev_obj)
-  {
+winvblock__lib_func struct device__type * device__get(PDEVICE_OBJECT dev_obj) {
     driver__dev_ext_ptr dev_ext = dev_obj->DeviceExtension;
     return dev_ext->device;
   }

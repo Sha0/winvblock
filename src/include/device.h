@@ -74,35 +74,17 @@ extern winvblock__lib_func device__close_func device__close;
  * @v dev_ptr           Points to the device to delete.
  */
 typedef void STDCALL device__free_func(IN struct device__type *);
-/**
- * Delete a device.
- *
- * @v dev_ptr           Points to the device to delete.
- */
+
 extern winvblock__lib_func device__free_func device__free;
 
 /**
- * Initialize the global, device-common environment
+ * Initialize the global, device-common environment.
  *
- * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
+ * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure.
  */
-extern STDCALL NTSTATUS device__init (
-  void
- );
+extern STDCALL NTSTATUS device__init(void);
 
-/**
- * Create a new device
- *
- * @ret dev_ptr         The address of a new device, or NULL for failure
- *
- * This function should not be confused with a PDO creation routine, which is
- * actually implemented for each device type.  This routine will allocate a
- * device__type, track it in a global list, as well as populate the device
- * with default values.
- */
-extern winvblock__lib_func struct device__type * device__create (
-  void
- );
+extern winvblock__lib_func struct device__type * device__create(void);
 
 winvblock__def_struct(device__ops) {
     device__create_pdo_func * create_pdo;
@@ -111,33 +93,43 @@ winvblock__def_struct(device__ops) {
     device__free_func * free;
   };
 
-typedef void STDCALL (device__thread_func)(IN void *);
+typedef void STDCALL device__thread_func(IN void *);
 
 /* Details common to all devices this driver works with */
-struct device__type
-{
-  winvblock__bool IsBus;	/* For debugging */
-  /* A device's IRP dispatch routine. */
-  driver__dispatch_func * (dispatch);
-  /* The device's thread routine. */
-  device__thread_func * (thread);
-  /* The device's thread wakeup signal. */
-  KEVENT (thread_wakeup);
-  /* The device's IRP queue. */
-  LIST_ENTRY (irp_list);
-  /* The device's IRP queue lock. */
-  KSPIN_LOCK (irp_list_lock);
-  PDEVICE_OBJECT Self;
-  PDEVICE_OBJECT Parent;
-  PDRIVER_OBJECT DriverObject;
-  enum device__state state;
-  enum device__state old_state;
-  irp__handler_chain irp_handler_chain;
-  struct device__type * next_sibling_ptr;
-  device__ops ops;
-  LIST_ENTRY tracking;
-  winvblock__any_ptr ext;
-};
+struct device__type {
+    /* For debugging */
+    winvblock__bool IsBus;
+    /* A device's IRP dispatch routine. */
+    driver__dispatch_func * dispatch;
+    /* The device's thread routine. */
+    device__thread_func * thread;
+    /* The device's thread wakeup signal. */
+    KEVENT thread_wakeup;
+    /* The device's IRP queue. */
+    LIST_ENTRY irp_list;
+    /* The device's IRP queue lock. */
+    KSPIN_LOCK irp_list_lock;
+    /* Self is self-explanatory. */
+    PDEVICE_OBJECT Self;
+    /* Points to the parent bus' DEVICE_OBJECT */
+    PDEVICE_OBJECT Parent;
+    /* Points to the driver. */
+    PDRIVER_OBJECT DriverObject;
+    /* Current state of the device. */
+    enum device__state state;
+    /* Previous state of the device. */
+    enum device__state old_state;
+    /* Deprecated: The mini IRP handler chain. */
+    irp__handler_chain irp_handler_chain;
+    /* The next device in the parent bus' devices.  TODO: Don't do this. */
+    struct device__type * next_sibling_ptr;
+    /* The device operations. */
+    device__ops ops;
+    /* Tracking for the device module itself. */
+    LIST_ENTRY tracking;
+    /* Points to further extensions. */
+    winvblock__any_ptr ext;
+  };
 
 extern winvblock__lib_func struct device__type * device__get(PDEVICE_OBJECT);
 extern winvblock__lib_func void device__set(
