@@ -393,7 +393,7 @@ static NTSTATUS STDCALL driver__dispatch_(
     dev_ptr = device__get(DeviceObject);
 
     /* We handle IRP_MJ_POWER as an exception. */
-    if (dev_ptr->State == Deleted) {
+    if (dev_ptr->state == device__state_deleted) {
         if (IoGetCurrentIrpStackLocation(Irp)->MajorFunction == IRP_MJ_POWER)
           PoStartNextPowerIrp(Irp);
         Irp->IoStatus.Information = 0;

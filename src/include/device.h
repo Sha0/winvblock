@@ -29,16 +29,15 @@
 
 #include "portable.h"
 
-enum _device__state {
-    NotStarted,
-    Started,
-    StopPending,
-    Stopped,
-    RemovePending,
-    SurpriseRemovePending,
-    Deleted
+enum device__state {
+    device__state_not_started,
+    device__state_started,
+    device__state_stop_pending,
+    device__state_stopped,
+    device__state_remove_pending,
+    device__state_surprise_remove_pending,
+    device__state_deleted
   };
-winvblock__def_enum(device__state);
 
 /* Forward declaration. */
 winvblock__def_struct(device__type);
@@ -149,8 +148,8 @@ struct _device__type
   PDEVICE_OBJECT Self;
   PDEVICE_OBJECT Parent;
   PDRIVER_OBJECT DriverObject;
-  device__state State;
-  device__state OldState;
+  enum device__state state;
+  enum device__state old_state;
   irp__handler_chain irp_handler_chain;
   device__type_ptr next_sibling_ptr;
   device__ops ops;

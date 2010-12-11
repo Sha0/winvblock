@@ -79,8 +79,8 @@ NTSTATUS STDCALL bus_pnp__start_dev(
     }
   if ( NT_SUCCESS ( status = Irp->IoStatus.Status ) )
     {
-      dev_ptr->OldState = dev_ptr->State;
-      dev_ptr->State = Started;
+      dev_ptr->old_state = dev_ptr->state;
+      dev_ptr->state = device__state_started;
     }
   status = STATUS_SUCCESS;
   Irp->IoStatus.Status = status;
@@ -103,8 +103,8 @@ NTSTATUS STDCALL bus_pnp__remove_dev(
    next;
   PDEVICE_OBJECT lower;
 
-  dev_ptr->OldState = dev_ptr->State;
-  dev_ptr->State = Deleted;
+  dev_ptr->old_state = dev_ptr->state;
+  dev_ptr->state = device__state_deleted;
   Irp->IoStatus.Information = 0;
   Irp->IoStatus.Status = STATUS_SUCCESS;
   IoSkipCurrentIrpStackLocation ( Irp );
@@ -224,31 +224,31 @@ NTSTATUS STDCALL bus_pnp__simple(
 	status = STATUS_SUCCESS;
 	break;
       case IRP_MN_QUERY_STOP_DEVICE:
-	dev_ptr->OldState = dev_ptr->State;
-	dev_ptr->State = StopPending;
+	dev_ptr->old_state = dev_ptr->state;
+	dev_ptr->state = device__state_stop_pending;
 	status = STATUS_SUCCESS;
 	break;
       case IRP_MN_CANCEL_STOP_DEVICE:
-	dev_ptr->State = dev_ptr->OldState;
+	dev_ptr->state = dev_ptr->old_state;
 	status = STATUS_SUCCESS;
 	break;
       case IRP_MN_STOP_DEVICE:
-	dev_ptr->OldState = dev_ptr->State;
-	dev_ptr->State = Stopped;
+	dev_ptr->old_state = dev_ptr->state;
+	dev_ptr->state = device__state_stopped;
 	status = STATUS_SUCCESS;
 	break;
       case IRP_MN_QUERY_REMOVE_DEVICE:
-	dev_ptr->OldState = dev_ptr->State;
-	dev_ptr->State = RemovePending;
+	dev_ptr->old_state = dev_ptr->state;
+	dev_ptr->state = device__state_remove_pending;
 	status = STATUS_SUCCESS;
 	break;
       case IRP_MN_CANCEL_REMOVE_DEVICE:
-	dev_ptr->State = dev_ptr->OldState;
+	dev_ptr->state = dev_ptr->old_state;
 	status = STATUS_SUCCESS;
 	break;
       case IRP_MN_SURPRISE_REMOVAL:
-	dev_ptr->OldState = dev_ptr->State;
-	dev_ptr->State = SurpriseRemovePending;
+	dev_ptr->old_state = dev_ptr->state;
+	dev_ptr->state = device__state_surprise_remove_pending;
 	status = STATUS_SUCCESS;
 	break;
       default:
