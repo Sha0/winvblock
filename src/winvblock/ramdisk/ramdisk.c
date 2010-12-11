@@ -115,41 +115,42 @@ disk__io_decl (
   return STATUS_SUCCESS;
 }
 
-static
-disk__pnp_id_decl (
-  query_id
- )
-{
-  ramdisk__type_ptr ramdisk_ptr = ramdisk_get_ptr ( disk_ptr->device );
-  static PWCHAR hw_ids[disk__media_count] =
-    { winvblock__literal_w L"\\RAMFloppyDisk",
-    winvblock__literal_w L"\\RAMHardDisk",
-    winvblock__literal_w L"\\RAMOpticalDisc"
-  };
+static winvblock__uint32 STDCALL query_id(
+    IN struct device__type * dev,
+    IN BUS_QUERY_ID_TYPE query_type,
+    IN OUT WCHAR (*buf)[512]
+  ) {
+    disk__type_ptr disk = disk__get_ptr(dev);
+    ramdisk__type_ptr ramdisk = ramdisk_get_ptr(dev);
+    static PWCHAR hw_ids[disk__media_count] = {
+        winvblock__literal_w L"\\RAMFloppyDisk",
+        winvblock__literal_w L"\\RAMHardDisk",
+        winvblock__literal_w L"\\RAMOpticalDisc"
+      };
 
-  switch ( query_type )
-    {
-      case BusQueryDeviceID:
-	return swprintf ( buf_512, hw_ids[disk_ptr->media] ) + 1;
-      case BusQueryInstanceID:
-	/*
-	 * "Location" 
-	 */
-	return swprintf ( buf_512, L"RAM_at_%08X", ramdisk_ptr->DiskBuf ) + 1;
-      case BusQueryHardwareIDs:
-	{
-	  winvblock__uint32 tmp;
-	  tmp = swprintf ( buf_512, hw_ids[disk_ptr->media] ) + 1;
-	  tmp +=
-	    swprintf ( &buf_512[tmp], disk__compat_ids[disk_ptr->media] ) + 4;
-	  return tmp;
-	}
-      case BusQueryCompatibleIDs:
-	return swprintf ( buf_512, disk__compat_ids[disk_ptr->media] ) + 4;
-      default:
-	return 0;
-    }
-}
+    switch (query_type) {
+        case BusQueryDeviceID:
+          return swprintf(*buf, hw_ids[disk->media]) + 1;
+
+        case BusQueryInstanceID:
+        	/* "Location" */
+          return swprintf(*buf, L"RAM_at_%08X", ramdisk->DiskBuf) + 1;
+
+        case BusQueryHardwareIDs: {
+            winvblock__uint32 tmp;
+
+            tmp = swprintf(*buf, hw_ids[disk->media]) + 1;
+            tmp += swprintf(*buf + tmp, disk__compat_ids[disk->media]) + 4;
+            return tmp;
+          }
+
+        case BusQueryCompatibleIDs:
+          return swprintf(*buf, disk__compat_ids[disk->media]) + 4;
+
+        default:
+          return 0;
+      }
+  }
 
 /**
  * Create a new RAM disk
@@ -190,8 +191,8 @@ ramdisk__create (
   ramdisk_ptr->disk = disk_ptr;
   ramdisk_ptr->prev_free = disk_ptr->device->ops.free;
   disk_ptr->device->ops.free = free_ramdisk;
+  disk_ptr->device->ops.pnp_id = query_id;
   disk_ptr->disk_ops.io = io;
-  disk_ptr->disk_ops.pnp_id = query_id;
   disk_ptr->ext = ramdisk_ptr;
 
   return ramdisk_ptr;

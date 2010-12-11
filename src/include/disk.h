@@ -119,31 +119,6 @@ typedef disk__init_decl (
  );
 
 /**
- * Disk PnP ID reponse routine
- *
- * @v disk_ptr        The disk device being queried
- * @v query_type      The query type
- * @v buf_512         Wide character 512-element buffer for ID response
- *
- * Returns the number of wide characters in the response.
- */
-#  define disk__pnp_id_decl( x ) \
-\
-winvblock__uint32 STDCALL \
-x ( \
-  IN disk__type_ptr disk_ptr, \
-  IN BUS_QUERY_ID_TYPE query_type, \
-  OUT PWCHAR buf_512 \
- )
-/*
- * Function pointer for a disk PnP response routine.
- * 'indent' mangles this, so it looks weird
- */
-typedef disk__pnp_id_decl (
-   ( *disk__pnp_id_routine )
- );
-
-/**
  * Disk close routine
  *
  * @v disk_ptr        The disk device being closed
@@ -167,7 +142,6 @@ winvblock__def_struct ( disk__ops )
   disk__io_routine io;
   disk__max_xfer_len_routine max_xfer_len;
   disk__init_routine init;
-  disk__pnp_id_routine pnp_id;
   disk__close_routine close;
 };
 
@@ -237,9 +211,6 @@ extern disk__io_decl (
  );
 extern disk__max_xfer_len_decl (
   disk__max_xfer_len
- );
-extern disk__pnp_id_decl (
-  disk__query_id
  );
 
 /**

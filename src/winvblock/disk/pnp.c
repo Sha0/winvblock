@@ -39,66 +39,6 @@
 #include "bus.h"
 #include "debug.h"
 
-NTSTATUS STDCALL disk_pnp__query_id(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
-  )
-{
-  NTSTATUS status;
-  PWCHAR string;
-  winvblock__uint32 string_length;
-  disk__type_ptr disk_ptr;
-
-  disk_ptr = disk__get_ptr ( dev_ptr );
-  string = wv_mallocz(512 * sizeof *string);
-  if ( string == NULL )
-    {
-      DBG("wv_malloc IRP_MN_QUERY_ID\n");
-      status = STATUS_INSUFFICIENT_RESOURCES;
-      goto alloc_string;
-    }
-  /*
-   * Invoke the specific disk class ID query 
-   */
-  string_length =
-    disk__query_id ( disk_ptr, Stack->Parameters.QueryId.IdType, string );
-
-  if ( string_length == 0 )
-    {
-      Irp->IoStatus.Information = 0;
-      status = STATUS_NOT_SUPPORTED;
-      goto alloc_info;
-    }
-
-  Irp->IoStatus.Information = (ULONG_PTR) wv_palloc(
-      string_length * sizeof *string
-    );
-  if ( Irp->IoStatus.Information == 0 )
-    {
-      DBG("wv_palloc failed.\n");
-      status = STATUS_INSUFFICIENT_RESOURCES;
-      goto alloc_info;
-    }
-  RtlCopyMemory ( ( PWCHAR ) Irp->IoStatus.Information, string,
-		  string_length * sizeof ( WCHAR ) );
-  status = STATUS_SUCCESS;
-  /*
-   * Irp->IoStatus.Information not freed 
-   */
-alloc_info:
-
-  wv_free(string);
-alloc_string:
-
-  Irp->IoStatus.Status = status;
-  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-  *completion_ptr = TRUE;
-  return status;
-}
-
 NTSTATUS STDCALL disk_pnp__query_dev_text(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
@@ -135,17 +75,23 @@ NTSTATUS STDCALL disk_pnp__query_dev_text(
 	    status = STATUS_INSUFFICIENT_RESOURCES;
 	    goto alloc_info;
 	  }
-	RtlCopyMemory ( ( PWCHAR ) Irp->IoStatus.Information, string,
-			string_length * sizeof ( WCHAR ) );
+	RtlCopyMemory(
+      (PWCHAR) Irp->IoStatus.Information,
+      (WCHAR (*)[512]) string,
+			string_length * sizeof (WCHAR)
+    );
 	status = STATUS_SUCCESS;
 	goto alloc_info;
 
       case DeviceTextLocationInformation:
-	string_length =
-	  disk__query_id ( disk_ptr, BusQueryInstanceID, string );
-  Irp->IoStatus.Information = (ULONG_PTR) wv_palloc(
-      string_length * sizeof *string
-    );
+        string_length = device__pnp_id(
+            dev_ptr,
+            BusQueryInstanceID,
+            (WCHAR (*)[512]) string
+          );
+        Irp->IoStatus.Information = (ULONG_PTR) wv_palloc(
+            string_length * sizeof *string
+          );
 	if ( Irp->IoStatus.Information == 0 )
 	  {
       DBG("wv_palloc DeviceTextLocationInformation\n");

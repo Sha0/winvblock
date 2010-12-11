@@ -97,38 +97,41 @@ disk__io_decl (
   return status;
 }
 
-static
-disk__pnp_id_decl (
-  query_id
- )
-{
-  filedisk__type_ptr filedisk_ptr = filedisk__get_ptr ( disk_ptr->device );
-  static PWCHAR hw_ids[disk__media_count] =
-    { winvblock__literal_w L"\\FileFloppyDisk",
-    winvblock__literal_w L"\\FileHardDisk",
-    winvblock__literal_w L"\\FileOpticalDisc"
-  };
+static winvblock__uint32 STDCALL query_id(
+    IN struct device__type * dev,
+    IN BUS_QUERY_ID_TYPE query_type,
+    IN OUT WCHAR (*buf)[512]
+  ) {
+    disk__type_ptr disk = disk__get_ptr(dev);
+    filedisk__type_ptr filedisk = filedisk__get_ptr(dev);
+    static PWCHAR hw_ids[disk__media_count] = {
+        winvblock__literal_w L"\\FileFloppyDisk",
+        winvblock__literal_w L"\\FileHardDisk",
+        winvblock__literal_w L"\\FileOpticalDisc"
+      };
 
-  switch ( query_type )
-    {
-      case BusQueryDeviceID:
-	return swprintf ( buf_512, hw_ids[disk_ptr->media] ) + 1;
-      case BusQueryInstanceID:
-	return swprintf ( buf_512, L"Hash_%08X", filedisk_ptr->hash ) + 1;
-      case BusQueryHardwareIDs:
-	{
-	  winvblock__uint32 tmp;
-	  tmp = swprintf ( buf_512, hw_ids[disk_ptr->media] ) + 1;
-	  tmp +=
-	    swprintf ( &buf_512[tmp], disk__compat_ids[disk_ptr->media] ) + 4;
-	  return tmp;
-	}
-      case BusQueryCompatibleIDs:
-	return swprintf ( buf_512, disk__compat_ids[disk_ptr->media] ) + 4;
-      default:
-	return 0;
-    }
-}
+    switch (query_type) {
+        case BusQueryDeviceID:
+          return swprintf(*buf, hw_ids[disk->media]) + 1;
+
+        case BusQueryInstanceID:
+          return swprintf(*buf, L"Hash_%08X", filedisk->hash) + 1;
+
+        case BusQueryHardwareIDs: {
+            winvblock__uint32 tmp;
+
+            tmp = swprintf(*buf, hw_ids[disk->media]) + 1;
+            tmp += swprintf(*buf + tmp, disk__compat_ids[disk->media]) + 4;
+            return tmp;
+          }
+
+        case BusQueryCompatibleIDs:
+          return swprintf(*buf, disk__compat_ids[disk->media]) + 4;
+
+        default:
+          return 0;
+      }
+  }
 
 NTSTATUS STDCALL filedisk__attach(
     IN PDEVICE_OBJECT DeviceObject,
@@ -290,8 +293,8 @@ filedisk__create (
   filedisk_ptr->disk = disk_ptr;
   filedisk_ptr->prev_free = disk_ptr->device->ops.free;
   disk_ptr->device->ops.free = free_filedisk;
+  disk_ptr->device->ops.pnp_id = query_id;
   disk_ptr->disk_ops.io = io;
-  disk_ptr->disk_ops.pnp_id = query_id;
   disk_ptr->disk_ops.close = close;
   disk_ptr->ext = filedisk_ptr;
 

@@ -1957,28 +1957,41 @@ static disk__max_xfer_len_decl(max_xfer_len)
     return disk_ptr->SectorSize * aoe_disk_ptr->MaxSectorsPerPacket;
   }
 
-static disk__pnp_id_decl(query_id)
-  {
-    struct aoe__disk_type_ * aoe_disk_ptr = aoe__get_(disk_ptr->device);
-  
-    switch ( query_type )
-      {
+static winvblock__uint32 STDCALL query_id(
+    IN struct device__type * dev,
+    IN BUS_QUERY_ID_TYPE query_type,
+    IN OUT WCHAR (*buf)[512]
+  ) {
+    struct aoe__disk_type_ * aoe_disk = aoe__get_(dev);
+
+    switch (query_type) {
         case BusQueryDeviceID:
-  	return swprintf ( buf_512, winvblock__literal_w L"\\AoEHardDisk" ) + 1;
+          return swprintf(*buf, winvblock__literal_w L"\\AoEHardDisk") + 1;
+
         case BusQueryInstanceID:
-  	return swprintf ( buf_512, L"AoE_at_Shelf_%d.Slot_%d",
-  			  aoe_disk_ptr->Major, aoe_disk_ptr->Minor ) + 1;
-        case BusQueryHardwareIDs:
-  	{
-  	  winvblock__uint32 tmp =
-  	    swprintf ( buf_512, winvblock__literal_w L"\\AoEHardDisk" ) + 1;
-  	  tmp += swprintf ( &buf_512[tmp], L"GenDisk" ) + 4;
-  	  return tmp;
-  	}
+          return swprintf(
+              *buf,
+              L"AoE_at_Shelf_%d.Slot_%d",
+  			      aoe_disk->Major,
+              aoe_disk->Minor
+            ) + 1;
+
+        case BusQueryHardwareIDs: {
+            winvblock__uint32 tmp;
+
+            tmp = swprintf(
+                *buf,
+                winvblock__literal_w L"\\AoEHardDisk"
+              ) + 1;
+            tmp += swprintf(*buf + tmp, L"GenDisk") + 4;
+            return tmp;
+          }
+
         case BusQueryCompatibleIDs:
-  	return swprintf ( buf_512, L"GenDisk" ) + 4;
+          return swprintf(*buf, L"GenDisk") + 4;
+
         default:
-  	return 0;
+          return 0;
       }
   }
 
@@ -2336,9 +2349,9 @@ static struct aoe__disk_type_ * aoe__create_disk_(void)
     aoe_disk_ptr->disk = disk_ptr;
     aoe_disk_ptr->prev_free = disk_ptr->device->ops.free;
     disk_ptr->device->ops.free = aoe__free_disk_;
+    disk_ptr->device->ops.pnp_id = query_id;
     disk_ptr->disk_ops.io = io;
     disk_ptr->disk_ops.max_xfer_len = max_xfer_len;
-    disk_ptr->disk_ops.pnp_id = query_id;
     disk_ptr->disk_ops.init = init;
     disk_ptr->disk_ops.close = close;
     disk_ptr->ext = aoe_disk_ptr;

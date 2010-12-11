@@ -60,9 +60,26 @@ extern winvblock__lib_func device__create_pdo_func device__create_pdo;
 typedef winvblock__bool STDCALL device__init_func(IN struct device__type *);
 
 /**
+ * Device PnP ID reponse routine.
+ *
+ * @v dev                       The device being queried for PnP IDs.
+ * @v query_type                The query type.
+ * @v buf                       Wide character, 512-element buffer for the
+ *                              ID response.
+ * @ret winvblock__uint32       The number of wide characters in the response.
+ */
+typedef winvblock__uint32 STDCALL device__pnp_id_func(
+    IN struct device__type *,
+    IN BUS_QUERY_ID_TYPE,
+    IN OUT WCHAR (*)[512]
+  );
+
+extern winvblock__lib_func device__pnp_id_func device__pnp_id;
+
+/**
  * Device close routine.
  *
- * @v dev_ptr           The device being closed.
+ * @v dev               The device being closed.
  */
 typedef void STDCALL device__close_func(IN struct device__type *);
 
@@ -82,6 +99,7 @@ extern winvblock__lib_func struct device__type * device__create(void);
 winvblock__def_struct(device__ops) {
     device__create_pdo_func * create_pdo;
     device__init_func * init;
+    device__pnp_id_func * pnp_id;
     device__close_func * close;
     device__free_func * free;
   };
@@ -129,5 +147,6 @@ extern winvblock__lib_func void device__set(
     PDEVICE_OBJECT,
     struct device__type *
   );
+extern irp__handler device__pnp_query_id;
 
 #endif  /* _DEVICE_H */

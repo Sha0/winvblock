@@ -94,6 +94,81 @@ static PDEVICE_OBJECT STDCALL device__make_pdo_(IN struct device__type * dev) {
   }
 
 /**
+ * Respond to a device PnP ID query.
+ *
+ * @v dev                       The device being queried for PnP IDs.
+ * @v query_type                The query type.
+ * @v buf                       Wide character, 512-element buffer for the
+ *                              ID response.
+ * @ret winvblock__uint32       The number of wide characters in the response,
+ *                              or 0 upon a failure.
+ */
+winvblock__uint32 STDCALL device__pnp_id(
+    IN struct device__type * dev,
+    IN BUS_QUERY_ID_TYPE query_type,
+    IN OUT WCHAR (*buf)[512]
+  ) {
+    return dev->ops.pnp_id ? dev->ops.pnp_id(dev, query_type, buf) : 0;
+  }
+
+/* An IRP handler for a PnP ID query. */
+NTSTATUS STDCALL device__pnp_query_id(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp,
+    IN PIO_STACK_LOCATION Stack,
+    IN struct device__type * dev,
+    OUT winvblock__bool_ptr completion
+  ) {
+    NTSTATUS status;
+    WCHAR (*str)[512];
+    winvblock__uint32 str_len;
+
+    /* Allocate the working buffer. */
+    str = wv_mallocz(sizeof *str);
+    if (str == NULL) {
+        DBG("wv_malloc IRP_MN_QUERY_ID\n");
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto alloc_str;
+      }
+    /* Invoke the specific device's ID query. */
+    str_len = device__pnp_id(
+        dev,
+        Stack->Parameters.QueryId.IdType,
+        str
+      );
+    if (str_len == 0) {
+        Irp->IoStatus.Information = 0;
+        status = STATUS_NOT_SUPPORTED;
+        goto alloc_info;
+      }
+    /* Allocate the return buffer. */
+    Irp->IoStatus.Information = (ULONG_PTR) wv_palloc(str_len * sizeof **str);
+    if (Irp->IoStatus.Information == 0) {
+        DBG("wv_palloc failed.\n");
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto alloc_info;
+      }
+    /* Copy the working buffer to the return buffer. */
+    RtlCopyMemory(
+        (void *) Irp->IoStatus.Information,
+        str,
+        str_len * sizeof **str
+      );
+    status = STATUS_SUCCESS;
+
+    /* Irp->IoStatus.Information not freed. */
+    alloc_info:
+
+    wv_free(str);
+    alloc_str:
+
+    Irp->IoStatus.Status = status;
+    IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    *completion = TRUE;
+    return status;
+  }
+
+/**
  * Close a device.
  *
  * @v dev               Points to the device to close.

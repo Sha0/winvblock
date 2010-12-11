@@ -384,7 +384,7 @@ static NTSTATUS STDCALL (disk_dispatch)(
           IRP_MN_QUERY_DEVICE_TEXT, FALSE, FALSE,
                                                 disk_pnp__query_dev_text },
         {            IRP_MJ_PNP,
-                   IRP_MN_QUERY_ID, FALSE, FALSE,     disk_pnp__query_id },
+                   IRP_MN_QUERY_ID, FALSE, FALSE,   device__pnp_query_id },
       };
 
     status = irp__process_with_table(
@@ -518,10 +518,4 @@ disk__io_decl ( disk__io )
 disk__max_xfer_len_decl ( disk__max_xfer_len )
 {
   return disk_ptr->disk_ops.max_xfer_len ( disk_ptr );
-}
-
-/* See header for details */
-disk__pnp_id_decl ( disk__query_id )
-{
-  return disk_ptr->disk_ops.pnp_id ( disk_ptr, query_type, buf_512 );
 }
