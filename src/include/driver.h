@@ -27,8 +27,6 @@
  * Driver specifics.
  */
 
-#include "portable.h"
-
 /* For testing and debugging */
 #if 0
 #  define RIS

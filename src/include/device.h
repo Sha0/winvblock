@@ -27,8 +27,6 @@
  * Device specifics.
  */
 
-#include "portable.h"
-
 enum device__state {
     device__state_not_started,
     device__state_started,

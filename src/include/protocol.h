@@ -28,8 +28,6 @@
  *
  */
 
-#  include "portable.h"
-
 extern winvblock__bool STDCALL Protocol_SearchNIC (
   IN winvblock__uint8_ptr Mac
  );
