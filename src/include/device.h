@@ -60,31 +60,13 @@ extern winvblock__lib_func device__create_pdo_func device__create_pdo;
 typedef winvblock__bool STDCALL device__init_func(IN struct device__type *);
 
 /**
- * Device close routine
+ * Device close routine.
  *
- * @v dev_ptr           The device being closed
+ * @v dev_ptr           The device being closed.
  */
-#  define device__close_decl( x ) \
-\
-void STDCALL \
-x ( \
-  IN struct device__type * dev_ptr \
- )
-/*
- * Function pointer for a device close routine.
- * 'indent' mangles this, so it looks weird
- */
-typedef device__close_decl (
-   ( *device__close_routine )
- );
-/**
- * Close a device
- *
- * @v dev_ptr           Points to the device to close
- */
-extern winvblock__lib_func device__close_decl (
-  device__close
- );
+typedef void STDCALL device__close_func(IN struct device__type *);
+
+extern winvblock__lib_func device__close_func device__close;
 
 /**
  * Device deletion routine.
@@ -125,7 +107,7 @@ extern winvblock__lib_func struct device__type * device__create (
 winvblock__def_struct(device__ops) {
     device__create_pdo_func * create_pdo;
     device__init_func * init;
-    device__close_routine close;
+    device__close_func * close;
     device__free_func * free;
   };
 

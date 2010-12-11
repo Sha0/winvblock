@@ -80,15 +80,11 @@ disk__init_decl ( default_init )
   return TRUE;
 }
 
-static
-device__close_decl (
-  close
- )
-{
-  disk__type_ptr disk_ptr = disk__get_ptr ( dev_ptr );
-  disk_ptr->disk_ops.close ( disk_ptr );
-  return;
-}
+static void STDCALL disk__close_(IN struct device__type * dev_ptr) {
+    disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
+    disk_ptr->disk_ops.close(disk_ptr);
+    return;
+  }
 
 disk__close_decl ( default_close )
 {
@@ -448,7 +444,7 @@ disk__create (
   disk_ptr->disk_ops.init = default_init;
   disk_ptr->disk_ops.close = default_close;
   dev_ptr->dispatch = disk_dispatch;
-  dev_ptr->ops.close = close;
+  dev_ptr->ops.close = disk__close_;
   dev_ptr->ops.create_pdo = create_pdo;
   dev_ptr->ops.free = free_disk;
   dev_ptr->ops.init = disk__init_;

@@ -119,20 +119,17 @@ static PDEVICE_OBJECT STDCALL make_dev_pdo(IN struct device__type * dev_ptr) {
   }
 
 /**
- * Close a device
+ * Close a device.
  *
- * @v dev_ptr           Points to the device to close
+ * @v dev_ptr           Points to the device to close.
  */
-winvblock__lib_func
-device__close_decl (
-  device__close
- )
-{
-  /*
-   * Call the device's close routine
-   */
-  dev_ptr->ops.close ( dev_ptr );
-}
+winvblock__lib_func void STDCALL device__close(
+    IN struct device__type * dev_ptr
+  ) {
+    /* Call the device's close routine. */
+    dev_ptr->ops.close(dev_ptr);
+    return;
+  }
 
 /**
  * Delete a device.
