@@ -38,25 +38,9 @@
 #include "bus_dev_ctl.h"
 #include "debug.h"
 
-/* Globals. */
-static LIST_ENTRY bus__list_;
-static KSPIN_LOCK bus__list_lock_;
-winvblock__bool bus__module_up_ = FALSE;
-
 /* Forward declarations. */
 static device__free_func bus__free_;
 static device__create_pdo_func bus__create_pdo_;
-
-/**
- * Tear down the global, bus-common environment.
- */
-void bus__module_shutdown(void) {
-
-    DBG("Entry\n");
-    bus__module_up_ = FALSE;
-    DBG("Exit\n");
-    return;
-  }
 
 /**
  * Add a child node to the bus.
@@ -75,10 +59,6 @@ winvblock__lib_func winvblock__bool STDCALL bus__add_child(
     device__type_ptr walker;
 
     DBG("Entry\n");
-    if (!bus__module_up_) {
-        DBG("Bus module not initialized.\n");
-        return FALSE;
-      }
     if ((bus_ptr == NULL) || (dev_ptr == NULL)) {
         DBG("No bus or no device!\n");
         return FALSE;
@@ -204,95 +184,6 @@ NTSTATUS STDCALL bus__get_dev_capabilities(
     return status;
   }
 
-static NTSTATUS STDCALL attach_fdo(
-    IN PDRIVER_OBJECT DriverObject,
-    IN PDEVICE_OBJECT PhysicalDeviceObject
-  ) {
-    PLIST_ENTRY walker;
-    struct bus__type * bus_ptr;
-    NTSTATUS status;
-    PUNICODE_STRING dev_name = NULL;
-    PDEVICE_OBJECT fdo = NULL;
-    device__type_ptr dev_ptr;
-
-    DBG("Entry\n");
-    /* Search for the associated bus. */
-    walker = bus__list_.Flink;
-    while (walker != &bus__list_) {
-        bus_ptr = CONTAINING_RECORD(walker, struct bus__type, tracking);
-        if (bus_ptr->PhysicalDeviceObject == PhysicalDeviceObject)
-          break;
-        walker = walker->Flink;
-      }
-    /* If we get back to the list head, we need to create a bus. */
-    if (walker == &bus__list_) {
-        DBG("No bus->PDO association.  Creating a new bus\n");
-        bus_ptr = bus__create();
-        if (bus_ptr == NULL) {
-            return Error(
-                "Could not create a bus!\n",
-                STATUS_INSUFFICIENT_RESOURCES
-              );
-          }
-      }
-    /* This bus might have an associated name. */
-    if (bus_ptr->named)
-      dev_name = &bus_ptr->dev_name;
-    /* Create the bus FDO. */
-    status = IoCreateDevice(
-        DriverObject,
-        sizeof (driver__dev_ext),
-        dev_name,
-        FILE_DEVICE_CONTROLLER,
-        FILE_DEVICE_SECURE_OPEN,
-        FALSE,
-        &fdo
-      );
-    if (!NT_SUCCESS(status)) {
-        device__free(bus_ptr->device);
-        return Error("IoCreateDevice", status);
-      }
-    /* DosDevice symlink. */
-    if (bus_ptr->named) {
-        status = IoCreateSymbolicLink(
-            &bus_ptr->dos_dev_name,
-            &bus_ptr->dev_name
-          );
-      }
-    if (!NT_SUCCESS(status)) {
-        IoDeleteDevice(fdo);
-        device__free(bus_ptr->device);
-        return Error("IoCreateSymbolicLink", status);
-      }
-
-    /* Set associations for the bus, device, FDO, PDO. */
-    dev_ptr = bus_ptr->device;
-    device__set(fdo, dev_ptr);
-    dev_ptr->Self = fdo;
-
-    bus_ptr->PhysicalDeviceObject = PhysicalDeviceObject;
-    fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
-    fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
-    /* Add the bus to the device tree. */
-    if (PhysicalDeviceObject != NULL) {
-        bus_ptr->LowerDeviceObject = IoAttachDeviceToDeviceStack(
-            fdo,
-            PhysicalDeviceObject
-          );
-        if (bus_ptr->LowerDeviceObject == NULL) {
-            IoDeleteDevice(fdo);
-            device__free(bus_ptr->device);
-            return Error("IoAttachDeviceToDeviceStack", STATUS_NO_SUCH_DEVICE);
-          }
-      }
-    fdo->Flags &= ~DO_DEVICE_INITIALIZING;
-    #ifdef RIS
-    dev_ptr->State = Started;
-    #endif
-    DBG("Exit\n");
-    return STATUS_SUCCESS;
-  }
-
 /* Bus dispatch routine. */
 static NTSTATUS STDCALL bus_dispatch(
     IN PDEVICE_OBJECT dev,
@@ -367,10 +258,6 @@ winvblock__lib_func struct bus__type * bus__create(void) {
     device__type_ptr dev_ptr;
     struct bus__type * bus_ptr;
 
-    if (!bus__module_up_) {
-        DBG("Bus module not initialized.\n");
-        return NULL;
-      }
     /* Try to create a device. */
     dev_ptr = device__create();
     if (dev_ptr == NULL)
@@ -382,12 +269,6 @@ winvblock__lib_func struct bus__type * bus__create(void) {
     bus_ptr = wv_mallocz(sizeof *bus_ptr);
     if (bus_ptr == NULL)
       goto err_nobus;
-    /* Track the new bus in our global list. */
-    ExInterlockedInsertTailList(
-        &bus__list_,
-        &bus_ptr->tracking,
-        &bus__list_lock_
-      );
     /* Populate non-zero device defaults. */
     bus_ptr->device = dev_ptr;
     bus_ptr->prev_free = dev_ptr->ops.free;
@@ -477,24 +358,6 @@ static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN device__type_ptr dev) {
   }
 
 /**
- * Initialize the global, bus-common environment.
- *
- * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure.
- */
-NTSTATUS bus__module_init(void) {
-    struct bus__type * boot_bus_ptr;
-
-    /* Initialize the global list of devices. */
-    InitializeListHead(&bus__list_);
-    KeInitializeSpinLock(&bus__list_lock_);
-    /* We handle AddDevice call-backs for the driver. */
-    driver__obj_ptr->DriverExtension->AddDevice = attach_fdo;
-    bus__module_up_ = TRUE;
-
-    return STATUS_SUCCESS;
-  }
-
-/**
  * Default bus deletion operation.
  *
  * @v dev_ptr           Points to the bus device to delete.
@@ -503,12 +366,6 @@ static void STDCALL bus__free_(IN device__type_ptr dev_ptr) {
     struct bus__type * bus_ptr = bus__get(dev_ptr);
     /* Free the "inherited class". */
     bus_ptr->prev_free(dev_ptr);
-    /*
-     * Track the bus deletion in our global list.  Unfortunately,
-     * for now we have faith that a bus won't be deleted twice and
-     * result in a race condition.  Something to keep in mind...
-     */
-    ExInterlockedRemoveHeadList(bus_ptr->tracking.Blink, &bus__list_lock_);
 
     wv_free(bus_ptr);
   }

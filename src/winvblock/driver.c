@@ -50,6 +50,7 @@ PDRIVER_OBJECT driver__obj_ptr = NULL;
 static void * driver__state_handle_;
 static winvblock__bool driver__started_ = FALSE;
 static PDEVICE_OBJECT driver__bus_fdo_ = NULL;
+static KSPIN_LOCK driver__bus_fdo_lock_;
 /* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters. */
 static LPWSTR driver__os_load_opts_ = NULL;
 
@@ -113,12 +114,26 @@ static LPWSTR STDCALL get_opt(IN LPWSTR opt_name) {
     return the_opt;
   }
 
-/* Create the root-enumerated, main bus device. */
-NTSTATUS STDCALL driver__create_bus_(void) {
-    struct bus__type * bus;
+static NTSTATUS STDCALL driver__attach_fdo_(
+    IN PDRIVER_OBJECT DriverObject,
+    IN PDEVICE_OBJECT PhysicalDeviceObject
+  ) {
+    KIRQL irql;
     NTSTATUS status;
-    PDEVICE_OBJECT bus_pdo = NULL;
+    PLIST_ENTRY walker;
+    struct bus__type * bus;
+    PUNICODE_STRING dev_name = NULL;
+    PDEVICE_OBJECT fdo = NULL;
+    device__type_ptr dev_ptr;
 
+    DBG("Entry\n");
+    /* Do we alreay have our main bus? */
+    if (driver__bus_fdo_) {
+        DBG("Already have the main bus.  Refusing.\n");
+        status = STATUS_NOT_SUPPORTED;
+        goto err_already_established;
+      }
+    /* Create the bus. */
     bus = bus__create();
     if (!bus) {
         DBG("bus__create() failed for the main bus.\n");
@@ -135,6 +150,87 @@ NTSTATUS STDCALL driver__create_bus_(void) {
         L"\\DosDevices\\" winvblock__literal_w
       );
     bus->named = TRUE;
+    /* Create the bus FDO. */
+    status = IoCreateDevice(
+        DriverObject,
+        sizeof (driver__dev_ext),
+        &bus->dev_name,
+        FILE_DEVICE_CONTROLLER,
+        FILE_DEVICE_SECURE_OPEN,
+        FALSE,
+        &fdo
+      );
+    if (!NT_SUCCESS(status)) {
+        DBG("IoCreateDevice() failed!\n");
+        goto err_fdo;
+      }
+    /* DosDevice symlink. */
+    status = IoCreateSymbolicLink(
+        &bus->dos_dev_name,
+        &bus->dev_name
+      );
+    if (!NT_SUCCESS(status)) {
+        DBG("IoCreateSymbolicLink() failed!\n");
+        goto err_dos_symlink;
+      }
+    /* Set associations for the bus, device, FDO, PDO. */
+    device__set(fdo, bus->device);
+    bus->device->Self = fdo;
+    bus->PhysicalDeviceObject = PhysicalDeviceObject;
+    fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
+    fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
+    /* Attach the FDO to the PDO. */
+    bus->LowerDeviceObject = IoAttachDeviceToDeviceStack(
+        fdo,
+        PhysicalDeviceObject
+      );
+    if (bus->LowerDeviceObject == NULL) {
+        status = STATUS_NO_SUCH_DEVICE;
+        DBG("IoAttachDeviceToDeviceStack() failed!\n");
+        goto err_attach;
+      }
+    /* Ok! */
+    KeAcquireSpinLock(&driver__bus_fdo_lock_, &irql);
+    if (driver__bus_fdo_) {
+        KeReleaseSpinLock(&driver__bus_fdo_lock_, irql);
+        DBG("Beaten to it!\n");
+        status = STATUS_NOT_SUPPORTED;
+        goto err_race_failed;
+      }
+    fdo->Flags &= ~DO_DEVICE_INITIALIZING;
+    #ifdef RIS
+    bus->device->State = Started;
+    #endif
+    driver__bus_fdo_ = fdo;
+    KeReleaseSpinLock(&driver__bus_fdo_lock_, irql);
+    DBG("Exit\n");
+    return STATUS_SUCCESS;
+
+    err_race_failed:
+
+    err_attach:
+
+    IoDeleteSymbolicLink(&bus->dos_dev_name);
+    err_dos_symlink:
+
+    IoDeleteDevice(fdo);
+    err_fdo:
+
+    device__free(bus->device);
+    err_bus:
+
+    err_already_established:
+
+    DBG("Exit with failure\n");
+    return status;
+  }
+
+/* Create the root-enumerated, main bus device. */
+NTSTATUS STDCALL driver__create_bus_(void) {
+    struct bus__type * bus;
+    NTSTATUS status;
+    PDEVICE_OBJECT bus_pdo = NULL;
+
     /* Create the PDO. */
     IoReportDetectedDevice(
         driver__obj_ptr,
@@ -151,35 +247,19 @@ NTSTATUS STDCALL driver__create_bus_(void) {
         status = STATUS_UNSUCCESSFUL;
         goto err_driver_bus;
       }
-    /* We have a PDO.  Note it.  We need this in order to attach the FDO. */
-    bus->PhysicalDeviceObject = bus_pdo;
-    /*
-     * Attach FDO to PDO. *sigh*  Note that we do not own the PDO,
-     * so we must associate the bus structure with the FDO, instead.
-     * Consider that the AddDevice()/attach_fdo() routine takes two parameters,
-     * neither of which are guaranteed to be owned by a caller in this driver.
-     * Since attach_fdo() associates a bus device, it is forced to walk our
-     * global list of bus devices.  Otherwise, it would be easy to pass it here
-     */
-    status = driver__obj_ptr->DriverExtension->AddDevice(
-        driver__obj_ptr,
-        bus_pdo
-      );
+    /* Attach FDO to PDO. */
+    status = driver__attach_fdo_(driver__obj_ptr, bus_pdo);
     if (!NT_SUCCESS(status)) {
-        DBG("attach_fdo() went wrong!\n");
+        DBG("driver__attach_fdo_() went wrong!\n");
         goto err_add_dev;
       }
-    /* Bus created, PDO created, FDO attached.  All done. */
-    driver__bus_fdo_ = bus->device->Self;
+    /* PDO created, FDO attached.  All done. */
     return STATUS_SUCCESS;
 
     err_add_dev:
 
     IoDeleteDevice(bus_pdo);
     err_driver_bus:
-
-    device__free(bus->device);
-    err_bus:
 
     return status;
   }
@@ -209,6 +289,7 @@ NTSTATUS STDCALL DriverEntry(
       return Error("registry__note_driver__os_load_opts", status);
 
     driver__state_handle_ = NULL;
+    KeInitializeSpinLock(&driver__bus_fdo_lock_);
 
     if ((driver__state_handle_ = PoRegisterSystemState(
         NULL,
@@ -231,9 +312,10 @@ NTSTATUS STDCALL DriverEntry(
     DriverObject->MajorFunction[IRP_MJ_SCSI] = driver__dispatch_;
     /* Set the driver Unload callback. */
     DriverObject->DriverUnload = driver__unload_;
+    /* Set the driver AddDevice callback. */
+    DriverObject->DriverExtension->AddDevice = driver__attach_fdo_;
     /* Initialize various modules. */
     device__init();             /* TODO: Check for error. */
-    bus__module_init();         /* TODO: Check for error. */
     disk__init();               /* TODO: Check for error. */
     filedisk__init();           /* TODO: Check for error. */
     ramdisk__init();            /* TODO: Check for error. */
@@ -396,7 +478,6 @@ static void STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
       );
     IoDeleteSymbolicLink(&DosDeviceName);
     driver__bus_fdo_ = NULL;
-    bus__module_shutdown();
     wv_free(driver__os_load_opts_);
     driver__started_ = FALSE;
     DBG("Done\n");
