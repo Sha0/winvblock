@@ -124,6 +124,8 @@ struct device__type {
     PDEVICE_OBJECT Self;
     /* Points to the parent bus' DEVICE_OBJECT */
     PDEVICE_OBJECT Parent;
+    /* The device's child ID relative to the parent bus. */
+    winvblock__uint32 dev_num;
     /* Points to the driver. */
     PDRIVER_OBJECT DriverObject;
     /* Current state of the device. */

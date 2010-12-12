@@ -51,7 +51,6 @@ __divdi3 (
 #endif
 
 /* Globals. */
-static winvblock__uint32 next_disk = 0;
 static LIST_ENTRY disk_list;
 static KSPIN_LOCK disk_list_lock;
 winvblock__bool disk__removable[disk__media_count] = { TRUE, FALSE, TRUE };
@@ -172,7 +171,6 @@ static PDEVICE_OBJECT STDCALL create_pdo(IN struct device__type * dev_ptr) {
     dev_ptr->Self = dev_obj_ptr;
     KeInitializeEvent ( &disk_ptr->SearchEvent, SynchronizationEvent, FALSE );
     KeInitializeSpinLock ( &disk_ptr->SpinLock );
-    disk_ptr->DiskNumber = InterlockedIncrement ( &next_disk ) - 1;
     /*
      * Some device parameters
      */

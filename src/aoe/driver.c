@@ -2200,7 +2200,7 @@ static NTSTATUS STDCALL show(
         disk__type_ptr disk = disk__get_ptr(dev_walker);
         struct aoe__disk_type_ * aoe_disk = aoe__get_(dev_walker);
 
-        disks->Disk[count].Disk = disk->DiskNumber;
+        disks->Disk[count].Disk = dev_walker->dev_num;
         RtlCopyMemory(
             &disks->Disk[count].ClientMac,
             &aoe_disk->ClientMac,

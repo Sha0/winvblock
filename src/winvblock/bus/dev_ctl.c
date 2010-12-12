@@ -57,7 +57,7 @@ static NTSTATUS STDCALL disk_detach(
     if (dev_walker != NULL)
       disk_walker = disk__get_ptr(dev_walker);
     prev_disk_walker = disk_walker;
-    while ((disk_walker != NULL) && (disk_walker->DiskNumber != disk_num)) {
+    while ((disk_walker != NULL) && (dev_walker->dev_num != disk_num)) {
         prev_disk_walker = disk_walker;
         dev_walker = dev_walker->next_sibling_ptr;
         if (dev_walker != NULL)
@@ -70,7 +70,7 @@ static NTSTATUS STDCALL disk_detach(
             *completion = TRUE;
             return STATUS_INVALID_DEVICE_REQUEST;
           }
-        DBG("Deleting disk %d\n", disk_walker->DiskNumber);
+        DBG("Deleting disk %d\n", dev_walker->dev_num);
         if (disk_walker == disk__get_ptr(bus->first_child))
           bus->first_child = dev_walker->next_sibling_ptr;
           else {

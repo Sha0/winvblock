@@ -152,7 +152,6 @@ struct _disk__type
   KSPIN_LOCK SpinLock;
   winvblock__bool BootDrive;
   winvblock__bool Unmount;
-  winvblock__uint32 DiskNumber;
   disk__media media;
   disk__ops disk_ops;
   ULONGLONG LBADiskSize;

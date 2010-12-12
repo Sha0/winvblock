@@ -158,7 +158,6 @@ static NTSTATUS STDCALL scsi_get_address(
 {
   winvblock__uint32 copy_size;
   SCSI_ADDRESS scsi_address;
-  disk__type_ptr disk_ptr;
 
   copy_size =
     ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
@@ -167,8 +166,7 @@ static NTSTATUS STDCALL scsi_get_address(
   scsi_address.Length = sizeof ( SCSI_ADDRESS );
   scsi_address.PortNumber = 0;
   scsi_address.PathId = 0;
-  disk_ptr = disk__get_ptr ( dev_ptr );
-  scsi_address.TargetId = ( winvblock__uint8 ) disk_ptr->DiskNumber;
+  scsi_address.TargetId = (winvblock__uint8) dev_ptr->dev_num;
   scsi_address.Lun = 0;
   RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, &scsi_address, copy_size );
   Irp->IoStatus.Information = ( ULONG_PTR ) copy_size;

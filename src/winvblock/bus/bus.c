@@ -57,6 +57,7 @@ winvblock__lib_func winvblock__bool STDCALL bus__add_child(
     PDEVICE_OBJECT dev_obj_ptr;
     /* Walks the child nodes. */
     struct device__type * walker;
+    winvblock__uint32 dev_num;
 
     DBG("Entry\n");
     if ((bus_ptr == NULL) || (dev_ptr == NULL)) {
@@ -79,14 +80,37 @@ winvblock__lib_func winvblock__bool STDCALL bus__add_child(
     dev_ptr->ops.init(dev_ptr);
     dev_obj_ptr->Flags &= ~DO_DEVICE_INITIALIZING;
     /* Add the new device's extension to the bus' list of children. */
+    dev_num = 0;
     if (bus_ptr->first_child == NULL) {
         bus_ptr->first_child = dev_ptr;
       } else {
         walker = bus_ptr->first_child;
-        while (walker->next_sibling_ptr != NULL)
-          walker = walker->next_sibling_ptr;
-        walker->next_sibling_ptr = dev_ptr;
+        /* If the first child device number isn't 0... */
+        if (walker->dev_num) {
+            /* We insert before. */
+            dev_ptr->next_sibling_ptr = walker;
+            bus_ptr->first_child = dev_ptr;
+          } else {
+            while (walker->next_sibling_ptr != NULL) {
+                /* If there's a gap in the device numbers for the bus... */
+                if (walker->dev_num < walker->next_sibling_ptr->dev_num - 1) {
+                    /* Insert here, instead of at the end. */
+                    dev_num = walker->dev_num + 1;
+                    dev_ptr->next_sibling_ptr = walker->next_sibling_ptr;
+                    walker->next_sibling_ptr = dev_ptr;
+                    break;
+                  }
+                walker = walker->next_sibling_ptr;
+                dev_num = walker->dev_num + 1;
+              }
+            /* If we haven't already inserted the device... */
+            if (!dev_ptr->next_sibling_ptr) {
+                walker->next_sibling_ptr = dev_ptr;
+                dev_num = walker->dev_num + 1;
+              }
+          }
       }
+    dev_ptr->dev_num = dev_num;
     bus_ptr->Children++;
     if (bus_ptr->PhysicalDeviceObject != NULL) {
         IoInvalidateDeviceRelations(
