@@ -716,50 +716,44 @@ static winvblock__bool STDCALL setup_reg(OUT PNTSTATUS status_out)
 NTSTATUS STDCALL DriverEntry(
     IN PDRIVER_OBJECT DriverObject,
     IN PUNICODE_STRING RegistryPath
-  )
-  {
+  ) {
     NTSTATUS Status;
     OBJECT_ATTRIBUTES ObjectAttributes;
     void * ThreadObject;
+    struct bus__type * bus_ptr;
 
-    DBG ( "Entry\n" );
+    DBG("Entry\n");
 
-    if ( aoe__started_ )
+    if (aoe__started_)
       return STATUS_SUCCESS;
     /* Initialize the global list of AoE disks. */
-    InitializeListHead ( &aoe__disk_list_ );
-    KeInitializeSpinLock ( &aoe__disk_list_lock_ );
+    InitializeListHead(&aoe__disk_list_);
+    KeInitializeSpinLock(&aoe__disk_list_lock_);
     /* Setup the Registry. */
-    if ( !NT_SUCCESS ( setup_reg ( &Status ) ) )
-      {
-        DBG ( "Could not update Registry!\n" );
+    if (!NT_SUCCESS(setup_reg(&Status))) {
+        DBG("Could not update Registry!\n");
         return Status;
-      }
-    else
-      {
-        DBG ( "Registry updated\n" );
+      } else {
+        DBG("Registry updated\n");
       }
     /* Start up the protocol. */
-    if ( !NT_SUCCESS ( Status = Protocol_Start (  ) ) )
-      {
-        DBG ( "Protocol startup failure!\n" );
+    if (!NT_SUCCESS(Status = Protocol_Start())) {
+        DBG("Protocol startup failure!\n");
         return Status;
       }
     /* Allocate and zero-fill the global probe tag. */
     aoe__probe_tag_ = wv_mallocz(sizeof *aoe__probe_tag_);
     if (aoe__probe_tag_ == NULL) {
-        DBG ( "Couldn't allocate probe tag; bye!\n" );
+        DBG("Couldn't allocate probe tag; bye!\n");
         return STATUS_INSUFFICIENT_RESOURCES;
       }
 
     /* Set up the probe tag's AoE packet reference. */
     aoe__probe_tag_->PacketSize = sizeof (struct aoe__packet_);
     /* Allocate and zero-fill the probe tag's packet reference. */
-    aoe__probe_tag_->packet_data = wv_mallocz(
-        aoe__probe_tag_->PacketSize
-      );
+    aoe__probe_tag_->packet_data = wv_mallocz(aoe__probe_tag_->PacketSize);
     if (aoe__probe_tag_->packet_data == NULL) {
-        DBG ( "Couldn't allocate aoe__probe_tag_->packet_data\n" );
+        DBG("Couldn't allocate aoe__probe_tag_->packet_data\n");
         wv_free(aoe__probe_tag_);
         return STATUS_INSUFFICIENT_RESOURCES;
       }
@@ -768,22 +762,26 @@ NTSTATUS STDCALL DriverEntry(
     /* Initialize the probe tag's AoE packet. */
     aoe__probe_tag_->packet_data->Ver = AOEPROTOCOLVER;
     aoe__probe_tag_->packet_data->Major =
-      htons ( ( winvblock__uint16 ) - 1 );
-    aoe__probe_tag_->packet_data->Minor = ( winvblock__uint8 ) - 1;
-    aoe__probe_tag_->packet_data->Cmd = 0xec;  /* IDENTIFY DEVICE */
+      htons((winvblock__uint16) -1);
+    aoe__probe_tag_->packet_data->Minor = (winvblock__uint8) -1;
+    aoe__probe_tag_->packet_data->Cmd = 0xec;           /* IDENTIFY DEVICE */
     aoe__probe_tag_->packet_data->Count = 1;
 
     /* Initialize global target-list spinlock. */
-    KeInitializeSpinLock ( &aoe__target_list_spinlock_ );
+    KeInitializeSpinLock(&aoe__target_list_spinlock_);
 
     /* Initialize global spin-lock and global thread signal event. */
-    KeInitializeSpinLock ( &aoe__spinlock_ );
-    KeInitializeEvent ( &aoe__thread_sig_evt_, SynchronizationEvent,
-            FALSE );
+    KeInitializeSpinLock(&aoe__spinlock_);
+    KeInitializeEvent(&aoe__thread_sig_evt_, SynchronizationEvent, FALSE);
 
-    /* Initialize object attributes. */
-    InitializeObjectAttributes ( &ObjectAttributes, NULL, OBJ_KERNEL_HANDLE,
-               NULL, NULL );
+    /* Initialize object attributes for thread. */
+    InitializeObjectAttributes(
+        &ObjectAttributes,
+        NULL,
+        OBJ_KERNEL_HANDLE,
+        NULL,
+        NULL
+      );
 
     /* Create global thread. */
     if (!NT_SUCCESS(Status = PsCreateSystemThread(
@@ -795,89 +793,85 @@ NTSTATUS STDCALL DriverEntry(
         aoe__thread_,
         NULL
       )))
-      return Error ( "PsCreateSystemThread", Status );
+      return Error("PsCreateSystemThread", Status);
 
-    if ( !NT_SUCCESS
-         ( Status =
-     ObReferenceObjectByHandle ( aoe__thread_handle_,
-               THREAD_ALL_ACCESS, NULL, KernelMode,
-               &ThreadObject, NULL ) ) )
-      {
-        ZwClose ( aoe__thread_handle_ );
-        Error ( "ObReferenceObjectByHandle", Status );
+    if (!NT_SUCCESS(Status = ObReferenceObjectByHandle(
+        aoe__thread_handle_,
+        THREAD_ALL_ACCESS,
+        NULL,
+        KernelMode,
+        &ThreadObject,
+        NULL
+      ))) {
+        ZwClose(aoe__thread_handle_);
+        Error("ObReferenceObjectByHandle", Status);
         aoe__stop_ = TRUE;
-        KeSetEvent ( &aoe__thread_sig_evt_, 0, FALSE );
+        KeSetEvent(&aoe__thread_sig_evt_, 0, FALSE);
       }
 
-    {
-      struct bus__type * bus_ptr = driver__bus();
-      if ( !bus_ptr )
-        {
-    DBG ( "Unable to register for IOCTLs!\n" );
-        }
-      else
-        {
-    irp__reg_table ( &bus_ptr->device->irp_handler_chain, handling_table );
-        }
-    }
+    bus_ptr = driver__bus();
+    if (!bus_ptr) {
+        DBG("Unable to register for IOCTLs!\n");
+      } else
+      irp__reg_table(&bus_ptr->device->irp_handler_chain, handling_table);
     DriverObject->DriverUnload = aoe__unload_;
     aoe__process_abft_();
     aoe__started_ = TRUE;
-    DBG ( "Exit\n" );
+    DBG("Exit\n");
     return Status;
   }
 
 /**
  * Stop AoE operations.
  */
-static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
-  {
+static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject) {
     NTSTATUS Status;
     struct aoe__disk_search_ * disk_searcher, * previous_disk_searcher;
     struct aoe__work_tag_ * tag;
     KIRQL Irql, Irql2;
     struct aoe__target_list_ * Walker, * Next;
 
-    DBG ( "Entry\n" );
+    DBG("Entry\n");
     /* If we're not already started, there's nothing to do. */
-    if ( !aoe__started_ )
+    if (!aoe__started_)
       return;
     /* Stop the AoE protocol. */
-    Protocol_Stop (  );
+    Protocol_Stop();
     /* If we're not already shutting down, signal the event. */
-    if ( !aoe__stop_ )
-      {
+    if (!aoe__stop_) {
         aoe__stop_ = TRUE;
-        KeSetEvent ( &aoe__thread_sig_evt_, 0, FALSE );
+        KeSetEvent(&aoe__thread_sig_evt_, 0, FALSE);
         /* Wait until the event has been signalled. */
-        if ( !NT_SUCCESS
-       ( Status =
-         ZwWaitForSingleObject ( aoe__thread_handle_, FALSE,
-               NULL ) ) )
-    Error ( "AoE_Stop ZwWaitForSingleObject", Status );
-        ZwClose ( aoe__thread_handle_ );
+        if (!NT_SUCCESS(Status = ZwWaitForSingleObject(
+            aoe__thread_handle_,
+            FALSE,
+            NULL
+          )))
+          Error("AoE_Stop ZwWaitForSingleObject", Status);
+        ZwClose(aoe__thread_handle_);
       }
 
     /* Free the target list. */
-    KeAcquireSpinLock ( &aoe__target_list_spinlock_, &Irql2 );
+    KeAcquireSpinLock(&aoe__target_list_spinlock_, &Irql2);
     Walker = aoe__target_list_;
-    while ( Walker != NULL )
-      {
+    while (Walker != NULL) {
         Next = Walker->next;
         wv_free(Walker);
         Walker = Next;
       }
-    KeReleaseSpinLock ( &aoe__target_list_spinlock_, Irql2 );
+    KeReleaseSpinLock(&aoe__target_list_spinlock_, Irql2);
 
     /* Wait until we have the global spin-lock. */
-    KeAcquireSpinLock ( &aoe__spinlock_, &Irql );
+    KeAcquireSpinLock(&aoe__spinlock_, &Irql);
 
     /* Free disk searches in the global disk search list. */
     disk_searcher = aoe__disk_search_list_;
-    while ( disk_searcher != NULL )
-      {
-        KeSetEvent ( &( disk__get_ptr ( disk_searcher->device )->SearchEvent ),
-         0, FALSE );
+    while (disk_searcher != NULL) {
+        KeSetEvent(
+            &(disk__get_ptr(disk_searcher->device)->SearchEvent),
+            0,
+            FALSE
+          );
         previous_disk_searcher = disk_searcher;
         disk_searcher = disk_searcher->next;
         wv_free(previous_disk_searcher);
@@ -885,27 +879,22 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
 
     /* Cancel and free all tags in the global tag list. */
     tag = aoe__tag_list_;
-    while ( tag != NULL )
-      {
-        if ( tag->request_ptr != NULL && --tag->request_ptr->TagCount == 0 )
-    {
-      tag->request_ptr->Irp->IoStatus.Information = 0;
-      tag->request_ptr->Irp->IoStatus.Status = STATUS_CANCELLED;
-      IoCompleteRequest ( tag->request_ptr->Irp, IO_NO_INCREMENT );
-      wv_free(tag->request_ptr);
-    }
-        if ( tag->next == NULL )
-    {
-      wv_free(tag->packet_data);
-      wv_free(tag);
-      tag = NULL;
-    }
-        else
-    {
-      tag = tag->next;
-      wv_free(tag->previous->packet_data);
-      wv_free(tag->previous);
-    }
+    while (tag != NULL) {
+        if (tag->request_ptr != NULL && --tag->request_ptr->TagCount == 0) {
+            tag->request_ptr->Irp->IoStatus.Information = 0;
+            tag->request_ptr->Irp->IoStatus.Status = STATUS_CANCELLED;
+            IoCompleteRequest(tag->request_ptr->Irp, IO_NO_INCREMENT);
+            wv_free(tag->request_ptr);
+          }
+        if (tag->next == NULL) {
+            wv_free(tag->packet_data);
+            wv_free(tag);
+            tag = NULL;
+          } else {
+            tag = tag->next;
+            wv_free(tag->previous->packet_data);
+            wv_free(tag->previous);
+          }
       }
     aoe__tag_list_ = NULL;
     aoe__tag_list_last_ = NULL;
@@ -915,21 +904,21 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject)
     wv_free(aoe__probe_tag_);
 
     /* Release the global spin-lock. */
-    KeReleaseSpinLock ( &aoe__spinlock_, Irql );
+    KeReleaseSpinLock(&aoe__spinlock_, Irql);
     {
       struct bus__type * bus_ptr = driver__bus();
-      if ( !bus_ptr )
-        {
-    DBG ( "Unable to un-register IOCTLs!\n" );
-        }
-      else
-        {
-    irp__unreg_table ( &bus_ptr->device->irp_handler_chain,
-           handling_table );
+
+      if (!bus_ptr) {
+          DBG("Unable to un-register IOCTLs!\n");
+        } else {
+          irp__unreg_table(
+              &bus_ptr->device->irp_handler_chain,
+              handling_table
+            );
         }
     }
     aoe__started_ = FALSE;
-    DBG ( "Exit\n" );
+    DBG("Exit\n");
   }
 
 /**
@@ -2196,7 +2185,7 @@ static NTSTATUS STDCALL show(
       }
 
     disks = wv_malloc(sizeof *disks + (count * sizeof disks->Disk[0]));
-    if (disks == NULL ) {
+    if (disks == NULL) {
         DBG("wv_malloc disks\n");
         irp->IoStatus.Information = 0;
         return STATUS_INSUFFICIENT_RESOURCES;
