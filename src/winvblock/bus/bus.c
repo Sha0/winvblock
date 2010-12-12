@@ -79,10 +79,10 @@ winvblock__lib_func winvblock__bool STDCALL bus__add_child(
     dev_ptr->ops.init(dev_ptr);
     dev_obj_ptr->Flags &= ~DO_DEVICE_INITIALIZING;
     /* Add the new device's extension to the bus' list of children. */
-    if (bus_ptr->first_child_ptr == NULL) {
-        bus_ptr->first_child_ptr = dev_ptr;
+    if (bus_ptr->first_child == NULL) {
+        bus_ptr->first_child = dev_ptr;
       } else {
-        walker = bus_ptr->first_child_ptr;
+        walker = bus_ptr->first_child;
         while (walker->next_sibling_ptr != NULL)
           walker = walker->next_sibling_ptr;
         walker->next_sibling_ptr = dev_ptr;

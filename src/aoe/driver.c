@@ -2188,7 +2188,7 @@ static NTSTATUS STDCALL show(
     DBG("Got IOCTL_AOE_SHOW...\n");
 
     bus = bus__get(dev);
-    dev_walker = bus->first_child_ptr;
+    dev_walker = bus->first_child;
     count = 0;
     while (dev_walker != NULL) {
         count++;
@@ -2206,7 +2206,7 @@ static NTSTATUS STDCALL show(
     disks->Count = count;
 
     count = 0;
-    dev_walker = bus->first_child_ptr;
+    dev_walker = bus->first_child;
     while (dev_walker != NULL) {
         disk__type_ptr disk = disk__get_ptr(dev_walker);
         struct aoe__disk_type_ * aoe_disk = aoe__get_(dev_walker);

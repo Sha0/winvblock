@@ -32,7 +32,7 @@ struct bus__type {
     PDEVICE_OBJECT LowerDeviceObject;
     PDEVICE_OBJECT PhysicalDeviceObject;
     winvblock__uint32 Children;
-    struct device__type * first_child_ptr;
+    struct device__type * first_child;
     KSPIN_LOCK SpinLock;
     LIST_ENTRY tracking;
     winvblock__any_ptr ext;

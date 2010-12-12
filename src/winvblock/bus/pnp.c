@@ -109,7 +109,7 @@ NTSTATUS STDCALL bus_pnp__remove_dev(
   IoSkipCurrentIrpStackLocation ( Irp );
   bus_ptr = bus__get(dev_ptr);
   status = IoCallDriver ( bus_ptr->LowerDeviceObject, Irp );
-  walker = bus_ptr->first_child_ptr;
+  walker = bus_ptr->first_child;
   while ( walker != NULL )
     {
       next = walker->next_sibling_ptr;
@@ -119,7 +119,7 @@ NTSTATUS STDCALL bus_pnp__remove_dev(
       walker = next;
     }
   bus_ptr->Children = 0;
-  bus_ptr->first_child_ptr = NULL;
+  bus_ptr->first_child = NULL;
   lower = bus_ptr->LowerDeviceObject;
   if (lower)
     IoDetachDevice(lower);
@@ -159,7 +159,7 @@ NTSTATUS STDCALL bus_pnp__query_dev_relations(
     }
   probe__disks (  );
   count = 0;
-  walker = bus_ptr->first_child_ptr;
+  walker = bus_ptr->first_child;
   while ( walker != NULL )
     {
       count++;
@@ -183,7 +183,7 @@ NTSTATUS STDCALL bus_pnp__query_dev_relations(
   dev_relations->Count = count;
 
   count = 0;
-  walker = bus_ptr->first_child_ptr;
+  walker = bus_ptr->first_child;
   while ( walker != NULL )
     {
       ObReferenceObject ( walker->Self );

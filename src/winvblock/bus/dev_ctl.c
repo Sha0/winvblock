@@ -54,7 +54,7 @@ static NTSTATUS STDCALL disk_detach(
 
   DBG ( "Request to detach disk: %d\n", *( winvblock__uint32_ptr ) buffer );
   bus_ptr = bus__get(dev_ptr);
-  dev_walker = bus_ptr->first_child_ptr;
+  dev_walker = bus_ptr->first_child;
   if ( dev_walker != NULL )
     disk_walker = disk__get_ptr ( dev_walker );
   prev_disk_walker = disk_walker;
@@ -76,15 +76,12 @@ static NTSTATUS STDCALL disk_detach(
 	  return STATUS_INVALID_DEVICE_REQUEST;
 	}
       DBG ( "Deleting disk %d\n", disk_walker->DiskNumber );
-      if ( disk_walker == disk__get_ptr ( bus_ptr->first_child_ptr ) )
-	{
-	  bus_ptr->first_child_ptr = dev_walker->next_sibling_ptr;
-	}
-      else
-	{
-	  prev_disk_walker->device->next_sibling_ptr =
-	    dev_walker->next_sibling_ptr;
-	}
+      if (disk_walker == disk__get_ptr(bus_ptr->first_child))
+    	  bus_ptr->first_child = dev_walker->next_sibling_ptr;
+      else {
+          prev_disk_walker->device->next_sibling_ptr =
+            dev_walker->next_sibling_ptr;
+      	}
       disk_walker->Unmount = TRUE;
       dev_walker->next_sibling_ptr = NULL;
       if ( bus_ptr->PhysicalDeviceObject != NULL )
