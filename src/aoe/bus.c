@@ -28,7 +28,6 @@
 
 #include "winvblock.h"
 #include "portable.h"
-#include "irp.h"
 #include "driver.h"
 #include "device.h"
 #include "bus.h"
@@ -37,63 +36,46 @@
 #include "debug.h"
 
 /* TODO: Remove this pull from aoe/driver.c */
-extern irp__handler scan;
-extern irp__handler show;
-extern irp__handler mount;
+extern device__dispatch_func aoe__scan;
+extern device__dispatch_func aoe__show;
+extern device__dispatch_func aoe__mount;
 
 /* Forward declarations. */
-static NTSTATUS STDCALL aoe_bus__dev_ctl_(
-    IN PDEVICE_OBJECT,
-    IN PIRP,
-    IN PIO_STACK_LOCATION,
-    IN struct device__type *,
-    OUT winvblock__bool_ptr
-  );
+static device__dev_ctl_func aoe_bus__dev_ctl_dispatch_;
 static device__pnp_id_func aoe_bus__pnp_id_;
+winvblock__bool aoe_bus__create(void);
+void aoe_bus__free(void);
 
 /* Globals. */
 struct bus__type * aoe_bus = NULL;
-static irp__handling aoe_bus__handling_table_[] = {
-    /*
-     * Major, minor, any major?, any minor?, handler
-     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     * Note that the fall-through case must come FIRST!
-     * Why? It sets completion to true, so others won't be called.
-     */
-    { IRP_MJ_DEVICE_CONTROL, 0, FALSE, TRUE, aoe_bus__dev_ctl_ },
-  };
 
-
-static NTSTATUS STDCALL aoe_bus__dev_ctl_(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp,
-    IN PIO_STACK_LOCATION io_stack_loc,
+static NTSTATUS STDCALL aoe_bus__dev_ctl_dispatch_(
     IN struct device__type * dev,
-    OUT winvblock__bool_ptr completion
+    IN PIRP irp,
+    IN ULONG POINTER_ALIGNMENT code
   ) {
-    NTSTATUS status = STATUS_NOT_SUPPORTED;
-
-    switch(io_stack_loc->Parameters.DeviceIoControl.IoControlCode) {
+    switch(code) {
         case IOCTL_AOE_SCAN:
-          status = scan(dev_obj, irp, io_stack_loc, dev, completion);
-          break;
+          return aoe__scan(dev, irp);
 
         case IOCTL_AOE_SHOW:
-          status = show(dev_obj, irp, io_stack_loc, dev, completion);
-          break;
+          return aoe__show(dev, irp);
 
         case IOCTL_AOE_MOUNT:
-          status = mount(dev_obj, irp, io_stack_loc, dev, completion);
-          break;
+          return aoe__mount(dev, irp);
 
         case IOCTL_AOE_UMOUNT:
-          io_stack_loc->Parameters.DeviceIoControl.IoControlCode =
-            IOCTL_FILE_DETACH;
-          break;
+          /* Pretend it's an IOCTL_FILE_DETACH. */
+          return device__get(bus__get(dev)->LowerDeviceObject)->irp_mj->dev_ctl(
+              dev,
+              irp,
+              IOCTL_FILE_DETACH
+            );
+
+        default:
+          DBG("Unsupported IOCTL\n");
+          return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
       }
-    if (*completion)
-      IoCompleteRequest(irp, IO_NO_INCREMENT);
-    return status;
   }
 
 /**
@@ -153,10 +135,6 @@ void aoe_bus__free(void) {
     IoDeleteSymbolicLink(&aoe_bus->dos_dev_name);
     IoDeleteSymbolicLink(&aoe_bus->dev_name);
     IoDeleteDevice(aoe_bus->device->Self);
-    irp__unreg_table(
-        &aoe_bus->device->irp_handler_chain,
-        aoe_bus__handling_table_
-      );
     #if 0
     bus__remove_child(driver__bus(), aoe_bus->device);
     #endif

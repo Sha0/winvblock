@@ -32,14 +32,12 @@
 #include "wv_stdlib.h"
 #include "wv_string.h"
 #include "portable.h"
-#include "irp.h"
 #include "driver.h"
 #include "device.h"
 #include "disk.h"
 #include "mount.h"
 #include "bus.h"
 #include "aoe.h"
-#include "aoe_bus.h"
 #include "registry.h"
 #include "protocol.h"
 #include "debug.h"
@@ -52,10 +50,14 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject(
     IN PLARGE_INTEGER Timeout OPTIONAL
   );
 
+/* From aoe/bus.c */
+extern struct bus__type * aoe_bus;
+extern winvblock__bool aoe_bus__create(void);
+extern void aoe_bus__free(void);
+
 /* Forward declarations. */
 struct aoe__disk_type_;
 static void STDCALL aoe__thread_(IN void *);
-irp__handler aoe__bus_dev_ctl_dispatch;
 static void aoe__process_abft_(void);
 static void STDCALL aoe__unload_(IN PDRIVER_OBJECT);
 static struct aoe__disk_type_ * aoe__create_disk_(void);
@@ -204,12 +206,6 @@ static HANDLE aoe__thread_handle_;
 static winvblock__bool aoe__started_ = FALSE;
 static LIST_ENTRY aoe__disk_list_;
 static KSPIN_LOCK aoe__disk_list_lock_;
-
-static irp__handling handling_table[] =
-  {
-    /* Major, minor, any major?, any minor?, handler. */
-    { IRP_MJ_DEVICE_CONTROL, 0, FALSE, TRUE, aoe__bus_dev_ctl_dispatch }
-  };
 
 /* Yield a pointer to the AoE disk. */
 static struct aoe__disk_type_ * aoe__get_(struct device__type * dev_ptr)
@@ -908,18 +904,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject) {
 
     /* Release the global spin-lock. */
     KeReleaseSpinLock(&aoe__spinlock_, Irql);
-    {
-      struct bus__type * bus_ptr = driver__bus();
-
-      if (!bus_ptr) {
-          DBG("Unable to un-register IOCTLs!\n");
-        } else {
-          irp__unreg_table(
-              &bus_ptr->device->irp_handler_chain,
-              handling_table
-            );
-        }
-    }
+    aoe_bus__free();
     aoe__started_ = FALSE;
     DBG("Exit\n");
   }
@@ -2106,17 +2091,15 @@ static void aoe__process_abft_(void) {
     return;
   }
 
-NTSTATUS STDCALL scan(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp,
-    IN PIO_STACK_LOCATION io_stack_loc,
+NTSTATUS STDCALL aoe__scan(
     IN struct device__type * dev,
-    OUT winvblock__bool_ptr completion
+    IN PIRP irp
   ) {
     KIRQL irql;
     winvblock__uint32 count;
     struct aoe__target_list_ * target_walker;
     aoe__mount_targets_ptr targets;
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     DBG("Got IOCTL_AOE_SCAN...\n");
     KeAcquireSpinLock(&aoe__target_list_spinlock_, &irql);
@@ -2129,10 +2112,13 @@ NTSTATUS STDCALL scan(
       }
 
     targets = wv_malloc(sizeof *targets + (count * sizeof targets->Target[0]));
-    if ( targets == NULL ) {
+    if (targets == NULL) {
         DBG("wv_malloc targets\n");
-        irp->IoStatus.Information = 0;
-        return STATUS_INSUFFICIENT_RESOURCES;
+        return driver__complete_irp(
+            irp,
+            0,
+            STATUS_INSUFFICIENT_RESOURCES
+          );
       }
     irp->IoStatus.Information =
       sizeof (aoe__mount_targets) + (count * sizeof (aoe__mount_target));
@@ -2161,21 +2147,18 @@ NTSTATUS STDCALL scan(
     wv_free(targets);
 
     KeReleaseSpinLock(&aoe__target_list_spinlock_, irql);
-    *completion = TRUE;
-    return STATUS_SUCCESS;
+    return driver__complete_irp(irp, irp->IoStatus.Information, STATUS_SUCCESS);
   }
 
-NTSTATUS STDCALL show(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp,
-    IN PIO_STACK_LOCATION io_stack_loc,
+NTSTATUS STDCALL aoe__show(
     IN struct device__type * dev,
-    OUT winvblock__bool_ptr completion
+    IN PIRP irp
   ) {
     winvblock__uint32 count;
     struct device__type * dev_walker;
     struct bus__type * bus;
     aoe__mount_disks_ptr disks;
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     DBG("Got IOCTL_AOE_SHOW...\n");
 
@@ -2190,11 +2173,14 @@ NTSTATUS STDCALL show(
     disks = wv_malloc(sizeof *disks + (count * sizeof disks->Disk[0]));
     if (disks == NULL) {
         DBG("wv_malloc disks\n");
-        irp->IoStatus.Information = 0;
-        return STATUS_INSUFFICIENT_RESOURCES;
+        return driver__complete_irp(
+            irp,
+            0,
+            STATUS_INSUFFICIENT_RESOURCES
+          );
       }
     irp->IoStatus.Information =
-      sizeof (aoe__mount_disks) + (count * sizeof (aoe__mount_disk ));
+      sizeof (aoe__mount_disks) + (count * sizeof (aoe__mount_disk));
     disks->Count = count;
 
     count = 0;
@@ -2230,16 +2216,12 @@ NTSTATUS STDCALL show(
         )
       );
     wv_free(disks);
-    *completion = TRUE;
-    return STATUS_SUCCESS;
+    return driver__complete_irp(irp, irp->IoStatus.Information, STATUS_SUCCESS);
   }
 
-NTSTATUS STDCALL mount(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp,
-    IN PIO_STACK_LOCATION io_stack_loc,
+NTSTATUS STDCALL aoe__mount(
     IN struct device__type * dev,
-    OUT winvblock__bool_ptr completion
+    IN PIRP irp
   ) {
     winvblock__uint8_ptr buffer = irp->AssociatedIrp.SystemBuffer;
     struct aoe__disk_type_ * aoe_disk;
@@ -2259,9 +2241,11 @@ NTSTATUS STDCALL mount(
     aoe_disk = aoe__create_disk_();
     if (aoe_disk == NULL) {
         DBG("Could not create AoE disk!\n");
-        irp->IoStatus.Information = 0;
-        *completion = TRUE;
-        return STATUS_INSUFFICIENT_RESOURCES;
+        return driver__complete_irp(
+            irp,
+            0,
+            STATUS_INSUFFICIENT_RESOURCES
+          );
       }
     RtlCopyMemory(aoe_disk->ClientMac, buffer, 6);
     RtlFillMemory(aoe_disk->ServerMac, 6, 0xff);
@@ -2272,41 +2256,8 @@ NTSTATUS STDCALL mount(
     aoe_disk->disk->BootDrive = FALSE;
     aoe_disk->disk->media = disk__media_hard;
     bus__add_child(driver__bus(), aoe_disk->disk->device);
-    irp->IoStatus.Information = 0;
-    *completion = TRUE;
-    return STATUS_SUCCESS;
-  }
 
-NTSTATUS STDCALL aoe__bus_dev_ctl_dispatch(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp,
-    IN PIO_STACK_LOCATION io_stack_loc,
-    IN struct device__type * dev,
-    OUT winvblock__bool_ptr completion
-  ) {
-    NTSTATUS status = STATUS_NOT_SUPPORTED;
-
-    switch (io_stack_loc->Parameters.DeviceIoControl.IoControlCode) {
-        case IOCTL_AOE_SCAN:
-          status = scan(dev_obj, irp, io_stack_loc, dev, completion);
-          break;
-
-        case IOCTL_AOE_SHOW:
-          status = show(dev_obj, irp, io_stack_loc, dev, completion);
-          break;
-
-        case IOCTL_AOE_MOUNT:
-          status = mount(dev_obj, irp, io_stack_loc, dev, completion);
-          break;
-
-        case IOCTL_AOE_UMOUNT:
-          io_stack_loc->Parameters.DeviceIoControl.IoControlCode =
-            IOCTL_FILE_DETACH;
-          break;
-      }
-    if (*completion)
-      IoCompleteRequest(irp, IO_NO_INCREMENT);
-    return status;
+    return driver__complete_irp(irp, 0, STATUS_SUCCESS);
   }
 
 /**

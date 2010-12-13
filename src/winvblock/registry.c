@@ -24,7 +24,7 @@
 /**
  * @file
  *
- * Registry specifics
+ * Registry specifics.
  */
 
 #include <ntddk.h>
@@ -33,7 +33,6 @@
 #include "wv_stdlib.h"
 #include "portable.h"
 #include "debug.h"
-#include "irp.h"
 #include "driver.h"
 #include "registry.h"
 

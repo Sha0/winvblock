@@ -20,8 +20,7 @@
 /**
  * @file
  *
- * MEMDISK specifics
- *
+ * MEMDISK specifics.
  */
 
 #include <stdio.h>
@@ -30,7 +29,6 @@
 #include "winvblock.h"
 #include "wv_string.h"
 #include "portable.h"
-#include "irp.h"
 #include "driver.h"
 #include "device.h"
 #include "disk.h"

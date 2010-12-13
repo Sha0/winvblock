@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -22,8 +22,7 @@
 /**
  * @file
  *
- * Protocol specifics
- *
+ * Protocol specifics.
  */
 
 #include <ntddk.h>
@@ -34,7 +33,6 @@
 #include "wv_stdlib.h"
 #include "wv_string.h"
 #include "portable.h"
-#include "irp.h"
 #include "driver.h"
 #include "device.h"
 #include "disk.h"

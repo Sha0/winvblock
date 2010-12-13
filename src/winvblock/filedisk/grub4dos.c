@@ -20,8 +20,7 @@
 /**
  * @file
  *
- * GRUB4DOS file-backed disk specifics
- *
+ * GRUB4DOS file-backed disk specifics.
  */
 
 #include <ntddk.h>
@@ -32,7 +31,6 @@
 #include "wv_stdlib.h"
 #include "wv_string.h"
 #include "portable.h"
-#include "irp.h"
 #include "driver.h"
 #include "device.h"
 #include "disk.h"

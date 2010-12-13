@@ -33,7 +33,6 @@
 #include "wv_stdlib.h"
 #include "wv_string.h"
 #include "portable.h"
-#include "irp.h"
 #include "driver.h"
 #include "device.h"
 #include "disk.h"
@@ -63,7 +62,6 @@ static driver__dispatch_func driver__dispatch_sys_ctl_;
 static driver__dispatch_func driver__dispatch_dev_ctl_;
 static driver__dispatch_func driver__dispatch_scsi_;
 static driver__dispatch_func driver__dispatch_pnp_;
-static driver__dispatch_func driver__dispatch_;
 static void STDCALL driver__unload_(IN PDRIVER_OBJECT);
 
 static LPWSTR STDCALL get_opt(IN LPWSTR opt_name) {
@@ -356,22 +354,6 @@ static NTSTATUS STDCALL driver__dispatch_not_supported_(
     return irp->IoStatus.Status;
   }
 
-/* IRP is not understood. */
-extern winvblock__lib_func NTSTATUS STDCALL driver__not_supported(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp,
-    IN PIO_STACK_LOCATION stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
-  ) {
-    NTSTATUS status = STATUS_NOT_SUPPORTED;
-
-    irp->IoStatus.Status = status;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
-    *completion_ptr = TRUE;
-    return status;
-  }
-
 /**
  * Common IRP completion routine.
  *
@@ -536,50 +518,6 @@ static NTSTATUS driver__dispatch_pnp_(
       }
     /* Otherwise, we don't support the IRP. */
     return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
-  }
-
-static NTSTATUS STDCALL driver__dispatch_(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp
-  ) {
-    NTSTATUS status;
-    struct device__type * dev_ptr;
-
-    #ifdef DEBUGIRPS
-    Debug_IrpStart(DeviceObject, Irp);
-    #endif
-    dev_ptr = device__get(DeviceObject);
-
-    /* Check for a deleted device. */
-    if (dev_ptr->state == device__state_deleted) {
-        Irp->IoStatus.Information = 0;
-        Irp->IoStatus.Status = STATUS_NO_SUCH_DEVICE;
-        IoCompleteRequest(Irp, IO_NO_INCREMENT);
-        #ifdef DEBUGIRPS
-        Debug_IrpEnd ( Irp, STATUS_NO_SUCH_DEVICE );
-        #endif
-        return STATUS_NO_SUCH_DEVICE;
-      }
-
-    /* Enqueue the IRP for threaded devices, or process immediately. */
-    if (dev_ptr->thread) {
-        IoMarkIrpPending(Irp);
-        ExInterlockedInsertTailList(
-            &dev_ptr->irp_list,
-            /* Where IRPs can be linked. */
-            &Irp->Tail.Overlay.ListEntry,
-            &dev_ptr->irp_list_lock
-          );
-        KeSetEvent(&dev_ptr->thread_wakeup, 0, FALSE);
-        status = STATUS_PENDING;
-      } else {
-        if (dev_ptr->dispatch)
-          status = dev_ptr->dispatch(DeviceObject, Irp);
-          else
-          return driver__complete_irp(Irp, 0, STATUS_NOT_SUPPORTED);
-      }
-
-    return status;
   }
 
 static void STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {

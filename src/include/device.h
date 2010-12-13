@@ -195,8 +195,6 @@ struct device__type {
     enum device__state state;
     /* Previous state of the device. */
     enum device__state old_state;
-    /* Deprecated: The mini IRP handler chain. */
-    irp__handler_chain irp_handler_chain;
     /* The next device in the parent bus' devices.  TODO: Don't do this. */
     struct device__type * next_sibling_ptr;
     /* The device operations. */

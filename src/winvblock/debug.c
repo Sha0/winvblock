@@ -22,8 +22,7 @@
 /**
  * @file
  *
- * Debugging specifics
- *
+ * Debugging specifics.
  */
 
 #include <ntddk.h>
@@ -37,7 +36,6 @@
 #include "winvblock.h"
 #include "wv_stdlib.h"
 #include "portable.h"
-#include "irp.h"
 #include "driver.h"
 #include "device.h"
 #include "disk.h"

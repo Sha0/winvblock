@@ -20,8 +20,7 @@
 /**
  * @file
  *
- * GRUB4DOS RAM disk specifics
- *
+ * GRUB4DOS RAM disk specifics.
  */
 
 #include <stdio.h>
@@ -30,7 +29,6 @@
 #include "winvblock.h"
 #include "wv_string.h"
 #include "portable.h"
-#include "irp.h"
 #include "driver.h"
 #include "device.h"
 #include "disk.h"

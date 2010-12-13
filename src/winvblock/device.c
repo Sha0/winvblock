@@ -30,7 +30,6 @@
 #include "winvblock.h"
 #include "wv_stdlib.h"
 #include "portable.h"
-#include "irp.h"
 #include "driver.h"
 #include "device.h"
 #include "debug.h"
