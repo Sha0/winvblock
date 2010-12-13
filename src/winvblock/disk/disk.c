@@ -50,15 +50,19 @@ __divdi3 (
 }
 #endif
 
+/* Forward declarations. */
+static device__free_func free_disk;
+static device__dispatch_func disk__power_;
+
 /* Globals. */
 static LIST_ENTRY disk_list;
 static KSPIN_LOCK disk_list_lock;
 winvblock__bool disk__removable[disk__media_count] = { TRUE, FALSE, TRUE };
 PWCHAR disk__compat_ids[disk__media_count] =
   { L"GenSFloppy", L"GenDisk", L"GenCdRom" };
-
-/* Forward declarations. */
-static device__free_func free_disk;
+struct device__irp_mj disk__irp_mj_ = {
+    disk__power_,
+  };
 
 static
 disk__max_xfer_len_decl (
@@ -90,19 +94,12 @@ disk__close_decl ( default_close )
   return;
 }
 
-static NTSTATUS STDCALL power(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
-  )
-  {
-    PoStartNextPowerIrp ( Irp );
-    Irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
-    IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-    *completion_ptr = TRUE;
-    return STATUS_NOT_SUPPORTED;
+static NTSTATUS STDCALL disk__power_(
+    IN struct device__type * dev,
+    IN PIRP irp
+  ) {
+    PoStartNextPowerIrp(irp);
+    return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
 static NTSTATUS STDCALL sys_ctl(
@@ -366,7 +363,6 @@ static NTSTATUS STDCALL (disk_dispatch)(
         {         IRP_MJ_CREATE, 0, FALSE,  TRUE,   driver__create_close },
         { IRP_MJ_DEVICE_CONTROL, 0, FALSE,  TRUE, disk_dev_ctl__dispatch },
         { IRP_MJ_SYSTEM_CONTROL, 0, FALSE,  TRUE,                sys_ctl },
-        {          IRP_MJ_POWER, 0, FALSE,  TRUE,                  power },
         {           IRP_MJ_SCSI, 0, FALSE,  TRUE,    disk_scsi__dispatch },
         {            IRP_MJ_PNP, 0, FALSE,  TRUE,       disk_pnp__simple },
         {            IRP_MJ_PNP,
@@ -447,6 +443,7 @@ disk__create (
   dev_ptr->ops.free = free_disk;
   dev_ptr->ops.init = disk__init_;
   dev_ptr->ext = disk_ptr;
+  dev_ptr->irp_mj = &disk__irp_mj_;
   KeInitializeSpinLock ( &disk_ptr->SpinLock );
 
   return disk_ptr;

@@ -56,6 +56,7 @@ static LPWSTR driver__os_load_opts_ = NULL;
 
 /* Forward declarations. */
 static driver__dispatch_func driver__dispatch_not_supported_;
+static driver__dispatch_func driver__dispatch_power_;
 static driver__dispatch_func driver__dispatch_;
 static void STDCALL driver__unload_(IN PDRIVER_OBJECT);
 
@@ -304,7 +305,7 @@ NTSTATUS STDCALL DriverEntry(
     for (i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++)
       DriverObject->MajorFunction[i] = driver__dispatch_not_supported_;
     DriverObject->MajorFunction[IRP_MJ_PNP] = driver__dispatch_;
-    DriverObject->MajorFunction[IRP_MJ_POWER] = driver__dispatch_;
+    DriverObject->MajorFunction[IRP_MJ_POWER] = driver__dispatch_power_;
     DriverObject->MajorFunction[IRP_MJ_CREATE] = driver__dispatch_;
     DriverObject->MajorFunction[IRP_MJ_CLOSE] = driver__dispatch_;
     DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = driver__dispatch_;
@@ -379,6 +380,52 @@ extern winvblock__lib_func NTSTATUS STDCALL driver__not_supported(
     return status;
   }
 
+/**
+ * Common IRP completion routine.
+ *
+ * @v irp               Points to the IRP to complete.
+ * @v info              Number of bytes returned for the IRP, or 0.
+ * @v status            Status for the IRP to complete.
+ * @ret NTSTATUS        Returns the status value, as passed.
+ */
+winvblock__lib_func NTSTATUS STDCALL driver__complete_irp(
+    IN PIRP irp,
+    IN ULONG_PTR info,
+    IN NTSTATUS status
+  ) {
+    irp->IoStatus.Information = info;
+    irp->IoStatus.Status = status;
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    #ifdef DEBUGIRPS
+    Debug_IrpEnd(irp, status);
+    #endif
+    return status;
+  }
+
+/* Handle a power IRP. */
+static NTSTATUS driver__dispatch_power_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    /* device__get() checks for a NULL dev_obj */
+    struct device__type * dev = device__get(dev_obj);
+
+    #ifdef DEBUGIRPS
+    Debug_IrpStart(dev_obj, irp);
+    #endif
+    /* Check that the device exists. */
+    if (!dev || dev->state == device__state_deleted) {
+        /* Even if it doesn't, a power IRP is important! */
+        PoStartNextPowerIrp(irp);
+        return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
+      }
+    /* Call the particular device's power handler. */
+    if (dev->irp_mj && dev->irp_mj->power)            
+      return dev->irp_mj->power(dev, irp);
+    /* Otherwise, we don't support the IRP. */
+    return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+  }
+
 static NTSTATUS STDCALL driver__dispatch_(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp
@@ -391,10 +438,8 @@ static NTSTATUS STDCALL driver__dispatch_(
     #endif
     dev_ptr = device__get(DeviceObject);
 
-    /* We handle IRP_MJ_POWER as an exception. */
+    /* Check for a deleted device. */
     if (dev_ptr->state == device__state_deleted) {
-        if (IoGetCurrentIrpStackLocation(Irp)->MajorFunction == IRP_MJ_POWER)
-          PoStartNextPowerIrp(Irp);
         Irp->IoStatus.Information = 0;
         Irp->IoStatus.Status = STATUS_NO_SUCH_DEVICE;
         IoCompleteRequest(Irp, IO_NO_INCREMENT);

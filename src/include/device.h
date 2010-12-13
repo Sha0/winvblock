@@ -106,6 +106,23 @@ winvblock__def_struct(device__ops) {
 
 typedef void STDCALL device__thread_func(IN void *);
 
+/**
+ * The prototype for a device IRP dispatch.
+ *
+ * @v dev               Points to the device.
+ * @v irp               Points to the IRP.
+ * @ret NTSTATUS        The status of processing the IRP for the device.
+ */
+typedef NTSTATUS STDCALL device__dispatch_func(
+    IN struct device__type *,
+    IN PIRP
+  );
+
+/* IRP major function handler table. */
+struct device__irp_mj {
+    device__dispatch_func * power;
+  };
+
 /* Details common to all devices this driver works with */
 struct device__type {
     /* For debugging */
@@ -142,6 +159,8 @@ struct device__type {
     LIST_ENTRY tracking;
     /* Points to further extensions. */
     winvblock__any_ptr ext;
+    /* How to handle IRPs based on major function code. */
+    struct device__irp_mj * irp_mj;
   };
 
 extern winvblock__lib_func struct device__type * device__get(PDEVICE_OBJECT);

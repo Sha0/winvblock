@@ -41,6 +41,12 @@
 /* Forward declarations. */
 static device__free_func bus__free_;
 static device__create_pdo_func bus__create_pdo_;
+static device__dispatch_func bus__power_;
+
+/* Globals. */
+struct device__irp_mj bus__irp_mj_ = {
+    bus__power_,
+  };
 
 /**
  * Add a child node to the bus.
@@ -139,19 +145,18 @@ static NTSTATUS STDCALL bus__sys_ctl_(
   }
 
 static NTSTATUS STDCALL bus__power_(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
+    IN struct device__type * dev,
+    IN PIRP irp
   ) {
-    struct bus__type * bus_ptr = bus__get(dev_ptr);
-    PDEVICE_OBJECT lower = bus_ptr->LowerDeviceObject;
+    struct bus__type * bus = bus__get(dev);
+    PDEVICE_OBJECT lower = bus->LowerDeviceObject;
 
-    PoStartNextPowerIrp(Irp);
-    IoSkipCurrentIrpStackLocation(Irp);
-    *completion_ptr = TRUE;
-    return lower ? PoCallDriver(lower, Irp) : STATUS_SUCCESS;
+    PoStartNextPowerIrp(irp);
+    if (lower) {
+        IoSkipCurrentIrpStackLocation(irp);
+        return PoCallDriver(lower, irp);
+      }
+    return driver__complete_irp(irp, 0, STATUS_SUCCESS);
   }
 
 NTSTATUS STDCALL bus__get_dev_capabilities(
@@ -226,7 +231,6 @@ static NTSTATUS STDCALL bus_dispatch(
         {          IRP_MJ_CLOSE, 0, FALSE, TRUE,  driver__create_close },
         {         IRP_MJ_CREATE, 0, FALSE, TRUE,  driver__create_close },
         { IRP_MJ_SYSTEM_CONTROL, 0, FALSE, TRUE,         bus__sys_ctl_ },
-        {          IRP_MJ_POWER, 0, FALSE, TRUE,           bus__power_ },
         { IRP_MJ_DEVICE_CONTROL, 0, FALSE, TRUE, bus_dev_ctl__dispatch },
         {            IRP_MJ_PNP, 0, FALSE, TRUE,       bus_pnp__simple },
         {            IRP_MJ_PNP,
@@ -303,6 +307,7 @@ winvblock__lib_func struct bus__type * bus__create(void) {
     dev_ptr->ops.init = bus__init_;
     dev_ptr->ops.free = bus__free_;
     dev_ptr->ext = bus_ptr;
+    dev_ptr->irp_mj = &bus__irp_mj_;
     dev_ptr->IsBus = TRUE;
     KeInitializeSpinLock(&bus_ptr->SpinLock);
 

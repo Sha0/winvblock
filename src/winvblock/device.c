@@ -207,7 +207,11 @@ static void STDCALL device__free_dev_(IN struct device__type * dev) {
  * @ret                 Returns a pointer to the device on success, else NULL.
  */
 winvblock__lib_func struct device__type * device__get(PDEVICE_OBJECT dev_obj) {
-    driver__dev_ext_ptr dev_ext = dev_obj->DeviceExtension;
+    driver__dev_ext_ptr dev_ext;
+
+    if (!dev_obj)
+      return NULL;
+    dev_ext = dev_obj->DeviceExtension;
     return dev_ext->device;
   }
 
