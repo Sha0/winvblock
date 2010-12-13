@@ -38,16 +38,14 @@
 #include "debug.h"
 #include "probe.h"
 
-static NTSTATUS STDCALL
-Bus_IoCompletionRoutine (
-  IN PDEVICE_OBJECT DeviceObject,
-  IN PIRP Irp,
-  IN PKEVENT Event
- )
-{
-  KeSetEvent ( Event, 0, FALSE );
-  return STATUS_MORE_PROCESSING_REQUIRED;
-}
+static NTSTATUS STDCALL bus_pnp__io_completion_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp,
+    IN PKEVENT event
+  ) {
+    KeSetEvent(event, 0, FALSE);
+    return STATUS_MORE_PROCESSING_REQUIRED;
+  }
 
 NTSTATUS STDCALL bus_pnp__start_dev(
     IN PDEVICE_OBJECT DeviceObject,
@@ -69,7 +67,7 @@ NTSTATUS STDCALL bus_pnp__start_dev(
   KeInitializeEvent ( &event, NotificationEvent, FALSE );
   IoCopyCurrentIrpStackLocationToNext ( Irp );
   IoSetCompletionRoutine ( Irp,
-			   ( PIO_COMPLETION_ROUTINE ) Bus_IoCompletionRoutine,
+			   ( PIO_COMPLETION_ROUTINE ) bus_pnp__io_completion_,
 			   ( void * )&event, TRUE, TRUE, TRUE );
   status = IoCallDriver ( lower, Irp );
   if ( status == STATUS_PENDING )
