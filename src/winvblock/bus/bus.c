@@ -138,7 +138,7 @@ static NTSTATUS STDCALL bus__sys_ctl_(
     return lower ? IoCallDriver(lower, Irp) : STATUS_SUCCESS;
   }
 
-static NTSTATUS STDCALL power(
+static NTSTATUS STDCALL bus__power_(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp,
     IN PIO_STACK_LOCATION Stack,
@@ -226,7 +226,7 @@ static NTSTATUS STDCALL bus_dispatch(
         {          IRP_MJ_CLOSE, 0, FALSE, TRUE,  driver__create_close },
         {         IRP_MJ_CREATE, 0, FALSE, TRUE,  driver__create_close },
         { IRP_MJ_SYSTEM_CONTROL, 0, FALSE, TRUE,         bus__sys_ctl_ },
-        {          IRP_MJ_POWER, 0, FALSE, TRUE,                 power },
+        {          IRP_MJ_POWER, 0, FALSE, TRUE,           bus__power_ },
         { IRP_MJ_DEVICE_CONTROL, 0, FALSE, TRUE, bus_dev_ctl__dispatch },
         {            IRP_MJ_PNP, 0, FALSE, TRUE,       bus_pnp__simple },
         {            IRP_MJ_PNP,
