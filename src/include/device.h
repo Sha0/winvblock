@@ -138,10 +138,23 @@ typedef NTSTATUS STDCALL device__dev_ctl_func(
  * @v dev               Points to the device.
  * @v irp               Points to the IRP.
  * @v code              The SCSI function.
- * @v srb               The SCSI request block.
  * @ret NTSTATUS        The status of processing the IRP for the device.
  */
 typedef NTSTATUS STDCALL device__scsi_func(
+    IN struct device__type *,
+    IN PIRP,
+    IN UCHAR
+  );
+
+/**
+ * The prototype for a device IRP_MJ_PNP dispatch.
+ *
+ * @v dev               Points to the device.
+ * @v irp               Points to the IRP.
+ * @v code              The minor function.
+ * @ret NTSTATUS        The status of processing the IRP for the device.
+ */
+typedef NTSTATUS STDCALL device__pnp_func(
     IN struct device__type *,
     IN PIRP,
     IN UCHAR
@@ -153,6 +166,7 @@ struct device__irp_mj {
     device__dispatch_func * sys_ctl;
     device__dev_ctl_func * dev_ctl;
     device__scsi_func * scsi;
+    device__pnp_func * pnp;
   };
 
 /* Details common to all devices this driver works with */
@@ -200,6 +214,6 @@ extern winvblock__lib_func void device__set(
     PDEVICE_OBJECT,
     struct device__type *
   );
-extern irp__handler device__pnp_query_id;
+extern device__dispatch_func device__pnp_query_id;
 
 #endif  /* _DEVICE_H */

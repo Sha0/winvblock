@@ -112,15 +112,13 @@ winvblock__uint32 STDCALL device__pnp_id(
 
 /* An IRP handler for a PnP ID query. */
 NTSTATUS STDCALL device__pnp_query_id(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
     IN struct device__type * dev,
-    OUT winvblock__bool_ptr completion
+    IN PIRP irp
   ) {
     NTSTATUS status;
     WCHAR (*str)[512];
     winvblock__uint32 str_len;
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     /* Allocate the working buffer. */
     str = wv_mallocz(sizeof *str);
@@ -132,39 +130,36 @@ NTSTATUS STDCALL device__pnp_query_id(
     /* Invoke the specific device's ID query. */
     str_len = device__pnp_id(
         dev,
-        Stack->Parameters.QueryId.IdType,
+        io_stack_loc->Parameters.QueryId.IdType,
         str
       );
     if (str_len == 0) {
-        Irp->IoStatus.Information = 0;
+        irp->IoStatus.Information = 0;
         status = STATUS_NOT_SUPPORTED;
         goto alloc_info;
       }
     /* Allocate the return buffer. */
-    Irp->IoStatus.Information = (ULONG_PTR) wv_palloc(str_len * sizeof **str);
-    if (Irp->IoStatus.Information == 0) {
+    irp->IoStatus.Information = (ULONG_PTR) wv_palloc(str_len * sizeof **str);
+    if (irp->IoStatus.Information == 0) {
         DBG("wv_palloc failed.\n");
         status = STATUS_INSUFFICIENT_RESOURCES;
         goto alloc_info;
       }
     /* Copy the working buffer to the return buffer. */
     RtlCopyMemory(
-        (void *) Irp->IoStatus.Information,
+        (void *) irp->IoStatus.Information,
         str,
         str_len * sizeof **str
       );
     status = STATUS_SUCCESS;
 
-    /* Irp->IoStatus.Information not freed. */
+    /* irp->IoStatus.Information not freed. */
     alloc_info:
 
     wv_free(str);
     alloc_str:
 
-    Irp->IoStatus.Status = status;
-    IoCompleteRequest(Irp, IO_NO_INCREMENT);
-    *completion = TRUE;
-    return status;
+    return driver__complete_irp(irp, irp->IoStatus.Information, status);
   }
 
 /**

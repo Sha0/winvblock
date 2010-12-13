@@ -34,17 +34,19 @@
 #include "driver.h"
 #include "device.h"
 #include "bus.h"
-#include "bus_pnp.h"
 #include "debug.h"
 
 /* IRP_MJ_DEVICE_CONTROL dispatcher from bus/dev_ctl.c */
 extern device__dev_ctl_func bus_dev_ctl__dispatch;
+/* IRP_MJ_PNP dispatcher from bus/pnp.c */
+extern device__pnp_func bus_pnp__dispatch;
 
 /* Forward declarations. */
 static device__free_func bus__free_;
 static device__create_pdo_func bus__create_pdo_;
 static device__dispatch_func bus__power_;
 static device__dispatch_func bus__sys_ctl_;
+static device__pnp_func bus__pnp_dispatch_;
 
 /* Globals. */
 struct device__irp_mj bus__irp_mj_ = {
@@ -52,6 +54,7 @@ struct device__irp_mj bus__irp_mj_ = {
     bus__sys_ctl_,
     bus_dev_ctl__dispatch,
     (device__scsi_func *) 0,
+    bus_pnp__dispatch,
   };
 
 /**
@@ -218,58 +221,6 @@ NTSTATUS STDCALL bus__get_dev_capabilities(
     return status;
   }
 
-/* Bus dispatch routine. */
-static NTSTATUS STDCALL bus_dispatch(
-    IN PDEVICE_OBJECT dev,
-    IN PIRP irp
-  ) {
-    NTSTATUS status;
-    winvblock__bool completion = FALSE;
-    static const irp__handling handling_table[] = {
-        /*
-         * Major, minor, any major?, any minor?, handler
-         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         * Note that the fall-through case must come FIRST!
-         * Why? It sets completion to true, so others won't be called.
-         */
-        {                     0, 0,  TRUE, TRUE, driver__not_supported },
-        {            IRP_MJ_PNP, 0, FALSE, TRUE,       bus_pnp__simple },
-        {            IRP_MJ_PNP,
-               IRP_MN_START_DEVICE, FALSE, FALSE,   bus_pnp__start_dev },
-        {            IRP_MJ_PNP,
-              IRP_MN_REMOVE_DEVICE, FALSE, FALSE,  bus_pnp__remove_dev },
-        {            IRP_MJ_PNP,
-     IRP_MN_QUERY_DEVICE_RELATIONS, FALSE, FALSE,
-                                          bus_pnp__query_dev_relations },
-        {            IRP_MJ_PNP,
-                   IRP_MN_QUERY_ID, FALSE, FALSE, device__pnp_query_id },
-      };
-
-    /* Try registered mini IRP handling tables first.  Deprecated. */
-    status = irp__process(
-        dev,
-        irp,
-        IoGetCurrentIrpStackLocation(irp),
-        device__get(dev),
-        &completion
-      );
-    /* Fall through to the bus defaults, if needed. */
-    if (status == STATUS_NOT_SUPPORTED && !completion)
-      status = irp__process_with_table(
-          dev,
-          irp,
-          handling_table,
-          sizeof handling_table,
-          &completion
-        );
-    #ifdef DEBUGIRPS
-    if (status != STATUS_PENDING)
-      Debug_IrpEnd(irp, status);
-    #endif
-
-    return status;
-  }
-
 /* Initialize a bus. */
 static winvblock__bool STDCALL bus__init_(IN struct device__type * dev) {
     return TRUE;
@@ -303,7 +254,6 @@ winvblock__lib_func struct bus__type * bus__create(void) {
     /* Populate non-zero device defaults. */
     bus_ptr->device = dev_ptr;
     bus_ptr->prev_free = dev_ptr->ops.free;
-    dev_ptr->dispatch = bus_dispatch;
     dev_ptr->ops.create_pdo = bus__create_pdo_;
     dev_ptr->ops.init = bus__init_;
     dev_ptr->ops.free = bus__free_;

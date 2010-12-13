@@ -39,332 +39,351 @@
 #include "bus.h"
 #include "debug.h"
 
-NTSTATUS STDCALL disk_pnp__query_dev_text(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
-  )
-{
-  PWCHAR string;
-  NTSTATUS status;
-  winvblock__uint32 string_length;
-  disk__type_ptr disk_ptr;
+/* Forward declarations. */
+static device__dispatch_func disk_pnp__query_dev_text_;
+static device__dispatch_func disk_pnp__query_dev_relations_;
+static device__dispatch_func disk_pnp__query_bus_info_;
+static device__dispatch_func disk_pnp__query_capabilities_;
+static device__pnp_func disk_pnp__simple_;
+device__pnp_func disk_pnp__dispatch;
 
-  string = wv_mallocz(512 * sizeof *string);
-  disk_ptr = disk__get_ptr ( dev_ptr );
+static NTSTATUS STDCALL disk_pnp__query_dev_text_(
+    IN struct device__type * dev,
+    IN PIRP irp
+  ) {
+    disk__type_ptr disk;
+    WCHAR (*str)[512];
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    NTSTATUS status;
+    winvblock__uint32 str_len;
 
-  if ( string == NULL )
-    {
-      DBG("wv_malloc IRP_MN_QUERY_DEVICE_TEXT\n");
-      status = STATUS_INSUFFICIENT_RESOURCES;
-      goto alloc_string;
-    }
+    disk = disk__get_ptr(dev);
+    /* Allocate a string buffer. */
+    str = wv_mallocz(sizeof *str);
+    if (str == NULL) {
+        DBG("wv_malloc IRP_MN_QUERY_DEVICE_TEXT\n");
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto alloc_str;
+      }
+    /* Determine the query type. */
+    switch (io_stack_loc->Parameters.QueryDeviceText.DeviceTextType) {
+        case DeviceTextDescription:
+          str_len = swprintf(*str, winvblock__literal_w L" Disk") + 1;
+          irp->IoStatus.Information =
+            (ULONG_PTR) wv_palloc(str_len * sizeof *str);
+          if (irp->IoStatus.Information == 0) {
+              DBG("wv_palloc DeviceTextDescription\n");
+              status = STATUS_INSUFFICIENT_RESOURCES;
+              goto alloc_info;
+            }
+          RtlCopyMemory(
+              (PWCHAR) irp->IoStatus.Information,
+              str,
+              str_len * sizeof (WCHAR)
+            );
+          status = STATUS_SUCCESS;
+          goto alloc_info;
 
-  switch ( Stack->Parameters.QueryDeviceText.DeviceTextType )
-    {
-      case DeviceTextDescription:
-	string_length = swprintf ( string, winvblock__literal_w L" Disk" ) + 1;
-  Irp->IoStatus.Information = (ULONG_PTR) wv_palloc(
-      string_length * sizeof *string
-    );
-	if ( Irp->IoStatus.Information == 0 )
-	  {
-      DBG("wv_palloc DeviceTextDescription\n");
-	    status = STATUS_INSUFFICIENT_RESOURCES;
-	    goto alloc_info;
-	  }
-	RtlCopyMemory(
-      (PWCHAR) Irp->IoStatus.Information,
-      (WCHAR (*)[512]) string,
-			string_length * sizeof (WCHAR)
-    );
-	status = STATUS_SUCCESS;
-	goto alloc_info;
+        case DeviceTextLocationInformation:
+          str_len = device__pnp_id(
+              dev,
+              BusQueryInstanceID,
+              str
+            );
+          irp->IoStatus.Information =
+            (ULONG_PTR) wv_palloc(str_len * sizeof *str);
+          if (irp->IoStatus.Information == 0) {
+              DBG("wv_palloc DeviceTextLocationInformation\n");
+              status = STATUS_INSUFFICIENT_RESOURCES;
+              goto alloc_info;
+            }
+          RtlCopyMemory(
+              (PWCHAR) irp->IoStatus.Information,
+              str,
+              str_len * sizeof (WCHAR)
+            );
+          status = STATUS_SUCCESS;
+          goto alloc_info;
 
-      case DeviceTextLocationInformation:
-        string_length = device__pnp_id(
-            dev_ptr,
-            BusQueryInstanceID,
-            (WCHAR (*)[512]) string
+        default:
+          irp->IoStatus.Information = 0;
+          status = STATUS_NOT_SUPPORTED;
+      }
+    /* irp->IoStatus.Information not freed. */
+    alloc_info:
+
+    wv_free(str);
+    alloc_str:
+
+    return driver__complete_irp(irp, irp->IoStatus.Information, status);
+  }
+
+static NTSTATUS STDCALL disk_pnp__query_dev_relations_(
+    IN struct device__type * dev,
+    IN PIRP irp
+  ) {
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    NTSTATUS status;
+    PDEVICE_RELATIONS dev_relations;
+
+    if (io_stack_loc->Parameters.QueryDeviceRelations.Type !=
+        TargetDeviceRelation
+      ) {
+        status = irp->IoStatus.Status;
+        goto out;
+      }
+    dev_relations = wv_palloc(sizeof *dev_relations + sizeof dev->Self);
+    if (dev_relations == NULL) {
+        DBG("wv_palloc IRP_MN_QUERY_DEVICE_RELATIONS\n");
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto alloc_dev_relations;
+      }
+    dev_relations->Objects[0] = dev->Self;
+    dev_relations->Count = 1;
+    ObReferenceObject(dev->Self);
+    irp->IoStatus.Information = (ULONG_PTR) dev_relations;
+    status = STATUS_SUCCESS;
+
+    /* irp->IoStatus.Information (dev_relations) not freed. */
+    alloc_dev_relations:
+
+    out:
+
+    irp->IoStatus.Status = status;
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    return status;
+  }
+
+DEFINE_GUID(
+    GUID_BUS_TYPE_INTERNAL,
+    0x2530ea73L,
+    0x086b,
+    0x11d1,
+    0xa0,
+    0x9f,
+    0x00,
+    0xc0,
+    0x4f,
+    0xc3,
+    0x40,
+    0xb1
+  );
+
+static NTSTATUS STDCALL disk_pnp__query_bus_info_(
+    IN struct device__type * dev,
+    IN PIRP irp
+  ) {
+    PPNP_BUS_INFORMATION pnp_bus_info;
+    NTSTATUS status;
+
+    pnp_bus_info = wv_palloc(sizeof *pnp_bus_info);
+    if (pnp_bus_info == NULL) {
+        DBG("wv_palloc IRP_MN_QUERY_BUS_INFORMATION\n");
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto alloc_pnp_bus_info;
+      }
+    pnp_bus_info->BusTypeGuid = GUID_BUS_TYPE_INTERNAL;
+    pnp_bus_info->LegacyBusType = PNPBus;
+    pnp_bus_info->BusNumber = 0;
+    irp->IoStatus.Information = (ULONG_PTR) pnp_bus_info;
+    status = STATUS_SUCCESS;
+
+    /* irp-IoStatus.Information (pnp_bus_info) not freed. */
+    alloc_pnp_bus_info:
+
+    irp->IoStatus.Status = status;
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    return status;
+  }
+
+static NTSTATUS STDCALL disk_pnp__query_capabilities_(
+    IN struct device__type * dev,
+    IN PIRP irp
+  ) {
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    PDEVICE_CAPABILITIES DeviceCapabilities =
+      io_stack_loc->Parameters.DeviceCapabilities.Capabilities;
+    NTSTATUS status;
+    disk__type_ptr disk;
+    struct bus__type * bus;
+    DEVICE_CAPABILITIES ParentDeviceCapabilities;
+    PDEVICE_OBJECT bus_lower;
+
+    if (DeviceCapabilities->Version != 1 ||
+        DeviceCapabilities->Size < sizeof (DEVICE_CAPABILITIES)
+      ) {
+        status = STATUS_UNSUCCESSFUL;
+        goto out;
+      }
+    disk = disk__get_ptr(dev);
+    bus = bus__get(device__get(dev->Parent));
+    bus_lower = bus->LowerDeviceObject;
+    if (bus_lower) {
+        status = bus__get_dev_capabilities(
+            bus_lower,
+            &ParentDeviceCapabilities
           );
-        Irp->IoStatus.Information = (ULONG_PTR) wv_palloc(
-            string_length * sizeof *string
+      } else {
+        status = bus__get_dev_capabilities(
+            bus->device->Self,
+            &ParentDeviceCapabilities
           );
-	if ( Irp->IoStatus.Information == 0 )
-	  {
-      DBG("wv_palloc DeviceTextLocationInformation\n");
-	    status = STATUS_INSUFFICIENT_RESOURCES;
-	    goto alloc_info;
-	  }
-	RtlCopyMemory ( ( PWCHAR ) Irp->IoStatus.Information, string,
-			string_length * sizeof ( WCHAR ) );
-	status = STATUS_SUCCESS;
-	goto alloc_info;
+      }      
+    if (!NT_SUCCESS(status))
+      goto out;
 
-      default:
-	Irp->IoStatus.Information = 0;
-	status = STATUS_NOT_SUPPORTED;
-    }
-  /*
-   * Irp->IoStatus.Information not freed 
-   */
-alloc_info:
+    RtlCopyMemory(
+        DeviceCapabilities->DeviceState,
+        ParentDeviceCapabilities.DeviceState,
+        (PowerSystemShutdown + 1) * sizeof (DEVICE_POWER_STATE)
+      );
+    DeviceCapabilities->DeviceState[PowerSystemWorking] = PowerDeviceD0;
+    if (DeviceCapabilities->DeviceState[PowerSystemSleeping1] != PowerDeviceD0)
+      DeviceCapabilities->DeviceState[PowerSystemSleeping1] = PowerDeviceD1;
+    if (DeviceCapabilities->DeviceState[PowerSystemSleeping2] != PowerDeviceD0)
+      DeviceCapabilities->DeviceState[PowerSystemSleeping2] = PowerDeviceD3;
+    #if 0
+    if (DeviceCapabilities->DeviceState[PowerSystemSleeping3] != PowerDeviceD0)
+      DeviceCapabilities->DeviceState[PowerSystemSleeping3] = PowerDeviceD3;
+    #endif
+    DeviceCapabilities->DeviceWake = PowerDeviceD1;
+    DeviceCapabilities->DeviceD1 = TRUE;
+    DeviceCapabilities->DeviceD2 = FALSE;
+    DeviceCapabilities->WakeFromD0 = FALSE;
+    DeviceCapabilities->WakeFromD1 = FALSE;
+    DeviceCapabilities->WakeFromD2 = FALSE;
+    DeviceCapabilities->WakeFromD3 = FALSE;
+    DeviceCapabilities->D1Latency = 0;
+    DeviceCapabilities->D2Latency = 0;
+    DeviceCapabilities->D3Latency = 0;
+    DeviceCapabilities->EjectSupported = FALSE;
+    DeviceCapabilities->HardwareDisabled = FALSE;
+    DeviceCapabilities->Removable = disk__removable[disk->media];
+    DeviceCapabilities->SurpriseRemovalOK = FALSE;
+    DeviceCapabilities->UniqueID = FALSE;
+    DeviceCapabilities->SilentInstall = FALSE;
+    #if 0
+    DeviceCapabilities->Address = dev->Self->SerialNo;
+    DeviceCapabilities->UINumber = dev->Self->SerialNo;
+    #endif
+    status = STATUS_SUCCESS;
 
-  wv_free(string);
-alloc_string:
+    out:
+    irp->IoStatus.Status = status;
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    return status;
+  }
 
-  Irp->IoStatus.Status = status;
-  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-  *completion_ptr = TRUE;
-  return status;
-}
+static NTSTATUS STDCALL disk_pnp__simple_(
+    IN struct device__type * dev,
+    IN PIRP irp,
+    IN UCHAR code
+  ) {
+    disk__type_ptr disk = disk__get_ptr(dev);
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    NTSTATUS status;
 
-NTSTATUS STDCALL disk_pnp__query_dev_relations(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
-  )
-{
-  NTSTATUS status;
-  PDEVICE_RELATIONS dev_relations;
+    switch (code) {
+        case IRP_MN_DEVICE_USAGE_NOTIFICATION:
+          if (io_stack_loc->Parameters.UsageNotification.InPath) {
+              disk->SpecialFileCount++;
+            } else {
+              disk->SpecialFileCount--;
+            }
+          irp->IoStatus.Information = 0;
+          status = STATUS_SUCCESS;
+          break;
 
-  if ( Stack->Parameters.QueryDeviceRelations.Type != TargetDeviceRelation )
-    {
-      status = Irp->IoStatus.Status;
-      goto ret_path;
-    }
-  dev_relations = wv_palloc(sizeof *dev_relations + sizeof dev_ptr->Self);
-  if ( dev_relations == NULL )
-    {
-      DBG("wv_palloc IRP_MN_QUERY_DEVICE_RELATIONS\n");
-      status = STATUS_INSUFFICIENT_RESOURCES;
-      goto alloc_dev_relations;
-    }
-  dev_relations->Objects[0] = dev_ptr->Self;
-  dev_relations->Count = 1;
-  ObReferenceObject ( dev_ptr->Self );
-  Irp->IoStatus.Information = ( ULONG_PTR ) dev_relations;
-  status = STATUS_SUCCESS;
+        case IRP_MN_QUERY_PNP_DEVICE_STATE:
+          irp->IoStatus.Information = 0;
+          status = STATUS_SUCCESS;
+          break;
 
-  /*
-   * Irp->IoStatus.Information (dev_relations) not freed 
-   */
-alloc_dev_relations:
+        case IRP_MN_START_DEVICE:
+          dev->old_state = dev->state;
+          dev->state = device__state_started;
+          status = STATUS_SUCCESS;
+          break;
 
-ret_path:
-  Irp->IoStatus.Status = status;
-  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-  *completion_ptr = TRUE;
-  return status;
-}
+        case IRP_MN_QUERY_STOP_DEVICE:
+          dev->old_state = dev->state;
+          dev->state = device__state_stop_pending;
+          status = STATUS_SUCCESS;
+          break;
 
-DEFINE_GUID ( GUID_BUS_TYPE_INTERNAL, 0x2530ea73L, 0x086b, 0x11d1, 0xa0, 0x9f,
-	      0x00, 0xc0, 0x4f, 0xc3, 0x40, 0xb1 );
+        case IRP_MN_CANCEL_STOP_DEVICE:
+          dev->state = dev->old_state;
+          status = STATUS_SUCCESS;
+          break;
 
-NTSTATUS STDCALL disk_pnp__query_bus_info(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
-  )
-{
-  PPNP_BUS_INFORMATION pnp_bus_info;
-  NTSTATUS status;
+        case IRP_MN_STOP_DEVICE:
+          dev->old_state = dev->state;
+          dev->state = device__state_stopped;
+          status = STATUS_SUCCESS;
+          break;
 
-  pnp_bus_info = wv_palloc(sizeof *pnp_bus_info);
-  if ( pnp_bus_info == NULL )
-    {
-      DBG("wv_palloc IRP_MN_QUERY_BUS_INFORMATION\n");
-      status = STATUS_INSUFFICIENT_RESOURCES;
-      goto alloc_pnp_bus_info;
-    }
-  pnp_bus_info->BusTypeGuid = GUID_BUS_TYPE_INTERNAL;
-  pnp_bus_info->LegacyBusType = PNPBus;
-  pnp_bus_info->BusNumber = 0;
-  Irp->IoStatus.Information = ( ULONG_PTR ) pnp_bus_info;
-  status = STATUS_SUCCESS;
+        case IRP_MN_QUERY_REMOVE_DEVICE:
+          dev->old_state = dev->state;
+          dev->state = device__state_remove_pending;
+          status = STATUS_SUCCESS;
+          break;
 
-  /*
-   * Irp-IoStatus.Information (pnp_bus_info) not freed 
-   */
-alloc_pnp_bus_info:
+        case IRP_MN_REMOVE_DEVICE:
+          dev->old_state = dev->state;
+          dev->state = device__state_not_started;
+          if (disk->Unmount) {
+              device__close(dev);
+              IoDeleteDevice(dev->Self);
+              device__free(dev);
+              status = STATUS_NO_SUCH_DEVICE;
+            } else {
+              status = STATUS_SUCCESS;
+            }
+          break;
 
-  Irp->IoStatus.Status = status;
-  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-  *completion_ptr = TRUE;
-  return status;
-}
+        case IRP_MN_CANCEL_REMOVE_DEVICE:
+          dev->state = dev->old_state;
+          status = STATUS_SUCCESS;
+          break;
 
-NTSTATUS STDCALL disk_pnp__query_capabilities(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
-  )
-{
-  PDEVICE_CAPABILITIES DeviceCapabilities =
-    Stack->Parameters.DeviceCapabilities.Capabilities;
-  NTSTATUS status;
-  disk__type_ptr disk_ptr;
-  struct bus__type * bus_ptr;
-  DEVICE_CAPABILITIES ParentDeviceCapabilities;
-  PDEVICE_OBJECT bus_lower;
+        case IRP_MN_SURPRISE_REMOVAL:
+          dev->old_state = dev->state;
+          dev->state = device__state_surprise_remove_pending;
+          status = STATUS_SUCCESS;
+          break;
 
-  if ( DeviceCapabilities->Version != 1
-       || DeviceCapabilities->Size < sizeof ( DEVICE_CAPABILITIES ) )
-    {
-      status = STATUS_UNSUCCESSFUL;
-      goto ret_path;
-    }
-  disk_ptr = disk__get_ptr ( dev_ptr );
-  bus_ptr = bus__get(device__get(dev_ptr->Parent));
-  bus_lower = bus_ptr->LowerDeviceObject;
-  if (bus_lower) {
-      status = bus__get_dev_capabilities(
-          bus_lower,
-		    	&ParentDeviceCapabilities
-        );
-    } else {
-      status = bus__get_dev_capabilities(
-          bus_ptr->device->Self,
-		    	&ParentDeviceCapabilities
-        );
-    }      
-  if ( !NT_SUCCESS ( status ) )
-    goto ret_path;
+        default:
+          status = irp->IoStatus.Status;
+      }
 
-  RtlCopyMemory ( DeviceCapabilities->DeviceState,
-		  ParentDeviceCapabilities.DeviceState,
-		  ( PowerSystemShutdown +
-		    1 ) * sizeof ( DEVICE_POWER_STATE ) );
-  DeviceCapabilities->DeviceState[PowerSystemWorking] = PowerDeviceD0;
-  if ( DeviceCapabilities->DeviceState[PowerSystemSleeping1] != PowerDeviceD0 )
-    DeviceCapabilities->DeviceState[PowerSystemSleeping1] = PowerDeviceD1;
-  if ( DeviceCapabilities->DeviceState[PowerSystemSleeping2] != PowerDeviceD0 )
-    DeviceCapabilities->DeviceState[PowerSystemSleeping2] = PowerDeviceD3;
-#if 0
-  if ( DeviceCapabilities->DeviceState[PowerSystemSleeping3] != PowerDeviceD0 )
-    DeviceCapabilities->DeviceState[PowerSystemSleeping3] = PowerDeviceD3;
-#endif
-  DeviceCapabilities->DeviceWake = PowerDeviceD1;
-  DeviceCapabilities->DeviceD1 = TRUE;
-  DeviceCapabilities->DeviceD2 = FALSE;
-  DeviceCapabilities->WakeFromD0 = FALSE;
-  DeviceCapabilities->WakeFromD1 = FALSE;
-  DeviceCapabilities->WakeFromD2 = FALSE;
-  DeviceCapabilities->WakeFromD3 = FALSE;
-  DeviceCapabilities->D1Latency = 0;
-  DeviceCapabilities->D2Latency = 0;
-  DeviceCapabilities->D3Latency = 0;
-  DeviceCapabilities->EjectSupported = FALSE;
-  DeviceCapabilities->HardwareDisabled = FALSE;
-  DeviceCapabilities->Removable = disk__removable[disk_ptr->media];
-  DeviceCapabilities->SurpriseRemovalOK = FALSE;
-  DeviceCapabilities->UniqueID = FALSE;
-  DeviceCapabilities->SilentInstall = FALSE;
-#if 0
-  DeviceCapabilities->Address = DeviceObject->SerialNo;
-  DeviceCapabilities->UINumber = DeviceObject->SerialNo;
-#endif
-  status = STATUS_SUCCESS;
+    irp->IoStatus.Status = status;
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    return status;
+  }
 
-ret_path:
-  Irp->IoStatus.Status = status;
-  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-  *completion_ptr = TRUE;
-  return status;
-}
+/* Disk PnP dispatch routine. */
+NTSTATUS STDCALL disk_pnp__dispatch(
+    IN struct device__type * dev,
+    IN PIRP irp,
+    IN UCHAR code
+  ) {
+    switch (code) {
+        case IRP_MN_QUERY_ID:
+          return device__pnp_query_id(dev, irp);
 
-NTSTATUS STDCALL disk_pnp__simple(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
-  )
-{
-  NTSTATUS status;
-  disk__type_ptr disk_ptr;
+        case IRP_MN_QUERY_DEVICE_TEXT:
+          return disk_pnp__query_dev_text_(dev, irp);
 
-  disk_ptr = disk__get_ptr ( dev_ptr );
-  switch ( Stack->MinorFunction )
-    {
-      case IRP_MN_DEVICE_USAGE_NOTIFICATION:
-	if ( Stack->Parameters.UsageNotification.InPath )
-	  {
-	    disk_ptr->SpecialFileCount++;
-	  }
-	else
-	  {
-	    disk_ptr->SpecialFileCount--;
-	  }
-	Irp->IoStatus.Information = 0;
-	status = STATUS_SUCCESS;
-	break;
-      case IRP_MN_QUERY_PNP_DEVICE_STATE:
-	Irp->IoStatus.Information = 0;
-	status = STATUS_SUCCESS;
-	break;
-      case IRP_MN_START_DEVICE:
-	dev_ptr->old_state = dev_ptr->state;
-	dev_ptr->state = device__state_started;
-	status = STATUS_SUCCESS;
-	break;
-      case IRP_MN_QUERY_STOP_DEVICE:
-	dev_ptr->old_state = dev_ptr->state;
-	dev_ptr->state = device__state_stop_pending;
-	status = STATUS_SUCCESS;
-	break;
-      case IRP_MN_CANCEL_STOP_DEVICE:
-	dev_ptr->state = dev_ptr->old_state;
-	status = STATUS_SUCCESS;
-	break;
-      case IRP_MN_STOP_DEVICE:
-	dev_ptr->old_state = dev_ptr->state;
-	dev_ptr->state = device__state_stopped;
-	status = STATUS_SUCCESS;
-	break;
-      case IRP_MN_QUERY_REMOVE_DEVICE:
-	dev_ptr->old_state = dev_ptr->state;
-	dev_ptr->state = device__state_remove_pending;
-	status = STATUS_SUCCESS;
-	break;
-      case IRP_MN_REMOVE_DEVICE:
-	dev_ptr->old_state = dev_ptr->state;
-	dev_ptr->state = device__state_not_started;
-	if ( disk_ptr->Unmount )
-	  {
-	    device__close ( dev_ptr );
-	    IoDeleteDevice ( dev_ptr->Self );
-	    device__free ( dev_ptr );
-	    status = STATUS_NO_SUCH_DEVICE;
-	  }
-	else
-	  {
-	    status = STATUS_SUCCESS;
-	  }
-	break;
-      case IRP_MN_CANCEL_REMOVE_DEVICE:
-	dev_ptr->state = dev_ptr->old_state;
-	status = STATUS_SUCCESS;
-	break;
-      case IRP_MN_SURPRISE_REMOVAL:
-	dev_ptr->old_state = dev_ptr->state;
-	dev_ptr->state = device__state_surprise_remove_pending;
-	status = STATUS_SUCCESS;
-	break;
-      default:
-	status = Irp->IoStatus.Status;
-    }
+        case IRP_MN_QUERY_DEVICE_RELATIONS:
+          return disk_pnp__query_dev_relations_(dev, irp);
 
-  Irp->IoStatus.Status = status;
-  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-  *completion_ptr = TRUE;
-  return status;
-}
+        case IRP_MN_QUERY_BUS_INFORMATION:
+          return disk_pnp__query_bus_info_(dev, irp);
+
+        case IRP_MN_QUERY_CAPABILITIES:
+          return disk_pnp__query_capabilities_(dev, irp);
+
+        default:
+          return disk_pnp__simple_(dev, irp, code);
+      }
+  }

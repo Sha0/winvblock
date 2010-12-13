@@ -34,7 +34,6 @@
 #include "driver.h"
 #include "device.h"
 #include "disk.h"
-#include "disk_pnp.h"
 #include "debug.h"
 
 #ifndef _MSC_VER
@@ -52,6 +51,8 @@ __divdi3 (
 extern device__dev_ctl_func disk_dev_ctl__dispatch;
 /* IRP_MJ_SCSI dispatcher from disk/scsi.c */
 extern device__scsi_func disk_scsi__dispatch;
+/* IRP_MJ_PNP dispatcher from disk/pnp.c */
+extern device__pnp_func disk_pnp__dispatch;
 
 /* Forward declarations. */
 static device__free_func free_disk;
@@ -69,6 +70,7 @@ struct device__irp_mj disk__irp_mj_ = {
     disk__sys_ctl_,
     disk_dev_ctl__dispatch,
     disk_scsi__dispatch,
+    disk_pnp__dispatch,
   };
 
 static
@@ -344,53 +346,6 @@ disk__guess_geometry (
     disk_ptr->Cylinders = disk_ptr->LBADiskSize / ( heads * sects_per_track );
 }
 
-/* Disk dispatch routine. */
-static NTSTATUS STDCALL (disk_dispatch)(
-    IN PDEVICE_OBJECT (dev),
-    IN PIRP (irp)
-  ) {
-    NTSTATUS (status);
-    winvblock__bool (completion) = FALSE;
-    static const irp__handling (handling_table)[] = {
-        /*
-         * Major, minor, any major?, any minor?, handler
-         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         * Note that the fall-through case must come FIRST!
-         * Why? It sets completion to true, so others won't be called.
-         */
-        {                     0, 0,  TRUE,  TRUE,  driver__not_supported },
-        {            IRP_MJ_PNP, 0, FALSE,  TRUE,       disk_pnp__simple },
-        {            IRP_MJ_PNP,
-         IRP_MN_QUERY_CAPABILITIES, FALSE, FALSE,
-                                            disk_pnp__query_capabilities },
-        {            IRP_MJ_PNP,
-      IRP_MN_QUERY_BUS_INFORMATION, FALSE, FALSE,
-                                                disk_pnp__query_bus_info },
-        {            IRP_MJ_PNP,
-     IRP_MN_QUERY_DEVICE_RELATIONS, FALSE, FALSE,
-                                           disk_pnp__query_dev_relations },
-        {            IRP_MJ_PNP,
-          IRP_MN_QUERY_DEVICE_TEXT, FALSE, FALSE,
-                                                disk_pnp__query_dev_text },
-        {            IRP_MJ_PNP,
-                   IRP_MN_QUERY_ID, FALSE, FALSE,   device__pnp_query_id },
-      };
-
-    status = irp__process_with_table(
-        dev,
-        irp,
-        handling_table,
-        sizeof handling_table,
-        &completion
-      );
-    #ifdef DEBUGIRPS
-    if (status != STATUS_PENDING)
-      Debug_IrpEnd(irp, status);
-    #endif
-
-    return status;
-  }
-
 /**
  * Create a new disk
  *
@@ -432,7 +387,6 @@ disk__create (
   disk_ptr->disk_ops.max_xfer_len = default_max_xfer_len;
   disk_ptr->disk_ops.init = default_init;
   disk_ptr->disk_ops.close = default_close;
-  dev_ptr->dispatch = disk_dispatch;
   dev_ptr->ops.close = disk__close_;
   dev_ptr->ops.create_pdo = create_pdo;
   dev_ptr->ops.free = free_disk;
