@@ -236,6 +236,8 @@ static NTSTATUS STDCALL bus_dispatch(
         {            IRP_MJ_PNP,
      IRP_MN_QUERY_DEVICE_RELATIONS, FALSE, FALSE,
                                           bus_pnp__query_dev_relations },
+        {            IRP_MJ_PNP,
+                   IRP_MN_QUERY_ID, FALSE, FALSE, device__pnp_query_id },
       };
 
     /* Try registered mini IRP handling tables first.  Deprecated. */
