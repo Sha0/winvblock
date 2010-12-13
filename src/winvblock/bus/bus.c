@@ -51,6 +51,7 @@ struct device__irp_mj bus__irp_mj_ = {
     bus__power_,
     bus__sys_ctl_,
     bus_dev_ctl__dispatch,
+    (device__scsi_func *) 0,
   };
 
 /**

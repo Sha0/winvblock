@@ -38,8 +38,38 @@
 #include "disk.h"
 #include "debug.h"
 
+/**
+ * The prototype for a disk SCSI function.
+ *
+ * @v dev               Points to the disk's device for the SCSI request.
+ * @v irp               Points to the IRP.
+ * @v disk              Points to the disk for the SCSI request.
+ * @v srb               Points to the SCSI request block.
+ * @v cdb               Points to the command descriptor block.
+ * @v completion        Points to a boolean for whether the IRP has
+ *                      been completed or not.
+ * @ret NTSTATUS        The status of the SCSI operation.
+ */
+typedef NTSTATUS STDCALL disk_scsi__func(
+    IN struct device__type *,
+    IN PIRP,
+    IN disk__type_ptr,
+    IN PSCSI_REQUEST_BLOCK,
+    IN PCDB,
+    OUT winvblock__bool_ptr
+  );
+
+/* Forward declarations. */
+disk_scsi__func disk_scsi__read_write_;
+disk_scsi__func disk_scsi__verify_;
+disk_scsi__func disk_scsi__read_capacity_;
+disk_scsi__func disk_scsi__read_capacity_16_;
+disk_scsi__func disk_scsi__mode_sense_;
+disk_scsi__func disk_scsi__read_toc_;
+device__scsi_func disk_scsi__dispatch;
+
 #if _WIN32_WINNT <= 0x0600
-#  if 0				/* FIXME: To build with WINDDK 6001.18001 */
+#  if 0        /* FIXME: To build with WINDDK 6001.18001 */
 #    ifdef _MSC_VER
 #      pragma pack(1)
 #    endif
@@ -61,10 +91,10 @@ typedef union _EIGHT_BYTE
 #    ifdef _MSC_VER
 #      pragma pack()
 #    endif
-#  endif			/* To build with WINDDK 6001.18001 */
+#  endif      /* To build with WINDDK 6001.18001 */
 
 #  if _WIN32_WINNT < 0x0500
-#    if 0			/* FIXME: To build with WINDDK 6001.18001 */
+#    if 0      /* FIXME: To build with WINDDK 6001.18001 */
 #      ifdef _MSC_VER
 #        pragma pack(1)
 #      endif
@@ -77,8 +107,8 @@ typedef struct _READ_CAPACITY_DATA_EX
 #      ifdef _MSC_VER
 #        pragma pack()
 #      endif
-#    endif			/* To build with WINDDK 6001.18001 */
-#  endif			/* _WIN32_WINNT < 0x0500 */
+#    endif      /* To build with WINDDK 6001.18001 */
+#  endif      /* _WIN32_WINNT < 0x0500 */
 
 #  ifdef _MSC_VER
 #    pragma pack(1)
@@ -111,346 +141,388 @@ typedef struct _DISK_CDB16
   d->Byte1 = s->Byte6;                            \
   d->Byte0 = s->Byte7;                            \
 }
-#endif				/* if _WIN32_WINNT <= 0x0600 */
+#endif        /* if _WIN32_WINNT <= 0x0600 */
 
-#define scsi_op( x ) \
-\
-NTSTATUS STDCALL                                \
-x (                                             \
-  IN struct device__type * dev_ptr,             \
-  IN PIRP Irp,                                  \
-  IN disk__type_ptr disk_ptr,                   \
-  IN PSCSI_REQUEST_BLOCK Srb,                   \
-  IN PCDB Cdb,                                  \
-  OUT winvblock__bool_ptr completion_ptr        \
- )
+static NTSTATUS STDCALL disk_scsi__read_write_(
+    IN struct device__type * dev,
+    IN PIRP irp,
+    IN disk__type_ptr disk,
+    IN PSCSI_REQUEST_BLOCK srb,
+    IN PCDB cdb,
+    OUT winvblock__bool_ptr completion
+  ) {
+    ULONGLONG start_sector;
+    winvblock__uint32 sector_count;
+    NTSTATUS status = STATUS_SUCCESS;
 
-static
-scsi_op (
-  read_write
- )
-{
-  ULONGLONG start_sector;
-  winvblock__uint32 sector_count;
-  NTSTATUS status = STATUS_SUCCESS;
+    if (cdb->AsByte[0] == SCSIOP_READ16 || cdb->AsByte[0] == SCSIOP_WRITE16) {
+        REVERSE_BYTES_QUAD(
+            &start_sector,
+            &(((PDISK_CDB16) cdb)->LogicalBlock[0])
+          );
+        REVERSE_BYTES(
+            &sector_count,
+            &(((PDISK_CDB16) cdb )->TransferLength[0])
+          );
+      } else {
+        start_sector = (cdb->CDB10.LogicalBlockByte0 << 24) +
+          (cdb->CDB10.LogicalBlockByte1 << 16) +
+          (cdb->CDB10.LogicalBlockByte2 << 8 ) +
+          cdb->CDB10.LogicalBlockByte3;
+        sector_count = (cdb->CDB10.TransferBlocksMsb << 8) +
+          cdb->CDB10.TransferBlocksLsb;
+      }
+    if (start_sector >= disk->LBADiskSize) {
+        DBG("Fixed sector_count (start_sector off disk)!!\n");
+        sector_count = 0;
+      }
+    if (
+        (start_sector + sector_count > disk->LBADiskSize) &&
+        sector_count != 0
+      ) {
+        DBG("Fixed sector_count (start_sector + sector_count off disk)!!\n");
+        sector_count = (winvblock__uint32) (disk->LBADiskSize - start_sector);
+      }
+    if (sector_count * disk->SectorSize > srb->DataTransferLength) {
+        DBG("Fixed sector_count (DataTransferLength " "too small)!!\n");
+        sector_count = srb->DataTransferLength / disk->SectorSize;
+      }
+    if (srb->DataTransferLength % disk->SectorSize != 0)
+      DBG("DataTransferLength not aligned!!\n");
+    if (srb->DataTransferLength > sector_count * disk->SectorSize)
+      DBG("DataTransferLength too big!!\n");
 
-  if ( Cdb->AsByte[0] == SCSIOP_READ16 || Cdb->AsByte[0] == SCSIOP_WRITE16 )
-    {
-      REVERSE_BYTES_QUAD ( &start_sector,
-			   &( ( ( PDISK_CDB16 ) Cdb )->LogicalBlock[0] ) );
-      REVERSE_BYTES ( &sector_count,
-		      &( ( ( PDISK_CDB16 ) Cdb )->TransferLength[0] ) );
-    }
-  else
-    {
-      start_sector =
-	( Cdb->CDB10.LogicalBlockByte0 << 24 ) +
-	( Cdb->CDB10.LogicalBlockByte1 << 16 ) +
-	( Cdb->CDB10.LogicalBlockByte2 << 8 ) + Cdb->CDB10.LogicalBlockByte3;
-      sector_count =
-	( Cdb->CDB10.TransferBlocksMsb << 8 ) + Cdb->CDB10.TransferBlocksLsb;
-    }
-  if ( start_sector >= disk_ptr->LBADiskSize )
-    {
-      DBG ( "Fixed sector_count (start_sector off disk)!!\n" );
-      sector_count = 0;
-    }
-  if ( ( start_sector + sector_count > disk_ptr->LBADiskSize )
-       && sector_count != 0 )
-    {
-      DBG ( "Fixed sector_count (start_sector + "
-	    "sector_count off disk)!!\n" );
-      sector_count =
-	( winvblock__uint32 ) ( disk_ptr->LBADiskSize - start_sector );
-    }
-  if ( sector_count * disk_ptr->SectorSize > Srb->DataTransferLength )
-    {
-      DBG ( "Fixed sector_count (DataTransferLength " "too small)!!\n" );
-      sector_count = Srb->DataTransferLength / disk_ptr->SectorSize;
-    }
-  if ( Srb->DataTransferLength % disk_ptr->SectorSize != 0 )
-    DBG ( "DataTransferLength not aligned!!\n" );
-  if ( Srb->DataTransferLength > sector_count * disk_ptr->SectorSize )
-    DBG ( "DataTransferLength too big!!\n" );
+    srb->DataTransferLength = sector_count * disk->SectorSize;
+    srb->SrbStatus = SRB_STATUS_SUCCESS;
+    if (sector_count == 0) {
+        irp->IoStatus.Information = 0;
+        return status;
+      }
 
-  Srb->DataTransferLength = sector_count * disk_ptr->SectorSize;
-  Srb->SrbStatus = SRB_STATUS_SUCCESS;
-  if ( sector_count == 0 )
-    {
-      Irp->IoStatus.Information = 0;
-      return status;
-    }
+    if ((
+        (
+            (winvblock__uint8_ptr) srb->DataBuffer -
+            (winvblock__uint8_ptr) MmGetMdlVirtualAddress(irp->MdlAddress)
+          ) + (winvblock__uint8_ptr) MmGetSystemAddressForMdlSafe(
+              irp->MdlAddress,
+              HighPagePriority
+      )) == NULL) {
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        irp->IoStatus.Information = 0;
+        return status;
+      }
 
-  if ( ( ( ( winvblock__uint8_ptr ) Srb->DataBuffer -
-	   ( winvblock__uint8_ptr )
-	   MmGetMdlVirtualAddress ( Irp->MdlAddress ) ) +
-	 ( winvblock__uint8_ptr )
-	 MmGetSystemAddressForMdlSafe ( Irp->MdlAddress,
-					HighPagePriority ) ) == NULL )
-    {
-      status = STATUS_INSUFFICIENT_RESOURCES;
-      Irp->IoStatus.Information = 0;
-      return status;
-    }
+    if (cdb->AsByte[0] == SCSIOP_READ || cdb->AsByte[0] == SCSIOP_READ16) {
+        status = disk__io(
+            dev,
+            disk__io_mode_read,
+            start_sector,
+            sector_count,
+            ((winvblock__uint8_ptr) srb->DataBuffer -
+              (winvblock__uint8_ptr) MmGetMdlVirtualAddress(irp->MdlAddress)) +
+              (winvblock__uint8_ptr) MmGetSystemAddressForMdlSafe(
+                  irp->MdlAddress,
+                  HighPagePriority
+              ),
+            irp
+          );
+      } else {
+        status = disk__io(
+            dev,
+            disk__io_mode_write,
+            start_sector,
+            sector_count,
+            ((winvblock__uint8_ptr) srb->DataBuffer -
+              (winvblock__uint8_ptr) MmGetMdlVirtualAddress(irp->MdlAddress)) +
+              (winvblock__uint8_ptr) MmGetSystemAddressForMdlSafe(
+                  irp->MdlAddress,
+                  HighPagePriority
+              ),
+            irp
+          );
+      }
+    if (status != STATUS_PENDING)
+      *completion = TRUE;
+    return status;
+  }
 
-  if ( Cdb->AsByte[0] == SCSIOP_READ || Cdb->AsByte[0] == SCSIOP_READ16 )
-    {
-      status =
-	disk__io ( dev_ptr, disk__io_mode_read, start_sector, sector_count,
-		   ( ( winvblock__uint8_ptr ) Srb->DataBuffer -
-		     ( winvblock__uint8_ptr )
-		     MmGetMdlVirtualAddress ( Irp->MdlAddress ) ) +
-		   ( winvblock__uint8_ptr )
-		   MmGetSystemAddressForMdlSafe ( Irp->MdlAddress,
-						  HighPagePriority ), Irp );
-    }
-  else
-    {
-      status =
-	disk__io ( dev_ptr, disk__io_mode_write, start_sector, sector_count,
-		   ( ( winvblock__uint8_ptr ) Srb->DataBuffer -
-		     ( winvblock__uint8_ptr )
-		     MmGetMdlVirtualAddress ( Irp->MdlAddress ) ) +
-		   ( winvblock__uint8_ptr )
-		   MmGetSystemAddressForMdlSafe ( Irp->MdlAddress,
-						  HighPagePriority ), Irp );
-    }
-  if ( status != STATUS_PENDING )
-    *completion_ptr = TRUE;
-  return status;
-}
+static NTSTATUS STDCALL disk_scsi__verify_(
+    IN struct device__type * dev,
+    IN PIRP irp,
+    IN disk__type_ptr disk,
+    IN PSCSI_REQUEST_BLOCK srb,
+    IN PCDB cdb,
+    OUT winvblock__bool_ptr completion
+  ) {
+    LONGLONG start_sector;
+    winvblock__uint32 sector_count;
 
-static
-scsi_op (
-  verify
- )
-{
-  LONGLONG start_sector;
-  winvblock__uint32 sector_count;
+    if (cdb->AsByte[0] == SCSIOP_VERIFY16) {
+        REVERSE_BYTES_QUAD(
+            &start_sector,
+            &(((PDISK_CDB16) cdb)->LogicalBlock[0])
+          );
+        REVERSE_BYTES(
+            &sector_count,
+            &(((PDISK_CDB16) cdb)->TransferLength[0])
+          );
+      } else {
+        start_sector = (cdb->CDB10.LogicalBlockByte0 << 24) +
+          (cdb->CDB10.LogicalBlockByte1 << 16) +
+          (cdb->CDB10.LogicalBlockByte2 << 8) +
+          cdb->CDB10.LogicalBlockByte3;
+        sector_count = (cdb->CDB10.TransferBlocksMsb << 8) +
+          cdb->CDB10.TransferBlocksLsb;
+      }
+    #if 0
+    srb->DataTransferLength = sector_count * SECTORSIZE;
+    #endif
+    srb->SrbStatus = SRB_STATUS_SUCCESS;
+    return STATUS_SUCCESS;
+  }
 
-  if ( Cdb->AsByte[0] == SCSIOP_VERIFY16 )
-    {
-      REVERSE_BYTES_QUAD ( &start_sector,
-			   &( ( ( PDISK_CDB16 ) Cdb )->LogicalBlock[0] ) );
-      REVERSE_BYTES ( &sector_count,
-		      &( ( ( PDISK_CDB16 ) Cdb )->TransferLength[0] ) );
-    }
-  else
-    {
-      start_sector =
-	( Cdb->CDB10.LogicalBlockByte0 << 24 ) +
-	( Cdb->CDB10.LogicalBlockByte1 << 16 ) +
-	( Cdb->CDB10.LogicalBlockByte2 << 8 ) + Cdb->CDB10.LogicalBlockByte3;
-      sector_count =
-	( Cdb->CDB10.TransferBlocksMsb << 8 ) + Cdb->CDB10.TransferBlocksLsb;
-    }
-#if 0
-  Srb->DataTransferLength = sector_count * SECTORSIZE;
-#endif
-  Srb->SrbStatus = SRB_STATUS_SUCCESS;
-  return STATUS_SUCCESS;
-}
+static NTSTATUS STDCALL disk_scsi__read_capacity_(
+    IN struct device__type * dev,
+    IN PIRP irp,
+    IN disk__type_ptr disk,
+    IN PSCSI_REQUEST_BLOCK srb,
+    IN PCDB cdb,
+    OUT winvblock__bool_ptr completion
+  ) {
+    winvblock__uint32 temp = disk->SectorSize;
+    PREAD_CAPACITY_DATA data = (PREAD_CAPACITY_DATA) srb->DataBuffer;
 
-static
-scsi_op (
-  read_capacity
- )
-{
-  winvblock__uint32 temp = disk_ptr->SectorSize;
-  PREAD_CAPACITY_DATA data = ( PREAD_CAPACITY_DATA ) Srb->DataBuffer;
+    REVERSE_BYTES(&data->BytesPerBlock, &temp);
+    if ((disk->LBADiskSize - 1) > 0xffffffff) {
+        data->LogicalBlockAddress = -1;
+      } else {
+        temp = (winvblock__uint32) (disk->LBADiskSize - 1);
+        REVERSE_BYTES(&data->LogicalBlockAddress, &temp);
+      }
+    irp->IoStatus.Information = sizeof (READ_CAPACITY_DATA);
+    srb->SrbStatus = SRB_STATUS_SUCCESS;
+    return STATUS_SUCCESS;
+  }
 
-  REVERSE_BYTES ( &data->BytesPerBlock, &temp );
-  if ( ( disk_ptr->LBADiskSize - 1 ) > 0xffffffff )
-    {
-      data->LogicalBlockAddress = -1;
-    }
-  else
-    {
-      temp = ( winvblock__uint32 ) ( disk_ptr->LBADiskSize - 1 );
-      REVERSE_BYTES ( &data->LogicalBlockAddress, &temp );
-    }
-  Irp->IoStatus.Information = sizeof ( READ_CAPACITY_DATA );
-  Srb->SrbStatus = SRB_STATUS_SUCCESS;
-  return STATUS_SUCCESS;
-}
+static NTSTATUS STDCALL disk_scsi__read_capacity_16_(
+    IN struct device__type * dev,
+    IN PIRP irp,
+    IN disk__type_ptr disk,
+    IN PSCSI_REQUEST_BLOCK srb,
+    IN PCDB cdb,
+    OUT winvblock__bool_ptr completion
+  ) {
+    winvblock__uint32 temp;
+    LONGLONG big_temp;
 
-static
-scsi_op (
-  read_capacity_16
- )
-{
-  winvblock__uint32 temp;
-  LONGLONG big_temp;
+    temp = disk->SectorSize;
+    REVERSE_BYTES(
+        &(((PREAD_CAPACITY_DATA_EX) srb->DataBuffer)->BytesPerBlock),
+        &temp
+      );
+    big_temp = disk->LBADiskSize - 1;
+    REVERSE_BYTES_QUAD(
+        &(((PREAD_CAPACITY_DATA_EX) srb->DataBuffer)->
+          LogicalBlockAddress.QuadPart),
+        &big_temp
+      );
+    irp->IoStatus.Information = sizeof (READ_CAPACITY_DATA_EX);
+    srb->SrbStatus = SRB_STATUS_SUCCESS;
+    return STATUS_SUCCESS;
+  }
 
-  temp = disk_ptr->SectorSize;
-  REVERSE_BYTES ( &
-		  ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->DataBuffer )->
-		    BytesPerBlock ), &temp );
-  big_temp = disk_ptr->LBADiskSize - 1;
-  REVERSE_BYTES_QUAD ( &
-		       ( ( ( PREAD_CAPACITY_DATA_EX ) Srb->DataBuffer )->
-			 LogicalBlockAddress.QuadPart ), &big_temp );
-  Irp->IoStatus.Information = sizeof ( READ_CAPACITY_DATA_EX );
-  Srb->SrbStatus = SRB_STATUS_SUCCESS;
-  return STATUS_SUCCESS;
-}
+static NTSTATUS STDCALL disk_scsi__mode_sense_(
+    IN struct device__type * dev,
+    IN PIRP irp,
+    IN disk__type_ptr disk,
+    IN PSCSI_REQUEST_BLOCK srb,
+    IN PCDB cdb,
+    OUT winvblock__bool_ptr completion
+  ) {
+    PMODE_PARAMETER_HEADER mode_param_header;
+    static MEDIA_TYPE media_types[disk__media_count] =
+      { RemovableMedia, FixedMedia, RemovableMedia };
 
-static
-scsi_op (
-  mode_sense
- )
-{
-  PMODE_PARAMETER_HEADER mode_param_header;
-  static MEDIA_TYPE media_types[disk__media_count] =
-    { RemovableMedia, FixedMedia, RemovableMedia };
+    if (srb->DataTransferLength < sizeof (MODE_PARAMETER_HEADER)) {
+        srb->SrbStatus = SRB_STATUS_DATA_OVERRUN;
+        return STATUS_SUCCESS;
+      }
+    mode_param_header = (PMODE_PARAMETER_HEADER) srb->DataBuffer;
+    RtlZeroMemory(mode_param_header, srb->DataTransferLength);
+    mode_param_header->ModeDataLength = sizeof (MODE_PARAMETER_HEADER);
+    mode_param_header->MediumType = media_types[disk->media];
+    mode_param_header->BlockDescriptorLength = 0;
+    srb->DataTransferLength = sizeof (MODE_PARAMETER_HEADER);
+    irp->IoStatus.Information = sizeof (MODE_PARAMETER_HEADER);
+    srb->SrbStatus = SRB_STATUS_SUCCESS;
+    return STATUS_SUCCESS;
+  }
 
-  if ( Srb->DataTransferLength < sizeof ( MODE_PARAMETER_HEADER ) )
-    {
-      Srb->SrbStatus = SRB_STATUS_DATA_OVERRUN;
-      return STATUS_SUCCESS;
-    }
-  mode_param_header = ( PMODE_PARAMETER_HEADER ) Srb->DataBuffer;
-  RtlZeroMemory ( mode_param_header, Srb->DataTransferLength );
-  mode_param_header->ModeDataLength = sizeof ( MODE_PARAMETER_HEADER );
-  mode_param_header->MediumType = media_types[disk_ptr->media];
-  mode_param_header->BlockDescriptorLength = 0;
-  Srb->DataTransferLength = sizeof ( MODE_PARAMETER_HEADER );
-  Irp->IoStatus.Information = sizeof ( MODE_PARAMETER_HEADER );
-  Srb->SrbStatus = SRB_STATUS_SUCCESS;
-  return STATUS_SUCCESS;
-}
+static NTSTATUS STDCALL disk_scsi__read_toc_(
+    IN struct device__type * dev,
+    IN PIRP irp,
+    IN disk__type_ptr disk,
+    IN PSCSI_REQUEST_BLOCK srb,
+    IN PCDB cdb,
+    OUT winvblock__bool_ptr completion
+  ) {
+    /* With thanks to Olof Lagerkvist's ImDisk source. */
+    PCDROM_TOC table_of_contents = (PCDROM_TOC) srb->DataBuffer;
 
-static
-scsi_op (
-  read_toc
- )
-{
-  /*
-   * With thanks to Olof's ImDisk source
-   */
-  PCDROM_TOC table_of_contents = ( PCDROM_TOC ) Srb->DataBuffer;
+    if (srb->DataTransferLength < sizeof (CDROM_TOC)) {
+        irp->IoStatus.Information = 0;
+        srb->SrbStatus = SRB_STATUS_DATA_OVERRUN;
+        return STATUS_BUFFER_TOO_SMALL;
+      }
+    RtlZeroMemory(table_of_contents, sizeof (CDROM_TOC));
 
-  if ( Srb->DataTransferLength < sizeof ( CDROM_TOC ) )
-    {
-      Irp->IoStatus.Information = 0;
-      Srb->SrbStatus = SRB_STATUS_DATA_OVERRUN;
-      return STATUS_BUFFER_TOO_SMALL;
-    }
-  RtlZeroMemory ( table_of_contents, sizeof ( CDROM_TOC ) );
-
-  table_of_contents->FirstTrack = 1;
-  table_of_contents->LastTrack = 1;
-  table_of_contents->TrackData[0].Control = 4;
-  Irp->IoStatus.Information = sizeof ( CDROM_TOC );
-  Srb->SrbStatus = SRB_STATUS_SUCCESS;
-  return STATUS_SUCCESS;
-}
+    table_of_contents->FirstTrack = 1;
+    table_of_contents->LastTrack = 1;
+    table_of_contents->TrackData[0].Control = 4;
+    irp->IoStatus.Information = sizeof (CDROM_TOC);
+    srb->SrbStatus = SRB_STATUS_SUCCESS;
+    return STATUS_SUCCESS;
+  }
 
 NTSTATUS STDCALL disk_scsi__dispatch(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
-  )
-{
-  NTSTATUS status = STATUS_SUCCESS;
-  disk__type_ptr disk_ptr;
-  PSCSI_REQUEST_BLOCK Srb;
-  PCDB Cdb;
-  winvblock__bool completion = FALSE;
+    IN struct device__type * dev,
+    IN PIRP irp,
+    IN UCHAR code
+  ) {
+    disk__type_ptr disk = disk__get_ptr(dev);
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    PSCSI_REQUEST_BLOCK srb = io_stack_loc->Parameters.Scsi.Srb;
+    NTSTATUS status = STATUS_SUCCESS;
+    PCDB cdb;
+    winvblock__bool completion = FALSE;
 
-  /*
-   * Establish a pointer to the disk
-   */
-  disk_ptr = disk__get_ptr ( dev_ptr );
+    srb->SrbStatus = SRB_STATUS_INVALID_REQUEST;
+    srb->ScsiStatus = SCSISTAT_GOOD;
 
-  Srb = Stack->Parameters.Scsi.Srb;
-  Srb->SrbStatus = SRB_STATUS_INVALID_REQUEST;
-  Srb->ScsiStatus = SCSISTAT_GOOD;
+    cdb = (PCDB) srb->Cdb;
 
-  Cdb = ( PCDB ) Srb->Cdb;
+    irp->IoStatus.Information = 0;
+    if (srb->Lun != 0) {
+        DBG("Invalid Lun!!\n");
+        goto out;
+      }
+    switch (code) {
+        case SRB_FUNCTION_EXECUTE_SCSI:
+          switch (cdb->AsByte[0]) {
+              case SCSIOP_TEST_UNIT_READY:
+                srb->SrbStatus = SRB_STATUS_SUCCESS;
+                break;
 
-  Irp->IoStatus.Information = 0;
-  if ( Srb->Lun != 0 )
-    {
-      DBG ( "Invalid Lun!!\n" );
-      goto ret_path;
-    }
-  switch ( Srb->Function )
-    {
-      case SRB_FUNCTION_EXECUTE_SCSI:
-	switch ( Cdb->AsByte[0] )
-	  {
-	    case SCSIOP_TEST_UNIT_READY:
-	      Srb->SrbStatus = SRB_STATUS_SUCCESS;
-	      break;
-	    case SCSIOP_READ:
-	    case SCSIOP_READ16:
-	    case SCSIOP_WRITE:
-	    case SCSIOP_WRITE16:
-	      status =
-		read_write ( dev_ptr, Irp, disk_ptr, Srb, Cdb, &completion );
-	      break;
-	    case SCSIOP_VERIFY:
-	    case SCSIOP_VERIFY16:
-	      status =
-		verify ( dev_ptr, Irp, disk_ptr, Srb, Cdb, &completion );
-	      break;
-	    case SCSIOP_READ_CAPACITY:
-	      status =
-		read_capacity ( dev_ptr, Irp, disk_ptr, Srb, Cdb,
-				&completion );
-	      break;
-	    case SCSIOP_READ_CAPACITY16:
-	      status =
-		read_capacity_16 ( dev_ptr, Irp, disk_ptr, Srb, Cdb,
-				   &completion );
-	      break;
-	    case SCSIOP_MODE_SENSE:
-	      status =
-		mode_sense ( dev_ptr, Irp, disk_ptr, Srb, Cdb, &completion );
-	      break;
-	    case SCSIOP_MEDIUM_REMOVAL:
-	      Irp->IoStatus.Information = 0;
-	      Srb->SrbStatus = SRB_STATUS_SUCCESS;
-	      status = STATUS_SUCCESS;
-	      break;
-	    case SCSIOP_READ_TOC:
-	      status =
-		read_toc ( dev_ptr, Irp, disk_ptr, Srb, Cdb, &completion );
-	      break;
-	    default:
-	      DBG ( "Invalid SCSIOP (%02x)!!\n", Cdb->AsByte[0] );
-	      Srb->SrbStatus = SRB_STATUS_ERROR;
-	      status = STATUS_NOT_IMPLEMENTED;
-	  }
-	break;
-      case SRB_FUNCTION_IO_CONTROL:
-	Srb->SrbStatus = SRB_STATUS_INVALID_REQUEST;
-	break;
-      case SRB_FUNCTION_CLAIM_DEVICE:
-	Srb->DataBuffer = DeviceObject;
-	break;
-      case SRB_FUNCTION_RELEASE_DEVICE:
-	ObDereferenceObject ( DeviceObject );
-	break;
-      case SRB_FUNCTION_SHUTDOWN:
-      case SRB_FUNCTION_FLUSH:
-	Srb->SrbStatus = SRB_STATUS_SUCCESS;
-	break;
-      default:
-	DBG ( "Invalid SRB FUNCTION (%08x)!!\n", Srb->Function );
-	status = STATUS_NOT_IMPLEMENTED;
-    }
+              case SCSIOP_READ:
+              case SCSIOP_READ16:
+              case SCSIOP_WRITE:
+              case SCSIOP_WRITE16:
+                status = disk_scsi__read_write_(
+                    dev,
+                    irp,
+                    disk,
+                    srb,
+                    cdb,
+                    &completion
+                  );
+                break;
 
-ret_path:
-  if ( !completion )
-    {
-      Irp->IoStatus.Status = status;
-      if ( status != STATUS_PENDING )
-	IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-    }
-  *completion_ptr = TRUE;
-  return status;
-}
+              case SCSIOP_VERIFY:
+              case SCSIOP_VERIFY16:
+                status = disk_scsi__verify_(
+                    dev,
+                    irp,
+                    disk,
+                    srb,
+                    cdb,
+                    &completion
+                  );
+                break;
+
+              case SCSIOP_READ_CAPACITY:
+                status = disk_scsi__read_capacity_(
+                    dev,
+                    irp,
+                    disk,
+                    srb,
+                    cdb,
+                    &completion
+                  );
+                break;
+
+              case SCSIOP_READ_CAPACITY16:
+                status = disk_scsi__read_capacity_16_(
+                    dev,
+                    irp,
+                    disk,
+                    srb,
+                    cdb,
+                    &completion
+                  );
+                break;
+
+              case SCSIOP_MODE_SENSE:
+                status = disk_scsi__mode_sense_(
+                    dev,
+                    irp,
+                    disk,
+                    srb,
+                    cdb,
+                    &completion
+                  );
+                break;
+
+              case SCSIOP_MEDIUM_REMOVAL:
+                irp->IoStatus.Information = 0;
+                srb->SrbStatus = SRB_STATUS_SUCCESS;
+                status = STATUS_SUCCESS;
+                break;
+
+              case SCSIOP_READ_TOC:
+                status = disk_scsi__read_toc_(
+                    dev,
+                    irp,
+                    disk,
+                    srb,
+                    cdb,
+                    &completion
+                  );
+                break;
+
+              default:
+                DBG("Invalid SCSIOP (%02x)!!\n", cdb->AsByte[0]);
+                srb->SrbStatus = SRB_STATUS_ERROR;
+                status = STATUS_NOT_IMPLEMENTED;
+            }
+          break; /* SRB_FUNCTION_EXECUTE_SCSI */
+
+        case SRB_FUNCTION_IO_CONTROL:
+          srb->SrbStatus = SRB_STATUS_INVALID_REQUEST;
+          break;
+
+        case SRB_FUNCTION_CLAIM_DEVICE:
+          srb->DataBuffer = dev->Self;
+          break;
+
+        case SRB_FUNCTION_RELEASE_DEVICE:
+          ObDereferenceObject(dev->Self);
+          break;
+
+        case SRB_FUNCTION_SHUTDOWN:
+        case SRB_FUNCTION_FLUSH:
+          srb->SrbStatus = SRB_STATUS_SUCCESS;
+          break;
+
+        default:
+          DBG("Invalid SRB FUNCTION (%08x)!!\n", code);
+          status = STATUS_NOT_IMPLEMENTED;
+      }
+
+    out:
+    if (!completion) {
+        irp->IoStatus.Status = status;
+        if (status != STATUS_PENDING)
+          IoCompleteRequest(irp, IO_NO_INCREMENT);
+      }
+    return status;
+  }

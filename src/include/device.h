@@ -132,12 +132,27 @@ typedef NTSTATUS STDCALL device__dev_ctl_func(
     IN ULONG POINTER_ALIGNMENT
   );
 
+/**
+ * The prototype for a device IRP_MJ_SCSI dispatch.
+ *
+ * @v dev               Points to the device.
+ * @v irp               Points to the IRP.
+ * @v code              The SCSI function.
+ * @v srb               The SCSI request block.
+ * @ret NTSTATUS        The status of processing the IRP for the device.
+ */
+typedef NTSTATUS STDCALL device__scsi_func(
+    IN struct device__type *,
+    IN PIRP,
+    IN UCHAR
+  );
 
 /* IRP major function handler table. */
 struct device__irp_mj {
     device__dispatch_func * power;
     device__dispatch_func * sys_ctl;
     device__dev_ctl_func * dev_ctl;
+    device__scsi_func * scsi;
   };
 
 /* Details common to all devices this driver works with */

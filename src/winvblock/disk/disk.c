@@ -35,7 +35,6 @@
 #include "device.h"
 #include "disk.h"
 #include "disk_pnp.h"
-#include "disk_scsi.h"
 #include "debug.h"
 
 #ifndef _MSC_VER
@@ -51,6 +50,8 @@ __divdi3 (
 
 /* IRP_MJ_DEVICE_CONTROL dispatcher from disk/dev_ctl.c */
 extern device__dev_ctl_func disk_dev_ctl__dispatch;
+/* IRP_MJ_SCSI dispatcher from disk/scsi.c */
+extern device__scsi_func disk_scsi__dispatch;
 
 /* Forward declarations. */
 static device__free_func free_disk;
@@ -67,6 +68,7 @@ struct device__irp_mj disk__irp_mj_ = {
     disk__power_,
     disk__sys_ctl_,
     disk_dev_ctl__dispatch,
+    disk_scsi__dispatch,
   };
 
 static
@@ -357,7 +359,6 @@ static NTSTATUS STDCALL (disk_dispatch)(
          * Why? It sets completion to true, so others won't be called.
          */
         {                     0, 0,  TRUE,  TRUE,  driver__not_supported },
-        {           IRP_MJ_SCSI, 0, FALSE,  TRUE,    disk_scsi__dispatch },
         {            IRP_MJ_PNP, 0, FALSE,  TRUE,       disk_pnp__simple },
         {            IRP_MJ_PNP,
          IRP_MN_QUERY_CAPABILITIES, FALSE, FALSE,
