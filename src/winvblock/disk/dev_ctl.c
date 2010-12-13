@@ -42,183 +42,194 @@
 #include "disk.h"
 #include "debug.h"
 
-static NTSTATUS STDCALL storage_query_prop(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
-  )
-{
-  NTSTATUS status = STATUS_INVALID_PARAMETER;
-  PSTORAGE_PROPERTY_QUERY storage_prop_query = Irp->AssociatedIrp.SystemBuffer;
-  winvblock__uint32 copy_size;
-  disk__type_ptr disk_ptr;
-  STORAGE_ADAPTER_DESCRIPTOR storage_adapter_desc;
-  STORAGE_DEVICE_DESCRIPTOR storage_dev_desc;
+/* Forward declarations. */
+static device__dispatch_func disk_dev_ctl__storage_query_prop_;
+static device__dispatch_func disk_dev_ctl__get_geom_;
+static device__dispatch_func disk_dev_ctl__scsi_get_address_;
 
-  disk_ptr = disk__get_ptr ( dev_ptr );
-  if ( storage_prop_query->PropertyId == StorageAdapterProperty
-       && storage_prop_query->QueryType == PropertyStandardQuery )
-    {
-      copy_size =
-	( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-	  sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) ? Stack->
-	  Parameters.DeviceIoControl.
-	  OutputBufferLength : sizeof ( STORAGE_ADAPTER_DESCRIPTOR ) );
-      storage_adapter_desc.Version = sizeof ( STORAGE_ADAPTER_DESCRIPTOR );
-      storage_adapter_desc.Size = sizeof ( STORAGE_ADAPTER_DESCRIPTOR );
-      storage_adapter_desc.MaximumTransferLength =
-	disk__max_xfer_len ( disk_ptr );
-#if 0
-      storage_adapter_desc.MaximumTransferLength = SECTORSIZE * POOLSIZE;
-#endif
-      storage_adapter_desc.MaximumPhysicalPages = ( winvblock__uint32 ) - 1;
-      storage_adapter_desc.AlignmentMask = 0;
-      storage_adapter_desc.AdapterUsesPio = TRUE;
-      storage_adapter_desc.AdapterScansDown = FALSE;
-      storage_adapter_desc.CommandQueueing = FALSE;
-      storage_adapter_desc.AcceleratedTransfer = FALSE;
-      storage_adapter_desc.BusType = BusTypeScsi;
-      RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, &storage_adapter_desc,
-		      copy_size );
-      Irp->IoStatus.Information = ( ULONG_PTR ) copy_size;
-      status = STATUS_SUCCESS;
-    }
+static NTSTATUS STDCALL disk_dev_ctl__storage_query_prop_(
+    IN struct device__type * dev,
+    IN PIRP irp
+  ) {
+    disk__type_ptr disk;
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    NTSTATUS status = STATUS_INVALID_PARAMETER;
+    PSTORAGE_PROPERTY_QUERY storage_prop_query = irp->AssociatedIrp.SystemBuffer;
+    winvblock__uint32 copy_size;
+    STORAGE_ADAPTER_DESCRIPTOR storage_adapter_desc;
+    STORAGE_DEVICE_DESCRIPTOR storage_dev_desc;
 
-  if ( storage_prop_query->PropertyId == StorageDeviceProperty
-       && storage_prop_query->QueryType == PropertyStandardQuery )
-    {
-      copy_size =
-	( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-	  sizeof ( STORAGE_DEVICE_DESCRIPTOR ) ? Stack->
-	  Parameters.DeviceIoControl.
-	  OutputBufferLength : sizeof ( STORAGE_DEVICE_DESCRIPTOR ) );
-      storage_dev_desc.Version = sizeof ( STORAGE_DEVICE_DESCRIPTOR );
-      storage_dev_desc.Size = sizeof ( STORAGE_DEVICE_DESCRIPTOR );
-      storage_dev_desc.DeviceType = DIRECT_ACCESS_DEVICE;
-      storage_dev_desc.DeviceTypeModifier = 0;
-      storage_dev_desc.RemovableMedia = disk__removable[disk_ptr->media];
-      storage_dev_desc.CommandQueueing = FALSE;
-      storage_dev_desc.VendorIdOffset = 0;
-      storage_dev_desc.ProductIdOffset = 0;
-      storage_dev_desc.ProductRevisionOffset = 0;
-      storage_dev_desc.SerialNumberOffset = 0;
-      storage_dev_desc.BusType = BusTypeScsi;
-      storage_dev_desc.RawPropertiesLength = 0;
-      RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, &storage_dev_desc,
-		      copy_size );
-      Irp->IoStatus.Information = ( ULONG_PTR ) copy_size;
-      status = STATUS_SUCCESS;
-    }
+    disk = disk__get_ptr(dev);
+    if (
+        storage_prop_query->PropertyId == StorageAdapterProperty &&
+        storage_prop_query->QueryType == PropertyStandardQuery
+      ) {
+        copy_size = (
+            io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength <
+            sizeof (STORAGE_ADAPTER_DESCRIPTOR) ?
+            io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength :
+            sizeof (STORAGE_ADAPTER_DESCRIPTOR)
+          );
+        storage_adapter_desc.Version = sizeof (STORAGE_ADAPTER_DESCRIPTOR);
+        storage_adapter_desc.Size = sizeof (STORAGE_ADAPTER_DESCRIPTOR);
+        storage_adapter_desc.MaximumTransferLength =
+          disk__max_xfer_len(disk);
+        #if 0
+        storage_adapter_desc.MaximumTransferLength = SECTORSIZE * POOLSIZE;
+        #endif
+        storage_adapter_desc.MaximumPhysicalPages = (winvblock__uint32) -1;
+        storage_adapter_desc.AlignmentMask = 0;
+        storage_adapter_desc.AdapterUsesPio = TRUE;
+        storage_adapter_desc.AdapterScansDown = FALSE;
+        storage_adapter_desc.CommandQueueing = FALSE;
+        storage_adapter_desc.AcceleratedTransfer = FALSE;
+        storage_adapter_desc.BusType = BusTypeScsi;
+        RtlCopyMemory(
+            irp->AssociatedIrp.SystemBuffer,
+            &storage_adapter_desc,
+            copy_size
+          );
+        irp->IoStatus.Information = (ULONG_PTR) copy_size;
+        status = STATUS_SUCCESS;
+      }
 
-  if ( status == STATUS_INVALID_PARAMETER )
-    {
-      DBG ( "!!Invalid IOCTL_STORAGE_QUERY_PROPERTY "
-	    "(PropertyId: %08x / QueryType: %08x)!!\n",
-	    storage_prop_query->PropertyId, storage_prop_query->QueryType );
-    }
-  return status;
-}
+    if (
+        storage_prop_query->PropertyId == StorageDeviceProperty &&
+        storage_prop_query->QueryType == PropertyStandardQuery
+      ) {
+        copy_size = (
+            io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength <
+            sizeof (STORAGE_DEVICE_DESCRIPTOR) ?
+            io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength :
+            sizeof (STORAGE_DEVICE_DESCRIPTOR)
+          );
+        storage_dev_desc.Version = sizeof (STORAGE_DEVICE_DESCRIPTOR);
+        storage_dev_desc.Size = sizeof (STORAGE_DEVICE_DESCRIPTOR);
+        storage_dev_desc.DeviceType = DIRECT_ACCESS_DEVICE;
+        storage_dev_desc.DeviceTypeModifier = 0;
+        storage_dev_desc.RemovableMedia = disk__removable[disk->media];
+        storage_dev_desc.CommandQueueing = FALSE;
+        storage_dev_desc.VendorIdOffset = 0;
+        storage_dev_desc.ProductIdOffset = 0;
+        storage_dev_desc.ProductRevisionOffset = 0;
+        storage_dev_desc.SerialNumberOffset = 0;
+        storage_dev_desc.BusType = BusTypeScsi;
+        storage_dev_desc.RawPropertiesLength = 0;
+        RtlCopyMemory(
+            irp->AssociatedIrp.SystemBuffer,
+            &storage_dev_desc,
+            copy_size
+          );
+        irp->IoStatus.Information = (ULONG_PTR) copy_size;
+        status = STATUS_SUCCESS;
+      }
 
-static NTSTATUS STDCALL disk_get_drive_geom(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
-  )
-{
-  winvblock__uint32 copy_size;
-  DISK_GEOMETRY disk_geom;
-  disk__type_ptr disk_ptr;
+    if (status == STATUS_INVALID_PARAMETER) {
+        DBG(
+            "!!Invalid IOCTL_STORAGE_QUERY_PROPERTY "
+              "(PropertyId: %08x / QueryType: %08x)!!\n",
+            storage_prop_query->PropertyId,
+            storage_prop_query->QueryType
+          );
+      }
+    return status;
+  }
 
-  copy_size =
-    ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-      sizeof ( DISK_GEOMETRY ) ? Stack->Parameters.DeviceIoControl.
-      OutputBufferLength : sizeof ( DISK_GEOMETRY ) );
-  disk_geom.MediaType = FixedMedia;
-  disk_ptr = disk__get_ptr ( dev_ptr );
-  disk_geom.Cylinders.QuadPart = disk_ptr->Cylinders;
-  disk_geom.TracksPerCylinder = disk_ptr->Heads;
-  disk_geom.SectorsPerTrack = disk_ptr->Sectors;
-  disk_geom.BytesPerSector = disk_ptr->SectorSize;
-  RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, &disk_geom, copy_size );
-  Irp->IoStatus.Information = ( ULONG_PTR ) copy_size;
-  return STATUS_SUCCESS;
-}
+static NTSTATUS STDCALL disk_dev_ctl__get_geom_(
+    IN struct device__type * dev,
+    IN PIRP irp
+  ) {
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    winvblock__uint32 copy_size;
+    DISK_GEOMETRY disk_geom;
+    disk__type_ptr disk;
 
-static NTSTATUS STDCALL scsi_get_address(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
-  )
-{
-  winvblock__uint32 copy_size;
-  SCSI_ADDRESS scsi_address;
+    copy_size = (
+        io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength <
+        sizeof (DISK_GEOMETRY) ?
+        io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength :
+        sizeof (DISK_GEOMETRY)
+      );
+    disk_geom.MediaType = FixedMedia;
+    disk = disk__get_ptr(dev);
+    disk_geom.Cylinders.QuadPart = disk->Cylinders;
+    disk_geom.TracksPerCylinder = disk->Heads;
+    disk_geom.SectorsPerTrack = disk->Sectors;
+    disk_geom.BytesPerSector = disk->SectorSize;
+    RtlCopyMemory(
+        irp->AssociatedIrp.SystemBuffer,
+        &disk_geom,
+        copy_size
+      );
+    irp->IoStatus.Information = (ULONG_PTR) copy_size;
+    return STATUS_SUCCESS;
+  }
 
-  copy_size =
-    ( Stack->Parameters.DeviceIoControl.OutputBufferLength <
-      sizeof ( SCSI_ADDRESS ) ? Stack->Parameters.DeviceIoControl.
-      OutputBufferLength : sizeof ( SCSI_ADDRESS ) );
-  scsi_address.Length = sizeof ( SCSI_ADDRESS );
-  scsi_address.PortNumber = 0;
-  scsi_address.PathId = 0;
-  scsi_address.TargetId = (winvblock__uint8) dev_ptr->dev_num;
-  scsi_address.Lun = 0;
-  RtlCopyMemory ( Irp->AssociatedIrp.SystemBuffer, &scsi_address, copy_size );
-  Irp->IoStatus.Information = ( ULONG_PTR ) copy_size;
-  return STATUS_SUCCESS;
-}
+static NTSTATUS STDCALL disk_dev_ctl__scsi_get_address_(
+    IN struct device__type * dev,
+    IN PIRP irp
+  ) {
+    PIO_STACK_LOCATION io_stack_loc= IoGetCurrentIrpStackLocation(irp);
+    winvblock__uint32 copy_size;
+    SCSI_ADDRESS scsi_address;
+
+    copy_size = (
+        io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength <
+        sizeof (SCSI_ADDRESS) ?
+        io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength :
+        sizeof (SCSI_ADDRESS)
+      );
+    scsi_address.Length = sizeof (SCSI_ADDRESS);
+    scsi_address.PortNumber = 0;
+    scsi_address.PathId = 0;
+    scsi_address.TargetId = (winvblock__uint8) dev->dev_num;
+    scsi_address.Lun = 0;
+    RtlCopyMemory(
+        irp->AssociatedIrp.SystemBuffer,
+        &scsi_address,
+        copy_size
+      );
+    irp->IoStatus.Information = (ULONG_PTR) copy_size;
+    return STATUS_SUCCESS;
+  }
 
 NTSTATUS STDCALL disk_dev_ctl__dispatch(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
-  )
-{
-  NTSTATUS status;
+    IN struct device__type * dev,
+    IN PIRP irp,
+    IN ULONG POINTER_ALIGNMENT code
+  ) {
+    NTSTATUS status;
 
-  switch ( Stack->Parameters.DeviceIoControl.IoControlCode )
-    {
-      case IOCTL_STORAGE_QUERY_PROPERTY:
-	status =
-	  storage_query_prop ( DeviceObject, Irp, Stack, dev_ptr,
-			       completion_ptr );
-	break;
-      case IOCTL_DISK_GET_DRIVE_GEOMETRY:
-	status =
-	  disk_get_drive_geom ( DeviceObject, Irp, Stack, dev_ptr,
-				completion_ptr );
-	break;
-      case IOCTL_SCSI_GET_ADDRESS:
-	status =
-	  scsi_get_address ( DeviceObject, Irp, Stack, dev_ptr,
-			     completion_ptr );
-	break;
-	/*
-	 * Some cases that pop up on Windows Server 2003 
-	 */
-#if 0
-      case IOCTL_MOUNTDEV_UNIQUE_ID_CHANGE_NOTIFY:
-      case IOCTL_MOUNTDEV_LINK_CREATED:
-      case IOCTL_MOUNTDEV_QUERY_STABLE_GUID:
-      case IOCTL_VOLUME_ONLINE:
-	Irp->IoStatus.Information = 0;
-	status = STATUS_SUCCESS;
-	break;
-#endif
-      default:
-	Irp->IoStatus.Information = 0;
-	status = STATUS_INVALID_PARAMETER;
-    }
+    switch (code) {
+        case IOCTL_STORAGE_QUERY_PROPERTY:
+          status = disk_dev_ctl__storage_query_prop_(dev, irp);
+          break;
 
-  Irp->IoStatus.Status = status;
-  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-  *completion_ptr = TRUE;
-  return status;
-}
+        case IOCTL_DISK_GET_DRIVE_GEOMETRY:
+          status = disk_dev_ctl__get_geom_(dev, irp);
+          break;
+
+        case IOCTL_SCSI_GET_ADDRESS:
+          status = disk_dev_ctl__scsi_get_address_(dev, irp);
+          break;
+
+        /* Some cases that pop up on Windows Server 2003. */
+        #if 0
+        case IOCTL_MOUNTDEV_UNIQUE_ID_CHANGE_NOTIFY:
+        case IOCTL_MOUNTDEV_LINK_CREATED:
+        case IOCTL_MOUNTDEV_QUERY_STABLE_GUID:
+        case IOCTL_VOLUME_ONLINE:
+          irp->IoStatus.Information = 0;
+          status = STATUS_SUCCESS;
+          break;
+        #endif
+
+        default:
+          irp->IoStatus.Information = 0;
+          status = STATUS_INVALID_PARAMETER;
+      }
+
+    irp->IoStatus.Status = status;
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    return status;
+  }

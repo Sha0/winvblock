@@ -59,6 +59,7 @@ static driver__dispatch_func driver__dispatch_not_supported_;
 static driver__dispatch_func driver__dispatch_power_;
 static driver__dispatch_func driver__dispatch_create_close_;
 static driver__dispatch_func driver__dispatch_sys_ctl_;
+static driver__dispatch_func driver__dispatch_dev_ctl_;
 static driver__dispatch_func driver__dispatch_;
 static void STDCALL driver__unload_(IN PDRIVER_OBJECT);
 
@@ -312,7 +313,8 @@ NTSTATUS STDCALL DriverEntry(
     DriverObject->MajorFunction[IRP_MJ_CLOSE] = driver__dispatch_create_close_;
     DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] =
       driver__dispatch_sys_ctl_;
-    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = driver__dispatch_;
+    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] =
+      driver__dispatch_dev_ctl_;
     DriverObject->MajorFunction[IRP_MJ_SCSI] = driver__dispatch_;
     /* Set the driver Unload callback. */
     DriverObject->DriverUnload = driver__unload_;
@@ -448,6 +450,33 @@ static NTSTATUS driver__dispatch_sys_ctl_(
     /* Call the particular device's power handler. */
     if (dev->irp_mj && dev->irp_mj->sys_ctl)
       return dev->irp_mj->sys_ctl(dev, irp);
+    /* Otherwise, we don't support the IRP. */
+    return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+  }
+
+/* Handle an IRP_MJ_DEVICE_CONTROL IRP. */
+static NTSTATUS driver__dispatch_dev_ctl_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    /* device__get() checks for a NULL dev_obj */
+    struct device__type * dev = device__get(dev_obj);
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+
+    #ifdef DEBUGIRPS
+    Debug_IrpStart(dev_obj, irp);
+    #endif
+    /* Check that the device exists. */
+    if (!dev || dev->state == device__state_deleted)
+      return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
+    /* Call the particular device's power handler. */
+    if (dev->irp_mj && dev->irp_mj->dev_ctl) {
+        return dev->irp_mj->dev_ctl(
+            dev,
+            irp,
+            io_stack_loc->Parameters.DeviceIoControl.IoControlCode
+          );
+      }
     /* Otherwise, we don't support the IRP. */
     return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
   }

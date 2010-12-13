@@ -38,12 +38,12 @@
 #include "debug.h"
 #include "filedisk.h"
 
-static NTSTATUS STDCALL disk_detach(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp,
-    IN PIO_STACK_LOCATION io_stack_loc,
+/* Forward declarations. */
+static device__dispatch_func bus_dev_ctl__disk_detach_;
+
+static NTSTATUS STDCALL bus_dev_ctl__disk_detach_(
     IN struct device__type * dev,
-    OUT winvblock__bool_ptr completion
+    IN PIRP irp
   ) {
     winvblock__uint8_ptr buffer = irp->AssociatedIrp.SystemBuffer;
     winvblock__uint32 disk_num = *(winvblock__uint32_ptr) buffer;
@@ -67,7 +67,6 @@ static NTSTATUS STDCALL disk_detach(
         if (disk_walker->BootDrive) {
             DBG("Cannot unmount a boot drive.\n");
             irp->IoStatus.Information = 0;
-            *completion = TRUE;
             return STATUS_INVALID_DEVICE_REQUEST;
           }
         DBG("Deleting disk %d\n", dev_walker->dev_num);
@@ -84,37 +83,23 @@ static NTSTATUS STDCALL disk_detach(
       }
     bus->Children--;
     irp->IoStatus.Information = 0;
-    *completion = TRUE;
     return STATUS_SUCCESS;
   }
 
 NTSTATUS STDCALL bus_dev_ctl__dispatch(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp,
-    IN PIO_STACK_LOCATION io_stack_loc,
     IN struct device__type * dev,
-    OUT winvblock__bool_ptr completion
+    IN PIRP irp,
+    IN ULONG POINTER_ALIGNMENT code
   ) {
     NTSTATUS status;
-    switch (io_stack_loc->Parameters.DeviceIoControl.IoControlCode) {
+
+    switch (code) {
         case IOCTL_FILE_ATTACH:
-          status = filedisk__attach(
-              dev_obj,
-              irp,
-              io_stack_loc,
-              dev,
-              completion
-            );
+          status = filedisk__attach(dev, irp);
           break;
 
         case IOCTL_FILE_DETACH:
-          status = disk_detach(
-              dev_obj,
-              irp,
-              io_stack_loc,
-              dev,
-              completion
-            );
+          status = bus_dev_ctl__disk_detach_(dev, irp);
           break;
 
         default:
@@ -124,6 +109,5 @@ NTSTATUS STDCALL bus_dev_ctl__dispatch(
 
     irp->IoStatus.Status = status;
     IoCompleteRequest(irp, IO_NO_INCREMENT);
-    *completion = TRUE;
     return status;
   }

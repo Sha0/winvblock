@@ -44,7 +44,7 @@ winvblock__def_struct ( filedisk__type )
   UNICODE_STRING filepath_unicode;
 };
 
-extern irp__handler filedisk__attach;
+extern device__dispatch_func filedisk__attach;
 
 /**
  * Initialize the global, file-backed disk-common environment

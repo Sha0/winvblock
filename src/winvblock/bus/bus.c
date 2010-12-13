@@ -35,8 +35,10 @@
 #include "device.h"
 #include "bus.h"
 #include "bus_pnp.h"
-#include "bus_dev_ctl.h"
 #include "debug.h"
+
+/* IRP_MJ_DEVICE_CONTROL dispatcher from bus/dev_ctl.c */
+extern device__dev_ctl_func bus_dev_ctl__dispatch;
 
 /* Forward declarations. */
 static device__free_func bus__free_;
@@ -48,6 +50,7 @@ static device__dispatch_func bus__sys_ctl_;
 struct device__irp_mj bus__irp_mj_ = {
     bus__power_,
     bus__sys_ctl_,
+    bus_dev_ctl__dispatch,
   };
 
 /**
@@ -229,7 +232,6 @@ static NTSTATUS STDCALL bus_dispatch(
          * Why? It sets completion to true, so others won't be called.
          */
         {                     0, 0,  TRUE, TRUE, driver__not_supported },
-        { IRP_MJ_DEVICE_CONTROL, 0, FALSE, TRUE, bus_dev_ctl__dispatch },
         {            IRP_MJ_PNP, 0, FALSE, TRUE,       bus_pnp__simple },
         {            IRP_MJ_PNP,
                IRP_MN_START_DEVICE, FALSE, FALSE,   bus_pnp__start_dev },

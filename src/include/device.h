@@ -118,10 +118,26 @@ typedef NTSTATUS STDCALL device__dispatch_func(
     IN PIRP
   );
 
+/**
+ * The prototype for a device IRP_MJ_DEVICE_CONTROL dispatch.
+ *
+ * @v dev               Points to the device.
+ * @v irp               Points to the IRP.
+ * @v code              The I/O control code.
+ * @ret NTSTATUS        The status of processing the IRP for the device.
+ */
+typedef NTSTATUS STDCALL device__dev_ctl_func(
+    IN struct device__type *,
+    IN PIRP,
+    IN ULONG POINTER_ALIGNMENT
+  );
+
+
 /* IRP major function handler table. */
 struct device__irp_mj {
     device__dispatch_func * power;
     device__dispatch_func * sys_ctl;
+    device__dev_ctl_func * dev_ctl;
   };
 
 /* Details common to all devices this driver works with */

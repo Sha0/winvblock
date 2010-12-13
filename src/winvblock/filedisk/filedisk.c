@@ -134,15 +134,11 @@ static winvblock__uint32 STDCALL query_id(
   }
 
 NTSTATUS STDCALL filedisk__attach(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
-  )
-{
+    IN struct device__type * dev,
+    IN PIRP irp
+  ) {
   ANSI_STRING file_path1;
-  winvblock__uint8_ptr buf = Irp->AssociatedIrp.SystemBuffer;
+  winvblock__uint8_ptr buf = irp->AssociatedIrp.SystemBuffer;
   mount__filedisk_ptr params = ( mount__filedisk_ptr ) buf;
   UNICODE_STRING file_path2;
   OBJECT_ATTRIBUTES obj_attrs;
