@@ -60,7 +60,6 @@ winvblock__lib_func struct device__type * device__create(void) {
     if (dev == NULL)
       return NULL;
     /* Populate non-zero device defaults. */
-    dev->dispatch = driver__default_dispatch;
     dev->DriverObject = driver__obj_ptr;
     dev->ops.create_pdo = device__make_pdo_;
     dev->ops.free = device__free_dev_;

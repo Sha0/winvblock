@@ -544,50 +544,12 @@ static NTSTATUS STDCALL driver__dispatch_(
           );
         KeSetEvent(&dev_ptr->thread_wakeup, 0, FALSE);
         status = STATUS_PENDING;
-      } else
-      status = dev_ptr->dispatch(DeviceObject, Irp);
-
-    return status;
-  }
-
-/* Place-holder while implementing a dispatch routine per device class. */
-winvblock__lib_func NTSTATUS STDCALL driver__default_dispatch(
-    IN PDEVICE_OBJECT dev,
-    IN PIRP irp
-  ) {
-    NTSTATUS status;
-    winvblock__bool completion = FALSE;
-    static const irp__handling handling_table[] = {
-        /*
-         * Major, minor, any major?, any minor?, handler
-         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         * Note that the fall-through case must come FIRST!
-         * Why? It sets completion to true, so others won't be called.
-         */
-        {             0, 0,  TRUE, TRUE, driver__not_supported },
-      };
-
-    status = irp__process(
-        dev,
-        irp,
-        IoGetCurrentIrpStackLocation(irp),
-        device__get(dev),
-        &completion
-      );
-    /* Fall through to some driver defaults, if needed. */
-    if (status == STATUS_NOT_SUPPORTED && !completion) {
-        status = irp__process_with_table(
-            dev,
-            irp,
-            handling_table,
-            sizeof handling_table,
-            &completion
-          );
+      } else {
+        if (dev_ptr->dispatch)
+          status = dev_ptr->dispatch(DeviceObject, Irp);
+          else
+          return driver__complete_irp(Irp, 0, STATUS_NOT_SUPPORTED);
       }
-    #ifdef DEBUGIRPS
-    if (status != STATUS_PENDING)
-      Debug_IrpEnd(irp, status);
-    #endif
 
     return status;
   }
