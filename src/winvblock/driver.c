@@ -58,6 +58,7 @@ static LPWSTR driver__os_load_opts_ = NULL;
 static driver__dispatch_func driver__dispatch_not_supported_;
 static driver__dispatch_func driver__dispatch_power_;
 static driver__dispatch_func driver__dispatch_create_close_;
+static driver__dispatch_func driver__dispatch_sys_ctl_;
 static driver__dispatch_func driver__dispatch_;
 static void STDCALL driver__unload_(IN PDRIVER_OBJECT);
 
@@ -309,7 +310,8 @@ NTSTATUS STDCALL DriverEntry(
     DriverObject->MajorFunction[IRP_MJ_POWER] = driver__dispatch_power_;
     DriverObject->MajorFunction[IRP_MJ_CREATE] = driver__dispatch_create_close_;
     DriverObject->MajorFunction[IRP_MJ_CLOSE] = driver__dispatch_create_close_;
-    DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = driver__dispatch_;
+    DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] =
+      driver__dispatch_sys_ctl_;
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = driver__dispatch_;
     DriverObject->MajorFunction[IRP_MJ_SCSI] = driver__dispatch_;
     /* Set the driver Unload callback. */
@@ -405,7 +407,7 @@ static NTSTATUS driver__dispatch_power_(
         return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
       }
     /* Call the particular device's power handler. */
-    if (dev->irp_mj && dev->irp_mj->power)            
+    if (dev->irp_mj && dev->irp_mj->power)
       return dev->irp_mj->power(dev, irp);
     /* Otherwise, we don't support the IRP. */
     return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
@@ -427,6 +429,27 @@ static NTSTATUS driver__dispatch_create_close_(
       return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Always succeed with nothing to do. */
     return driver__complete_irp(irp, 0, STATUS_SUCCESS);
+  }
+
+/* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
+static NTSTATUS driver__dispatch_sys_ctl_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    /* device__get() checks for a NULL dev_obj */
+    struct device__type * dev = device__get(dev_obj);
+
+    #ifdef DEBUGIRPS
+    Debug_IrpStart(dev_obj, irp);
+    #endif
+    /* Check that the device exists. */
+    if (!dev || dev->state == device__state_deleted)
+      return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
+    /* Call the particular device's power handler. */
+    if (dev->irp_mj && dev->irp_mj->sys_ctl)
+      return dev->irp_mj->sys_ctl(dev, irp);
+    /* Otherwise, we don't support the IRP. */
+    return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
 static NTSTATUS STDCALL driver__dispatch_(

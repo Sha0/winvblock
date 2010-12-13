@@ -121,6 +121,7 @@ typedef NTSTATUS STDCALL device__dispatch_func(
 /* IRP major function handler table. */
 struct device__irp_mj {
     device__dispatch_func * power;
+    device__dispatch_func * sys_ctl;
   };
 
 /* Details common to all devices this driver works with */

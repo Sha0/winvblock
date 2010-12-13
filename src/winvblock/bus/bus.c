@@ -42,10 +42,12 @@
 static device__free_func bus__free_;
 static device__create_pdo_func bus__create_pdo_;
 static device__dispatch_func bus__power_;
+static device__dispatch_func bus__sys_ctl_;
 
 /* Globals. */
 struct device__irp_mj bus__irp_mj_ = {
     bus__power_,
+    bus__sys_ctl_,
   };
 
 /**
@@ -129,19 +131,18 @@ winvblock__lib_func winvblock__bool STDCALL bus__add_child(
   }
 
 static NTSTATUS STDCALL bus__sys_ctl_(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
+    IN struct device__type * dev,
+    IN PIRP irp
   ) {
-    struct bus__type * bus_ptr = bus__get(dev_ptr);
-    PDEVICE_OBJECT lower = bus_ptr->LowerDeviceObject;
+    struct bus__type * bus = bus__get(dev);
+    PDEVICE_OBJECT lower = bus->LowerDeviceObject;
 
-    DBG("...\n");
-    IoSkipCurrentIrpStackLocation(Irp);
-    *completion_ptr = TRUE;
-    return lower ? IoCallDriver(lower, Irp) : STATUS_SUCCESS;
+    if (lower) {
+        DBG("Passing IRP_MJ_SYSTEM_CONTROL down\n");
+        IoSkipCurrentIrpStackLocation(irp);
+        return IoCallDriver(lower, irp);
+      }
+    return driver__complete_irp(irp, 0, STATUS_SUCCESS);
   }
 
 static NTSTATUS STDCALL bus__power_(
@@ -228,7 +229,6 @@ static NTSTATUS STDCALL bus_dispatch(
          * Why? It sets completion to true, so others won't be called.
          */
         {                     0, 0,  TRUE, TRUE, driver__not_supported },
-        { IRP_MJ_SYSTEM_CONTROL, 0, FALSE, TRUE,         bus__sys_ctl_ },
         { IRP_MJ_DEVICE_CONTROL, 0, FALSE, TRUE, bus_dev_ctl__dispatch },
         {            IRP_MJ_PNP, 0, FALSE, TRUE,       bus_pnp__simple },
         {            IRP_MJ_PNP,

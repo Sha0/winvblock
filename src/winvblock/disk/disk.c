@@ -53,6 +53,7 @@ __divdi3 (
 /* Forward declarations. */
 static device__free_func free_disk;
 static device__dispatch_func disk__power_;
+static device__dispatch_func disk__sys_ctl_;
 
 /* Globals. */
 static LIST_ENTRY disk_list;
@@ -62,6 +63,7 @@ PWCHAR disk__compat_ids[disk__media_count] =
   { L"GenSFloppy", L"GenDisk", L"GenCdRom" };
 struct device__irp_mj disk__irp_mj_ = {
     disk__power_,
+    disk__sys_ctl_,
   };
 
 static
@@ -102,19 +104,12 @@ static NTSTATUS STDCALL disk__power_(
     return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
-static NTSTATUS STDCALL sys_ctl(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PIRP Irp,
-    IN PIO_STACK_LOCATION Stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
-  )
-{
-  NTSTATUS status = Irp->IoStatus.Status;
-  IoCompleteRequest ( Irp, IO_NO_INCREMENT );
-  *completion_ptr = TRUE;
-  return status;
-}
+static NTSTATUS STDCALL disk__sys_ctl_(
+    IN struct device__type * dev,
+    IN PIRP irp
+  ) {
+    return driver__complete_irp(irp, 0, irp->IoStatus.Status);
+  }
 
 /**
  * Create a disk PDO filled with the given disk parameters.
@@ -360,7 +355,6 @@ static NTSTATUS STDCALL (disk_dispatch)(
          */
         {                     0, 0,  TRUE,  TRUE,  driver__not_supported },
         { IRP_MJ_DEVICE_CONTROL, 0, FALSE,  TRUE, disk_dev_ctl__dispatch },
-        { IRP_MJ_SYSTEM_CONTROL, 0, FALSE,  TRUE,                sys_ctl },
         {           IRP_MJ_SCSI, 0, FALSE,  TRUE,    disk_scsi__dispatch },
         {            IRP_MJ_PNP, 0, FALSE,  TRUE,       disk_pnp__simple },
         {            IRP_MJ_PNP,
