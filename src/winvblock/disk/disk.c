@@ -359,8 +359,6 @@ static NTSTATUS STDCALL (disk_dispatch)(
          * Why? It sets completion to true, so others won't be called.
          */
         {                     0, 0,  TRUE,  TRUE,  driver__not_supported },
-        {          IRP_MJ_CLOSE, 0, FALSE,  TRUE,   driver__create_close },
-        {         IRP_MJ_CREATE, 0, FALSE,  TRUE,   driver__create_close },
         { IRP_MJ_DEVICE_CONTROL, 0, FALSE,  TRUE, disk_dev_ctl__dispatch },
         { IRP_MJ_SYSTEM_CONTROL, 0, FALSE,  TRUE,                sys_ctl },
         {           IRP_MJ_SCSI, 0, FALSE,  TRUE,    disk_scsi__dispatch },

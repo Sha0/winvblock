@@ -228,8 +228,6 @@ static NTSTATUS STDCALL bus_dispatch(
          * Why? It sets completion to true, so others won't be called.
          */
         {                     0, 0,  TRUE, TRUE, driver__not_supported },
-        {          IRP_MJ_CLOSE, 0, FALSE, TRUE,  driver__create_close },
-        {         IRP_MJ_CREATE, 0, FALSE, TRUE,  driver__create_close },
         { IRP_MJ_SYSTEM_CONTROL, 0, FALSE, TRUE,         bus__sys_ctl_ },
         { IRP_MJ_DEVICE_CONTROL, 0, FALSE, TRUE, bus_dev_ctl__dispatch },
         {            IRP_MJ_PNP, 0, FALSE, TRUE,       bus_pnp__simple },

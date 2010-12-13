@@ -57,6 +57,7 @@ static LPWSTR driver__os_load_opts_ = NULL;
 /* Forward declarations. */
 static driver__dispatch_func driver__dispatch_not_supported_;
 static driver__dispatch_func driver__dispatch_power_;
+static driver__dispatch_func driver__dispatch_create_close_;
 static driver__dispatch_func driver__dispatch_;
 static void STDCALL driver__unload_(IN PDRIVER_OBJECT);
 
@@ -306,8 +307,8 @@ NTSTATUS STDCALL DriverEntry(
       DriverObject->MajorFunction[i] = driver__dispatch_not_supported_;
     DriverObject->MajorFunction[IRP_MJ_PNP] = driver__dispatch_;
     DriverObject->MajorFunction[IRP_MJ_POWER] = driver__dispatch_power_;
-    DriverObject->MajorFunction[IRP_MJ_CREATE] = driver__dispatch_;
-    DriverObject->MajorFunction[IRP_MJ_CLOSE] = driver__dispatch_;
+    DriverObject->MajorFunction[IRP_MJ_CREATE] = driver__dispatch_create_close_;
+    DriverObject->MajorFunction[IRP_MJ_CLOSE] = driver__dispatch_create_close_;
     DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = driver__dispatch_;
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = driver__dispatch_;
     DriverObject->MajorFunction[IRP_MJ_SCSI] = driver__dispatch_;
@@ -346,22 +347,6 @@ static NTSTATUS STDCALL driver__dispatch_not_supported_(
     irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
     IoCompleteRequest(irp, IO_NO_INCREMENT);
     return irp->IoStatus.Status;
-  }
-
-/* Handle IRP_MJ_CREATE and IRP_MJ_CLOSE */
-extern winvblock__lib_func NTSTATUS STDCALL driver__create_close(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp,
-    IN PIO_STACK_LOCATION stack,
-    IN struct device__type * dev_ptr,
-    OUT winvblock__bool_ptr completion_ptr
-  ) {
-    NTSTATUS status = STATUS_SUCCESS;
-
-    irp->IoStatus.Status = status;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
-    *completion_ptr = TRUE;
-    return status;
   }
 
 /* IRP is not understood. */
@@ -426,6 +411,24 @@ static NTSTATUS driver__dispatch_power_(
     return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
+/* Handle an IRP_MJ_CREATE or IRP_MJ_CLOSE IRP. */
+static NTSTATUS driver__dispatch_create_close_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    /* device__get() checks for a NULL dev_obj */
+    struct device__type * dev = device__get(dev_obj);
+
+    #ifdef DEBUGIRPS
+    Debug_IrpStart(dev_obj, irp);
+    #endif
+    /* Check that the device exists. */
+    if (!dev || dev->state == device__state_deleted)
+      return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
+    /* Always succeed with nothing to do. */
+    return driver__complete_irp(irp, 0, STATUS_SUCCESS);
+  }
+
 static NTSTATUS STDCALL driver__dispatch_(
     IN PDEVICE_OBJECT DeviceObject,
     IN PIRP Irp
@@ -481,8 +484,6 @@ winvblock__lib_func NTSTATUS STDCALL driver__default_dispatch(
          * Why? It sets completion to true, so others won't be called.
          */
         {             0, 0,  TRUE, TRUE, driver__not_supported },
-        {  IRP_MJ_CLOSE, 0, FALSE, TRUE,  driver__create_close },
-        { IRP_MJ_CREATE, 0, FALSE, TRUE,  driver__create_close },
       };
 
     status = irp__process(

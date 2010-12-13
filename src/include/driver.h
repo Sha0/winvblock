@@ -64,7 +64,6 @@ typedef NTSTATUS STDCALL driver__dispatch_func(
 
 extern winvblock__lib_func driver__dispatch_func driver__default_dispatch;
 extern winvblock__lib_func irp__handler driver__not_supported;
-extern winvblock__lib_func irp__handler driver__create_close;
 extern winvblock__lib_func NTSTATUS STDCALL driver__complete_irp(
     IN PIRP,
     IN ULONG_PTR,
