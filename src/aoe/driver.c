@@ -39,6 +39,7 @@
 #include "mount.h"
 #include "bus.h"
 #include "aoe.h"
+#include "aoe_bus.h"
 #include "registry.h"
 #include "protocol.h"
 #include "debug.h"
@@ -809,14 +810,14 @@ NTSTATUS STDCALL DriverEntry(
         KeSetEvent(&aoe__thread_sig_evt_, 0, FALSE);
       }
 
-    bus_ptr = driver__bus();
-    if (!bus_ptr) {
-        DBG("Unable to register for IOCTLs!\n");
-      } else
-      irp__reg_table(&bus_ptr->device->irp_handler_chain, handling_table);
     DriverObject->DriverUnload = aoe__unload_;
-    aoe__process_abft_();
     aoe__started_ = TRUE;
+    if (!aoe_bus__create()) {
+        DBG("Unable to create AoE bus!\n");
+        aoe__unload_(DriverObject);
+        return STATUS_INSUFFICIENT_RESOURCES;
+      }
+    aoe__process_abft_();
     DBG("Exit\n");
     return Status;
   }
@@ -835,6 +836,8 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject) {
     /* If we're not already started, there's nothing to do. */
     if (!aoe__started_)
       return;
+    /* Destroy the AoE bus. */
+    aoe_bus__free();
     /* Stop the AoE protocol. */
     Protocol_Stop();
     /* If we're not already shutting down, signal the event. */
@@ -2103,7 +2106,7 @@ static void aoe__process_abft_(void) {
     return;
   }
 
-static NTSTATUS STDCALL scan(
+NTSTATUS STDCALL scan(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
     IN PIO_STACK_LOCATION io_stack_loc,
@@ -2162,7 +2165,7 @@ static NTSTATUS STDCALL scan(
     return STATUS_SUCCESS;
   }
 
-static NTSTATUS STDCALL show(
+NTSTATUS STDCALL show(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
     IN PIO_STACK_LOCATION io_stack_loc,
@@ -2231,7 +2234,7 @@ static NTSTATUS STDCALL show(
     return STATUS_SUCCESS;
   }
 
-static NTSTATUS STDCALL mount(
+NTSTATUS STDCALL mount(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
     IN PIO_STACK_LOCATION io_stack_loc,
