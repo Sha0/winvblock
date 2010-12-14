@@ -284,6 +284,7 @@ static NTSTATUS STDCALL disk_pnp__simple_(
 
     switch (code) {
         case IRP_MN_DEVICE_USAGE_NOTIFICATION:
+          DBG("disk_pnp: IRP_MN_DEVICE_USAGE_NOTIFICATION\n");
           if (io_stack_loc->Parameters.UsageNotification.InPath) {
               disk->SpecialFileCount++;
             } else {
@@ -294,40 +295,47 @@ static NTSTATUS STDCALL disk_pnp__simple_(
           break;
 
         case IRP_MN_QUERY_PNP_DEVICE_STATE:
+          DBG("disk_pnp: IRP_MN_QUERY_PNP_DEVICE_STATE\n");
           irp->IoStatus.Information = 0;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_START_DEVICE:
+          DBG("disk_pnp: IRP_MN_START_DEVICE\n");
           dev->old_state = dev->state;
           dev->state = device__state_started;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_QUERY_STOP_DEVICE:
+          DBG("disk_pnp: IRP_MN_QUERY_STOP_DEVICE\n");
           dev->old_state = dev->state;
           dev->state = device__state_stop_pending;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_CANCEL_STOP_DEVICE:
+          DBG("disk_pnp: IRP_MN_CANCEL_STOP_DEVICE\n");
           dev->state = dev->old_state;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_STOP_DEVICE:
+          DBG("disk_pnp: IRP_MN_STOP_DEVICE\n");
           dev->old_state = dev->state;
           dev->state = device__state_stopped;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_QUERY_REMOVE_DEVICE:
+          DBG("disk_pnp: IRP_MN_QUERY_REMOVE_DEVICE\n");
           dev->old_state = dev->state;
           dev->state = device__state_remove_pending;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_REMOVE_DEVICE:
+          DBG("disk_pnp: IRP_MN_REMOVE_DEVICE\n");
           dev->old_state = dev->state;
           dev->state = device__state_not_started;
           if (disk->Unmount) {
@@ -341,17 +349,20 @@ static NTSTATUS STDCALL disk_pnp__simple_(
           break;
 
         case IRP_MN_CANCEL_REMOVE_DEVICE:
+          DBG("disk_pnp: IRP_MN_CANCEL_REMOVE_DEVICE\n");
           dev->state = dev->old_state;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_SURPRISE_REMOVAL:
+          DBG("disk_pnp: IRP_MN_SURPRISE_REMOVAL\n");
           dev->old_state = dev->state;
           dev->state = device__state_surprise_remove_pending;
           status = STATUS_SUCCESS;
           break;
 
         default:
+          DBG("disk_pnp: Unhandled IRP_MN_*: %d\n", code);
           status = irp->IoStatus.Status;
       }
 
@@ -368,18 +379,23 @@ NTSTATUS STDCALL disk_pnp__dispatch(
   ) {
     switch (code) {
         case IRP_MN_QUERY_ID:
+          DBG("disk_pnp: IIRP_MN_QUERY_ID\n");
           return device__pnp_query_id(dev, irp);
 
         case IRP_MN_QUERY_DEVICE_TEXT:
+          DBG("disk_pnp: IRP_MN_QUERY_DEVICE_TEXT\n");
           return disk_pnp__query_dev_text_(dev, irp);
 
         case IRP_MN_QUERY_DEVICE_RELATIONS:
+          DBG("disk_pnp: IRP_MN_QUERY_DEVICE_RELATIONS\n");
           return disk_pnp__query_dev_relations_(dev, irp);
 
         case IRP_MN_QUERY_BUS_INFORMATION:
+          DBG("disk_pnp: IRP_MN_QUERY_BUS_INFORMATION\n");
           return disk_pnp__query_bus_info_(dev, irp);
 
         case IRP_MN_QUERY_CAPABILITIES:
+          DBG("disk_pnp: IRP_MN_QUERY_CAPABILITIES\n");
           return disk_pnp__query_capabilities_(dev, irp);
 
         default:

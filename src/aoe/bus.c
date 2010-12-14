@@ -149,16 +149,16 @@ static winvblock__uint32 STDCALL aoe_bus__pnp_id_(
   ) {
     switch (query_type) {
         case BusQueryDeviceID:
-          return swprintf(*buf, L"WinVBlock\\AoEDEVID") + 1;
+          return swprintf(*buf, winvblock__literal_w L"\\AoE") + 1;
 
         case BusQueryInstanceID:
-          return swprintf(*buf, L"WinVBlock\\AoEINSTID") + 1;
+          return swprintf(*buf, L"0") + 1;
 
         case BusQueryHardwareIDs:
-          return swprintf(*buf, L"WinVBlock\\AoEHWID") + 1;
+          return swprintf(*buf, winvblock__literal_w L"\\AoE") + 2;
 
         case BusQueryCompatibleIDs:
-          return swprintf(*buf, L"WinVBlock\\AoECOMPATID") + 4;
+          return swprintf(*buf, winvblock__literal_w L"\\AoE") + 4;
 
         default:
           return 0;
