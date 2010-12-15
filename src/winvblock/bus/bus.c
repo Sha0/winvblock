@@ -46,6 +46,7 @@ static device__create_pdo_func bus__create_pdo_;
 static device__dispatch_func bus__power_;
 static device__dispatch_func bus__sys_ctl_;
 static device__pnp_func bus__pnp_dispatch_;
+static bus__thread_func bus__default_thread_;
 
 /* Globals. */
 struct device__irp_mj bus__irp_mj_ = {
@@ -253,15 +254,17 @@ winvblock__lib_func struct bus__type * bus__create(void) {
     /* Populate non-zero device defaults. */
     bus_ptr->device = dev_ptr;
     bus_ptr->prev_free = dev_ptr->ops.free;
+    bus_ptr->thread = bus__default_thread_;
+    KeInitializeSpinLock(&bus_ptr->SpinLock);
+    KeInitializeSpinLock(&bus_ptr->work_items_lock);
+    InitializeListHead(&bus_ptr->work_items);
+    KeInitializeEvent(&bus_ptr->work_signal, SynchronizationEvent, FALSE);
     dev_ptr->ops.create_pdo = bus__create_pdo_;
     dev_ptr->ops.init = bus__init_;
     dev_ptr->ops.free = bus__free_;
     dev_ptr->ext = bus_ptr;
     dev_ptr->irp_mj = &bus__irp_mj_;
     dev_ptr->IsBus = TRUE;
-    KeInitializeSpinLock(&bus_ptr->SpinLock);
-    KeInitializeSpinLock(&bus_ptr->work_items_lock);
-    InitializeListHead(&bus_ptr->work_items);
 
     return bus_ptr;
 
@@ -390,9 +393,6 @@ static winvblock__bool bus__add_work_item_(
     struct bus__type * bus,
     struct bus__work_item_ * work_item
   ) {
-    if (!bus || !work_item)
-      return FALSE;
-
     ExInterlockedInsertTailList(
         &bus->work_items,
         &work_item->list_entry,
@@ -412,9 +412,6 @@ static struct bus__work_item_ * bus__get_work_item_(
     struct bus__type * bus
   ) {
     PLIST_ENTRY list_entry;
-
-    if (!bus)
-      return NULL;
 
     list_entry = ExInterlockedRemoveHeadList(
         &bus->work_items,
@@ -449,4 +446,101 @@ winvblock__lib_func void bus__process_work_items(struct bus__type * bus) {
           }
       }
     return;
+  }
+
+/**
+ * The bus thread wrapper.
+ *
+ * @v context           The thread context.  In our case, it points to
+ *                      the bus that the thread should use in processing.
+ */
+static void STDCALL bus__thread_(IN void *context) {
+    struct bus__type * bus = context;
+
+    if (!bus || !bus->thread) {
+        DBG("No bus or no thread!\n");
+        return;
+      }
+
+    bus->thread(bus);
+    return;
+  }
+
+/**
+ * The default bus thread routine.
+ *
+ * @v bus       Points to the bus device for the thread to work with.
+ *
+ * Note that if you implement your own bus type using this library,
+ * you can override the thread routine with your own.  If you do so,
+ * your thread routine should call bus__process_work_items() within
+ * its loop.  To start a bus thread, use bus__start_thread()
+ * If you implement your own thread routine, you are also responsible
+ * for freeing the bus.
+ */
+static void STDCALL bus__default_thread_(IN struct bus__type * bus) {
+    LARGE_INTEGER timeout;
+
+    /* Wake up at least every second. */
+    timeout.QuadPart = -10000000LL;
+
+    /* When bus::thread is cleared, we shut down. */
+    while (bus->thread) {
+        DBG("Alive.\n");
+
+        /* Wait for the work signal or the timeout. */
+        KeWaitForSingleObject(
+            &bus->work_signal,
+            Executive,
+            KernelMode,
+            FALSE,
+            &timeout
+          );
+        /* Reset the work signal. */
+        KeResetEvent(&bus->work_signal);
+
+        bus__process_work_items(bus);
+      } /* while bus->alive */
+
+    bus__free_(bus->device);
+    return;
+  }
+
+/**
+ * Start a bus thread.
+ *
+ * @v bus               The bus to start a thread for.
+ * @ret NTSTATUS        The status of the thread creation operation.
+ *
+ * Also see bus__thread_func in the header for details about the prototype
+ * for implementing your own bus thread routine.  You set bus::thread to
+ * specify your own thread routine, then call this function to start it.
+ */
+winvblock__lib_func NTSTATUS bus__start_thread(
+    struct bus__type * bus
+  ) {
+    OBJECT_ATTRIBUTES obj_attrs;
+    HANDLE thread_handle;
+
+    if (!bus) {
+        DBG("No bus specified!\n");
+        return STATUS_INVALID_PARAMETER;
+      }
+
+    InitializeObjectAttributes(
+        &obj_attrs,
+        NULL,
+        OBJ_KERNEL_HANDLE,
+        NULL,
+        NULL
+      );
+    return PsCreateSystemThread(
+        &thread_handle,
+        THREAD_ALL_ACCESS,
+        &obj_attrs,
+        NULL,
+        NULL,
+        bus__thread_,
+        bus
+      );
   }

@@ -194,6 +194,11 @@ static NTSTATUS STDCALL driver__attach_fdo_(
         DBG("IoAttachDeviceToDeviceStack() failed!\n");
         goto err_attach;
       }
+    status = bus__start_thread(bus);
+    if (!NT_SUCCESS(status)) {
+        DBG("Couldn't start bus thread!\n");
+        goto err_thread;
+      }
     /* Ok! */
     KeAcquireSpinLock(&driver__bus_fdo_lock_, &irql);
     if (driver__bus_fdo_) {
@@ -212,6 +217,8 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     return STATUS_SUCCESS;
 
     err_race_failed:
+
+    err_thread:
 
     err_attach:
 

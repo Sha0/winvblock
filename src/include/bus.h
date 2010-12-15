@@ -27,6 +27,17 @@
  * Bus specifics.
  */
 
+/**
+ * A bus thread routine.
+ *
+ * @v bus       The bus to be used in the thread routine.
+ *
+ * If you implement your own bus thread routine, you should call
+ * bus__process_work_items() within its loop.
+ */
+typedef void STDCALL bus__thread_func(IN struct bus__type *);
+
+/* The bus type. */
 struct bus__type {
     struct device__type * device;
     PDEVICE_OBJECT LowerDeviceObject;
@@ -42,6 +53,8 @@ struct bus__type {
     winvblock__bool named;
     LIST_ENTRY work_items;
     KSPIN_LOCK work_items_lock;
+    KEVENT work_signal;
+    bus__thread_func * thread;
   };
 
 /* Exports. */
@@ -58,5 +71,6 @@ extern winvblock__lib_func winvblock__bool STDCALL bus__add_child(
   );
 extern winvblock__lib_func struct bus__type * bus__get(struct device__type *);
 extern winvblock__lib_func void bus__process_work_items(struct bus__type *);
+extern winvblock__lib_func NTSTATUS bus__start_thread(struct bus__type *);
 
 #endif  /* _BUS_H */
