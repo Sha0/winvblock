@@ -448,6 +448,15 @@ winvblock__lib_func void bus__process_work_items(struct bus__type * bus) {
     return;
   }
 
+/* The device__type::ops.free implementation for a threaded bus. */
+static void STDCALL bus__thread_free_(IN struct device__type * dev) {
+    struct bus__type * bus = bus__get(dev);
+
+    bus->thread = (bus__thread_func *) 0;
+    KeSetEvent(&bus->work_signal, 0, FALSE);
+    return;
+  }
+
 /**
  * The bus thread wrapper.
  *
@@ -483,6 +492,9 @@ static void STDCALL bus__default_thread_(IN struct bus__type * bus) {
 
     /* Wake up at least every second. */
     timeout.QuadPart = -10000000LL;
+
+    /* Hook device__type::ops.free() */
+    bus->device->ops.free = bus__thread_free_;
 
     /* When bus::thread is cleared, we shut down. */
     while (bus->thread) {
