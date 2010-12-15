@@ -40,6 +40,8 @@ struct bus__type {
     UNICODE_STRING dev_name;
     UNICODE_STRING dos_dev_name;
     winvblock__bool named;
+    LIST_ENTRY work_items;
+    KSPIN_LOCK work_items_lock;
   };
 
 /* Exports. */
@@ -55,5 +57,6 @@ extern winvblock__lib_func winvblock__bool STDCALL bus__add_child(
     IN struct device__type *
   );
 extern winvblock__lib_func struct bus__type * bus__get(struct device__type *);
+extern winvblock__lib_func void bus__process_work_items(struct bus__type *);
 
 #endif  /* _BUS_H */

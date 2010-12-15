@@ -260,6 +260,8 @@ winvblock__lib_func struct bus__type * bus__create(void) {
     dev_ptr->irp_mj = &bus__irp_mj_;
     dev_ptr->IsBus = TRUE;
     KeInitializeSpinLock(&bus_ptr->SpinLock);
+    KeInitializeSpinLock(&bus_ptr->work_items_lock);
+    InitializeListHead(&bus_ptr->work_items);
 
     return bus_ptr;
 
@@ -361,4 +363,90 @@ extern winvblock__lib_func struct bus__type * bus__get(
     struct device__type * dev
   ) {
     return dev->ext;
+  }
+
+enum bus__work_item_type_ {
+    bus__work_item_type_add_pdo_,
+    bus__work_item_type_del_pdo_,
+    bus__work_item_types_
+  };
+
+struct bus__work_item_ {
+    LIST_ENTRY list_entry;
+    enum bus__work_item_type_ type;
+    union {
+        PDEVICE_OBJECT dev_obj;
+      } context;
+  };
+
+/**
+ * Add a work item for a bus to process.
+ *
+ * @v bus                       The bus to process the work item.
+ * @v work_item                 The work item to add.
+ * @ret winvblock__bool         TRUE if added, else FALSE
+ */
+static winvblock__bool bus__add_work_item_(
+    struct bus__type * bus,
+    struct bus__work_item_ * work_item
+  ) {
+    if (!bus || !work_item)
+      return FALSE;
+
+    ExInterlockedInsertTailList(
+        &bus->work_items,
+        &work_item->list_entry,
+        &bus->work_items_lock
+      );
+
+    return TRUE;
+  }
+
+/**
+ * Get (and dequeue) a work item from a bus' queue.
+ *
+ * @v bus                       The bus processing the work item.
+ * @ret bus__work_item_         The work item, or NULL for an empty queue.
+ */
+static struct bus__work_item_ * bus__get_work_item_(
+    struct bus__type * bus
+  ) {
+    PLIST_ENTRY list_entry;
+
+    if (!bus)
+      return NULL;
+
+    list_entry = ExInterlockedRemoveHeadList(
+        &bus->work_items,
+        &bus->work_items_lock
+      );
+    if (!list_entry)
+      return NULL;
+
+    return CONTAINING_RECORD(list_entry, struct bus__work_item_, list_entry);
+  }
+
+/**
+ * Process work items for a bus.
+ *
+ * @v bus               The bus to process its work items.
+ */
+winvblock__lib_func void bus__process_work_items(struct bus__type * bus) {
+    struct bus__work_item_ * work_item;
+
+    while (work_item = bus__get_work_item_(bus)) {
+        switch (work_item->type) {
+            case bus__work_item_type_add_pdo_:
+              DBG("Adding PDO...\n");
+              break;
+
+            case bus__work_item_type_del_pdo_:
+              DBG("Deleting PDO...\n");
+              break;
+
+            default:
+              DBG("Unknown work item type!\n");
+          }
+      }
+    return;
   }
