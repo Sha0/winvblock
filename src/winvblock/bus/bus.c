@@ -40,6 +40,24 @@ extern device__dev_ctl_func bus_dev_ctl__dispatch;
 /* IRP_MJ_PNP dispatcher from bus/pnp.c */
 extern device__pnp_func bus_pnp__dispatch;
 
+/* Types. */
+enum bus__work_item_type_ {
+    bus__work_item_type_add_pdo_,
+    bus__work_item_type_del_pdo_,
+    bus__work_item_types_
+  };
+
+struct bus__work_item_ {
+    LIST_ENTRY list_entry;
+    enum bus__work_item_type_ type;
+    winvblock__bool failed;
+    PKEVENT signal;
+    union {
+        PDEVICE_OBJECT dev_obj;
+        struct device__type * dev;
+      } context;
+  };
+
 /* Forward declarations. */
 static device__free_func bus__free_;
 static device__create_pdo_func bus__create_pdo_;
@@ -47,6 +65,11 @@ static device__dispatch_func bus__power_;
 static device__dispatch_func bus__sys_ctl_;
 static device__pnp_func bus__pnp_dispatch_;
 static bus__thread_func bus__default_thread_;
+static winvblock__bool bus__add_work_item_(
+    struct bus__type *,
+    struct bus__work_item_ *
+  );
+static struct bus__work_item_ * bus__get_work_item_(struct bus__type *);
 
 /* Globals. */
 struct device__irp_mj bus__irp_mj_ = {
@@ -78,6 +101,42 @@ winvblock__lib_func winvblock__bool STDCALL bus__add_child(
     if ((bus_ptr == NULL) || (dev_ptr == NULL)) {
         DBG("No bus or no device!\n");
         return FALSE;
+      }
+    /* Check for a threaded bus. */
+    if (bus_ptr->thread) {
+        /* Determine whether we're called from the thread or not. */
+        if (!dev_ptr->thread_pdo) {
+            struct bus__work_item_ * work_item;
+            LARGE_INTEGER timeout;
+            KEVENT signal;
+
+            /* Add to queue. */
+            work_item = wv_malloc(sizeof *work_item);
+            if (!work_item)
+              return FALSE;
+            work_item->type = bus__work_item_type_add_pdo_;
+            work_item->signal = &signal;
+            work_item->context.dev = dev_ptr;
+            if (!bus__add_work_item_(bus_ptr, work_item)) {
+                wv_free(work_item);
+                return FALSE;
+              }
+            /* Trigger the activity and wait 10 seconds for signal. */
+            timeout.QuadPart = -100000000LL;
+            KeSetEvent(&bus_ptr->work_signal, 0, FALSE);
+            if ((KeWaitForSingleObject(
+                &work_item->signal,
+                Executive,
+                KernelMode,
+                FALSE,
+                &timeout
+              ) == STATUS_TIMEOUT) || work_item->failed) {
+                wv_free(work_item);
+                return FALSE;
+              }
+            wv_free(work_item);
+            return TRUE;
+          }
       }
     /* Create the child device. */
     dev_obj_ptr = device__create_pdo(dev_ptr);
@@ -368,31 +427,20 @@ extern winvblock__lib_func struct bus__type * bus__get(
     return dev->ext;
   }
 
-enum bus__work_item_type_ {
-    bus__work_item_type_add_pdo_,
-    bus__work_item_type_del_pdo_,
-    bus__work_item_types_
-  };
-
-struct bus__work_item_ {
-    LIST_ENTRY list_entry;
-    enum bus__work_item_type_ type;
-    union {
-        PDEVICE_OBJECT dev_obj;
-      } context;
-  };
-
 /**
  * Add a work item for a bus to process.
  *
  * @v bus                       The bus to process the work item.
  * @v work_item                 The work item to add.
  * @ret winvblock__bool         TRUE if added, else FALSE
+ *
+ * Note that this function will initialize the work item's completion signal.
  */
 static winvblock__bool bus__add_work_item_(
     struct bus__type * bus,
     struct bus__work_item_ * work_item
   ) {
+    KeInitializeEvent(work_item->signal, SynchronizationEvent, FALSE);
     ExInterlockedInsertTailList(
         &bus->work_items,
         &work_item->list_entry,
@@ -435,6 +483,9 @@ winvblock__lib_func void bus__process_work_items(struct bus__type * bus) {
         switch (work_item->type) {
             case bus__work_item_type_add_pdo_:
               DBG("Adding PDO...\n");
+              work_item->context.dev->thread_pdo = TRUE;
+              work_item->failed = !bus__add_child(bus, work_item->context.dev);
+              KeSetEvent(work_item->signal, 0, FALSE);
               break;
 
             case bus__work_item_type_del_pdo_:
@@ -463,7 +514,7 @@ static void STDCALL bus__thread_free_(IN struct device__type * dev) {
  * @v context           The thread context.  In our case, it points to
  *                      the bus that the thread should use in processing.
  */
-static void STDCALL bus__thread_(IN void *context) {
+static void STDCALL bus__thread_(IN void * context) {
     struct bus__type * bus = context;
 
     if (!bus || !bus->thread) {

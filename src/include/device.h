@@ -185,6 +185,8 @@ struct device__type {
     KSPIN_LOCK irp_list_lock;
     /* Self is self-explanatory. */
     PDEVICE_OBJECT Self;
+    /* Flag to create/delete a PDO on a threaded bus. */
+    winvblock__bool thread_pdo;
     /* Points to the parent bus' DEVICE_OBJECT */
     PDEVICE_OBJECT Parent;
     /* The device's child ID relative to the parent bus. */
