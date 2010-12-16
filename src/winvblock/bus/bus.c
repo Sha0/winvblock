@@ -286,6 +286,31 @@ static winvblock__bool STDCALL bus__init_(IN struct device__type * dev) {
   }
 
 /**
+ * Initialize bus defaults.
+ *
+ * @v bus               Points to the bus to initialize with defaults.
+ */
+winvblock__lib_func void bus__init(struct bus__type * bus) {
+    struct device__type * dev = bus->device;
+
+    RtlZeroMemory(bus, sizeof bus);
+    /* Populate non-zero bus device defaults. */
+    bus->device = dev;
+    bus->prev_free = dev->ops.free;
+    bus->thread = bus__default_thread_;
+    KeInitializeSpinLock(&bus->SpinLock);
+    KeInitializeSpinLock(&bus->work_items_lock);
+    InitializeListHead(&bus->work_items);
+    KeInitializeEvent(&bus->work_signal, SynchronizationEvent, FALSE);
+    dev->ops.create_pdo = bus__create_pdo_;
+    dev->ops.init = bus__init_;
+    dev->ops.free = bus__free_;
+    dev->ext = bus;
+    dev->irp_mj = &bus__irp_mj_;
+    dev->IsBus = TRUE;
+  }
+
+/**
  * Create a new bus.
  *
  * @ret bus_ptr         The address of a new bus, or NULL for failure.
@@ -296,41 +321,29 @@ static winvblock__bool STDCALL bus__init_(IN struct device__type * dev) {
  * with default values.
  */
 winvblock__lib_func struct bus__type * bus__create(void) {
-    struct device__type * dev_ptr;
-    struct bus__type * bus_ptr;
+    struct device__type * dev;
+    struct bus__type * bus;
 
     /* Try to create a device. */
-    dev_ptr = device__create();
-    if (dev_ptr == NULL)
-      goto err_nodev;
+    dev = device__create();
+    if (dev == NULL)
+      goto err_no_dev;
     /*
      * Bus devices might be used for booting and should
      * not be allocated from a paged memory pool.
      */
-    bus_ptr = wv_mallocz(sizeof *bus_ptr);
-    if (bus_ptr == NULL)
-      goto err_nobus;
-    /* Populate non-zero device defaults. */
-    bus_ptr->device = dev_ptr;
-    bus_ptr->prev_free = dev_ptr->ops.free;
-    bus_ptr->thread = bus__default_thread_;
-    KeInitializeSpinLock(&bus_ptr->SpinLock);
-    KeInitializeSpinLock(&bus_ptr->work_items_lock);
-    InitializeListHead(&bus_ptr->work_items);
-    KeInitializeEvent(&bus_ptr->work_signal, SynchronizationEvent, FALSE);
-    dev_ptr->ops.create_pdo = bus__create_pdo_;
-    dev_ptr->ops.init = bus__init_;
-    dev_ptr->ops.free = bus__free_;
-    dev_ptr->ext = bus_ptr;
-    dev_ptr->irp_mj = &bus__irp_mj_;
-    dev_ptr->IsBus = TRUE;
+    bus = wv_malloc(sizeof *bus);
+    if (bus == NULL)
+      goto err_no_bus;
 
-    return bus_ptr;
+    bus->device = dev;
+    bus__init(bus);
+    return bus;
 
-    err_nobus:
+    err_no_bus:
 
-    device__free(dev_ptr);
-    err_nodev:
+    device__free(dev);
+    err_no_dev:
 
     return NULL;
   }

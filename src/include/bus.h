@@ -64,6 +64,7 @@ extern NTSTATUS STDCALL bus__get_dev_capabilities(
   );
 extern NTSTATUS bus__module_init(void);
 extern void bus__module_shutdown(void);
+extern winvblock__lib_func void bus__init(struct bus__type *);
 extern winvblock__lib_func struct bus__type * bus__create(void);
 extern winvblock__lib_func winvblock__bool STDCALL bus__add_child(
     IN OUT struct bus__type *,
