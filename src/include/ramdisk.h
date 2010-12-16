@@ -34,14 +34,7 @@ winvblock__def_struct ( ramdisk__type )
   LIST_ENTRY tracking;
 };
 
-/**
- * Initialize the global, RAM disk-common environment
- *
- * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
- */
-extern NTSTATUS ramdisk__init (
-  void
- );
+extern NTSTATUS ramdisk__module_init(void);
 
 /**
  * Create a new RAM disk

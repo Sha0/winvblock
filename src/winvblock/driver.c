@@ -331,7 +331,7 @@ NTSTATUS STDCALL DriverEntry(
     /* Initialize various modules. */
     disk__module_init();        /* TODO: Check for error. */
     filedisk__module_init();    /* TODO: Check for error. */
-    ramdisk__init();            /* TODO: Check for error. */
+    ramdisk__module_init();     /* TODO: Check for error. */
 
     /*
      * Always create the root-enumerated, main bus device.

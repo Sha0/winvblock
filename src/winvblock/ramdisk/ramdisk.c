@@ -205,23 +205,17 @@ err_nodisk:
 }
 
 /**
- * Initialize the global, RAM disk-common environment
+ * Initialize the global, RAM disk-common environment.
  *
- * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
+ * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure.
  */
-NTSTATUS
-ramdisk__init (
-  void
- )
-{
-  /*
-   * Initialize the global list of RAM disks
-   */
-  InitializeListHead ( &ramdisk_list );
-  KeInitializeSpinLock ( &ramdisk_list_lock );
+NTSTATUS ramdisk__module_init(void) {
+    /* Initialize the global list of RAM disks. */
+    InitializeListHead(&ramdisk_list);
+    KeInitializeSpinLock(&ramdisk_list_lock);
 
-  return STATUS_SUCCESS;
-}
+    return STATUS_SUCCESS;
+  }
 
 /**
  * Default RAM disk deletion operation.
