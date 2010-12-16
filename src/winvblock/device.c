@@ -39,14 +39,26 @@ static device__free_func device__free_dev_;
 static device__create_pdo_func device__make_pdo_;
 
 /**
+ * Initialize device defaults.
+ *
+ * @v dev               Points to the device to initialize with defaults.
+ */
+winvblock__lib_func void device__init(struct device__type * dev) {
+    RtlZeroMemory(dev, sizeof dev);
+    /* Populate non-zero device defaults. */
+    dev->DriverObject = driver__obj_ptr;
+    dev->ops.create_pdo = device__make_pdo_;
+    dev->ops.free = device__free_dev_;
+  }
+
+/**
  * Create a new device.
  *
  * @ret dev             The address of a new device, or NULL for failure.
  *
  * This function should not be confused with a PDO creation routine, which is
  * actually implemented for each device type.  This routine will allocate a
- * device__type, track it in a global list, as well as populate the device
- * with default values.
+ * device__type and populate the device with default values.
  */
 winvblock__lib_func struct device__type * device__create(void) {
     struct device__type * dev;
@@ -55,14 +67,11 @@ winvblock__lib_func struct device__type * device__create(void) {
      * Devices might be used for booting and should
      * not be allocated from a paged memory pool.
      */
-    dev = wv_mallocz(sizeof *dev);
+    dev = wv_malloc(sizeof *dev);
     if (dev == NULL)
       return NULL;
-    /* Populate non-zero device defaults. */
-    dev->DriverObject = driver__obj_ptr;
-    dev->ops.create_pdo = device__make_pdo_;
-    dev->ops.free = device__free_dev_;
 
+    device__init(dev);
     return dev;
   }
 

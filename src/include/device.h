@@ -94,6 +94,7 @@ typedef void STDCALL device__free_func(IN struct device__type *);
 
 extern winvblock__lib_func device__free_func device__free;
 
+extern winvblock__lib_func void device__init(struct device__type *);
 extern winvblock__lib_func struct device__type * device__create(void);
 
 winvblock__def_struct(device__ops) {
