@@ -304,23 +304,17 @@ err_nodisk:
 }
 
 /**
- * Initialize the global, file-backed disk-common environment
+ * Initialize the global, file-backed disk-common environment.
  *
- * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
+ * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure.
  */
-NTSTATUS
-filedisk__init (
-  void
- )
-{
-  /*
-   * Initialize the global list of file-backed disks
-   */
-  InitializeListHead ( &filedisk_list );
-  KeInitializeSpinLock ( &filedisk_list_lock );
+NTSTATUS filedisk__module_init(void) {
+    /* Initialize the global list of file-backed disks. */
+    InitializeListHead(&filedisk_list);
+    KeInitializeSpinLock(&filedisk_list_lock);
 
-  return STATUS_SUCCESS;
-}
+    return STATUS_SUCCESS;
+  }
 
 /**
  * Default file-backed disk deletion operation.

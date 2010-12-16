@@ -46,14 +46,7 @@ winvblock__def_struct ( filedisk__type )
 
 extern device__dispatch_func filedisk__attach;
 
-/**
- * Initialize the global, file-backed disk-common environment
- *
- * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
- */
-extern NTSTATUS filedisk__init (
-  void
- );
+extern NTSTATUS filedisk__module_init(void);
 
 /**
  * Create a new file-backed disk

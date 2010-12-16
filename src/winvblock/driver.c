@@ -330,7 +330,7 @@ NTSTATUS STDCALL DriverEntry(
     DriverObject->DriverExtension->AddDevice = driver__attach_fdo_;
     /* Initialize various modules. */
     disk__module_init();        /* TODO: Check for error. */
-    filedisk__init();           /* TODO: Check for error. */
+    filedisk__module_init();    /* TODO: Check for error. */
     ramdisk__init();            /* TODO: Check for error. */
 
     /*
