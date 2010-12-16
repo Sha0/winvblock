@@ -405,23 +405,17 @@ err_nodev:
 }
 
 /**
- * Initialize the global, disk-common environment
+ * Initialize the global, disk-common environment.
  *
- * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
+ * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure.
  */
-NTSTATUS
-disk__init (
-  void
- )
-{
-  /*
-   * Initialize the global list of disks
-   */
-  InitializeListHead ( &disk_list );
-  KeInitializeSpinLock ( &disk_list_lock );
+NTSTATUS disk__module_init(void) {
+    /* Initialize the global list of disks. */
+    InitializeListHead(&disk_list);
+    KeInitializeSpinLock(&disk_list_lock);
 
-  return STATUS_SUCCESS;
-}
+    return STATUS_SUCCESS;
+  }
 
 /**
  * Default disk deletion operation.

@@ -237,13 +237,6 @@ extern winvblock__lib_func disk__type_ptr disk__create (
   void
  );
 
-/**
- * Initialize the global, disk-common environment
- *
- * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure
- */
-extern NTSTATUS disk__init (
-  void
- );
+extern NTSTATUS disk__module_init(void);
 
 #endif				/* _disk_h */
