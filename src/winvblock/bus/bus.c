@@ -63,10 +63,10 @@ static device__dispatch_func bus__sys_ctl_;
 static device__pnp_func bus__pnp_dispatch_;
 static bus__thread_func bus__default_thread_;
 static winvblock__bool bus__add_work_item_(
-    struct bus__type *,
+    WV_SP_BUS_T,
     WV_SP_BUS_WORK_ITEM_
   );
-static WV_SP_BUS_WORK_ITEM_ bus__get_work_item_(struct bus__type *);
+static WV_SP_BUS_WORK_ITEM_ bus__get_work_item_(WV_SP_BUS_T);
 
 /* Globals. */
 struct device__irp_mj bus__irp_mj_ = {
@@ -85,7 +85,7 @@ struct device__irp_mj bus__irp_mj_ = {
  * @ret                 TRUE for success, FALSE for failure.
  */
 winvblock__lib_func winvblock__bool STDCALL bus__add_child(
-    IN OUT struct bus__type * bus_ptr,
+    IN OUT WV_SP_BUS_T bus_ptr,
     IN OUT struct device__type * dev_ptr
   ) {
     /* The new node's device object. */
@@ -161,7 +161,7 @@ static NTSTATUS STDCALL bus__sys_ctl_(
     IN struct device__type * dev,
     IN PIRP irp
   ) {
-    struct bus__type * bus = bus__get(dev);
+    WV_SP_BUS_T bus = bus__get(dev);
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
 
     if (lower) {
@@ -176,7 +176,7 @@ static NTSTATUS STDCALL bus__power_(
     IN struct device__type * dev,
     IN PIRP irp
   ) {
-    struct bus__type * bus = bus__get(dev);
+    WV_SP_BUS_T bus = bus__get(dev);
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
 
     PoStartNextPowerIrp(irp);
@@ -251,7 +251,7 @@ static winvblock__bool STDCALL bus__init_(IN struct device__type * dev) {
  *
  * @v bus               Points to the bus to initialize with defaults.
  */
-winvblock__lib_func void bus__init(struct bus__type * bus) {
+winvblock__lib_func void bus__init(WV_SP_BUS_T bus) {
     struct device__type * dev = bus->device;
 
     RtlZeroMemory(bus, sizeof *bus);
@@ -278,12 +278,12 @@ winvblock__lib_func void bus__init(struct bus__type * bus) {
  *
  * This function should not be confused with a PDO creation routine, which is
  * actually implemented for each device type.  This routine will allocate a
- * bus__type, track it in a global list, as well as populate the bus
+ * WV_S_BUS_T, track it in a global list, as well as populate the bus
  * with default values.
  */
-winvblock__lib_func struct bus__type * bus__create(void) {
+winvblock__lib_func WV_SP_BUS_T bus__create(void) {
     struct device__type * dev;
-    struct bus__type * bus;
+    WV_SP_BUS_T bus;
 
     /* Try to create a device. */
     dev = device__create();
@@ -319,7 +319,7 @@ winvblock__lib_func struct bus__type * bus__create(void) {
  */
 static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN struct device__type * dev) {
     PDEVICE_OBJECT pdo = NULL;
-    struct bus__type * bus;
+    WV_SP_BUS_T bus;
     NTSTATUS status;
 
     /* Note the bus device needing a PDO. */
@@ -382,7 +382,7 @@ static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN struct device__type * dev) {
  * @v dev_ptr           Points to the bus device to delete.
  */
 static void STDCALL bus__free_(IN struct device__type * dev_ptr) {
-    struct bus__type * bus_ptr = bus__get(dev_ptr);
+    WV_SP_BUS_T bus_ptr = bus__get(dev_ptr);
     /* Free the "inherited class". */
     bus_ptr->prev_free(dev_ptr);
 
@@ -395,7 +395,7 @@ static void STDCALL bus__free_(IN struct device__type * dev_ptr) {
  * @v dev       A pointer to a device.
  * @ret         A pointer to the device's associated bus.
  */
-extern winvblock__lib_func struct bus__type * bus__get(
+extern winvblock__lib_func WV_SP_BUS_T bus__get(
     struct device__type * dev
   ) {
     return dev->ext;
@@ -411,7 +411,7 @@ extern winvblock__lib_func struct bus__type * bus__get(
  * Note that this function will initialize the work item's completion signal.
  */
 static winvblock__bool bus__add_work_item_(
-    struct bus__type * bus,
+    WV_SP_BUS_T bus,
     WV_SP_BUS_WORK_ITEM_ work_item
   ) {
     ExInterlockedInsertTailList(
@@ -430,7 +430,7 @@ static winvblock__bool bus__add_work_item_(
  * @ret bus__work_item_         The work item, or NULL for an empty queue.
  */
 static WV_SP_BUS_WORK_ITEM_ bus__get_work_item_(
-    struct bus__type * bus
+    WV_SP_BUS_T bus
   ) {
     PLIST_ENTRY list_entry;
 
@@ -449,7 +449,7 @@ static WV_SP_BUS_WORK_ITEM_ bus__get_work_item_(
  *
  * @v bus               The bus to process its work items.
  */
-winvblock__lib_func void bus__process_work_items(struct bus__type * bus) {
+winvblock__lib_func void bus__process_work_items(WV_SP_BUS_T bus) {
     WV_SP_BUS_WORK_ITEM_ work_item;
     WV_SP_BUS_NODE node;
 
@@ -485,7 +485,7 @@ winvblock__lib_func void bus__process_work_items(struct bus__type * bus) {
 
 /* The device__type::ops.free implementation for a threaded bus. */
 static void STDCALL bus__thread_free_(IN struct device__type * dev) {
-    struct bus__type * bus = bus__get(dev);
+    WV_SP_BUS_T bus = bus__get(dev);
 
     bus->thread = (bus__thread_func *) 0;
     KeSetEvent(&bus->work_signal, 0, FALSE);
@@ -499,7 +499,7 @@ static void STDCALL bus__thread_free_(IN struct device__type * dev) {
  *                      the bus that the thread should use in processing.
  */
 static void STDCALL bus__thread_(IN void * context) {
-    struct bus__type * bus = context;
+    WV_SP_BUS_T bus = context;
 
     if (!bus || !bus->thread) {
         DBG("No bus or no thread!\n");
@@ -522,7 +522,7 @@ static void STDCALL bus__thread_(IN void * context) {
  * If you implement your own thread routine, you are also responsible
  * for freeing the bus.
  */
-static void STDCALL bus__default_thread_(IN struct bus__type * bus) {
+static void STDCALL bus__default_thread_(IN WV_SP_BUS_T bus) {
     LARGE_INTEGER timeout;
 
     /* Wake up at least every 30 seconds. */
@@ -564,7 +564,7 @@ static void STDCALL bus__default_thread_(IN struct bus__type * bus) {
  * specify your own thread routine, then call this function to start it.
  */
 winvblock__lib_func NTSTATUS bus__start_thread(
-    struct bus__type * bus
+    WV_SP_BUS_T bus
   ) {
     OBJECT_ATTRIBUTES obj_attrs;
     HANDLE thread_handle;
@@ -623,7 +623,7 @@ winvblock__lib_func winvblock__bool STDCALL WvBusInitNode(
  * node will be added.  This is usually from the bus' thread.
  */
 winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
-    struct bus__type * Bus,
+    WV_SP_BUS_T Bus,
     WV_SP_BUS_NODE Node
   ) {
     WV_SP_BUS_WORK_ITEM_ work_item;
@@ -664,7 +664,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
 winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(
     WV_SP_BUS_NODE Node
   ) {
-    struct bus__type * bus;
+    WV_SP_BUS_T bus;
     WV_SP_BUS_WORK_ITEM_ work_item;
 
     if (!Node || !(bus = Node->BusPrivate_.Bus))

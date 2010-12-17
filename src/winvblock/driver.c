@@ -126,7 +126,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     KIRQL irql;
     NTSTATUS status;
     PLIST_ENTRY walker;
-    struct bus__type * bus;
+    WV_SP_BUS_T bus;
     PUNICODE_STRING dev_name = NULL;
     PDEVICE_OBJECT fdo = NULL;
     struct device__type * dev_ptr;
@@ -239,7 +239,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
 
 /* Create the root-enumerated, main bus device. */
 NTSTATUS STDCALL driver__create_bus_(void) {
-    struct bus__type * bus;
+    WV_SP_BUS_T bus;
     NTSTATUS status;
     PDEVICE_OBJECT bus_pdo = NULL;
 
@@ -565,7 +565,7 @@ winvblock__lib_func NTSTATUS STDCALL Error(
  *
  * @ret         A pointer to the driver bus, or NULL.
  */
-winvblock__lib_func struct bus__type * driver__bus(void) {
+winvblock__lib_func WV_SP_BUS_T driver__bus(void) {
     if (!driver__bus_fdo_) {
         DBG("No driver bus device!\n");
         return NULL;

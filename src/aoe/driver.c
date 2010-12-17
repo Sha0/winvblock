@@ -51,7 +51,7 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject(
   );
 
 /* From aoe/bus.c */
-extern struct bus__type * aoe_bus;
+extern WV_SP_BUS_T aoe_bus;
 extern winvblock__bool aoe_bus__create(void);
 extern void aoe_bus__free(void);
 
@@ -717,7 +717,7 @@ NTSTATUS STDCALL DriverEntry(
     NTSTATUS Status;
     OBJECT_ATTRIBUTES ObjectAttributes;
     void * ThreadObject;
-    struct bus__type * bus_ptr;
+    WV_SP_BUS_T bus_ptr;
 
     DBG("Entry\n");
 
@@ -2156,7 +2156,7 @@ NTSTATUS STDCALL aoe__show(
   ) {
     winvblock__uint32 count;
     struct device__type * dev_walker;
-    struct bus__type * bus;
+    WV_SP_BUS_T bus;
     aoe__mount_disks_ptr disks;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 

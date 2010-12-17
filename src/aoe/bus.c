@@ -47,7 +47,7 @@ winvblock__bool aoe_bus__create(void);
 void aoe_bus__free(void);
 
 /* Globals. */
-struct bus__type * aoe_bus = NULL;
+WV_SP_BUS_T aoe_bus = NULL;
 
 static NTSTATUS STDCALL aoe_bus__dev_ctl_dispatch_(
     IN struct device__type * dev,
@@ -84,7 +84,7 @@ static NTSTATUS STDCALL aoe_bus__dev_ctl_dispatch_(
  * @ret         TRUE for success, else FALSE.
  */
 winvblock__bool aoe_bus__create(void) {
-    struct bus__type * new_bus;
+    WV_SP_BUS_T new_bus;
 
     /* We should only be called once. */
     if (aoe_bus) {

@@ -35,10 +35,10 @@
  * If you implement your own bus thread routine, you should call
  * bus__process_work_items() within its loop.
  */
-typedef void STDCALL bus__thread_func(IN struct bus__type *);
+typedef void STDCALL bus__thread_func(IN WV_SP_BUS_T);
 
 /* The bus type. */
-struct bus__type {
+typedef struct WV_BUS_T {
     struct device__type * device;
     PDEVICE_OBJECT LowerDeviceObject;
     PDEVICE_OBJECT PhysicalDeviceObject;
@@ -60,14 +60,14 @@ struct bus__type {
         LIST_ENTRY Nodes;
         USHORT NodeCount;
       } BusPrivate_;
-  };
+  } WV_S_BUS_T, * WV_SP_BUS_T;
 
 /* A child PDO node on a bus.  Treat this as an opaque type. */
 typedef struct WV_BUS_NODE {
     struct {
         LIST_ENTRY Link;
         PDEVICE_OBJECT Pdo;
-        struct bus__type * Bus;
+        WV_SP_BUS_T Bus;
       } BusPrivate_;
   } WV_S_BUS_NODE, * WV_SP_BUS_NODE;
 
@@ -78,21 +78,21 @@ extern NTSTATUS STDCALL bus__get_dev_capabilities(
   );
 extern NTSTATUS bus__module_init(void);
 extern void bus__module_shutdown(void);
-extern winvblock__lib_func void bus__init(struct bus__type *);
-extern winvblock__lib_func struct bus__type * bus__create(void);
+extern winvblock__lib_func void bus__init(WV_SP_BUS_T);
+extern winvblock__lib_func WV_SP_BUS_T bus__create(void);
 extern winvblock__lib_func winvblock__bool STDCALL bus__add_child(
-    IN OUT struct bus__type *,
+    IN OUT WV_SP_BUS_T,
     IN struct device__type *
   );
-extern winvblock__lib_func struct bus__type * bus__get(struct device__type *);
-extern winvblock__lib_func void bus__process_work_items(struct bus__type *);
-extern winvblock__lib_func NTSTATUS bus__start_thread(struct bus__type *);
+extern winvblock__lib_func WV_SP_BUS_T bus__get(struct device__type *);
+extern winvblock__lib_func void bus__process_work_items(WV_SP_BUS_T);
+extern winvblock__lib_func NTSTATUS bus__start_thread(WV_SP_BUS_T);
 extern winvblock__lib_func winvblock__bool STDCALL WvBusInitNode(
     OUT WV_SP_BUS_NODE,
     IN PDEVICE_OBJECT
   );
 extern winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
-    struct bus__type *,
+    WV_SP_BUS_T,
     WV_SP_BUS_NODE
   );
 extern winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(WV_SP_BUS_NODE);

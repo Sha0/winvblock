@@ -204,7 +204,7 @@ static NTSTATUS STDCALL disk_pnp__query_capabilities_(
       io_stack_loc->Parameters.DeviceCapabilities.Capabilities;
     NTSTATUS status;
     disk__type_ptr disk;
-    struct bus__type * bus;
+    WV_SP_BUS_T bus;
     DEVICE_CAPABILITIES ParentDeviceCapabilities;
     PDEVICE_OBJECT bus_lower;
 

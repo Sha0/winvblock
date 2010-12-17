@@ -48,7 +48,7 @@ static NTSTATUS STDCALL bus_dev_ctl__disk_detach_(
     winvblock__uint32 disk_num = *(winvblock__uint32_ptr) buffer;
     struct device__type * dev_walker;
     disk__type_ptr disk_walker = NULL, prev_disk_walker;
-    struct bus__type * bus;
+    WV_SP_BUS_T bus;
 
     DBG("Request to detach disk: %d\n", disk_num);
     bus = bus__get(dev);

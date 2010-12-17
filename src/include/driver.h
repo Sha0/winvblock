@@ -44,7 +44,7 @@ extern PDRIVER_OBJECT driver__obj_ptr;
 extern winvblock__lib_func void STDCALL Driver_CompletePendingIrp(IN PIRP);
 /* Note the exception to the function naming convention. */
 extern winvblock__lib_func NTSTATUS STDCALL Error(IN PCHAR, IN NTSTATUS);
-extern winvblock__lib_func struct bus__type * driver__bus(void);
+extern winvblock__lib_func struct WV_BUS_T * driver__bus(void);
 /* Note the exception to the function naming convention. */
 extern NTSTATUS STDCALL DriverEntry(
     IN PDRIVER_OBJECT,
