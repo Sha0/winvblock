@@ -251,7 +251,7 @@ static winvblock__bool STDCALL bus__init_(IN struct device__type * dev) {
  *
  * @v bus               Points to the bus to initialize with defaults.
  */
-winvblock__lib_func void bus__init(WV_SP_BUS_T bus) {
+winvblock__lib_func void WvBusInit(WV_SP_BUS_T bus) {
     struct device__type * dev = bus->device;
 
     RtlZeroMemory(bus, sizeof *bus);
@@ -298,7 +298,7 @@ winvblock__lib_func WV_SP_BUS_T bus__create(void) {
       goto err_no_bus;
 
     bus->device = dev;
-    bus__init(bus);
+    WvBusInit(bus);
     return bus;
 
     err_no_bus:
