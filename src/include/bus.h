@@ -55,7 +55,21 @@ struct bus__type {
     KSPIN_LOCK work_items_lock;
     KEVENT work_signal;
     bus__thread_func * thread;
+    winvblock__bool Stop;
+    struct {
+        LIST_ENTRY Nodes;
+        USHORT NodeCount;
+      } BusPrivate_;
   };
+
+/* A child PDO node on a bus.  Treat this as an opaque type. */
+typedef struct WV_BUS_NODE {
+    struct {
+        LIST_ENTRY Link;
+        PDEVICE_OBJECT Pdo;
+        struct bus__type * Bus;
+      } BusPrivate_;
+  } WV_S_BUS_NODE, * WV_SP_BUS_NODE;
 
 /* Exports. */
 extern NTSTATUS STDCALL bus__get_dev_capabilities(
@@ -73,5 +87,14 @@ extern winvblock__lib_func winvblock__bool STDCALL bus__add_child(
 extern winvblock__lib_func struct bus__type * bus__get(struct device__type *);
 extern winvblock__lib_func void bus__process_work_items(struct bus__type *);
 extern winvblock__lib_func NTSTATUS bus__start_thread(struct bus__type *);
+extern winvblock__lib_func winvblock__bool STDCALL WvBusInitNode(
+    OUT WV_SP_BUS_NODE,
+    IN PDEVICE_OBJECT
+  );
+extern winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
+    struct bus__type *,
+    WV_SP_BUS_NODE
+  );
+extern winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(WV_SP_BUS_NODE);
 
 #endif  /* _BUS_H */

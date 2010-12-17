@@ -41,22 +41,19 @@ extern device__dev_ctl_func bus_dev_ctl__dispatch;
 extern device__pnp_func bus_pnp__dispatch;
 
 /* Types. */
-enum bus__work_item_type_ {
-    bus__work_item_type_add_pdo_,
-    bus__work_item_type_del_pdo_,
-    bus__work_item_types_
-  };
+typedef enum WV_BUS_WORK_ITEM_CMD_ {
+    WvBusWorkItemCmdAddPdo_,
+    WvBusWorkItemCmdRemovePdo_,
+    WvBusWorkItemCmds_
+  } WV_E_BUS_WORK_ITEM_CMD_, * WV_EP_BUS_WORK_ITEM_CMD_;
 
-struct bus__work_item_ {
-    LIST_ENTRY list_entry;
-    enum bus__work_item_type_ type;
-    winvblock__bool failed;
-    PKEVENT signal;
+typedef struct WV_BUS_WORK_ITEM_ {
+    LIST_ENTRY Link;
+    WV_E_BUS_WORK_ITEM_CMD_ Cmd;
     union {
-        PDEVICE_OBJECT dev_obj;
-        struct device__type * dev;
-      } context;
-  };
+        WV_SP_BUS_NODE Node;
+      } Context;
+  } WV_S_BUS_WORK_ITEM_, * WV_SP_BUS_WORK_ITEM_;
 
 /* Forward declarations. */
 static device__free_func bus__free_;
@@ -67,9 +64,9 @@ static device__pnp_func bus__pnp_dispatch_;
 static bus__thread_func bus__default_thread_;
 static winvblock__bool bus__add_work_item_(
     struct bus__type *,
-    struct bus__work_item_ *
+    WV_SP_BUS_WORK_ITEM_
   );
-static struct bus__work_item_ * bus__get_work_item_(struct bus__type *);
+static WV_SP_BUS_WORK_ITEM_ bus__get_work_item_(struct bus__type *);
 
 /* Globals. */
 struct device__irp_mj bus__irp_mj_ = {
@@ -101,42 +98,6 @@ winvblock__lib_func winvblock__bool STDCALL bus__add_child(
     if ((bus_ptr == NULL) || (dev_ptr == NULL)) {
         DBG("No bus or no device!\n");
         return FALSE;
-      }
-    /* Check for a threaded bus. */
-    if (bus_ptr->thread) {
-        /* Determine whether we're called from the thread or not. */
-        if (!dev_ptr->thread_pdo) {
-            struct bus__work_item_ * work_item;
-            LARGE_INTEGER timeout;
-            KEVENT signal;
-
-            /* Add to queue. */
-            work_item = wv_malloc(sizeof *work_item);
-            if (!work_item)
-              return FALSE;
-            work_item->type = bus__work_item_type_add_pdo_;
-            work_item->signal = &signal;
-            work_item->context.dev = dev_ptr;
-            if (!bus__add_work_item_(bus_ptr, work_item)) {
-                wv_free(work_item);
-                return FALSE;
-              }
-            /* Trigger the activity and wait 10 seconds for signal. */
-            timeout.QuadPart = -100000000LL;
-            KeSetEvent(&bus_ptr->work_signal, 0, FALSE);
-            if ((KeWaitForSingleObject(
-                &work_item->signal,
-                Executive,
-                KernelMode,
-                FALSE,
-                &timeout
-              ) == STATUS_TIMEOUT) || work_item->failed) {
-                wv_free(work_item);
-                return FALSE;
-              }
-            wv_free(work_item);
-            return TRUE;
-          }
       }
     /* Create the child device. */
     dev_obj_ptr = device__create_pdo(dev_ptr);
@@ -451,12 +412,11 @@ extern winvblock__lib_func struct bus__type * bus__get(
  */
 static winvblock__bool bus__add_work_item_(
     struct bus__type * bus,
-    struct bus__work_item_ * work_item
+    WV_SP_BUS_WORK_ITEM_ work_item
   ) {
-    KeInitializeEvent(work_item->signal, SynchronizationEvent, FALSE);
     ExInterlockedInsertTailList(
         &bus->work_items,
-        &work_item->list_entry,
+        &work_item->Link,
         &bus->work_items_lock
       );
 
@@ -469,7 +429,7 @@ static winvblock__bool bus__add_work_item_(
  * @v bus                       The bus processing the work item.
  * @ret bus__work_item_         The work item, or NULL for an empty queue.
  */
-static struct bus__work_item_ * bus__get_work_item_(
+static WV_SP_BUS_WORK_ITEM_ bus__get_work_item_(
     struct bus__type * bus
   ) {
     PLIST_ENTRY list_entry;
@@ -481,7 +441,7 @@ static struct bus__work_item_ * bus__get_work_item_(
     if (!list_entry)
       return NULL;
 
-    return CONTAINING_RECORD(list_entry, struct bus__work_item_, list_entry);
+    return CONTAINING_RECORD(list_entry, WV_S_BUS_WORK_ITEM_, Link);
   }
 
 /**
@@ -490,24 +450,35 @@ static struct bus__work_item_ * bus__get_work_item_(
  * @v bus               The bus to process its work items.
  */
 winvblock__lib_func void bus__process_work_items(struct bus__type * bus) {
-    struct bus__work_item_ * work_item;
+    WV_SP_BUS_WORK_ITEM_ work_item;
+    WV_SP_BUS_NODE node;
 
     while (work_item = bus__get_work_item_(bus)) {
-        switch (work_item->type) {
-            case bus__work_item_type_add_pdo_:
-              DBG("Adding PDO...\n");
-              work_item->context.dev->thread_pdo = TRUE;
-              work_item->failed = !bus__add_child(bus, work_item->context.dev);
-              KeSetEvent(work_item->signal, 0, FALSE);
+        switch (work_item->Cmd) {
+            case WvBusWorkItemCmdAddPdo_:
+              DBG("Adding PDO to bus...\n");
+
+              node = work_item->Context.Node;
+              /* It's too bad about having both linked list and bus ref. */
+              node->BusPrivate_.Bus = bus;
+              ObReferenceObject(node->BusPrivate_.Pdo);
+              InsertTailList(&bus->BusPrivate_.Nodes, &node->BusPrivate_.Link);
+              bus->BusPrivate_.NodeCount++;
               break;
 
-            case bus__work_item_type_del_pdo_:
-              DBG("Deleting PDO...\n");
+            case WvBusWorkItemCmdRemovePdo_:
+              DBG("Removing PDO from bus...\n");
+
+              node = work_item->Context.Node;
+              RemoveEntryList(&node->BusPrivate_.Link);
+              ObDereferenceObject(node->BusPrivate_.Pdo);
+              bus->BusPrivate_.NodeCount--;
               break;
 
             default:
               DBG("Unknown work item type!\n");
           }
+        wv_free(work_item);
       }
     return;
   }
@@ -554,8 +525,8 @@ static void STDCALL bus__thread_(IN void * context) {
 static void STDCALL bus__default_thread_(IN struct bus__type * bus) {
     LARGE_INTEGER timeout;
 
-    /* Wake up at least every second. */
-    timeout.QuadPart = -10000000LL;
+    /* Wake up at least every 30 seconds. */
+    timeout.QuadPart = -300000000LL;
 
     /* Hook device__type::ops.free() */
     bus->device->ops.free = bus__thread_free_;
@@ -619,4 +590,99 @@ winvblock__lib_func NTSTATUS bus__start_thread(
         bus__thread_,
         bus
       );
+  }
+
+/**
+ * Initialize a bus node with an associated PDO.
+ *
+ * @v Node              The node to initialize.
+ * @v Pdo               The PDO to associate the node with.
+ * @ret winvblock__bool FALSE for a NULL argument, otherwise TRUE
+ */
+winvblock__lib_func winvblock__bool STDCALL WvBusInitNode(
+    OUT WV_SP_BUS_NODE Node,
+    IN PDEVICE_OBJECT Pdo
+  ) {
+    if (!Node || !Pdo)
+      return FALSE;
+
+    RtlZeroMemory(Node, sizeof *Node);
+    Node->BusPrivate_.Pdo = Pdo;
+    return TRUE;
+  }
+
+/**
+ * Add a PDO node to a bus' list of children.
+ *
+ * @v Bus               The bus to add the node to.
+ * @v Node              The PDO node to add to the bus.
+ * @ret NTSTATUS        The status of the operation.
+ *
+ * Do not attempt to add the same node to more than one bus.
+ * When bus__process_work_items() is called for the bus, the
+ * node will be added.  This is usually from the bus' thread.
+ */
+winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
+    struct bus__type * Bus,
+    WV_SP_BUS_NODE Node
+  ) {
+    WV_SP_BUS_WORK_ITEM_ work_item;
+
+    if (
+        !Bus ||
+        !Node ||
+        Bus->device->Self->DriverObject != Node->BusPrivate_.Pdo->DriverObject
+      )
+      return STATUS_INVALID_PARAMETER;
+
+    if (Bus->Stop)
+      return STATUS_NO_SUCH_DEVICE;
+
+    if (!(work_item = wv_malloc(sizeof *work_item)))
+      return STATUS_INSUFFICIENT_RESOURCES;
+
+    work_item->Cmd = WvBusWorkItemCmdAddPdo_;
+    work_item->Context.Node = Node;
+    if (!bus__add_work_item_(Bus, work_item)) {
+        wv_free(work_item);
+        return STATUS_UNSUCCESSFUL;
+      }
+    /* Fire and forget. */
+    KeSetEvent(&Bus->work_signal, 0, FALSE);
+    return STATUS_SUCCESS;
+  }
+
+/**
+ * Remove a PDO node from a bus.
+ *
+ * @v Node              The PDO node to remove from its parent bus.
+ * @ret NTSTATUS        The status of the operation.
+ *
+ * When bus__process_work_items() is called for the bus, it will
+ * then remove the node.  This is usually from the bus' thread.
+ */
+winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(
+    WV_SP_BUS_NODE Node
+  ) {
+    struct bus__type * bus;
+    WV_SP_BUS_WORK_ITEM_ work_item;
+
+    if (!Node || !(bus = Node->BusPrivate_.Bus))
+      return STATUS_INVALID_PARAMETER;
+
+    if (bus->Stop)
+      return STATUS_NO_SUCH_DEVICE;
+
+    if (!(work_item = wv_malloc(sizeof *work_item)))
+      return STATUS_INSUFFICIENT_RESOURCES;
+
+    work_item->Cmd = WvBusWorkItemCmdRemovePdo_;
+    work_item->Context.Node = Node;
+    if (!bus__add_work_item_(bus, work_item)) {
+        wv_free(work_item);
+        return STATUS_UNSUCCESSFUL;
+      }
+    /* Fire and forget. */
+    KeSetEvent(&bus->work_signal, 0, FALSE);
+    return STATUS_SUCCESS;
   }
