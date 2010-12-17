@@ -79,7 +79,7 @@ extern NTSTATUS STDCALL WvBusGetDevCapabilities(
   );
 extern winvblock__lib_func void WvBusInit(WV_SP_BUS_T);
 extern winvblock__lib_func WV_SP_BUS_T WvBusCreate(void);
-extern winvblock__lib_func winvblock__bool STDCALL bus__add_child(
+extern winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
     IN OUT WV_SP_BUS_T,
     IN struct device__type *
   );

@@ -84,7 +84,7 @@ struct device__irp_mj bus__irp_mj_ = {
  * @v dev_ptr           Points to the child device to add.
  * @ret                 TRUE for success, FALSE for failure.
  */
-winvblock__lib_func winvblock__bool STDCALL bus__add_child(
+winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
     IN OUT WV_SP_BUS_T bus_ptr,
     IN OUT struct device__type * dev_ptr
   ) {

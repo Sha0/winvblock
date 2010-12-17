@@ -220,7 +220,7 @@ NTSTATUS STDCALL filedisk__attach(
       filedisk_ptr->hash += *path_iterator++;
   }
   /* Add the filedisk to the bus. */
-  if (!bus__add_child(driver__bus(), filedisk_ptr->disk->device)) {
+  if (!WvBusAddChild(driver__bus(), filedisk_ptr->disk->device)) {
       status = STATUS_UNSUCCESSFUL;
       goto err_add_child;
     }

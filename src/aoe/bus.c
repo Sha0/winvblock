@@ -110,7 +110,7 @@ winvblock__bool aoe_bus__create(void) {
       );
     new_bus->named = TRUE;
     /* Add it as a sub-bus to WinVBlock. */
-    if (!bus__add_child(driver__bus(), new_bus->device)) {
+    if (!WvBusAddChild(driver__bus(), new_bus->device)) {
         DBG("Couldn't add AoE bus to WinVBlock bus!\n");
         goto err_add_child;
       }

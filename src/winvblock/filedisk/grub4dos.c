@@ -492,7 +492,7 @@ filedisk_grub4dos__find (
 	  filedisk_ptr->disk->BootDrive = TRUE;
 	  FoundGrub4DosMapping = TRUE;
 	  /* Add the filedisk to the bus. */
-	  if (!bus__add_child(driver__bus(), filedisk_ptr->disk->device))
+	  if (!WvBusAddChild(driver__bus(), filedisk_ptr->disk->device))
       device__free(filedisk_ptr->disk->device);
 	}
       InterruptVector = &SafeMbrHookPtr->PrevHook;
