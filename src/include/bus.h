@@ -35,7 +35,8 @@
  * If you implement your own bus thread routine, you should call
  * bus__process_work_items() within its loop.
  */
-typedef void STDCALL bus__thread_func(IN WV_SP_BUS_T);
+typedef void STDCALL WV_F_BUS_THREAD(IN WV_SP_BUS_T);
+typedef WV_F_BUS_THREAD * WV_FP_BUS_THREAD;
 
 /* The bus type. */
 typedef struct WV_BUS_T {
@@ -54,7 +55,7 @@ typedef struct WV_BUS_T {
     LIST_ENTRY work_items;
     KSPIN_LOCK work_items_lock;
     KEVENT work_signal;
-    bus__thread_func * thread;
+    WV_FP_BUS_THREAD thread;
     winvblock__bool Stop;
     struct {
         LIST_ENTRY Nodes;

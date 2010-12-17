@@ -61,7 +61,7 @@ static device__create_pdo_func bus__create_pdo_;
 static device__dispatch_func bus__power_;
 static device__dispatch_func bus__sys_ctl_;
 static device__pnp_func bus__pnp_dispatch_;
-static bus__thread_func bus__default_thread_;
+static WV_F_BUS_THREAD bus__default_thread_;
 static winvblock__bool bus__add_work_item_(
     WV_SP_BUS_T,
     WV_SP_BUS_WORK_ITEM_
@@ -487,7 +487,7 @@ winvblock__lib_func void bus__process_work_items(WV_SP_BUS_T bus) {
 static void STDCALL bus__thread_free_(IN struct device__type * dev) {
     WV_SP_BUS_T bus = bus__get(dev);
 
-    bus->thread = (bus__thread_func *) 0;
+    bus->thread = (WV_FP_BUS_THREAD) 0;
     KeSetEvent(&bus->work_signal, 0, FALSE);
     return;
   }
@@ -559,7 +559,7 @@ static void STDCALL bus__default_thread_(IN WV_SP_BUS_T bus) {
  * @v bus               The bus to start a thread for.
  * @ret NTSTATUS        The status of the thread creation operation.
  *
- * Also see bus__thread_func in the header for details about the prototype
+ * Also see WV_F_BUS_THREAD in the header for details about the prototype
  * for implementing your own bus thread routine.  You set bus::thread to
  * specify your own thread routine, then call this function to start it.
  */
