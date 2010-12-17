@@ -254,7 +254,7 @@ static winvblock__bool STDCALL bus__init_(IN struct device__type * dev) {
 winvblock__lib_func void bus__init(struct bus__type * bus) {
     struct device__type * dev = bus->device;
 
-    RtlZeroMemory(bus, sizeof bus);
+    RtlZeroMemory(bus, sizeof *bus);
     /* Populate non-zero bus device defaults. */
     bus->device = dev;
     bus->prev_free = dev->ops.free;

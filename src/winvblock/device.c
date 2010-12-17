@@ -44,7 +44,7 @@ static device__create_pdo_func device__make_pdo_;
  * @v dev               Points to the device to initialize with defaults.
  */
 winvblock__lib_func void device__init(struct device__type * dev) {
-    RtlZeroMemory(dev, sizeof dev);
+    RtlZeroMemory(dev, sizeof *dev);
     /* Populate non-zero device defaults. */
     dev->DriverObject = driver__obj_ptr;
     dev->ops.create_pdo = device__make_pdo_;
