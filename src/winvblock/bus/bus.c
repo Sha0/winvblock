@@ -187,7 +187,7 @@ static NTSTATUS STDCALL bus__power_(
     return driver__complete_irp(irp, 0, STATUS_SUCCESS);
   }
 
-NTSTATUS STDCALL bus__get_dev_capabilities(
+NTSTATUS STDCALL WvBusGetDevCapabilities(
     IN PDEVICE_OBJECT DeviceObject,
     IN PDEVICE_CAPABILITIES DeviceCapabilities
   ) {

@@ -220,7 +220,7 @@ static NTSTATUS STDCALL bus_pnp__query_capabilities_(
         return IoCallDriver(lower, irp);
       }
     /* Otherwise, return our parent's capabilities. */
-    status = bus__get_dev_capabilities(
+    status = WvBusGetDevCapabilities(
         dev->Parent,
         DeviceCapabilities
       );

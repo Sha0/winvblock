@@ -73,7 +73,7 @@ typedef struct WV_BUS_NODE {
   } WV_S_BUS_NODE, * WV_SP_BUS_NODE;
 
 /* Exports. */
-extern NTSTATUS STDCALL bus__get_dev_capabilities(
+extern NTSTATUS STDCALL WvBusGetDevCapabilities(
     IN PDEVICE_OBJECT,
     IN PDEVICE_CAPABILITIES
   );
