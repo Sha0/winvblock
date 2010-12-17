@@ -281,7 +281,7 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T bus) {
  * WV_S_BUS_T, track it in a global list, as well as populate the bus
  * with default values.
  */
-winvblock__lib_func WV_SP_BUS_T bus__create(void) {
+winvblock__lib_func WV_SP_BUS_T WvBusCreate(void) {
     struct device__type * dev;
     WV_SP_BUS_T bus;
 

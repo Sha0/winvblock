@@ -92,7 +92,7 @@ winvblock__bool aoe_bus__create(void) {
         return FALSE;
       }
     /* Try to create the AoE bus. */
-    new_bus = bus__create();
+    new_bus = WvBusCreate();
     if (!new_bus) {
         DBG("Failed to create AoE bus!\n");
         goto err_new_bus;

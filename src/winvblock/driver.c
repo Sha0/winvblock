@@ -139,9 +139,9 @@ static NTSTATUS STDCALL driver__attach_fdo_(
         goto err_already_established;
       }
     /* Create the bus. */
-    bus = bus__create();
+    bus = WvBusCreate();
     if (!bus) {
-        DBG("bus__create() failed for the main bus.\n");
+        DBG("WvBusCreate() failed for the main bus.\n");
         status = STATUS_INSUFFICIENT_RESOURCES;
         goto err_bus;
       }
