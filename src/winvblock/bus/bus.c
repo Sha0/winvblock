@@ -61,7 +61,7 @@ static device__create_pdo_func WvBusCreatePdo_;
 static device__dispatch_func WvBusPower_;
 static device__dispatch_func WvBusSysCtl_;
 static WV_F_BUS_THREAD WvBusDefaultThread_;
-static winvblock__bool bus__add_work_item_(
+static winvblock__bool WvBusAddWorkItem_(
     WV_SP_BUS_T,
     WV_SP_BUS_WORK_ITEM_
   );
@@ -395,7 +395,7 @@ extern winvblock__lib_func WV_SP_BUS_T WvBusFromDev(
  *
  * Note that this function will initialize the work item's completion signal.
  */
-static winvblock__bool bus__add_work_item_(
+static winvblock__bool WvBusAddWorkItem_(
     WV_SP_BUS_T bus,
     WV_SP_BUS_WORK_ITEM_ work_item
   ) {
@@ -643,7 +643,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
 
     work_item->Cmd = WvBusWorkItemCmdAddPdo_;
     work_item->Context.Node = Node;
-    if (!bus__add_work_item_(Bus, work_item)) {
+    if (!WvBusAddWorkItem_(Bus, work_item)) {
         wv_free(work_item);
         return STATUS_UNSUCCESSFUL;
       }
@@ -678,7 +678,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(
 
     work_item->Cmd = WvBusWorkItemCmdRemovePdo_;
     work_item->Context.Node = Node;
-    if (!bus__add_work_item_(bus, work_item)) {
+    if (!WvBusAddWorkItem_(bus, work_item)) {
         wv_free(work_item);
         return STATUS_UNSUCCESSFUL;
       }
