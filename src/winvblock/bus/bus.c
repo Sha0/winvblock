@@ -65,7 +65,7 @@ static winvblock__bool WvBusAddWorkItem_(
     WV_SP_BUS_T,
     WV_SP_BUS_WORK_ITEM_
   );
-static WV_SP_BUS_WORK_ITEM_ bus__get_work_item_(WV_SP_BUS_T);
+static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(WV_SP_BUS_T);
 
 /* Globals. */
 struct device__irp_mj bus__irp_mj_ = {
@@ -414,7 +414,7 @@ static winvblock__bool WvBusAddWorkItem_(
  * @v bus                       The bus processing the work item.
  * @ret bus__work_item_         The work item, or NULL for an empty queue.
  */
-static WV_SP_BUS_WORK_ITEM_ bus__get_work_item_(
+static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(
     WV_SP_BUS_T bus
   ) {
     PLIST_ENTRY list_entry;
@@ -438,7 +438,7 @@ winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T bus) {
     WV_SP_BUS_WORK_ITEM_ work_item;
     WV_SP_BUS_NODE node;
 
-    while (work_item = bus__get_work_item_(bus)) {
+    while (work_item = WvBusGetWorkItem_(bus)) {
         switch (work_item->Cmd) {
             case WvBusWorkItemCmdAddPdo_:
               DBG("Adding PDO to bus...\n");
@@ -477,7 +477,7 @@ winvblock__lib_func void WvBusCancelWorkItems(WV_SP_BUS_T bus) {
     WV_SP_BUS_WORK_ITEM_ work_item;
 
     DBG("Canceling work items.\n");
-    while (work_item = bus__get_work_item_(bus))
+    while (work_item = WvBusGetWorkItem_(bus))
       wv_free(work_item);
     return;
   }
