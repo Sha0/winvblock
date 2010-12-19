@@ -56,7 +56,7 @@ typedef struct WV_BUS_WORK_ITEM_ {
   } WV_S_BUS_WORK_ITEM_, * WV_SP_BUS_WORK_ITEM_;
 
 /* Forward declarations. */
-static device__free_func bus__free_;
+static device__free_func WvBusFree_;
 static device__create_pdo_func bus__create_pdo_;
 static device__dispatch_func bus__power_;
 static device__dispatch_func bus__sys_ctl_;
@@ -264,7 +264,7 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T bus) {
     KeInitializeEvent(&bus->ThreadSignal, SynchronizationEvent, FALSE);
     dev->ops.create_pdo = bus__create_pdo_;
     dev->ops.init = bus__init_;
-    dev->ops.free = bus__free_;
+    dev->ops.free = WvBusFree_;
     dev->ext = bus;
     dev->irp_mj = &bus__irp_mj_;
     dev->IsBus = TRUE;
@@ -367,7 +367,7 @@ static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN struct device__type * dev) {
  *
  * @v dev_ptr           Points to the bus device to delete.
  */
-static void STDCALL bus__free_(IN struct device__type * dev_ptr) {
+static void STDCALL WvBusFree_(IN struct device__type * dev_ptr) {
     WV_SP_BUS_T bus_ptr = WvBusFromDev(dev_ptr);
     /* Free the "inherited class". */
     bus_ptr->BusPrivate_.PrevFree(dev_ptr);
@@ -550,7 +550,7 @@ static void STDCALL bus__default_thread_(IN WV_SP_BUS_T bus) {
       } /* while bus->alive */
 
     WvBusCancelWorkItems(bus);
-    bus__free_(bus->Dev);
+    WvBusFree_(bus->Dev);
     return;
   }
 
