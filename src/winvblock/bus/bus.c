@@ -59,7 +59,7 @@ typedef struct WV_BUS_WORK_ITEM_ {
 static device__free_func WvBusFree_;
 static device__create_pdo_func WvBusCreatePdo_;
 static device__dispatch_func WvBusPower_;
-static device__dispatch_func bus__sys_ctl_;
+static device__dispatch_func WvBusSysCtl_;
 static device__pnp_func bus__pnp_dispatch_;
 static WV_F_BUS_THREAD bus__default_thread_;
 static winvblock__bool bus__add_work_item_(
@@ -71,7 +71,7 @@ static WV_SP_BUS_WORK_ITEM_ bus__get_work_item_(WV_SP_BUS_T);
 /* Globals. */
 struct device__irp_mj bus__irp_mj_ = {
     WvBusPower_,
-    bus__sys_ctl_,
+    WvBusSysCtl_,
     WvBusDevCtlDispatch,
     (device__scsi_func *) 0,
     WvBusPnpDispatch,
@@ -157,7 +157,7 @@ winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
     return TRUE;
   }
 
-static NTSTATUS STDCALL bus__sys_ctl_(
+static NTSTATUS STDCALL WvBusSysCtl_(
     IN struct device__type * dev,
     IN PIRP irp
   ) {
