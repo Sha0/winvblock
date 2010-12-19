@@ -57,7 +57,7 @@ typedef struct WV_BUS_WORK_ITEM_ {
 
 /* Forward declarations. */
 static device__free_func WvBusFree_;
-static device__create_pdo_func bus__create_pdo_;
+static device__create_pdo_func WvBusCreatePdo_;
 static device__dispatch_func bus__power_;
 static device__dispatch_func bus__sys_ctl_;
 static device__pnp_func bus__pnp_dispatch_;
@@ -262,7 +262,7 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T bus) {
     KeInitializeSpinLock(&bus->BusPrivate_.WorkItemsLock);
     InitializeListHead(&bus->BusPrivate_.WorkItems);
     KeInitializeEvent(&bus->ThreadSignal, SynchronizationEvent, FALSE);
-    dev->ops.create_pdo = bus__create_pdo_;
+    dev->ops.create_pdo = WvBusCreatePdo_;
     dev->ops.init = bus__init_;
     dev->ops.free = WvBusFree_;
     dev->ext = bus;
@@ -316,7 +316,7 @@ winvblock__lib_func WV_SP_BUS_T WvBusCreate(void) {
  *
  * Returns a Physical Device Object pointer on success, NULL for failure.
  */
-static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN struct device__type * dev) {
+static PDEVICE_OBJECT STDCALL WvBusCreatePdo_(IN struct device__type * dev) {
     PDEVICE_OBJECT pdo = NULL;
     WV_SP_BUS_T bus;
     NTSTATUS status;
