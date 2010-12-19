@@ -483,7 +483,7 @@ winvblock__lib_func void WvBusCancelWorkItems(WV_SP_BUS_T bus) {
   }
 
 /* The device__type::ops.free implementation for a threaded bus. */
-static void STDCALL bus__thread_free_(IN struct device__type * dev) {
+static void STDCALL WvBusThreadFree_(IN struct device__type * dev) {
     WV_SP_BUS_T bus = WvBusFromDev(dev);
 
     bus->Stop = TRUE;
@@ -528,7 +528,7 @@ static void STDCALL WvBusDefaultThread_(IN WV_SP_BUS_T bus) {
     timeout.QuadPart = -300000000LL;
 
     /* Hook device__type::ops.free() */
-    bus->Dev->ops.free = bus__thread_free_;
+    bus->Dev->ops.free = WvBusThreadFree_;
 
     /* When bus::Stop is set, we shut down. */
     while (bus->Stop) {
