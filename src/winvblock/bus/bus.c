@@ -79,76 +79,76 @@ struct device__irp_mj WvBusIrpMj_ = {
 /**
  * Add a child node to the bus.
  *
- * @v bus_ptr           Points to the bus receiving the child.
- * @v dev_ptr           Points to the child device to add.
+ * @v Bus               Points to the bus receiving the child.
+ * @v Dev               Points to the child device to add.
  * @ret                 TRUE for success, FALSE for failure.
  */
 winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
-    IN OUT WV_SP_BUS_T bus_ptr,
-    IN OUT struct device__type * dev_ptr
+    IN OUT WV_SP_BUS_T Bus,
+    IN OUT struct device__type * Dev
   ) {
     /* The new node's device object. */
-    PDEVICE_OBJECT dev_obj_ptr;
+    PDEVICE_OBJECT dev_obj;
     /* Walks the child nodes. */
     struct device__type * walker;
     winvblock__uint32 dev_num;
 
     DBG("Entry\n");
-    if ((bus_ptr == NULL) || (dev_ptr == NULL)) {
+    if ((Bus == NULL) || (Dev == NULL)) {
         DBG("No bus or no device!\n");
         return FALSE;
       }
     /* Create the child device. */
-    dev_obj_ptr = device__create_pdo(dev_ptr);
-    if (dev_obj_ptr == NULL) {
+    dev_obj = device__create_pdo(Dev);
+    if (dev_obj == NULL) {
         DBG("PDO creation failed!\n");
-        device__free(dev_ptr);
+        device__free(Dev);
         return FALSE;
       }
 
-    dev_ptr->Parent = bus_ptr->Dev->Self;
+    Dev->Parent = Bus->Dev->Self;
     /*
      * Initialize the device.  For disks, this routine is responsible for
      * determining the disk's geometry appropriately for AoE/RAM/file disks.
      */
-    dev_ptr->ops.init(dev_ptr);
-    dev_obj_ptr->Flags &= ~DO_DEVICE_INITIALIZING;
+    Dev->ops.init(Dev);
+    dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
     /* Add the new device's extension to the bus' list of children. */
     dev_num = 0;
-    if (bus_ptr->first_child == NULL) {
-        bus_ptr->first_child = dev_ptr;
+    if (Bus->first_child == NULL) {
+        Bus->first_child = Dev;
       } else {
-        walker = bus_ptr->first_child;
+        walker = Bus->first_child;
         /* If the first child device number isn't 0... */
         if (walker->dev_num) {
             /* We insert before. */
-            dev_ptr->next_sibling_ptr = walker;
-            bus_ptr->first_child = dev_ptr;
+            Dev->next_sibling_ptr = walker;
+            Bus->first_child = Dev;
           } else {
             while (walker->next_sibling_ptr != NULL) {
                 /* If there's a gap in the device numbers for the bus... */
                 if (walker->dev_num < walker->next_sibling_ptr->dev_num - 1) {
                     /* Insert here, instead of at the end. */
                     dev_num = walker->dev_num + 1;
-                    dev_ptr->next_sibling_ptr = walker->next_sibling_ptr;
-                    walker->next_sibling_ptr = dev_ptr;
+                    Dev->next_sibling_ptr = walker->next_sibling_ptr;
+                    walker->next_sibling_ptr = Dev;
                     break;
                   }
                 walker = walker->next_sibling_ptr;
                 dev_num = walker->dev_num + 1;
               }
             /* If we haven't already inserted the device... */
-            if (!dev_ptr->next_sibling_ptr) {
-                walker->next_sibling_ptr = dev_ptr;
+            if (!Dev->next_sibling_ptr) {
+                walker->next_sibling_ptr = Dev;
                 dev_num = walker->dev_num + 1;
               }
           }
       }
-    dev_ptr->dev_num = dev_num;
-    bus_ptr->Children++;
-    if (bus_ptr->PhysicalDeviceObject != NULL) {
+    Dev->dev_num = dev_num;
+    Bus->Children++;
+    if (Bus->PhysicalDeviceObject != NULL) {
         IoInvalidateDeviceRelations(
-            bus_ptr->PhysicalDeviceObject,
+            Bus->PhysicalDeviceObject,
             BusRelations
           );
       }
@@ -156,6 +156,7 @@ winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
     return TRUE;
   }
 
+/* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
 static NTSTATUS STDCALL WvBusSysCtl_(
     IN struct device__type * dev,
     IN PIRP irp
@@ -171,6 +172,7 @@ static NTSTATUS STDCALL WvBusSysCtl_(
     return driver__complete_irp(irp, 0, STATUS_SUCCESS);
   }
 
+/* Handle a power IRP. */
 static NTSTATUS STDCALL WvBusPower_(
     IN struct device__type * dev,
     IN PIRP irp
@@ -187,56 +189,56 @@ static NTSTATUS STDCALL WvBusPower_(
   }
 
 NTSTATUS STDCALL WvBusGetDevCapabilities(
-    IN PDEVICE_OBJECT DeviceObject,
-    IN PDEVICE_CAPABILITIES DeviceCapabilities
+    IN PDEVICE_OBJECT DevObj,
+    IN PDEVICE_CAPABILITIES DevCapabilities
   ) {
-    IO_STATUS_BLOCK ioStatus;
-    KEVENT pnpEvent;
+    IO_STATUS_BLOCK io_status;
+    KEVENT pnp_event;
     NTSTATUS status;
-    PDEVICE_OBJECT targetObject;
-    PIO_STACK_LOCATION irpStack;
-    PIRP pnpIrp;
+    PDEVICE_OBJECT target_obj;
+    PIO_STACK_LOCATION io_stack_loc;
+    PIRP pnp_irp;
 
-    RtlZeroMemory(DeviceCapabilities, sizeof (DEVICE_CAPABILITIES));
-    DeviceCapabilities->Size = sizeof (DEVICE_CAPABILITIES);
-    DeviceCapabilities->Version = 1;
-    DeviceCapabilities->Address = -1;
-    DeviceCapabilities->UINumber = -1;
+    RtlZeroMemory(DevCapabilities, sizeof *DevCapabilities);
+    DevCapabilities->Size = sizeof *DevCapabilities;
+    DevCapabilities->Version = 1;
+    DevCapabilities->Address = -1;
+    DevCapabilities->UINumber = -1;
 
-    KeInitializeEvent(&pnpEvent, NotificationEvent, FALSE);
-    targetObject = IoGetAttachedDeviceReference(DeviceObject);
-    pnpIrp = IoBuildSynchronousFsdRequest(
+    KeInitializeEvent(&pnp_event, NotificationEvent, FALSE);
+    target_obj = IoGetAttachedDeviceReference(DevObj);
+    pnp_irp = IoBuildSynchronousFsdRequest(
         IRP_MJ_PNP,
-        targetObject,
+        target_obj,
         NULL,
         0,
         NULL,
-        &pnpEvent,
-        &ioStatus
+        &pnp_event,
+        &io_status
       );
-    if (pnpIrp == NULL) {
+    if (pnp_irp == NULL) {
         status = STATUS_INSUFFICIENT_RESOURCES;
       } else {
-        pnpIrp->IoStatus.Status = STATUS_NOT_SUPPORTED;
-        irpStack = IoGetNextIrpStackLocation(pnpIrp);
-        RtlZeroMemory(irpStack, sizeof (IO_STACK_LOCATION));
-        irpStack->MajorFunction = IRP_MJ_PNP;
-        irpStack->MinorFunction = IRP_MN_QUERY_CAPABILITIES;
-        irpStack->Parameters.DeviceCapabilities.Capabilities =
-          DeviceCapabilities;
-        status = IoCallDriver(targetObject, pnpIrp);
+        pnp_irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
+        io_stack_loc = IoGetNextIrpStackLocation(pnp_irp);
+        RtlZeroMemory(io_stack_loc, sizeof *io_stack_loc);
+        io_stack_loc->MajorFunction = IRP_MJ_PNP;
+        io_stack_loc->MinorFunction = IRP_MN_QUERY_CAPABILITIES;
+        io_stack_loc->Parameters.DeviceCapabilities.Capabilities =
+          DevCapabilities;
+        status = IoCallDriver(target_obj, pnp_irp);
         if (status == STATUS_PENDING) {
             KeWaitForSingleObject(
-                &pnpEvent,
+                &pnp_event,
                 Executive,
                 KernelMode,
                 FALSE,
                 NULL
               );
-            status = ioStatus.Status;
+            status = io_status.Status;
           }
       }
-    ObDereferenceObject(targetObject);
+    ObDereferenceObject(target_obj);
     return status;
   }
 
@@ -248,23 +250,23 @@ static winvblock__bool STDCALL WvBusDevInit_(IN struct device__type * dev) {
 /**
  * Initialize bus defaults.
  *
- * @v bus               Points to the bus to initialize with defaults.
+ * @v Bus               Points to the bus to initialize with defaults.
  */
-winvblock__lib_func void WvBusInit(WV_SP_BUS_T bus) {
-    struct device__type * dev = bus->Dev;
+winvblock__lib_func void WvBusInit(WV_SP_BUS_T Bus) {
+    struct device__type * dev = Bus->Dev;
 
-    RtlZeroMemory(bus, sizeof *bus);
+    RtlZeroMemory(Bus, sizeof *Bus);
     /* Populate non-zero bus device defaults. */
-    bus->Dev = dev;
-    bus->BusPrivate_.PrevFree = dev->ops.free;
-    bus->Thread = WvBusDefaultThread_;
-    KeInitializeSpinLock(&bus->BusPrivate_.WorkItemsLock);
-    InitializeListHead(&bus->BusPrivate_.WorkItems);
-    KeInitializeEvent(&bus->ThreadSignal, SynchronizationEvent, FALSE);
+    Bus->Dev = dev;
+    Bus->BusPrivate_.PrevFree = dev->ops.free;
+    Bus->Thread = WvBusDefaultThread_;
+    KeInitializeSpinLock(&Bus->BusPrivate_.WorkItemsLock);
+    InitializeListHead(&Bus->BusPrivate_.WorkItems);
+    KeInitializeEvent(&Bus->ThreadSignal, SynchronizationEvent, FALSE);
     dev->ops.create_pdo = WvBusCreatePdo_;
     dev->ops.init = WvBusDevInit_;
     dev->ops.free = WvBusFree_;
-    dev->ext = bus;
+    dev->ext = Bus;
     dev->irp_mj = &WvBusIrpMj_;
     dev->IsBus = TRUE;
   }
@@ -272,7 +274,7 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T bus) {
 /**
  * Create a new bus.
  *
- * @ret bus_ptr         The address of a new bus, or NULL for failure.
+ * @ret WV_SP_BUS_T     The address of a new bus, or NULL for failure.
  *
  * This function should not be confused with a PDO creation routine, which is
  * actually implemented for each device type.  This routine will allocate a
@@ -311,7 +313,7 @@ winvblock__lib_func WV_SP_BUS_T WvBusCreate(void) {
  * Create a bus PDO.
  *
  * @v dev               Populate PDO dev. ext. space from these details.
- * @ret pdo             Points to the new PDO, or is NULL upon failure.
+ * @ret PDEVICE_OBJECT  Points to the new PDO, or is NULL upon failure.
  *
  * Returns a Physical Device Object pointer on success, NULL for failure.
  */
@@ -364,14 +366,14 @@ static PDEVICE_OBJECT STDCALL WvBusCreatePdo_(IN struct device__type * dev) {
 /**
  * Default bus deletion operation.
  *
- * @v dev_ptr           Points to the bus device to delete.
+ * @v dev               Points to the bus device to delete.
  */
-static void STDCALL WvBusFree_(IN struct device__type * dev_ptr) {
-    WV_SP_BUS_T bus_ptr = WvBusFromDev(dev_ptr);
+static void STDCALL WvBusFree_(IN struct device__type * dev) {
+    WV_SP_BUS_T bus = WvBusFromDev(dev);
     /* Free the "inherited class". */
-    bus_ptr->BusPrivate_.PrevFree(dev_ptr);
+    bus->BusPrivate_.PrevFree(dev);
 
-    wv_free(bus_ptr);
+    wv_free(bus);
   }
 
 /**
@@ -381,9 +383,9 @@ static void STDCALL WvBusFree_(IN struct device__type * dev_ptr) {
  * @ret         A pointer to the device's associated bus.
  */
 extern winvblock__lib_func WV_SP_BUS_T WvBusFromDev(
-    struct device__type * dev
+    struct device__type * Dev
   ) {
-    return dev->ext;
+    return Dev->ext;
   }
 
 /**
@@ -432,23 +434,23 @@ static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(
 /**
  * Process work items for a bus.
  *
- * @v bus               The bus to process its work items.
+ * @v Bus               The bus to process its work items.
  */
-winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T bus) {
+winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T Bus) {
     WV_SP_BUS_WORK_ITEM_ work_item;
     WV_SP_BUS_NODE node;
 
-    while (work_item = WvBusGetWorkItem_(bus)) {
+    while (work_item = WvBusGetWorkItem_(Bus)) {
         switch (work_item->Cmd) {
             case WvBusWorkItemCmdAddPdo_:
               DBG("Adding PDO to bus...\n");
 
               node = work_item->Context.Node;
               /* It's too bad about having both linked list and bus ref. */
-              node->BusPrivate_.Bus = bus;
+              node->BusPrivate_.Bus = Bus;
               ObReferenceObject(node->BusPrivate_.Pdo);
-              InsertTailList(&bus->BusPrivate_.Nodes, &node->BusPrivate_.Link);
-              bus->BusPrivate_.NodeCount++;
+              InsertTailList(&Bus->BusPrivate_.Nodes, &node->BusPrivate_.Link);
+              Bus->BusPrivate_.NodeCount++;
               break;
 
             case WvBusWorkItemCmdRemovePdo_:
@@ -457,7 +459,7 @@ winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T bus) {
               node = work_item->Context.Node;
               RemoveEntryList(&node->BusPrivate_.Link);
               ObDereferenceObject(node->BusPrivate_.Pdo);
-              bus->BusPrivate_.NodeCount--;
+              Bus->BusPrivate_.NodeCount--;
               break;
 
             default:
@@ -471,13 +473,13 @@ winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T bus) {
 /**
  * Cancel pending work items for a bus.
  *
- * @v bus       The bus to cancel pending work items for.
+ * @v Bus       The bus to cancel pending work items for.
  */
-winvblock__lib_func void WvBusCancelWorkItems(WV_SP_BUS_T bus) {
+winvblock__lib_func void WvBusCancelWorkItems(WV_SP_BUS_T Bus) {
     WV_SP_BUS_WORK_ITEM_ work_item;
 
     DBG("Canceling work items.\n");
-    while (work_item = WvBusGetWorkItem_(bus))
+    while (work_item = WvBusGetWorkItem_(Bus))
       wv_free(work_item);
     return;
   }
@@ -556,7 +558,7 @@ static void STDCALL WvBusDefaultThread_(IN WV_SP_BUS_T bus) {
 /**
  * Start a bus thread.
  *
- * @v bus               The bus to start a thread for.
+ * @v Bus               The bus to start a thread for.
  * @ret NTSTATUS        The status of the thread creation operation.
  *
  * Also see WV_F_BUS_THREAD in the header for details about the prototype
@@ -564,12 +566,12 @@ static void STDCALL WvBusDefaultThread_(IN WV_SP_BUS_T bus) {
  * specify your own thread routine, then call this function to start it.
  */
 winvblock__lib_func NTSTATUS WvBusStartThread(
-    WV_SP_BUS_T bus
+    WV_SP_BUS_T Bus
   ) {
     OBJECT_ATTRIBUTES obj_attrs;
     HANDLE thread_handle;
 
-    if (!bus) {
+    if (!Bus) {
         DBG("No bus specified!\n");
         return STATUS_INVALID_PARAMETER;
       }
@@ -588,7 +590,7 @@ winvblock__lib_func NTSTATUS WvBusStartThread(
         NULL,
         NULL,
         WvBusThread_,
-        bus
+        Bus
       );
   }
 
