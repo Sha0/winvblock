@@ -474,7 +474,7 @@ winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T bus) {
 static void STDCALL bus__thread_free_(IN struct device__type * dev) {
     WV_SP_BUS_T bus = WvBusFromDev(dev);
 
-    bus->Thread = (WV_FP_BUS_THREAD) 0;
+    bus->Stop = TRUE;
     KeSetEvent(&bus->ThreadSignal, 0, FALSE);
     return;
   }
@@ -518,8 +518,8 @@ static void STDCALL bus__default_thread_(IN WV_SP_BUS_T bus) {
     /* Hook device__type::ops.free() */
     bus->Dev->ops.free = bus__thread_free_;
 
-    /* When bus::thread is cleared, we shut down. */
-    while (bus->Thread) {
+    /* When bus::Stop is set, we shut down. */
+    while (bus->Stop) {
         DBG("Alive.\n");
 
         /* Wait for the work signal or the timeout. */
