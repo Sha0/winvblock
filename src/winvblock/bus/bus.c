@@ -58,7 +58,7 @@ typedef struct WV_BUS_WORK_ITEM_ {
 /* Forward declarations. */
 static device__free_func WvBusFree_;
 static device__create_pdo_func WvBusCreatePdo_;
-static device__dispatch_func bus__power_;
+static device__dispatch_func WvBusPower_;
 static device__dispatch_func bus__sys_ctl_;
 static device__pnp_func bus__pnp_dispatch_;
 static WV_F_BUS_THREAD bus__default_thread_;
@@ -70,7 +70,7 @@ static WV_SP_BUS_WORK_ITEM_ bus__get_work_item_(WV_SP_BUS_T);
 
 /* Globals. */
 struct device__irp_mj bus__irp_mj_ = {
-    bus__power_,
+    WvBusPower_,
     bus__sys_ctl_,
     WvBusDevCtlDispatch,
     (device__scsi_func *) 0,
@@ -172,7 +172,7 @@ static NTSTATUS STDCALL bus__sys_ctl_(
     return driver__complete_irp(irp, 0, STATUS_SUCCESS);
   }
 
-static NTSTATUS STDCALL bus__power_(
+static NTSTATUS STDCALL WvBusPower_(
     IN struct device__type * dev,
     IN PIRP irp
   ) {
