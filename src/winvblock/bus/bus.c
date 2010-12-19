@@ -259,7 +259,6 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T bus) {
     bus->Dev = dev;
     bus->BusPrivate_.PrevFree = dev->ops.free;
     bus->Thread = bus__default_thread_;
-    KeInitializeSpinLock(&bus->SpinLock);
     KeInitializeSpinLock(&bus->BusPrivate_.WorkItemsLock);
     InitializeListHead(&bus->BusPrivate_.WorkItems);
     KeInitializeEvent(&bus->ThreadSignal, SynchronizationEvent, FALSE);

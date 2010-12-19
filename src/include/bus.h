@@ -45,7 +45,6 @@ typedef struct WV_BUS_T {
     PDEVICE_OBJECT PhysicalDeviceObject;
     winvblock__uint32 Children;
     struct device__type * first_child;
-    KSPIN_LOCK SpinLock;
     WV_FP_BUS_THREAD Thread;
     KEVENT ThreadSignal;
     winvblock__bool Stop;
