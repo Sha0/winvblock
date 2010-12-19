@@ -68,7 +68,7 @@ static winvblock__bool WvBusAddWorkItem_(
 static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(WV_SP_BUS_T);
 
 /* Globals. */
-struct device__irp_mj bus__irp_mj_ = {
+struct device__irp_mj WvBusIrpMj_ = {
     WvBusPower_,
     WvBusSysCtl_,
     WvBusDevCtlDispatch,
@@ -265,7 +265,7 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T bus) {
     dev->ops.init = bus__init_;
     dev->ops.free = WvBusFree_;
     dev->ext = bus;
-    dev->irp_mj = &bus__irp_mj_;
+    dev->irp_mj = &WvBusIrpMj_;
     dev->IsBus = TRUE;
   }
 
