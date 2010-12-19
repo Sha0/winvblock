@@ -241,7 +241,7 @@ NTSTATUS STDCALL WvBusGetDevCapabilities(
   }
 
 /* Initialize a bus. */
-static winvblock__bool STDCALL bus__init_(IN struct device__type * dev) {
+static winvblock__bool STDCALL WvBusDevInit_(IN struct device__type * dev) {
     return TRUE;
   }
 
@@ -262,7 +262,7 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T bus) {
     InitializeListHead(&bus->BusPrivate_.WorkItems);
     KeInitializeEvent(&bus->ThreadSignal, SynchronizationEvent, FALSE);
     dev->ops.create_pdo = WvBusCreatePdo_;
-    dev->ops.init = bus__init_;
+    dev->ops.init = WvBusDevInit_;
     dev->ops.free = WvBusFree_;
     dev->ext = bus;
     dev->irp_mj = &WvBusIrpMj_;
