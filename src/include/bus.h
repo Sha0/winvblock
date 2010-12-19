@@ -33,7 +33,7 @@
  * @v bus       The bus to be used in the thread routine.
  *
  * If you implement your own bus thread routine, you should call
- * bus__process_work_items() within its loop.
+ * WvBusProcessWorkItems() within its loop.
  */
 typedef void STDCALL WV_F_BUS_THREAD(IN WV_SP_BUS_T);
 typedef WV_F_BUS_THREAD * WV_FP_BUS_THREAD;
@@ -84,7 +84,7 @@ extern winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
     IN struct device__type *
   );
 extern winvblock__lib_func WV_SP_BUS_T WvBusFromDev(struct device__type *);
-extern winvblock__lib_func void bus__process_work_items(WV_SP_BUS_T);
+extern winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T);
 extern winvblock__lib_func NTSTATUS bus__start_thread(WV_SP_BUS_T);
 extern winvblock__lib_func winvblock__bool STDCALL WvBusInitNode(
     OUT WV_SP_BUS_NODE,

@@ -449,7 +449,7 @@ static WV_SP_BUS_WORK_ITEM_ bus__get_work_item_(
  *
  * @v bus               The bus to process its work items.
  */
-winvblock__lib_func void bus__process_work_items(WV_SP_BUS_T bus) {
+winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T bus) {
     WV_SP_BUS_WORK_ITEM_ work_item;
     WV_SP_BUS_NODE node;
 
@@ -517,7 +517,7 @@ static void STDCALL bus__thread_(IN void * context) {
  *
  * Note that if you implement your own bus type using this library,
  * you can override the thread routine with your own.  If you do so,
- * your thread routine should call bus__process_work_items() within
+ * your thread routine should call WvBusProcessWorkItems() within
  * its loop.  To start a bus thread, use bus__start_thread()
  * If you implement your own thread routine, you are also responsible
  * for freeing the bus.
@@ -546,7 +546,7 @@ static void STDCALL bus__default_thread_(IN WV_SP_BUS_T bus) {
         /* Reset the work signal. */
         KeResetEvent(&bus->work_signal);
 
-        bus__process_work_items(bus);
+        WvBusProcessWorkItems(bus);
       } /* while bus->alive */
 
     bus__free_(bus->device);
@@ -619,7 +619,7 @@ winvblock__lib_func winvblock__bool STDCALL WvBusInitNode(
  * @ret NTSTATUS        The status of the operation.
  *
  * Do not attempt to add the same node to more than one bus.
- * When bus__process_work_items() is called for the bus, the
+ * When WvBusProcessWorkItems() is called for the bus, the
  * node will be added.  This is usually from the bus' thread.
  */
 winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
@@ -658,7 +658,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
  * @v Node              The PDO node to remove from its parent bus.
  * @ret NTSTATUS        The status of the operation.
  *
- * When bus__process_work_items() is called for the bus, it will
+ * When WvBusProcessWorkItems() is called for the bus, it will
  * then remove the node.  This is usually from the bus' thread.
  */
 winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(
