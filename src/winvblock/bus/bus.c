@@ -60,7 +60,7 @@ static device__free_func WvBusFree_;
 static device__create_pdo_func WvBusCreatePdo_;
 static device__dispatch_func WvBusPower_;
 static device__dispatch_func WvBusSysCtl_;
-static WV_F_BUS_THREAD bus__default_thread_;
+static WV_F_BUS_THREAD WvBusDefaultThread_;
 static winvblock__bool bus__add_work_item_(
     WV_SP_BUS_T,
     WV_SP_BUS_WORK_ITEM_
@@ -257,7 +257,7 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T bus) {
     /* Populate non-zero bus device defaults. */
     bus->Dev = dev;
     bus->BusPrivate_.PrevFree = dev->ops.free;
-    bus->Thread = bus__default_thread_;
+    bus->Thread = WvBusDefaultThread_;
     KeInitializeSpinLock(&bus->BusPrivate_.WorkItemsLock);
     InitializeListHead(&bus->BusPrivate_.WorkItems);
     KeInitializeEvent(&bus->ThreadSignal, SynchronizationEvent, FALSE);
@@ -521,7 +521,7 @@ static void STDCALL bus__thread_(IN void * context) {
  * If you implement your own thread routine, you are also responsible
  * for calling WvBusCancelWorkItems() and freeing the bus.
  */
-static void STDCALL bus__default_thread_(IN WV_SP_BUS_T bus) {
+static void STDCALL WvBusDefaultThread_(IN WV_SP_BUS_T bus) {
     LARGE_INTEGER timeout;
 
     /* Wake up at least every 30 seconds. */
