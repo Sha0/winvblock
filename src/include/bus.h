@@ -46,7 +46,6 @@ typedef struct WV_BUS_T {
     winvblock__uint32 Children;
     struct device__type * first_child;
     KSPIN_LOCK SpinLock;
-    device__free_func * prev_free;
     UNICODE_STRING dev_name;
     UNICODE_STRING dos_dev_name;
     winvblock__bool named;
@@ -58,6 +57,7 @@ typedef struct WV_BUS_T {
     struct {
         LIST_ENTRY Nodes;
         USHORT NodeCount;
+        device__free_func * PrevFree;
       } BusPrivate_;
   } WV_S_BUS_T, * WV_SP_BUS_T;
 

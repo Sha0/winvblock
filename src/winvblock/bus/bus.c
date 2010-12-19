@@ -257,7 +257,7 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T bus) {
     RtlZeroMemory(bus, sizeof *bus);
     /* Populate non-zero bus device defaults. */
     bus->Dev = dev;
-    bus->prev_free = dev->ops.free;
+    bus->BusPrivate_.PrevFree = dev->ops.free;
     bus->thread = bus__default_thread_;
     KeInitializeSpinLock(&bus->SpinLock);
     KeInitializeSpinLock(&bus->work_items_lock);
@@ -384,7 +384,7 @@ static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN struct device__type * dev) {
 static void STDCALL bus__free_(IN struct device__type * dev_ptr) {
     WV_SP_BUS_T bus_ptr = WvBusFromDev(dev_ptr);
     /* Free the "inherited class". */
-    bus_ptr->prev_free(dev_ptr);
+    bus_ptr->BusPrivate_.PrevFree(dev_ptr);
 
     wv_free(bus_ptr);
   }
