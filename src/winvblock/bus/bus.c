@@ -38,7 +38,7 @@
 /* IRP_MJ_DEVICE_CONTROL dispatcher from bus/dev_ctl.c */
 extern device__dev_ctl_func WvBusDevCtlDispatch;
 /* IRP_MJ_PNP dispatcher from bus/pnp.c */
-extern device__pnp_func bus_pnp__dispatch;
+extern device__pnp_func WvBusPnpDispatch;
 
 /* Types. */
 typedef enum WV_BUS_WORK_ITEM_CMD_ {
@@ -74,7 +74,7 @@ struct device__irp_mj bus__irp_mj_ = {
     bus__sys_ctl_,
     WvBusDevCtlDispatch,
     (device__scsi_func *) 0,
-    bus_pnp__dispatch,
+    WvBusPnpDispatch,
   };
 
 /**

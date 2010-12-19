@@ -47,7 +47,7 @@ static device__dispatch_func bus_pnp__query_capabilities_;
 static device__dispatch_func bus_pnp__query_dev_text_;
 static device__dispatch_func bus_pnp__query_bus_info_;
 static device__pnp_func bus_pnp__simple_;
-device__pnp_func bus_pnp__dispatch;
+device__pnp_func WvBusPnpDispatch;
 
 static NTSTATUS STDCALL bus_pnp__io_completion_(
     IN PDEVICE_OBJECT dev_obj,
@@ -417,7 +417,7 @@ static NTSTATUS STDCALL bus_pnp__simple_(
   }
 
 /* Bus PnP dispatch routine. */
-NTSTATUS STDCALL bus_pnp__dispatch(
+NTSTATUS STDCALL WvBusPnpDispatch(
     IN struct device__type * dev,
     IN PIRP irp,
     IN UCHAR code
