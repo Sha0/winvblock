@@ -412,7 +412,7 @@ static winvblock__bool WvBusAddWorkItem_(
  * Get (and dequeue) a work item from a bus' queue.
  *
  * @v bus                       The bus processing the work item.
- * @ret bus__work_item_         The work item, or NULL for an empty queue.
+ * @ret WV_SP_BUS_WORK_ITEM_    The work item, or NULL for an empty queue.
  */
 static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(
     WV_SP_BUS_T bus
@@ -497,7 +497,7 @@ static void STDCALL WvBusThreadFree_(IN struct device__type * dev) {
  * @v context           The thread context.  In our case, it points to
  *                      the bus that the thread should use in processing.
  */
-static void STDCALL bus__thread_(IN void * context) {
+static void STDCALL WvBusThread_(IN void * context) {
     WV_SP_BUS_T bus = context;
 
     if (!bus || !bus->Thread) {
@@ -587,7 +587,7 @@ winvblock__lib_func NTSTATUS WvBusStartThread(
         &obj_attrs,
         NULL,
         NULL,
-        bus__thread_,
+        WvBusThread_,
         bus
       );
   }
