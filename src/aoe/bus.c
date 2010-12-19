@@ -100,7 +100,7 @@ winvblock__bool aoe_bus__create(void) {
         goto err_new_bus;
       }
     /* When the PDO is created, we need to handle PnP ID queries. */
-    new_bus->device->ops.pnp_id = aoe_bus__pnp_id_;
+    new_bus->Dev->ops.pnp_id = aoe_bus__pnp_id_;
     /* Name the bus when the PDO is created. */
     RtlInitUnicodeString(
         &new_bus->dev_name,
@@ -112,7 +112,7 @@ winvblock__bool aoe_bus__create(void) {
       );
     new_bus->named = TRUE;
     /* Add it as a sub-bus to WinVBlock. */
-    if (!WvBusAddChild(driver__bus(), new_bus->device)) {
+    if (!WvBusAddChild(driver__bus(), new_bus->Dev)) {
         DBG("Couldn't add AoE bus to WinVBlock bus!\n");
         goto err_add_child;
       }
@@ -122,7 +122,7 @@ winvblock__bool aoe_bus__create(void) {
 
     err_add_child:
 
-    device__free(new_bus->device);
+    device__free(new_bus->Dev);
     err_new_bus:
 
     return FALSE;
@@ -136,11 +136,11 @@ void aoe_bus__free(void) {
 
     IoDeleteSymbolicLink(&aoe_bus->dos_dev_name);
     IoDeleteSymbolicLink(&aoe_bus->dev_name);
-    IoDeleteDevice(aoe_bus->device->Self);
+    IoDeleteDevice(aoe_bus->Dev->Self);
     #if 0
-    bus__remove_child(driver__bus(), aoe_bus->device);
+    bus__remove_child(driver__bus(), aoe_bus->Dev);
     #endif
-    device__free(aoe_bus->device);
+    device__free(aoe_bus->Dev);
     return;
   }
 

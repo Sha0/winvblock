@@ -224,7 +224,7 @@ static NTSTATUS STDCALL disk_pnp__query_capabilities_(
           );
       } else {
         status = WvBusGetDevCapabilities(
-            bus->device->Self,
+            bus->Dev->Self,
             &ParentDeviceCapabilities
           );
       }      

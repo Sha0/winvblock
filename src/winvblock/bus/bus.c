@@ -107,7 +107,7 @@ winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
         return FALSE;
       }
 
-    dev_ptr->Parent = bus_ptr->device->Self;
+    dev_ptr->Parent = bus_ptr->Dev->Self;
     /*
      * Initialize the device.  For disks, this routine is responsible for
      * determining the disk's geometry appropriately for AoE/RAM/file disks.
@@ -252,11 +252,11 @@ static winvblock__bool STDCALL bus__init_(IN struct device__type * dev) {
  * @v bus               Points to the bus to initialize with defaults.
  */
 winvblock__lib_func void WvBusInit(WV_SP_BUS_T bus) {
-    struct device__type * dev = bus->device;
+    struct device__type * dev = bus->Dev;
 
     RtlZeroMemory(bus, sizeof *bus);
     /* Populate non-zero bus device defaults. */
-    bus->device = dev;
+    bus->Dev = dev;
     bus->prev_free = dev->ops.free;
     bus->thread = bus__default_thread_;
     KeInitializeSpinLock(&bus->SpinLock);
@@ -297,7 +297,7 @@ winvblock__lib_func WV_SP_BUS_T WvBusCreate(void) {
     if (bus == NULL)
       goto err_no_bus;
 
-    bus->device = dev;
+    bus->Dev = dev;
     WvBusInit(bus);
     return bus;
 
@@ -529,7 +529,7 @@ static void STDCALL bus__default_thread_(IN WV_SP_BUS_T bus) {
     timeout.QuadPart = -300000000LL;
 
     /* Hook device__type::ops.free() */
-    bus->device->ops.free = bus__thread_free_;
+    bus->Dev->ops.free = bus__thread_free_;
 
     /* When bus::thread is cleared, we shut down. */
     while (bus->thread) {
@@ -549,7 +549,7 @@ static void STDCALL bus__default_thread_(IN WV_SP_BUS_T bus) {
         WvBusProcessWorkItems(bus);
       } /* while bus->alive */
 
-    bus__free_(bus->device);
+    bus__free_(bus->Dev);
     return;
   }
 
@@ -631,7 +631,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
     if (
         !Bus ||
         !Node ||
-        Bus->device->Self->DriverObject != Node->BusPrivate_.Pdo->DriverObject
+        Bus->Dev->Self->DriverObject != Node->BusPrivate_.Pdo->DriverObject
       )
       return STATUS_INVALID_PARAMETER;
 

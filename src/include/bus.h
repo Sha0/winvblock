@@ -40,7 +40,7 @@ typedef WV_F_BUS_THREAD * WV_FP_BUS_THREAD;
 
 /* The bus type. */
 typedef struct WV_BUS_T {
-    struct device__type * device;
+    struct device__type * Dev;
     PDEVICE_OBJECT LowerDeviceObject;
     PDEVICE_OBJECT PhysicalDeviceObject;
     winvblock__uint32 Children;
