@@ -194,7 +194,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
         DBG("IoAttachDeviceToDeviceStack() failed!\n");
         goto err_attach;
       }
-    status = bus__start_thread(bus);
+    status = WvBusStartThread(bus);
     if (!NT_SUCCESS(status)) {
         DBG("Couldn't start bus thread!\n");
         goto err_thread;

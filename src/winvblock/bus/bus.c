@@ -518,7 +518,7 @@ static void STDCALL bus__thread_(IN void * context) {
  * Note that if you implement your own bus type using this library,
  * you can override the thread routine with your own.  If you do so,
  * your thread routine should call WvBusProcessWorkItems() within
- * its loop.  To start a bus thread, use bus__start_thread()
+ * its loop.  To start a bus thread, use WvBusStartThread()
  * If you implement your own thread routine, you are also responsible
  * for freeing the bus.
  */
@@ -563,7 +563,7 @@ static void STDCALL bus__default_thread_(IN WV_SP_BUS_T bus) {
  * for implementing your own bus thread routine.  You set bus::thread to
  * specify your own thread routine, then call this function to start it.
  */
-winvblock__lib_func NTSTATUS bus__start_thread(
+winvblock__lib_func NTSTATUS WvBusStartThread(
     WV_SP_BUS_T bus
   ) {
     OBJECT_ATTRIBUTES obj_attrs;
