@@ -47,7 +47,6 @@ typedef struct WV_BUS_T {
     struct device__type * first_child;
     KSPIN_LOCK SpinLock;
     LIST_ENTRY tracking;
-    winvblock__any_ptr ext;
     device__free_func * prev_free;
     UNICODE_STRING dev_name;
     UNICODE_STRING dos_dev_name;
