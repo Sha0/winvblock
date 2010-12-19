@@ -258,7 +258,7 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T bus) {
     /* Populate non-zero bus device defaults. */
     bus->Dev = dev;
     bus->BusPrivate_.PrevFree = dev->ops.free;
-    bus->thread = bus__default_thread_;
+    bus->Thread = bus__default_thread_;
     KeInitializeSpinLock(&bus->SpinLock);
     KeInitializeSpinLock(&bus->BusPrivate_.WorkItemsLock);
     InitializeListHead(&bus->BusPrivate_.WorkItems);
@@ -474,7 +474,7 @@ winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T bus) {
 static void STDCALL bus__thread_free_(IN struct device__type * dev) {
     WV_SP_BUS_T bus = WvBusFromDev(dev);
 
-    bus->thread = (WV_FP_BUS_THREAD) 0;
+    bus->Thread = (WV_FP_BUS_THREAD) 0;
     KeSetEvent(&bus->ThreadSignal, 0, FALSE);
     return;
   }
@@ -488,12 +488,12 @@ static void STDCALL bus__thread_free_(IN struct device__type * dev) {
 static void STDCALL bus__thread_(IN void * context) {
     WV_SP_BUS_T bus = context;
 
-    if (!bus || !bus->thread) {
+    if (!bus || !bus->Thread) {
         DBG("No bus or no thread!\n");
         return;
       }
 
-    bus->thread(bus);
+    bus->Thread(bus);
     return;
   }
 
@@ -519,7 +519,7 @@ static void STDCALL bus__default_thread_(IN WV_SP_BUS_T bus) {
     bus->Dev->ops.free = bus__thread_free_;
 
     /* When bus::thread is cleared, we shut down. */
-    while (bus->thread) {
+    while (bus->Thread) {
         DBG("Alive.\n");
 
         /* Wait for the work signal or the timeout. */
