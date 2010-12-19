@@ -60,7 +60,6 @@ static device__free_func WvBusFree_;
 static device__create_pdo_func WvBusCreatePdo_;
 static device__dispatch_func WvBusPower_;
 static device__dispatch_func WvBusSysCtl_;
-static device__pnp_func bus__pnp_dispatch_;
 static WV_F_BUS_THREAD bus__default_thread_;
 static winvblock__bool bus__add_work_item_(
     WV_SP_BUS_T,
