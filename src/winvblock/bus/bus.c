@@ -36,7 +36,7 @@
 #include "debug.h"
 
 /* IRP_MJ_DEVICE_CONTROL dispatcher from bus/dev_ctl.c */
-extern device__dev_ctl_func bus_dev_ctl__dispatch;
+extern device__dev_ctl_func WvBusDevCtlDispatch;
 /* IRP_MJ_PNP dispatcher from bus/pnp.c */
 extern device__pnp_func bus_pnp__dispatch;
 
@@ -72,7 +72,7 @@ static WV_SP_BUS_WORK_ITEM_ bus__get_work_item_(WV_SP_BUS_T);
 struct device__irp_mj bus__irp_mj_ = {
     bus__power_,
     bus__sys_ctl_,
-    bus_dev_ctl__dispatch,
+    WvBusDevCtlDispatch,
     (device__scsi_func *) 0,
     bus_pnp__dispatch,
   };

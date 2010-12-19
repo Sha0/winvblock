@@ -85,7 +85,7 @@ static NTSTATUS STDCALL bus_dev_ctl__disk_detach_(
     return STATUS_SUCCESS;
   }
 
-NTSTATUS STDCALL bus_dev_ctl__dispatch(
+NTSTATUS STDCALL WvBusDevCtlDispatch(
     IN struct device__type * dev,
     IN PIRP irp,
     IN ULONG POINTER_ALIGNMENT code
