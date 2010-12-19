@@ -260,9 +260,9 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T bus) {
     bus->BusPrivate_.PrevFree = dev->ops.free;
     bus->thread = bus__default_thread_;
     KeInitializeSpinLock(&bus->SpinLock);
-    KeInitializeSpinLock(&bus->work_items_lock);
-    InitializeListHead(&bus->work_items);
-    KeInitializeEvent(&bus->work_signal, SynchronizationEvent, FALSE);
+    KeInitializeSpinLock(&bus->BusPrivate_.WorkItemsLock);
+    InitializeListHead(&bus->BusPrivate_.WorkItems);
+    KeInitializeEvent(&bus->ThreadSignal, SynchronizationEvent, FALSE);
     dev->ops.create_pdo = bus__create_pdo_;
     dev->ops.init = bus__init_;
     dev->ops.free = bus__free_;
@@ -402,9 +402,9 @@ static winvblock__bool bus__add_work_item_(
     WV_SP_BUS_WORK_ITEM_ work_item
   ) {
     ExInterlockedInsertTailList(
-        &bus->work_items,
+        &bus->BusPrivate_.WorkItems,
         &work_item->Link,
-        &bus->work_items_lock
+        &bus->BusPrivate_.WorkItemsLock
       );
 
     return TRUE;
@@ -422,8 +422,8 @@ static WV_SP_BUS_WORK_ITEM_ bus__get_work_item_(
     PLIST_ENTRY list_entry;
 
     list_entry = ExInterlockedRemoveHeadList(
-        &bus->work_items,
-        &bus->work_items_lock
+        &bus->BusPrivate_.WorkItems,
+        &bus->BusPrivate_.WorkItemsLock
       );
     if (!list_entry)
       return NULL;
@@ -475,7 +475,7 @@ static void STDCALL bus__thread_free_(IN struct device__type * dev) {
     WV_SP_BUS_T bus = WvBusFromDev(dev);
 
     bus->thread = (WV_FP_BUS_THREAD) 0;
-    KeSetEvent(&bus->work_signal, 0, FALSE);
+    KeSetEvent(&bus->ThreadSignal, 0, FALSE);
     return;
   }
 
@@ -524,14 +524,14 @@ static void STDCALL bus__default_thread_(IN WV_SP_BUS_T bus) {
 
         /* Wait for the work signal or the timeout. */
         KeWaitForSingleObject(
-            &bus->work_signal,
+            &bus->ThreadSignal,
             Executive,
             KernelMode,
             FALSE,
             &timeout
           );
         /* Reset the work signal. */
-        KeResetEvent(&bus->work_signal);
+        KeResetEvent(&bus->ThreadSignal);
 
         WvBusProcessWorkItems(bus);
       } /* while bus->alive */
@@ -635,7 +635,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
         return STATUS_UNSUCCESSFUL;
       }
     /* Fire and forget. */
-    KeSetEvent(&Bus->work_signal, 0, FALSE);
+    KeSetEvent(&Bus->ThreadSignal, 0, FALSE);
     return STATUS_SUCCESS;
   }
 
@@ -670,6 +670,6 @@ winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(
         return STATUS_UNSUCCESSFUL;
       }
     /* Fire and forget. */
-    KeSetEvent(&bus->work_signal, 0, FALSE);
+    KeSetEvent(&bus->ThreadSignal, 0, FALSE);
     return STATUS_SUCCESS;
   }

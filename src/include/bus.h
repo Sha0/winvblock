@@ -46,15 +46,15 @@ typedef struct WV_BUS_T {
     winvblock__uint32 Children;
     struct device__type * first_child;
     KSPIN_LOCK SpinLock;
-    LIST_ENTRY work_items;
-    KSPIN_LOCK work_items_lock;
-    KEVENT work_signal;
     WV_FP_BUS_THREAD thread;
+    KEVENT ThreadSignal;
     winvblock__bool Stop;
     struct {
         LIST_ENTRY Nodes;
         USHORT NodeCount;
         device__free_func * PrevFree;
+        LIST_ENTRY WorkItems;
+        KSPIN_LOCK WorkItemsLock;
       } BusPrivate_;
   } WV_S_BUS_T, * WV_SP_BUS_T;
 
