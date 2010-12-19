@@ -35,6 +35,10 @@
 #include "mount.h"
 #include "debug.h"
 
+/* Names for the AoE bus. */
+#define AOE_M_BUS_NAME_ (L"\\Device\\AoE")
+#define AOE_M_BUS_DOSNAME_ (L"\\DosDevices\\AoE")
+
 /* TODO: Remove this pull from aoe/driver.c */
 extern device__dispatch_func aoe__scan;
 extern device__dispatch_func aoe__show;
@@ -48,6 +52,16 @@ void aoe_bus__free(void);
 
 /* Globals. */
 WV_SP_BUS_T aoe_bus = NULL;
+static UNICODE_STRING AoeBusName_ = {
+    sizeof AOE_M_BUS_NAME_,
+    sizeof AOE_M_BUS_NAME_,
+    AOE_M_BUS_NAME_
+  };
+static UNICODE_STRING AoeBusDosname_ = {
+    sizeof AOE_M_BUS_DOSNAME_,
+    sizeof AOE_M_BUS_DOSNAME_,
+    AOE_M_BUS_DOSNAME_
+  };
 
 static NTSTATUS STDCALL aoe_bus__dev_ctl_dispatch_(
     IN struct device__type * dev,
@@ -87,6 +101,7 @@ static NTSTATUS STDCALL aoe_bus__dev_ctl_dispatch_(
  */
 winvblock__bool aoe_bus__create(void) {
     WV_SP_BUS_T new_bus;
+    NTSTATUS status;
 
     /* We should only be called once. */
     if (aoe_bus) {
@@ -101,25 +116,28 @@ winvblock__bool aoe_bus__create(void) {
       }
     /* When the PDO is created, we need to handle PnP ID queries. */
     new_bus->Dev->ops.pnp_id = aoe_bus__pnp_id_;
-    /* Name the bus when the PDO is created. */
-    RtlInitUnicodeString(
-        &new_bus->dev_name,
-        L"\\Device\\AoE"
-      );
-    RtlInitUnicodeString(
-        &new_bus->dos_dev_name,
-        L"\\DosDevices\\AoE"
-      );
-    new_bus->named = TRUE;
     /* Add it as a sub-bus to WinVBlock. */
     if (!WvBusAddChild(driver__bus(), new_bus->Dev)) {
         DBG("Couldn't add AoE bus to WinVBlock bus!\n");
         goto err_add_child;
       }
+    /* DosDevice symlink. */
+    status = IoCreateSymbolicLink(
+        &AoeBusDosname_,
+        &AoeBusName_
+      );
+    if (!NT_SUCCESS(status)) {
+        DBG("IoCreateSymbolicLink() failed!\n");
+        goto err_dos_symlink;
+      }
     /* All done. */
     aoe_bus = new_bus;
     return TRUE;
 
+    IoDeleteSymbolicLink(&AoeBusDosname_);
+    err_dos_symlink:
+
+    IoDeleteDevice(aoe_bus->Dev->Self);
     err_add_child:
 
     device__free(new_bus->Dev);
@@ -134,8 +152,7 @@ void aoe_bus__free(void) {
       /* Nothing to do. */
       return;
 
-    IoDeleteSymbolicLink(&aoe_bus->dos_dev_name);
-    IoDeleteSymbolicLink(&aoe_bus->dev_name);
+    IoDeleteSymbolicLink(&AoeBusDosname_);
     IoDeleteDevice(aoe_bus->Dev->Self);
     #if 0
     bus__remove_child(driver__bus(), aoe_bus->Dev);

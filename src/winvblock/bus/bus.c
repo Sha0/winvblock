@@ -332,7 +332,7 @@ static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN struct device__type * dev) {
     status = IoCreateDevice(
         dev->DriverObject,
         sizeof (driver__dev_ext),
-        &bus->dev_name,
+        NULL,
         FILE_DEVICE_CONTROLLER,
         FILE_DEVICE_SECURE_OPEN,
         FALSE,
@@ -341,17 +341,6 @@ static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN struct device__type * dev) {
     if (pdo == NULL) {
         DBG("IoCreateDevice() failed!\n");
         goto err_pdo;
-      }
-    /* DosDevice symlink. */
-    if (bus->named) {
-        status = IoCreateSymbolicLink(
-            &bus->dos_dev_name,
-            &bus->dev_name
-          );
-      }
-    if (!NT_SUCCESS(status)) {
-        DBG("IoCreateSymbolicLink");
-        goto err_name;
       }
 
     /* Set associations for the bus, device, PDO. */
@@ -367,8 +356,6 @@ static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN struct device__type * dev) {
     #endif
 
     return pdo;
-
-    err_name:
 
     IoDeleteDevice(pdo);
     err_pdo:

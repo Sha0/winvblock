@@ -43,6 +43,10 @@
 #include "ramdisk.h"
 #include "debug.h"
 
+/* Names for the main bus. */
+#define WV_M_BUS_NAME_ (L"\\Device\\" winvblock__literal_w)
+#define WV_M_BUS_DOSNAME_ (L"\\DosDevices\\" winvblock__literal_w)
+
 /* Exported. */
 PDRIVER_OBJECT driver__obj_ptr = NULL;
 
@@ -51,6 +55,16 @@ static void * driver__state_handle_;
 static winvblock__bool driver__started_ = FALSE;
 static PDEVICE_OBJECT driver__bus_fdo_ = NULL;
 static KSPIN_LOCK driver__bus_fdo_lock_;
+static UNICODE_STRING WvBusName_ = {
+    sizeof WV_M_BUS_NAME_,
+    sizeof WV_M_BUS_NAME_,
+    WV_M_BUS_NAME_
+  };
+static UNICODE_STRING WvBusDosname_ = {
+    sizeof WV_M_BUS_DOSNAME_,
+    sizeof WV_M_BUS_DOSNAME_,
+    WV_M_BUS_DOSNAME_
+  };
 /* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters. */
 static LPWSTR driver__os_load_opts_ = NULL;
 
@@ -145,21 +159,11 @@ static NTSTATUS STDCALL driver__attach_fdo_(
         status = STATUS_INSUFFICIENT_RESOURCES;
         goto err_bus;
       }
-    /* In booting, he has a name.  His name is WinVBlock. */
-    RtlInitUnicodeString(
-        &bus->dev_name,
-        L"\\Device\\" winvblock__literal_w
-      );
-    RtlInitUnicodeString(
-        &bus->dos_dev_name,
-        L"\\DosDevices\\" winvblock__literal_w
-      );
-    bus->named = TRUE;
     /* Create the bus FDO. */
     status = IoCreateDevice(
         DriverObject,
         sizeof (driver__dev_ext),
-        &bus->dev_name,
+        &WvBusName_,
         FILE_DEVICE_CONTROLLER,
         FILE_DEVICE_SECURE_OPEN,
         FALSE,
@@ -171,8 +175,8 @@ static NTSTATUS STDCALL driver__attach_fdo_(
       }
     /* DosDevice symlink. */
     status = IoCreateSymbolicLink(
-        &bus->dos_dev_name,
-        &bus->dev_name
+        &WvBusDosname_,
+        &WvBusName_
       );
     if (!NT_SUCCESS(status)) {
         DBG("IoCreateSymbolicLink() failed!\n");
@@ -222,7 +226,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
 
     err_attach:
 
-    IoDeleteSymbolicLink(&bus->dos_dev_name);
+    IoDeleteSymbolicLink(&WvBusDosname_);
     err_dos_symlink:
 
     IoDeleteDevice(fdo);
@@ -528,16 +532,10 @@ static NTSTATUS driver__dispatch_pnp_(
   }
 
 static void STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
-    UNICODE_STRING DosDeviceName;
-
     DBG("Unloading...\n");
     if (driver__state_handle_ != NULL)
       PoUnregisterSystemState(driver__state_handle_);
-    RtlInitUnicodeString(
-        &DosDeviceName,
-        L"\\DosDevices\\" winvblock__literal_w
-      );
-    IoDeleteSymbolicLink(&DosDeviceName);
+    IoDeleteSymbolicLink(&WvBusDosname_);
     driver__bus_fdo_ = NULL;
     wv_free(driver__os_load_opts_);
     driver__started_ = FALSE;
