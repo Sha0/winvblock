@@ -470,6 +470,20 @@ winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T bus) {
     return;
   }
 
+/**
+ * Cancel pending work items for a bus.
+ *
+ * @v bus       The bus to cancel pending work items for.
+ */
+winvblock__lib_func void WvBusCancelWorkItems(WV_SP_BUS_T bus) {
+    WV_SP_BUS_WORK_ITEM_ work_item;
+
+    DBG("Canceling work items.\n");
+    while (work_item = bus__get_work_item_(bus))
+      wv_free(work_item);
+    return;
+  }
+
 /* The device__type::ops.free implementation for a threaded bus. */
 static void STDCALL bus__thread_free_(IN struct device__type * dev) {
     WV_SP_BUS_T bus = WvBusFromDev(dev);
@@ -507,7 +521,7 @@ static void STDCALL bus__thread_(IN void * context) {
  * your thread routine should call WvBusProcessWorkItems() within
  * its loop.  To start a bus thread, use WvBusStartThread()
  * If you implement your own thread routine, you are also responsible
- * for freeing the bus.
+ * for calling WvBusCancelWorkItems() and freeing the bus.
  */
 static void STDCALL bus__default_thread_(IN WV_SP_BUS_T bus) {
     LARGE_INTEGER timeout;
@@ -536,6 +550,7 @@ static void STDCALL bus__default_thread_(IN WV_SP_BUS_T bus) {
         WvBusProcessWorkItems(bus);
       } /* while bus->alive */
 
+    WvBusCancelWorkItems(bus);
     bus__free_(bus->Dev);
     return;
   }
@@ -547,7 +562,7 @@ static void STDCALL bus__default_thread_(IN WV_SP_BUS_T bus) {
  * @ret NTSTATUS        The status of the thread creation operation.
  *
  * Also see WV_F_BUS_THREAD in the header for details about the prototype
- * for implementing your own bus thread routine.  You set bus::thread to
+ * for implementing your own bus thread routine.  You set bus::Thread to
  * specify your own thread routine, then call this function to start it.
  */
 winvblock__lib_func NTSTATUS WvBusStartThread(
