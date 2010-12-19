@@ -570,5 +570,5 @@ winvblock__lib_func WV_SP_BUS_T driver__bus(void) {
         DBG("No driver bus device!\n");
         return NULL;
       }
-    return bus__get(device__get(driver__bus_fdo_));
+    return WvBusFromDev(device__get(driver__bus_fdo_));
   }

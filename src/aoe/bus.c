@@ -64,14 +64,16 @@ static NTSTATUS STDCALL aoe_bus__dev_ctl_dispatch_(
         case IOCTL_AOE_MOUNT:
           return aoe__mount(dev, irp);
 
-        case IOCTL_AOE_UMOUNT:
-          /* Pretend it's an IOCTL_FILE_DETACH. */
-          return device__get(bus__get(dev)->LowerDeviceObject)->irp_mj->dev_ctl(
-              dev,
-              irp,
-              IOCTL_FILE_DETACH
-            );
+        case IOCTL_AOE_UMOUNT: {
+            WV_SP_BUS_T bus = WvBusFromDev(dev);
 
+            /* Pretend it's an IOCTL_FILE_DETACH. */
+            return device__get(bus->LowerDeviceObject)->irp_mj->dev_ctl(
+                dev,
+                irp,
+                IOCTL_FILE_DETACH
+              );
+          }
         default:
           DBG("Unsupported IOCTL\n");
           return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);

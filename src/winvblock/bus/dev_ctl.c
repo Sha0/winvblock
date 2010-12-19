@@ -51,7 +51,7 @@ static NTSTATUS STDCALL bus_dev_ctl__disk_detach_(
     WV_SP_BUS_T bus;
 
     DBG("Request to detach disk: %d\n", disk_num);
-    bus = bus__get(dev);
+    bus = WvBusFromDev(dev);
     dev_walker = bus->first_child;
     if (dev_walker != NULL)
       disk_walker = disk__get_ptr(dev_walker);

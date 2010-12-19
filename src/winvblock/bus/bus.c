@@ -161,7 +161,7 @@ static NTSTATUS STDCALL bus__sys_ctl_(
     IN struct device__type * dev,
     IN PIRP irp
   ) {
-    WV_SP_BUS_T bus = bus__get(dev);
+    WV_SP_BUS_T bus = WvBusFromDev(dev);
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
 
     if (lower) {
@@ -176,7 +176,7 @@ static NTSTATUS STDCALL bus__power_(
     IN struct device__type * dev,
     IN PIRP irp
   ) {
-    WV_SP_BUS_T bus = bus__get(dev);
+    WV_SP_BUS_T bus = WvBusFromDev(dev);
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
 
     PoStartNextPowerIrp(irp);
@@ -327,7 +327,7 @@ static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN struct device__type * dev) {
         DBG("No device passed\n");
         return NULL;
       }
-    bus = bus__get(dev);
+    bus = WvBusFromDev(dev);
     /* Create the PDO. */
     status = IoCreateDevice(
         dev->DriverObject,
@@ -382,7 +382,7 @@ static PDEVICE_OBJECT STDCALL bus__create_pdo_(IN struct device__type * dev) {
  * @v dev_ptr           Points to the bus device to delete.
  */
 static void STDCALL bus__free_(IN struct device__type * dev_ptr) {
-    WV_SP_BUS_T bus_ptr = bus__get(dev_ptr);
+    WV_SP_BUS_T bus_ptr = WvBusFromDev(dev_ptr);
     /* Free the "inherited class". */
     bus_ptr->prev_free(dev_ptr);
 
@@ -395,7 +395,7 @@ static void STDCALL bus__free_(IN struct device__type * dev_ptr) {
  * @v dev       A pointer to a device.
  * @ret         A pointer to the device's associated bus.
  */
-extern winvblock__lib_func WV_SP_BUS_T bus__get(
+extern winvblock__lib_func WV_SP_BUS_T WvBusFromDev(
     struct device__type * dev
   ) {
     return dev->ext;
@@ -485,7 +485,7 @@ winvblock__lib_func void bus__process_work_items(WV_SP_BUS_T bus) {
 
 /* The device__type::ops.free implementation for a threaded bus. */
 static void STDCALL bus__thread_free_(IN struct device__type * dev) {
-    WV_SP_BUS_T bus = bus__get(dev);
+    WV_SP_BUS_T bus = WvBusFromDev(dev);
 
     bus->thread = (WV_FP_BUS_THREAD) 0;
     KeSetEvent(&bus->work_signal, 0, FALSE);

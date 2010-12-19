@@ -2162,7 +2162,7 @@ NTSTATUS STDCALL aoe__show(
 
     DBG("Got IOCTL_AOE_SHOW...\n");
 
-    bus = bus__get(dev);
+    bus = WvBusFromDev(dev);
     dev_walker = bus->first_child;
     count = 0;
     while (dev_walker != NULL) {

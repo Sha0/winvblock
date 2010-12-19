@@ -215,7 +215,7 @@ static NTSTATUS STDCALL disk_pnp__query_capabilities_(
         goto out;
       }
     disk = disk__get_ptr(dev);
-    bus = bus__get(device__get(dev->Parent));
+    bus = WvBusFromDev(device__get(dev->Parent));
     bus_lower = bus->LowerDeviceObject;
     if (bus_lower) {
         status = WvBusGetDevCapabilities(

@@ -64,7 +64,7 @@ static NTSTATUS STDCALL bus_pnp__start_dev_(
   ) {
     NTSTATUS status;
     KEVENT event;
-    WV_SP_BUS_T bus = bus__get(dev);
+    WV_SP_BUS_T bus = WvBusFromDev(dev);
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
 
     if (!lower)
@@ -100,7 +100,7 @@ static NTSTATUS STDCALL bus_pnp__remove_dev_(
     IN PIRP irp
   ) {
     NTSTATUS status = STATUS_SUCCESS;
-    WV_SP_BUS_T bus = bus__get(dev);
+    WV_SP_BUS_T bus = WvBusFromDev(dev);
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
     struct device__type * walker, * next;
 
@@ -139,7 +139,7 @@ static NTSTATUS STDCALL bus_pnp__query_dev_relations_(
     IN PIRP irp
   ) {
     NTSTATUS status;
-    WV_SP_BUS_T bus = bus__get(dev);
+    WV_SP_BUS_T bus = WvBusFromDev(dev);
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     winvblock__uint32 count;
@@ -205,7 +205,7 @@ static NTSTATUS STDCALL bus_pnp__query_capabilities_(
     PDEVICE_CAPABILITIES DeviceCapabilities =
       io_stack_loc->Parameters.DeviceCapabilities.Capabilities;
     NTSTATUS status;
-    WV_SP_BUS_T bus = bus__get(dev);
+    WV_SP_BUS_T bus = WvBusFromDev(dev);
     DEVICE_CAPABILITIES ParentDeviceCapabilities;
     PDEVICE_OBJECT lower;
 
@@ -233,7 +233,7 @@ static NTSTATUS STDCALL bus_pnp__query_dev_text_(
     IN struct device__type * dev,
     IN PIRP irp
   ) {
-    WV_SP_BUS_T bus = bus__get(dev);
+    WV_SP_BUS_T bus = WvBusFromDev(dev);
     WCHAR (*str)[512];
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
@@ -347,7 +347,7 @@ static NTSTATUS STDCALL bus_pnp__simple_(
     IN UCHAR code
   ) {
     NTSTATUS status;
-    WV_SP_BUS_T bus = bus__get(dev);
+    WV_SP_BUS_T bus = WvBusFromDev(dev);
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
 
     switch (code) {
