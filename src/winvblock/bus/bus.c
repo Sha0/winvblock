@@ -550,7 +550,7 @@ static void STDCALL WvBusDefaultThread_(IN WV_SP_BUS_T bus) {
     bus->Dev->ops.free = WvBusThreadFree_;
 
     /* When bus::Stop is set, we shut down. */
-    while (bus->Stop) {
+    while (!bus->Stop) {
         DBG("Alive.\n");
 
         /* Wait for the work signal or the timeout. */
