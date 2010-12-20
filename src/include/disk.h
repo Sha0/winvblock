@@ -37,7 +37,7 @@ typedef enum WV_DISK_MEDIA_TYPE {
 typedef char disk__boot_sect_ptr[512];
 
 extern winvblock__bool WvDiskIsRemovable[WvDiskMediaTypes];
-extern PWCHAR disk__compat_ids[WvDiskMediaTypes];
+extern PWCHAR WvDiskCompatIds[WvDiskMediaTypes];
 
 enum _disk__io_mode
 {

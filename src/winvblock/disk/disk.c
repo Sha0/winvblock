@@ -62,7 +62,7 @@ static WV_F_DEV_DISPATCH disk__sys_ctl_;
 static LIST_ENTRY disk_list;
 static KSPIN_LOCK disk_list_lock;
 winvblock__bool WvDiskIsRemovable[WvDiskMediaTypes] = { TRUE, FALSE, TRUE };
-PWCHAR disk__compat_ids[WvDiskMediaTypes] =
+PWCHAR WvDiskCompatIds[WvDiskMediaTypes] =
   { L"GenSFloppy", L"GenDisk", L"GenCdRom" };
 WV_S_DEV_IRP_MJ disk__irp_mj_ = {
     disk__power_,

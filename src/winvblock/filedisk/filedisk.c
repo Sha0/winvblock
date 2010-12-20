@@ -120,12 +120,12 @@ static winvblock__uint32 STDCALL query_id(
             winvblock__uint32 tmp;
 
             tmp = swprintf(*buf, hw_ids[disk->Media]) + 1;
-            tmp += swprintf(*buf + tmp, disk__compat_ids[disk->Media]) + 4;
+            tmp += swprintf(*buf + tmp, WvDiskCompatIds[disk->Media]) + 4;
             return tmp;
           }
 
         case BusQueryCompatibleIDs:
-          return swprintf(*buf, disk__compat_ids[disk->Media]) + 4;
+          return swprintf(*buf, WvDiskCompatIds[disk->Media]) + 4;
 
         default:
           return 0;
