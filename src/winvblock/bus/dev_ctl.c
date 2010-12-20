@@ -38,9 +38,9 @@
 #include "filedisk.h"
 
 /* Forward declarations. */
-static device__dispatch_func bus_dev_ctl__disk_detach_;
+static device__dispatch_func WvBusDevCtlDiskDetach_;
 
-static NTSTATUS STDCALL bus_dev_ctl__disk_detach_(
+static NTSTATUS STDCALL WvBusDevCtlDiskDetach_(
     IN struct device__type * dev,
     IN PIRP irp
   ) {
@@ -98,7 +98,7 @@ NTSTATUS STDCALL WvBusDevCtlDispatch(
           break;
 
         case IOCTL_FILE_DETACH:
-          status = bus_dev_ctl__disk_detach_(dev, irp);
+          status = WvBusDevCtlDiskDetach_(dev, irp);
           break;
 
         default:

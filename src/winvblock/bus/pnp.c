@@ -40,16 +40,16 @@
 #include "probe.h"
 
 /* Forward declarations. */
-static device__dispatch_func bus_pnp__start_dev_;
-static device__dispatch_func bus_pnp__remove_dev_;
-static device__dispatch_func bus_pnp__query_dev_relations_;
-static device__dispatch_func bus_pnp__query_capabilities_;
-static device__dispatch_func bus_pnp__query_dev_text_;
-static device__dispatch_func bus_pnp__query_bus_info_;
-static device__pnp_func bus_pnp__simple_;
+static device__dispatch_func WvBusPnpStartDev_;
+static device__dispatch_func WvBusPnpRemoveDev_;
+static device__dispatch_func WvBusPnpQueryDevRelations_;
+static device__dispatch_func WvBusPnpQueryCapabilities_;
+static device__dispatch_func WvBusPnpQueryDevText_;
+static device__dispatch_func WvBusPnpQueryBusInfo_;
+static device__pnp_func WvBusPnpSimple_;
 device__pnp_func WvBusPnpDispatch;
 
-static NTSTATUS STDCALL bus_pnp__io_completion_(
+static NTSTATUS STDCALL WvBusPnpIoCompletion_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
     IN PKEVENT event
@@ -58,7 +58,7 @@ static NTSTATUS STDCALL bus_pnp__io_completion_(
     return STATUS_MORE_PROCESSING_REQUIRED;
   }
 
-static NTSTATUS STDCALL bus_pnp__start_dev_(
+static NTSTATUS STDCALL WvBusPnpStartDev_(
     IN struct device__type * dev,
     IN PIRP irp
   ) {
@@ -73,7 +73,7 @@ static NTSTATUS STDCALL bus_pnp__start_dev_(
     IoCopyCurrentIrpStackLocationToNext(irp);
     IoSetCompletionRoutine(
         irp,
-        (PIO_COMPLETION_ROUTINE) bus_pnp__io_completion_,
+        (PIO_COMPLETION_ROUTINE) WvBusPnpIoCompletion_,
         (void *) &event,
         TRUE,
         TRUE,
@@ -95,7 +95,7 @@ static NTSTATUS STDCALL bus_pnp__start_dev_(
       );
   }
 
-static NTSTATUS STDCALL bus_pnp__remove_dev_(
+static NTSTATUS STDCALL WvBusPnpRemoveDev_(
     IN struct device__type * dev,
     IN PIRP irp
   ) {
@@ -134,7 +134,7 @@ static NTSTATUS STDCALL bus_pnp__remove_dev_(
     return status;
   }
 
-static NTSTATUS STDCALL bus_pnp__query_dev_relations_(
+static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
     IN struct device__type * dev,
     IN PIRP irp
   ) {
@@ -207,7 +207,7 @@ static NTSTATUS STDCALL bus_pnp__query_dev_relations_(
     return driver__complete_irp(irp, irp->IoStatus.Information, status);
   }
 
-static NTSTATUS STDCALL bus_pnp__query_capabilities_(
+static NTSTATUS STDCALL WvBusPnpQueryCapabilities_(
     IN struct device__type * dev,
     IN PIRP irp
   ) {
@@ -239,7 +239,7 @@ static NTSTATUS STDCALL bus_pnp__query_capabilities_(
     return driver__complete_irp(irp, irp->IoStatus.Information, STATUS_SUCCESS);
   }
 
-static NTSTATUS STDCALL bus_pnp__query_dev_text_(
+static NTSTATUS STDCALL WvBusPnpQueryDevText_(
     IN struct device__type * dev,
     IN PIRP irp
   ) {
@@ -324,7 +324,7 @@ DEFINE_GUID(
     0xb1
   );
 
-static NTSTATUS STDCALL bus_pnp__query_bus_info_(
+static NTSTATUS STDCALL WvBusPnpQueryBusInfo_(
     IN struct device__type * dev,
     IN PIRP irp
   ) {
@@ -351,7 +351,7 @@ static NTSTATUS STDCALL bus_pnp__query_bus_info_(
     return status;
   }
 
-static NTSTATUS STDCALL bus_pnp__simple_(
+static NTSTATUS STDCALL WvBusPnpSimple_(
     IN struct device__type * dev,
     IN PIRP irp,
     IN UCHAR code
@@ -439,29 +439,29 @@ NTSTATUS STDCALL WvBusPnpDispatch(
 
         case IRP_MN_QUERY_DEVICE_TEXT:
           DBG("bus_pnp: IRP_MN_QUERY_DEVICE_TEXT\n");
-          return bus_pnp__query_dev_text_(dev, irp);
+          return WvBusPnpQueryDevText_(dev, irp);
 
         case IRP_MN_QUERY_BUS_INFORMATION:
           DBG("bus_pnp: IRP_MN_QUERY_BUS_INFORMATION\n");
-          return bus_pnp__query_bus_info_(dev, irp);
+          return WvBusPnpQueryBusInfo_(dev, irp);
 
         case IRP_MN_QUERY_DEVICE_RELATIONS:
           DBG("bus_pnp: IRP_MJ_QUERY_DEVICE_RELATIONS\n");
-          return bus_pnp__query_dev_relations_(dev, irp);
+          return WvBusPnpQueryDevRelations_(dev, irp);
 
         case IRP_MN_QUERY_CAPABILITIES:
           DBG("bus_pnp: IRP_MN_QUERY_CAPABILITIES\n");
-          return bus_pnp__query_capabilities_(dev, irp);
+          return WvBusPnpQueryCapabilities_(dev, irp);
 
         case IRP_MN_REMOVE_DEVICE:
           DBG("bus_pnp: IRP_MN_REMOVE_DEVICE\n");
-          return bus_pnp__remove_dev_(dev, irp);
+          return WvBusPnpRemoveDev_(dev, irp);
 
         case IRP_MN_START_DEVICE:
           DBG("bus_pnp: IRP_MN_START_DEVICE\n");
-          return bus_pnp__start_dev_(dev, irp);
+          return WvBusPnpStartDev_(dev, irp);
 
         default:
-          return bus_pnp__simple_(dev, irp, code);
+          return WvBusPnpSimple_(dev, irp, code);
       }
   }
