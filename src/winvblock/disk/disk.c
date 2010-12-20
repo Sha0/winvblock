@@ -75,7 +75,7 @@ WV_S_DEV_IRP_MJ disk__irp_mj_ = {
     disk_pnp__dispatch,
   };
 
-static disk__max_xfer_len_decl(default_max_xfer_len) {
+static winvblock__uint32 default_max_xfer_len(IN WV_SP_DISK_T disk_ptr) {
     return 1024 * 1024;
   }
 
@@ -431,6 +431,6 @@ NTSTATUS STDCALL disk__io(
   }
 
 /* See header for details. */
-disk__max_xfer_len_decl(disk__max_xfer_len) {
+winvblock__uint32 disk__max_xfer_len(IN WV_SP_DISK_T disk_ptr) {
     return disk_ptr->disk_ops.max_xfer_len(disk_ptr);
   }

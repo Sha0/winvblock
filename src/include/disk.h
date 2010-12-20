@@ -73,20 +73,10 @@ typedef WV_F_DISK_IO * WV_FP_DISK_IO;
  * Maximum transfer length response routine.
  *
  * @v disk_ptr        The disk being queried.
+ * @ret UINT32        The maximum transfer length.
  */
-#  define disk__max_xfer_len_decl( x ) \
-\
-winvblock__uint32 \
-x ( \
-  IN WV_SP_DISK_T disk_ptr \
- )
-/*
- * Function pointer for a maximum transfer length response routine.
- * 'indent' mangles this, so it looks weird.
- */
-typedef disk__max_xfer_len_decl (
-   ( *disk__max_xfer_len_routine )
- );
+typedef winvblock__uint32 WV_F_DISK_MAX_XFER_LEN(IN WV_SP_DISK_T);
+typedef WV_F_DISK_MAX_XFER_LEN * WV_FP_DISK_MAX_XFER_LEN;
 
 /**
  * Disk initialization routine.
@@ -129,7 +119,7 @@ typedef disk__close_decl (
 winvblock__def_struct ( disk__ops )
 {
   WV_FP_DISK_IO io;
-  disk__max_xfer_len_routine max_xfer_len;
+  WV_FP_DISK_MAX_XFER_LEN max_xfer_len;
   disk__init_routine init;
   disk__close_routine close;
 };
@@ -192,9 +182,7 @@ winvblock__def_struct ( mbr )
 #  endif
 
 extern WV_F_DISK_IO disk__io;
-extern disk__max_xfer_len_decl (
-  disk__max_xfer_len
- );
+extern WV_F_DISK_MAX_XFER_LEN disk__max_xfer_len;
 
 /**
  * Attempt to guess a disk's geometry.

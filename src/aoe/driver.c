@@ -63,6 +63,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT);
 static struct aoe__disk_type_ * aoe__create_disk_(void);
 static WV_F_DEV_FREE aoe__free_disk_;
 static WV_F_DISK_IO io;
+static WV_F_DISK_MAX_XFER_LEN max_xfer_len;
 
 /** Tag types. */
 enum aoe__tag_type_
@@ -1930,8 +1931,7 @@ static void STDCALL aoe__thread_(IN void *StartContext)
     DBG ( "Exit\n" );
   }
 
-static disk__max_xfer_len_decl(max_xfer_len)
-  {
+static winvblock__uint32 max_xfer_len(IN WV_SP_DISK_T disk_ptr) {
     struct aoe__disk_type_ * aoe_disk_ptr = aoe__get_(disk_ptr->device);
 
     return disk_ptr->SectorSize * aoe_disk_ptr->MaxSectorsPerPacket;
