@@ -81,7 +81,7 @@ static disk__max_xfer_len_decl(default_max_xfer_len) {
 
 /* Initialize a disk. */
 static winvblock__bool STDCALL disk__init_(IN WV_SP_DEV_T dev) {
-    disk__type_ptr disk_ptr = disk__get_ptr(dev);
+    WV_SP_DISK_T disk_ptr = disk__get_ptr(dev);
     return disk_ptr->disk_ops.init(disk_ptr);
   }
 
@@ -90,7 +90,7 @@ disk__init_decl(default_init) {
   }
 
 static void STDCALL disk__close_(IN WV_SP_DEV_T dev_ptr) {
-    disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
+    WV_SP_DISK_T disk_ptr = disk__get_ptr(dev_ptr);
     disk_ptr->disk_ops.close(disk_ptr);
     return;
   }
@@ -125,7 +125,7 @@ static PDEVICE_OBJECT STDCALL create_pdo(IN WV_SP_DEV_T dev_ptr) {
      * @v disk_types[]      Floppy, hard disk, optical disc specifics
      * @v characteristics[] Floppy, hard disk, optical disc specifics
      */
-    disk__type_ptr disk_ptr;
+    WV_SP_DISK_T disk_ptr;
     NTSTATUS status;
     PDEVICE_OBJECT dev_obj_ptr;
     static DEVICE_TYPE disk_types[WvDiskMediaTypes] =
@@ -225,7 +225,7 @@ winvblock__def_struct(fat_super) {
  */
 winvblock__lib_func void disk__guess_geometry(
     IN WV_AP_DISK_BOOT_SECT boot_sect_ptr,
-    IN OUT disk__type_ptr disk_ptr
+    IN OUT WV_SP_DISK_T disk_ptr
   ) {
     winvblock__uint16 heads = 0, sects_per_track = 0, cylinders;
     mbr_ptr as_mbr;
@@ -328,9 +328,9 @@ winvblock__lib_func void disk__guess_geometry(
  *
  * See the header file for additional details.
  */
-winvblock__lib_func disk__type_ptr disk__create(void) {
+winvblock__lib_func WV_SP_DISK_T disk__create(void) {
     WV_SP_DEV_T dev_ptr;
-    disk__type_ptr disk_ptr;
+    WV_SP_DISK_T disk_ptr;
 
     /* Try to create a device. */
     dev_ptr = WvDevCreate();
@@ -392,7 +392,7 @@ NTSTATUS disk__module_init(void) {
  * @v dev_ptr           Points to the disk device to delete.
  */
 static void STDCALL free_disk(IN WV_SP_DEV_T dev_ptr) {
-    disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
+    WV_SP_DISK_T disk_ptr = disk__get_ptr(dev_ptr);
 
     /* Free the "inherited class". */
     disk_ptr->prev_free(dev_ptr);
@@ -408,7 +408,7 @@ static void STDCALL free_disk(IN WV_SP_DEV_T dev_ptr) {
 
 /* See header for details. */
 disk__io_decl(disk__io) {
-    disk__type_ptr disk_ptr;
+    WV_SP_DISK_T disk_ptr;
 
     /* Establish a pointer to the disk. */
     disk_ptr = disk__get_ptr(dev_ptr);

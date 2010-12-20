@@ -47,7 +47,7 @@ static NTSTATUS STDCALL WvBusDevCtlDiskDetach_(
     winvblock__uint8_ptr buffer = irp->AssociatedIrp.SystemBuffer;
     winvblock__uint32 disk_num = *(winvblock__uint32_ptr) buffer;
     WV_SP_DEV_T dev_walker;
-    disk__type_ptr disk_walker = NULL, prev_disk_walker;
+    WV_SP_DISK_T disk_walker = NULL, prev_disk_walker;
     WV_SP_BUS_T bus;
 
     DBG("Request to detach disk: %d\n", disk_num);

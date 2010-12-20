@@ -52,7 +52,7 @@
 typedef NTSTATUS STDCALL disk_scsi__func(
     IN WV_SP_DEV_T,
     IN PIRP,
-    IN disk__type_ptr,
+    IN WV_SP_DISK_T,
     IN PSCSI_REQUEST_BLOCK,
     IN PCDB,
     OUT winvblock__bool_ptr
@@ -145,7 +145,7 @@ typedef struct _DISK_CDB16
 static NTSTATUS STDCALL disk_scsi__read_write_(
     IN WV_SP_DEV_T dev,
     IN PIRP irp,
-    IN disk__type_ptr disk,
+    IN WV_SP_DISK_T disk,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
     OUT winvblock__bool_ptr completion
@@ -248,7 +248,7 @@ static NTSTATUS STDCALL disk_scsi__read_write_(
 static NTSTATUS STDCALL disk_scsi__verify_(
     IN WV_SP_DEV_T dev,
     IN PIRP irp,
-    IN disk__type_ptr disk,
+    IN WV_SP_DISK_T disk,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
     OUT winvblock__bool_ptr completion
@@ -283,7 +283,7 @@ static NTSTATUS STDCALL disk_scsi__verify_(
 static NTSTATUS STDCALL disk_scsi__read_capacity_(
     IN WV_SP_DEV_T dev,
     IN PIRP irp,
-    IN disk__type_ptr disk,
+    IN WV_SP_DISK_T disk,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
     OUT winvblock__bool_ptr completion
@@ -306,7 +306,7 @@ static NTSTATUS STDCALL disk_scsi__read_capacity_(
 static NTSTATUS STDCALL disk_scsi__read_capacity_16_(
     IN WV_SP_DEV_T dev,
     IN PIRP irp,
-    IN disk__type_ptr disk,
+    IN WV_SP_DISK_T disk,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
     OUT winvblock__bool_ptr completion
@@ -333,7 +333,7 @@ static NTSTATUS STDCALL disk_scsi__read_capacity_16_(
 static NTSTATUS STDCALL disk_scsi__mode_sense_(
     IN WV_SP_DEV_T dev,
     IN PIRP irp,
-    IN disk__type_ptr disk,
+    IN WV_SP_DISK_T disk,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
     OUT winvblock__bool_ptr completion
@@ -360,7 +360,7 @@ static NTSTATUS STDCALL disk_scsi__mode_sense_(
 static NTSTATUS STDCALL disk_scsi__read_toc_(
     IN WV_SP_DEV_T dev,
     IN PIRP irp,
-    IN disk__type_ptr disk,
+    IN WV_SP_DISK_T disk,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
     OUT winvblock__bool_ptr completion
@@ -388,7 +388,7 @@ NTSTATUS STDCALL disk_scsi__dispatch(
     IN PIRP irp,
     IN UCHAR code
   ) {
-    disk__type_ptr disk = disk__get_ptr(dev);
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     PSCSI_REQUEST_BLOCK srb = io_stack_loc->Parameters.Scsi.Srb;
     NTSTATUS status = STATUS_SUCCESS;

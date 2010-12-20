@@ -66,7 +66,7 @@ disk__io_decl (
 {
   PHYSICAL_ADDRESS PhysicalAddress;
   winvblock__uint8_ptr PhysicalMemory;
-  disk__type_ptr disk_ptr;
+  WV_SP_DISK_T disk_ptr;
   ramdisk__type_ptr ramdisk_ptr;
 
   /*
@@ -119,7 +119,7 @@ static winvblock__uint32 STDCALL query_id(
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
   ) {
-    disk__type_ptr disk = disk__get_ptr(dev);
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
     ramdisk__type_ptr ramdisk = ramdisk_get_ptr(dev);
     static PWCHAR hw_ids[WvDiskMediaTypes] = {
         winvblock__literal_w L"\\RAMFloppyDisk",
@@ -163,7 +163,7 @@ ramdisk__create (
   void
  )
 {
-  disk__type_ptr disk_ptr;
+  WV_SP_DISK_T disk_ptr;
   ramdisk__type_ptr ramdisk_ptr;
 
   /*
@@ -223,7 +223,7 @@ NTSTATUS ramdisk__module_init(void) {
  * @v dev_ptr           Points to the RAM disk device to delete.
  */
 static void STDCALL free_ramdisk(IN WV_SP_DEV_T dev_ptr) {
-    disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
+    WV_SP_DISK_T disk_ptr = disk__get_ptr(dev_ptr);
     ramdisk__type_ptr ramdisk_ptr = ramdisk_get_ptr(dev_ptr);
     /* Free the "inherited class". */
     ramdisk_ptr->prev_free(dev_ptr);

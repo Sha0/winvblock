@@ -51,7 +51,7 @@ disk__io_decl (
   io
  )
 {
-  disk__type_ptr disk_ptr;
+  WV_SP_DISK_T disk_ptr;
   filedisk__type_ptr filedisk_ptr;
   LARGE_INTEGER offset;
   NTSTATUS status;
@@ -101,7 +101,7 @@ static winvblock__uint32 STDCALL query_id(
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
   ) {
-    disk__type_ptr disk = disk__get_ptr(dev);
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
     filedisk__type_ptr filedisk = filedisk__get_ptr(dev);
     static PWCHAR hw_ids[WvDiskMediaTypes] = {
         winvblock__literal_w L"\\FileFloppyDisk",
@@ -258,7 +258,7 @@ filedisk__create (
   void
  )
 {
-  disk__type_ptr disk_ptr;
+  WV_SP_DISK_T disk_ptr;
   filedisk__type_ptr filedisk_ptr;
 
   /*
@@ -320,7 +320,7 @@ NTSTATUS filedisk__module_init(void) {
  */
 static void STDCALL free_filedisk(IN WV_SP_DEV_T dev_ptr)
   {
-    disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
+    WV_SP_DISK_T disk_ptr = disk__get_ptr(dev_ptr);
     filedisk__type_ptr filedisk_ptr = filedisk__get_ptr(dev_ptr);
     /*
      * Free the "inherited class".

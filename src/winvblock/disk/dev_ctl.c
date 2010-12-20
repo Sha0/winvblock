@@ -50,7 +50,7 @@ static NTSTATUS STDCALL disk_dev_ctl__storage_query_prop_(
     IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
-    disk__type_ptr disk;
+    WV_SP_DISK_T disk;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status = STATUS_INVALID_PARAMETER;
     PSTORAGE_PROPERTY_QUERY storage_prop_query = irp->AssociatedIrp.SystemBuffer;
@@ -141,7 +141,7 @@ static NTSTATUS STDCALL disk_dev_ctl__get_geom_(
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     winvblock__uint32 copy_size;
     DISK_GEOMETRY disk_geom;
-    disk__type_ptr disk;
+    WV_SP_DISK_T disk;
 
     copy_size = (
         io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength <

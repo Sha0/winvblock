@@ -47,7 +47,7 @@ typedef enum WV_DISK_IO_MODE {
   } WV_E_DISK_IO_MODE, * WV_EP_DISK_IO_MODE;
 
 /* Forward declaration. */
-winvblock__def_struct ( disk__type );
+typedef struct WV_DISK_T WV_S_DISK_T, * WV_SP_DISK_T;
 
 /**
  * I/O Request.
@@ -87,7 +87,7 @@ typedef disk__io_decl (
 \
 winvblock__uint32 \
 x ( \
-  IN disk__type_ptr disk_ptr \
+  IN WV_SP_DISK_T disk_ptr \
  )
 /*
  * Function pointer for a maximum transfer length response routine.
@@ -106,7 +106,7 @@ typedef disk__max_xfer_len_decl (
 \
 winvblock__bool STDCALL \
 x ( \
-  IN disk__type_ptr disk_ptr \
+  IN WV_SP_DISK_T disk_ptr \
  )
 /*
  * Function pointer for a disk initialization routine.
@@ -125,7 +125,7 @@ typedef disk__init_decl (
 \
 void STDCALL \
 x ( \
-  IN disk__type_ptr disk_ptr \
+  IN WV_SP_DISK_T disk_ptr \
  )
 /*
  * Function pointer for a disk close routine.
@@ -143,30 +143,27 @@ winvblock__def_struct ( disk__ops )
   disk__close_routine close;
 };
 
-struct _disk__type
-{
-  WV_SP_DEV_T device;
-  KEVENT SearchEvent;
-  KSPIN_LOCK SpinLock;
-  winvblock__bool BootDrive;
-  winvblock__bool Unmount;
-  WV_E_DISK_MEDIA_TYPE Media;
-  disk__ops disk_ops;
-  ULONGLONG LBADiskSize;
-  ULONGLONG Cylinders;
-  winvblock__uint32 Heads;
-  winvblock__uint32 Sectors;
-  winvblock__uint32 SectorSize;
-  winvblock__uint32 SpecialFileCount;
-  WV_FP_DEV_FREE prev_free;
-  LIST_ENTRY tracking;
-  winvblock__any_ptr ext;
-};
+struct WV_DISK_T {
+    WV_SP_DEV_T device;
+    KEVENT SearchEvent;
+    KSPIN_LOCK SpinLock;
+    winvblock__bool BootDrive;
+    winvblock__bool Unmount;
+    WV_E_DISK_MEDIA_TYPE Media;
+    disk__ops disk_ops;
+    ULONGLONG LBADiskSize;
+    ULONGLONG Cylinders;
+    winvblock__uint32 Heads;
+    winvblock__uint32 Sectors;
+    winvblock__uint32 SectorSize;
+    winvblock__uint32 SpecialFileCount;
+    WV_FP_DEV_FREE prev_free;
+    LIST_ENTRY tracking;
+    winvblock__any_ptr ext;
+  };
 
-/*
- * Yield a pointer to the disk.
- */
-#  define disk__get_ptr( dev_ptr ) ( ( disk__type_ptr ) dev_ptr->ext )
+/* Yield a pointer to the disk. */
+#  define disk__get_ptr(dev_ptr) ((WV_SP_DISK_T) dev_ptr->ext)
 
 /* An MBR C/H/S address and ways to access its components. */
 typedef winvblock__uint8 chs[3];
@@ -218,7 +215,7 @@ extern disk__max_xfer_len_decl (
  */
 extern winvblock__lib_func void disk__guess_geometry (
   IN WV_AP_DISK_BOOT_SECT,
-  IN OUT disk__type_ptr disk_ptr
+  IN OUT WV_SP_DISK_T disk_ptr
  );
 
 /**
@@ -228,12 +225,10 @@ extern winvblock__lib_func void disk__guess_geometry (
  *
  * This function should not be confused with a PDO creation routine, which is
  * actually implemented for each device type.  This routine will allocate a
- * disk__type, track it in a global list, as well as populate the disk
+ * WV_S_DISK_T, track it in a global list, as well as populate the disk
  * with default values.
  */
-extern winvblock__lib_func disk__type_ptr disk__create (
-  void
- );
+extern winvblock__lib_func WV_SP_DISK_T disk__create(void);
 
 extern NTSTATUS disk__module_init(void);
 

@@ -27,7 +27,7 @@
 
 winvblock__def_struct ( filedisk__type )
 {
-  disk__type_ptr disk;
+  WV_SP_DISK_T disk;
   HANDLE file;
   winvblock__uint32 hash;
   WV_FP_DEV_FREE prev_free;

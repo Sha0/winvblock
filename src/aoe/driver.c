@@ -172,7 +172,7 @@ enum aoe__search_state_
 /** The AoE disk type. */
 struct aoe__disk_type_
   {
-    disk__type_ptr disk;
+    WV_SP_DISK_T disk;
     winvblock__uint32 MTU;
     winvblock__uint8 ClientMac[6];
     winvblock__uint8 ServerMac[6];
@@ -1276,7 +1276,7 @@ static disk__io_decl(io)
     winvblock__uint32 i;
     PHYSICAL_ADDRESS PhysicalAddress;
     winvblock__uint8_ptr PhysicalMemory;
-    disk__type_ptr disk_ptr;
+    WV_SP_DISK_T disk_ptr;
     struct aoe__disk_type_ * aoe_disk_ptr;
 
     /*
@@ -1561,7 +1561,7 @@ NTSTATUS STDCALL aoe__reply(
     KIRQL Irql;
     winvblock__bool Found = FALSE;
     LARGE_INTEGER CurrentTime;
-    disk__type_ptr disk_ptr;
+    WV_SP_DISK_T disk_ptr;
     struct aoe__disk_type_ * aoe_disk_ptr;
 
     /*
@@ -1779,7 +1779,7 @@ static void STDCALL aoe__thread_(IN void *StartContext)
     winvblock__uint32 ResendFails = 0;
     winvblock__uint32 Fails = 0;
     winvblock__uint32 RequestTimeout = 0;
-    disk__type_ptr disk_ptr;
+    WV_SP_DISK_T disk_ptr;
     struct aoe__disk_type_ * aoe_disk_ptr;
 
     DBG ( "Entry\n" );
@@ -2182,7 +2182,7 @@ NTSTATUS STDCALL aoe__show(
     count = 0;
     dev_walker = bus->first_child;
     while (dev_walker != NULL) {
-        disk__type_ptr disk = disk__get_ptr(dev_walker);
+        WV_SP_DISK_T disk = disk__get_ptr(dev_walker);
         struct aoe__disk_type_ * aoe_disk = aoe__get_(dev_walker);
 
         disks->Disk[count].Disk = dev_walker->DevNum;
@@ -2267,7 +2267,7 @@ NTSTATUS STDCALL aoe__mount(
  * with default values.
  */
 static struct aoe__disk_type_ * aoe__create_disk_(void) {
-    disk__type_ptr disk;
+    WV_SP_DISK_T disk;
     struct aoe__disk_type_ * aoe_disk;
 
     /* Try to create a disk. */

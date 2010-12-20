@@ -27,7 +27,7 @@
 
 winvblock__def_struct ( ramdisk__type )
 {
-  disk__type_ptr disk;
+  WV_SP_DISK_T disk;
   winvblock__uint32 DiskBuf;
   winvblock__uint32 DiskSize;
   WV_FP_DEV_FREE prev_free;

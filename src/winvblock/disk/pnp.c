@@ -50,7 +50,7 @@ static NTSTATUS STDCALL disk_pnp__query_dev_text_(
     IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
-    disk__type_ptr disk;
+    WV_SP_DISK_T disk;
     WCHAR (*str)[512];
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
@@ -203,7 +203,7 @@ static NTSTATUS STDCALL disk_pnp__query_capabilities_(
     PDEVICE_CAPABILITIES DeviceCapabilities =
       io_stack_loc->Parameters.DeviceCapabilities.Capabilities;
     NTSTATUS status;
-    disk__type_ptr disk;
+    WV_SP_DISK_T disk;
     WV_SP_BUS_T bus;
     DEVICE_CAPABILITIES ParentDeviceCapabilities;
     PDEVICE_OBJECT bus_lower;
@@ -278,7 +278,7 @@ static NTSTATUS STDCALL disk_pnp__simple_(
     IN PIRP irp,
     IN UCHAR code
   ) {
-    disk__type_ptr disk = disk__get_ptr(dev);
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
 
