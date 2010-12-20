@@ -58,6 +58,7 @@ static WV_F_DEV_FREE free_disk;
 static WV_F_DEV_DISPATCH disk__power_;
 static WV_F_DEV_DISPATCH disk__sys_ctl_;
 static WV_F_DISK_INIT WvDiskDefaultInit_;
+static WV_F_DISK_CLOSE WvDiskDefaultClose_;
 
 /* Globals. */
 static LIST_ENTRY disk_list;
@@ -96,7 +97,7 @@ static void STDCALL disk__close_(IN WV_SP_DEV_T dev_ptr) {
     return;
   }
 
-disk__close_decl(default_close) {
+static void STDCALL WvDiskDefaultClose_(IN WV_SP_DISK_T disk_ptr) {
     return;
   }
 
@@ -355,7 +356,7 @@ winvblock__lib_func WV_SP_DISK_T disk__create(void) {
     disk_ptr->prev_free = dev_ptr->Ops.Free;
     disk_ptr->disk_ops.max_xfer_len = default_max_xfer_len;
     disk_ptr->disk_ops.init = WvDiskDefaultInit_;
-    disk_ptr->disk_ops.close = default_close;
+    disk_ptr->disk_ops.close = WvDiskDefaultClose_;
     dev_ptr->Ops.Close = disk__close_;
     dev_ptr->Ops.CreatePdo = create_pdo;
     dev_ptr->Ops.Free = free_disk;

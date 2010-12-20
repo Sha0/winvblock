@@ -47,6 +47,7 @@ static KSPIN_LOCK filedisk_list_lock;
 static WV_F_DEV_FREE free_filedisk;
 static WV_F_DISK_IO io;
 static WV_F_DISK_IO threaded_io;
+static WV_F_DISK_CLOSE close;
 
 static NTSTATUS STDCALL io(
     IN WV_SP_DEV_T dev_ptr,
@@ -241,15 +242,11 @@ err_ansi_to_unicode:
   return status;
 }
 
-static
-disk__close_decl (
-  close
- )
-{
-  filedisk__type_ptr filedisk_ptr = filedisk__get_ptr ( disk_ptr->device );
-  ZwClose ( filedisk_ptr->file );
-  return;
-}
+static void STDCALL close(IN WV_SP_DISK_T disk_ptr) {
+    filedisk__type_ptr filedisk_ptr = filedisk__get_ptr(disk_ptr->device);
+    ZwClose(filedisk_ptr->file);
+    return;
+  }
 
 /**
  * Create a new file-backed disk

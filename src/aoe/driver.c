@@ -65,6 +65,7 @@ static WV_F_DEV_FREE aoe__free_disk_;
 static WV_F_DISK_IO io;
 static WV_F_DISK_MAX_XFER_LEN max_xfer_len;
 static WV_F_DISK_INIT init;
+static WV_F_DISK_CLOSE close;
 
 /** Tag types. */
 enum aoe__tag_type_
@@ -1996,7 +1997,7 @@ winvblock__def_struct(abft) {
 #  pragma pack()
 #endif
 
-disk__close_decl(close) {
+static void STDCALL close(IN WV_SP_DISK_T disk_ptr) {
     return;
   }
 

@@ -92,26 +92,15 @@ typedef WV_F_DISK_INIT * WV_FP_DISK_INIT;
  *
  * @v disk_ptr        The disk device being closed.
  */
-#  define disk__close_decl( x ) \
-\
-void STDCALL \
-x ( \
-  IN WV_SP_DISK_T disk_ptr \
- )
-/*
- * Function pointer for a disk close routine.
- * 'indent' mangles this, so it looks weird.
- */
-typedef disk__close_decl (
-   ( *disk__close_routine )
- );
+typedef void STDCALL WV_F_DISK_CLOSE(IN WV_SP_DISK_T);
+typedef WV_F_DISK_CLOSE * WV_FP_DISK_CLOSE;
 
 winvblock__def_struct ( disk__ops )
 {
   WV_FP_DISK_IO io;
   WV_FP_DISK_MAX_XFER_LEN max_xfer_len;
   WV_FP_DISK_INIT init;
-  disk__close_routine close;
+  WV_FP_DISK_CLOSE close;
 };
 
 struct WV_DISK_T {
