@@ -44,6 +44,7 @@ extern device__pnp_func WvBusPnpDispatch;
 typedef enum WV_BUS_WORK_ITEM_CMD_ {
     WvBusWorkItemCmdAddPdo_,
     WvBusWorkItemCmdRemovePdo_,
+    WvBusWorkItemCmdProcessIrp_,
     WvBusWorkItemCmds_
   } WV_E_BUS_WORK_ITEM_CMD_, * WV_EP_BUS_WORK_ITEM_CMD_;
 
@@ -52,6 +53,7 @@ typedef struct WV_BUS_WORK_ITEM_ {
     WV_E_BUS_WORK_ITEM_CMD_ Cmd;
     union {
         WV_SP_BUS_NODE Node;
+        PIRP Irp;
       } Context;
   } WV_S_BUS_WORK_ITEM_, * WV_SP_BUS_WORK_ITEM_;
 
@@ -439,6 +441,10 @@ static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(
 winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T Bus) {
     WV_SP_BUS_WORK_ITEM_ work_item;
     WV_SP_BUS_NODE node;
+    PIRP irp;
+    PIO_STACK_LOCATION io_stack_loc;
+    PDEVICE_OBJECT dev_obj;
+    PDRIVER_OBJECT driver_obj;
 
     while (work_item = WvBusGetWorkItem_(Bus)) {
         switch (work_item->Cmd) {
@@ -460,6 +466,17 @@ winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T Bus) {
               RemoveEntryList(&node->BusPrivate_.Link);
               ObDereferenceObject(node->BusPrivate_.Pdo);
               Bus->BusPrivate_.NodeCount--;
+              break;
+
+            case WvBusWorkItemCmdProcessIrp_:
+              irp = work_item->Context.Irp;
+              io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+              dev_obj = Bus->Dev->Self;
+              driver_obj = dev_obj->DriverObject;
+              driver_obj->MajorFunction[io_stack_loc->MajorFunction](
+                  dev_obj,
+                  irp
+                );
               break;
 
             default:
@@ -687,4 +704,39 @@ winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(
     /* Fire and forget. */
     KeSetEvent(&bus->ThreadSignal, 0, FALSE);
     return STATUS_SUCCESS;
+  }
+
+/**
+ * Enqueue an IRP for a bus' thread to process.
+ *
+ * @v Bus               The bus for the IRP.
+ * @v Irp               The IRP for the bus.
+ * @ret NTSTATUS        The status of the operation.  Returns STATUS_PENDING
+ *                      if the IRP is successfully added to the queue.
+ */
+winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueIrp(
+    WV_SP_BUS_T Bus,
+    PIRP Irp
+  ) {
+    WV_SP_BUS_WORK_ITEM_ work_item;
+
+    if (!Bus || !Irp)
+      return STATUS_INVALID_PARAMETER;
+
+    if (Bus->Stop)
+      return STATUS_NO_SUCH_DEVICE;
+
+    if (!(work_item = wv_malloc(sizeof *work_item)))
+      return STATUS_INSUFFICIENT_RESOURCES;
+
+    work_item->Cmd = WvBusWorkItemCmdProcessIrp_;
+    work_item->Context.Irp = Irp;
+    IoMarkIrpPending(Irp);
+    if (!WvBusAddWorkItem_(Bus, work_item)) {
+        wv_free(work_item);
+        return STATUS_UNSUCCESSFUL;
+      }
+    /* Fire and forget. */
+    KeSetEvent(&Bus->ThreadSignal, 0, FALSE);
+    return STATUS_PENDING;
   }
