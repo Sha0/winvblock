@@ -170,7 +170,7 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
             irp->IoStatus.Status
           );
       }
-    probe__disks();
+    WvProbeDisks();
     count = 0;
     walker = bus->first_child;
     while (walker != NULL) {

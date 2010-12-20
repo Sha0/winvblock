@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -18,47 +18,42 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _probe_h
-#  define _probe_h
+#ifndef _WV_M_PROBE_H_
+#  define _WV_M_PROBE_H_
 
 /**
  * @file
  *
- * Boot-time disk probing specifics
- *
+ * Boot-time disk probing specifics.
  */
 
-winvblock__def_struct ( int_vector )
-{
-  winvblock__uint16 Offset;
-  winvblock__uint16 Segment;
-};
+typedef struct WV_PROBE_INT_VECTOR {
+    winvblock__uint16 Offset;
+    winvblock__uint16 Segment;
+  } WV_S_PROBE_INT_VECTOR, * WV_SP_PROBE_INT_VECTOR;
 
-#  ifdef _MSC_VER
-#    pragma pack(1)
-#  endif
-winvblock__def_struct ( safe_mbr_hook )
-{
-  winvblock__uint8 Jump[3];
-  winvblock__uint8 Signature[8];
-  winvblock__uint8 VendorID[8];
-  int_vector PrevHook;
-  winvblock__uint32 Flags;
-  winvblock__uint32 mBFT;	/* MEMDISK only */
-}
+#ifdef _MSC_VER
+#  pragma pack(1)
+#endif
+struct WV_PROBE_SAFE_MBR_HOOK {
+    winvblock__uint8 Jump[3];
+    winvblock__uint8 Signature[8];
+    winvblock__uint8 VendorId[8];
+    WV_S_PROBE_INT_VECTOR PrevHook;
+    winvblock__uint32 Flags;
+    winvblock__uint32 Mbft;     /* MEMDISK only. */
+  } __attribute__((__packed__));
+#ifdef _MSC_VER
+#  pragma pack()
+#endif
+typedef struct WV_PROBE_SAFE_MBR_HOOK
+  WV_S_PROBE_SAFE_MBR_HOOK, * WV_SP_PROBE_SAFE_MBR_HOOK;
 
-__attribute__ ( ( __packed__ ) );
-#  ifdef _MSC_VER
-#    pragma pack()
-#  endif
+/* Probe functions. */
+extern WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
+    IN winvblock__uint8_ptr,
+    IN WV_SP_PROBE_INT_VECTOR
+  );
+extern void WvProbeDisks(void);
 
-extern safe_mbr_hook_ptr STDCALL get_safe_hook (
-  IN winvblock__uint8_ptr PhysicalMemory,
-  IN int_vector_ptr InterruptVector
- );
-
-extern void probe__disks (
-  void
- );
-
-#endif				/* _probe_h */
+#endif  /* _WV_M_PROBE_H_ */

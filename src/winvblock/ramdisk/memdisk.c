@@ -47,7 +47,7 @@ check_mbft (
   mdi__mbft_ptr mBFT = ( mdi__mbft_ptr ) ( PhysicalMemory + Offset );
   winvblock__uint32 i;
   winvblock__uint8 Checksum = 0;
-  safe_mbr_hook_ptr AssociatedHook;
+  WV_SP_PROBE_SAFE_MBR_HOOK AssociatedHook;
   ramdisk__type_ptr ramdisk_ptr;
 
   if ( Offset >= 0x100000 )
@@ -74,7 +74,8 @@ check_mbft (
       DBG ( "mBFT safe hook physical pointer too high!\n" );
       return FALSE;
     }
-  AssociatedHook = ( safe_mbr_hook_ptr ) ( PhysicalMemory + mBFT->SafeHook );
+  AssociatedHook =
+    (WV_SP_PROBE_SAFE_MBR_HOOK) (PhysicalMemory + mBFT->SafeHook);
   if ( AssociatedHook->Flags )
     {
       DBG ( "This MEMDISK already processed\n" );
@@ -124,8 +125,8 @@ memdisk__find (
 {
   PHYSICAL_ADDRESS PhysicalAddress;
   winvblock__uint8_ptr PhysicalMemory;
-  int_vector_ptr InterruptVector;
-  safe_mbr_hook_ptr SafeMbrHookPtr;
+  WV_SP_PROBE_INT_VECTOR InterruptVector;
+  WV_SP_PROBE_SAFE_MBR_HOOK SafeMbrHookPtr;
   winvblock__uint32 Offset;
   winvblock__bool FoundMemdisk = FALSE;
 
@@ -140,18 +141,15 @@ memdisk__find (
       return;
     }
   InterruptVector =
-    ( int_vector_ptr ) ( PhysicalMemory + 0x13 * sizeof ( int_vector ) );
-  /*
-   * Walk the "safe hook" chain of INT 13h hooks as far as possible
-   */
-  while ( SafeMbrHookPtr = get_safe_hook ( PhysicalMemory, InterruptVector ) )
-    {
-      if (!wv_memcmpeq(SafeMbrHookPtr->VendorID, "MEMDISK ", 8)) {
+    (WV_SP_PROBE_INT_VECTOR) (PhysicalMemory + 0x13 * sizeof *InterruptVector);
+  /* Walk the "safe hook" chain of INT 13h hooks as far as possible. */
+  while (SafeMbrHookPtr = WvProbeGetSafeHook(PhysicalMemory, InterruptVector)) {
+      if (!wv_memcmpeq(SafeMbrHookPtr->VendorId, "MEMDISK ", 8)) {
 	  DBG ( "Non-MEMDISK INT 0x13 Safe Hook\n" );
 	}
       else
 	{
-	  FoundMemdisk |= check_mbft ( PhysicalMemory, SafeMbrHookPtr->mBFT );
+	  FoundMemdisk |= check_mbft ( PhysicalMemory, SafeMbrHookPtr->Mbft );
 	}
       InterruptVector = &SafeMbrHookPtr->PrevHook;
     }

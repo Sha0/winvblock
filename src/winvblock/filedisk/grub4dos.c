@@ -302,9 +302,9 @@ filedisk_grub4dos__find (
 {
   PHYSICAL_ADDRESS PhysicalAddress;
   winvblock__uint8_ptr PhysicalMemory;
-  int_vector_ptr InterruptVector;
+  WV_SP_PROBE_INT_VECTOR InterruptVector;
   winvblock__uint32 Int13Hook;
-  safe_mbr_hook_ptr SafeMbrHookPtr;
+  WV_SP_PROBE_SAFE_MBR_HOOK SafeMbrHookPtr;
   grub4dos__drive_mapping_ptr Grub4DosDriveMapSlotPtr;
   winvblock__uint32 i;
   winvblock__bool FoundGrub4DosMapping = FALSE;
@@ -324,16 +324,13 @@ filedisk_grub4dos__find (
       return;
     }
   InterruptVector =
-    ( int_vector_ptr ) ( PhysicalMemory + 0x13 * sizeof ( int_vector ) );
-  /*
-   * Walk the "safe hook" chain of INT 13h hooks as far as possible
-   */
-  while ( SafeMbrHookPtr = get_safe_hook ( PhysicalMemory, InterruptVector ) )
-    {
+    (WV_SP_PROBE_INT_VECTOR) (PhysicalMemory + 0x13 * sizeof *InterruptVector);
+  /* Walk the "safe hook" chain of INT 13h hooks as far as possible. */
+  while (SafeMbrHookPtr = WvProbeGetSafeHook(PhysicalMemory, InterruptVector)) {
       /*
        * Check signature
        */
-      if (!wv_memcmpeq(SafeMbrHookPtr->VendorID, sig, sizeof sig - 1)) {
+      if (!wv_memcmpeq(SafeMbrHookPtr->VendorId, sig, sizeof sig - 1)) {
 	  DBG ( "Non-GRUB4DOS INT 0x13 Safe Hook\n" );
 	  InterruptVector = &SafeMbrHookPtr->PrevHook;
 	  continue;

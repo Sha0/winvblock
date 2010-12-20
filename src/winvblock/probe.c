@@ -43,44 +43,38 @@
 #include "filedisk.h"
 #include "probe.h"
 
-safe_mbr_hook_ptr STDCALL
-get_safe_hook (
-  IN winvblock__uint8_ptr PhysicalMemory,
-  IN int_vector_ptr InterruptVector
- )
-{
-  winvblock__uint32 Int13Hook;
-  safe_mbr_hook_ptr SafeMbrHookPtr;
-  winvblock__uint8 Signature[9] = { 0 };
-  winvblock__uint8 VendorID[9] = { 0 };
+WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
+    IN winvblock__uint8_ptr PhysicalMemory,
+    IN WV_SP_PROBE_INT_VECTOR InterruptVector
+  ) {
+    winvblock__uint32 int13_hook;
+    WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook;
+    winvblock__uint8 sig[9] = {0};
+    winvblock__uint8 ven_id[9] = {0};
 
-  Int13Hook =
-    ( ( ( winvblock__uint32 ) InterruptVector->Segment ) << 4 ) +
-    ( ( winvblock__uint32 ) InterruptVector->Offset );
-  SafeMbrHookPtr = ( safe_mbr_hook_ptr ) ( PhysicalMemory + Int13Hook );
-  RtlCopyMemory ( Signature, SafeMbrHookPtr->Signature, 8 );
-  RtlCopyMemory ( VendorID, SafeMbrHookPtr->VendorID, 8 );
-  DBG ( "INT 0x13 Segment: 0x%04x\n", InterruptVector->Segment );
-  DBG ( "INT 0x13 Offset: 0x%04x\n", InterruptVector->Offset );
-  DBG ( "INT 0x13 Hook: 0x%08x\n", Int13Hook );
-  DBG ( "INT 0x13 Safe Hook Signature: %s\n", Signature );
-  if (!wv_memcmpeq(Signature, "$INT13SF", sizeof "$INT13SF" - 1)) {
-      DBG ( "Invalid INT 0x13 Safe Hook Signature; End of chain\n" );
-      return NULL;
-    }
-  return SafeMbrHookPtr;
-}
+    int13_hook = (((winvblock__uint32) InterruptVector->Segment) << 4) +
+      ((winvblock__uint32) InterruptVector->Offset);
+    safe_mbr_hook = (WV_SP_PROBE_SAFE_MBR_HOOK) (PhysicalMemory + int13_hook);
+    RtlCopyMemory(sig, safe_mbr_hook->Signature, 8);
+    RtlCopyMemory(ven_id, safe_mbr_hook->VendorId, 8);
+    DBG("INT 0x13 Segment: 0x%04x\n", InterruptVector->Segment);
+    DBG("INT 0x13 Offset: 0x%04x\n", InterruptVector->Offset);
+    DBG("INT 0x13 Hook: 0x%08x\n", int13_hook);
+    DBG("INT 0x13 Safe Hook Signature: %s\n", sig);
+    if (!wv_memcmpeq(sig, "$INT13SF", sizeof "$INT13SF" - 1)) {
+        DBG("Invalid INT 0x13 Safe Hook Signature; End of chain\n");
+        return NULL;
+      }
+    return safe_mbr_hook;
+  }
 
-extern void
-probe__disks (
-  void
- )
-{
-  static winvblock__bool probed = FALSE;
-  if ( probed )
-    return;
-  memdisk__find (  );
-  ramdisk_grub4dos__find (  );
-  filedisk_grub4dos__find (  );
-  probed = TRUE;
-}
+void WvProbeDisks(void) {
+    static winvblock__bool probed = FALSE;
+
+    if (probed)
+      return;
+    memdisk__find();
+    ramdisk_grub4dos__find();
+    filedisk_grub4dos__find();
+    probed = TRUE;
+  }
