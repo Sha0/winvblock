@@ -103,7 +103,7 @@ disk__io_decl (
       IoCompleteRequest ( irp, IO_NO_INCREMENT );
       return STATUS_INSUFFICIENT_RESOURCES;
     }
-  if ( mode == disk__io_mode_write )
+  if (mode == WvDiskIoModeWrite)
     fast_copy ( PhysicalMemory, buffer, sector_count * disk_ptr->SectorSize );
   else
     fast_copy ( buffer, PhysicalMemory, sector_count * disk_ptr->SectorSize );

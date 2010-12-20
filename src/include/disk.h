@@ -40,12 +40,11 @@ typedef WV_A_DISK_BOOT_SECT * WV_AP_DISK_BOOT_SECT;
 extern winvblock__bool WvDiskIsRemovable[WvDiskMediaTypes];
 extern PWCHAR WvDiskCompatIds[WvDiskMediaTypes];
 
-enum _disk__io_mode
-{
-  disk__io_mode_read,
-  disk__io_mode_write
-};
-winvblock__def_enum ( disk__io_mode );
+typedef enum WV_DISK_IO_MODE {
+    WvDiskIoModeRead,
+    WvDiskIoModeWrite,
+    WvDiskIoModes
+  } WV_E_DISK_IO_MODE, * WV_EP_DISK_IO_MODE;
 
 /* Forward declaration */
 winvblock__def_struct ( disk__type );
@@ -65,7 +64,7 @@ winvblock__def_struct ( disk__type );
 NTSTATUS STDCALL \
 x ( \
   IN WV_SP_DEV_T dev_ptr, \
-  IN disk__io_mode mode, \
+  IN WV_E_DISK_IO_MODE mode, \
   IN LONGLONG start_sector, \
   IN winvblock__uint32 sector_count, \
   IN winvblock__uint8_ptr buffer, \

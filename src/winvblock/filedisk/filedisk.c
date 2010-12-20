@@ -80,7 +80,7 @@ disk__io_decl (
   offset.QuadPart = start_sector * disk_ptr->SectorSize;
   offset.QuadPart += filedisk_ptr->offset.QuadPart;
 
-  if ( mode == disk__io_mode_write )
+  if (mode == WvDiskIoModeWrite)
     status =
       ZwWriteFile ( filedisk_ptr->file, NULL, NULL, NULL, &io_status, buffer,
 		    sector_count * disk_ptr->SectorSize, &offset, NULL );
@@ -344,7 +344,7 @@ winvblock__def_struct ( thread_req )
 {
   LIST_ENTRY list_entry;
   WV_SP_DEV_T dev_ptr;
-  disk__io_mode mode;
+  WV_E_DISK_IO_MODE mode;
   LONGLONG start_sector;
   winvblock__uint32 sector_count;
   winvblock__uint8_ptr buffer;

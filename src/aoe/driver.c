@@ -124,7 +124,7 @@ struct aoe__packet_
 /** An I/O request. */
 struct aoe__io_req_
   {
-    disk__io_mode Mode;
+    WV_E_DISK_IO_MODE Mode;
     winvblock__uint32 SectorCount;
     winvblock__uint8_ptr Buffer;
     PIRP Irp;
@@ -1374,7 +1374,7 @@ static disk__io_decl(io)
          * Allocate and initialize each tag's AoE packet 
          */
         tag->PacketSize = sizeof (struct aoe__packet_);
-        if ( mode == disk__io_mode_write )
+        if (mode == WvDiskIoModeWrite)
     tag->PacketSize += tag->SectorCount * disk_ptr->SectorSize;
         if ((tag->packet_data = wv_mallocz(tag->PacketSize)) == NULL) {
       DBG ( "Couldn't allocate tag->packet_data; bye!\n" );
@@ -1404,7 +1404,7 @@ static disk__io_decl(io)
         tag->packet_data->Tag = 0;
         tag->packet_data->Command = 0;
         tag->packet_data->ExtendedAFlag = TRUE;
-        if ( mode == disk__io_mode_read )
+        if (mode == WvDiskIoModeRead)
     {
       tag->packet_data->Cmd = 0x24;  /* READ SECTOR */
     }
@@ -1427,10 +1427,8 @@ static disk__io_decl(io)
         tag->packet_data->Lba5 =
     ( winvblock__uint8 ) ( ( ( start_sector + i ) >> 40 ) & 255 );
 
-        /*
-         * For a write request, copy from the buffer into the AoE packet 
-         */
-        if ( mode == disk__io_mode_write )
+        /* For a write request, copy from the buffer into the AoE packet. */
+        if (mode == WvDiskIoModeWrite)
     RtlCopyMemory ( tag->packet_data->Data, &buffer[tag->BufferOffset],
         tag->SectorCount * disk_ptr->SectorSize );
 
@@ -1736,10 +1734,8 @@ NTSTATUS STDCALL aoe__reply(
     KeSetEvent ( &disk_ptr->SearchEvent, 0, FALSE );
     break;
         case aoe__tag_type_io_:
-    /*
-     * If the reply is in response to a read request, get our data! 
-     */
-    if ( tag->request_ptr->Mode == disk__io_mode_read )
+    /* If the reply is in response to a read request, get our data! */
+    if (tag->request_ptr->Mode == WvDiskIoModeRead)
       RtlCopyMemory ( &tag->request_ptr->Buffer[tag->BufferOffset],
           reply->Data,
           tag->SectorCount * disk_ptr->SectorSize );
