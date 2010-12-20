@@ -439,18 +439,18 @@ filedisk_grub4dos__find (
 	   */
 	  if ( Grub4DosDriveMapSlotPtr[i].SourceODD )
 	    {
-	      filedisk_ptr->disk->media = disk__media_optical;
+	      filedisk_ptr->disk->Media = WvDiskMediaTypeOptical;
 	      filedisk_ptr->disk->SectorSize = 2048;
 	    }
 	  else
 	    {
-	      filedisk_ptr->disk->media =
+	      filedisk_ptr->disk->Media =
 		Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ?
-		disk__media_hard : disk__media_floppy;
+		WvDiskMediaTypeHard : WvDiskMediaTypeFloppy;
 	      filedisk_ptr->disk->SectorSize = 512;
 	    }
 	  DBG ( "Sector-mapped disk is type: %d\n",
-		filedisk_ptr->disk->media );
+		filedisk_ptr->disk->Media );
 	  /*
 	   * Note the offset of the disk image from the backing disk's start
 	   */

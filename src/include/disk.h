@@ -27,19 +27,17 @@
  * Disk device specifics.
  */
 
-enum _disk__media
-{
-  disk__media_floppy,
-  disk__media_hard,
-  disk__media_optical,
-  disk__media_count
-};
-winvblock__def_enum ( disk__media );
+typedef enum WV_DISK_MEDIA_TYPE {
+    WvDiskMediaTypeFloppy,
+    WvDiskMediaTypeHard,
+    WvDiskMediaTypeOptical,
+    WvDiskMediaTypes
+  } WV_E_DISK_MEDIA_TYPE, * WV_EP_DISK_MEDIA_TYPE;
 
 typedef char disk__boot_sect_ptr[512];
 
-extern winvblock__bool disk__removable[disk__media_count];
-extern PWCHAR disk__compat_ids[disk__media_count];
+extern winvblock__bool disk__removable[WvDiskMediaTypes];
+extern PWCHAR disk__compat_ids[WvDiskMediaTypes];
 
 enum _disk__io_mode
 {
@@ -152,7 +150,7 @@ struct _disk__type
   KSPIN_LOCK SpinLock;
   winvblock__bool BootDrive;
   winvblock__bool Unmount;
-  disk__media media;
+  WV_E_DISK_MEDIA_TYPE Media;
   disk__ops disk_ops;
   ULONGLONG LBADiskSize;
   ULONGLONG Cylinders;

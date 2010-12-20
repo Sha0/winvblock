@@ -257,7 +257,7 @@ static NTSTATUS STDCALL disk_pnp__query_capabilities_(
     DeviceCapabilities->D3Latency = 0;
     DeviceCapabilities->EjectSupported = FALSE;
     DeviceCapabilities->HardwareDisabled = FALSE;
-    DeviceCapabilities->Removable = disk__removable[disk->media];
+    DeviceCapabilities->Removable = disk__removable[disk->Media];
     DeviceCapabilities->SurpriseRemovalOK = FALSE;
     DeviceCapabilities->UniqueID = FALSE;
     DeviceCapabilities->SilentInstall = FALSE;

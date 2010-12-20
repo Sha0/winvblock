@@ -339,7 +339,7 @@ static NTSTATUS STDCALL disk_scsi__mode_sense_(
     OUT winvblock__bool_ptr completion
   ) {
     PMODE_PARAMETER_HEADER mode_param_header;
-    static MEDIA_TYPE media_types[disk__media_count] =
+    static MEDIA_TYPE media_types[WvDiskMediaTypes] =
       { RemovableMedia, FixedMedia, RemovableMedia };
 
     if (srb->DataTransferLength < sizeof (MODE_PARAMETER_HEADER)) {
@@ -349,7 +349,7 @@ static NTSTATUS STDCALL disk_scsi__mode_sense_(
     mode_param_header = (PMODE_PARAMETER_HEADER) srb->DataBuffer;
     RtlZeroMemory(mode_param_header, srb->DataTransferLength);
     mode_param_header->ModeDataLength = sizeof (MODE_PARAMETER_HEADER);
-    mode_param_header->MediumType = media_types[disk->media];
+    mode_param_header->MediumType = media_types[disk->Media];
     mode_param_header->BlockDescriptorLength = 0;
     srb->DataTransferLength = sizeof (MODE_PARAMETER_HEADER);
     irp->IoStatus.Information = sizeof (MODE_PARAMETER_HEADER);

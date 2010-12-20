@@ -106,7 +106,7 @@ static NTSTATUS STDCALL disk_dev_ctl__storage_query_prop_(
         storage_dev_desc.Size = sizeof (STORAGE_DEVICE_DESCRIPTOR);
         storage_dev_desc.DeviceType = DIRECT_ACCESS_DEVICE;
         storage_dev_desc.DeviceTypeModifier = 0;
-        storage_dev_desc.RemovableMedia = disk__removable[disk->media];
+        storage_dev_desc.RemovableMedia = disk__removable[disk->Media];
         storage_dev_desc.CommandQueueing = FALSE;
         storage_dev_desc.VendorIdOffset = 0;
         storage_dev_desc.ProductIdOffset = 0;

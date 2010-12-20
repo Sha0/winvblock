@@ -103,7 +103,7 @@ static winvblock__uint32 STDCALL query_id(
   ) {
     disk__type_ptr disk = disk__get_ptr(dev);
     filedisk__type_ptr filedisk = filedisk__get_ptr(dev);
-    static PWCHAR hw_ids[disk__media_count] = {
+    static PWCHAR hw_ids[WvDiskMediaTypes] = {
         winvblock__literal_w L"\\FileFloppyDisk",
         winvblock__literal_w L"\\FileHardDisk",
         winvblock__literal_w L"\\FileOpticalDisc"
@@ -111,7 +111,7 @@ static winvblock__uint32 STDCALL query_id(
 
     switch (query_type) {
         case BusQueryDeviceID:
-          return swprintf(*buf, hw_ids[disk->media]) + 1;
+          return swprintf(*buf, hw_ids[disk->Media]) + 1;
 
         case BusQueryInstanceID:
           return swprintf(*buf, L"Hash_%08X", filedisk->hash) + 1;
@@ -119,13 +119,13 @@ static winvblock__uint32 STDCALL query_id(
         case BusQueryHardwareIDs: {
             winvblock__uint32 tmp;
 
-            tmp = swprintf(*buf, hw_ids[disk->media]) + 1;
-            tmp += swprintf(*buf + tmp, disk__compat_ids[disk->media]) + 4;
+            tmp = swprintf(*buf, hw_ids[disk->Media]) + 1;
+            tmp += swprintf(*buf + tmp, disk__compat_ids[disk->Media]) + 4;
             return tmp;
           }
 
         case BusQueryCompatibleIDs:
-          return swprintf(*buf, disk__compat_ids[disk->media]) + 4;
+          return swprintf(*buf, disk__compat_ids[disk->Media]) + 4;
 
         default:
           return 0;
@@ -178,19 +178,19 @@ NTSTATUS STDCALL filedisk__attach(IN WV_SP_DEV_T dev, IN PIRP irp) {
   switch ( params->type )
     {
       case 'f':
-	filedisk_ptr->disk->media = disk__media_floppy;
+	filedisk_ptr->disk->Media = WvDiskMediaTypeFloppy;
 	filedisk_ptr->disk->SectorSize = 512;
 	break;
       case 'c':
-	filedisk_ptr->disk->media = disk__media_optical;
+	filedisk_ptr->disk->Media = WvDiskMediaTypeOptical;
 	filedisk_ptr->disk->SectorSize = 2048;
 	break;
       default:
-	filedisk_ptr->disk->media = disk__media_hard;
+	filedisk_ptr->disk->Media = WvDiskMediaTypeHard;
 	filedisk_ptr->disk->SectorSize = 512;
 	break;
     }
-  DBG ( "File-backed disk is type: %d\n", filedisk_ptr->disk->media );
+  DBG ( "File-backed disk is type: %d\n", filedisk_ptr->disk->Media );
   /*
    * Determine the disk's size
    */

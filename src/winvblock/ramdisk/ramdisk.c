@@ -121,7 +121,7 @@ static winvblock__uint32 STDCALL query_id(
   ) {
     disk__type_ptr disk = disk__get_ptr(dev);
     ramdisk__type_ptr ramdisk = ramdisk_get_ptr(dev);
-    static PWCHAR hw_ids[disk__media_count] = {
+    static PWCHAR hw_ids[WvDiskMediaTypes] = {
         winvblock__literal_w L"\\RAMFloppyDisk",
         winvblock__literal_w L"\\RAMHardDisk",
         winvblock__literal_w L"\\RAMOpticalDisc"
@@ -129,7 +129,7 @@ static winvblock__uint32 STDCALL query_id(
 
     switch (query_type) {
         case BusQueryDeviceID:
-          return swprintf(*buf, hw_ids[disk->media]) + 1;
+          return swprintf(*buf, hw_ids[disk->Media]) + 1;
 
         case BusQueryInstanceID:
         	/* "Location" */
@@ -138,13 +138,13 @@ static winvblock__uint32 STDCALL query_id(
         case BusQueryHardwareIDs: {
             winvblock__uint32 tmp;
 
-            tmp = swprintf(*buf, hw_ids[disk->media]) + 1;
-            tmp += swprintf(*buf + tmp, disk__compat_ids[disk->media]) + 4;
+            tmp = swprintf(*buf, hw_ids[disk->Media]) + 1;
+            tmp += swprintf(*buf + tmp, disk__compat_ids[disk->Media]) + 4;
             return tmp;
           }
 
         case BusQueryCompatibleIDs:
-          return swprintf(*buf, disk__compat_ids[disk->media]) + 4;
+          return swprintf(*buf, disk__compat_ids[disk->Media]) + 4;
 
         default:
           return 0;
