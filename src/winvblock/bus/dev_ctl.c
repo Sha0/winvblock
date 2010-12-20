@@ -72,7 +72,7 @@ static NTSTATUS STDCALL WvBusDevCtlDiskDetach_(
         if (disk_walker == disk__get_ptr(bus->first_child))
           bus->first_child = dev_walker->next_sibling_ptr;
           else {
-            prev_disk_walker->device->next_sibling_ptr =
+            prev_disk_walker->Dev->next_sibling_ptr =
               dev_walker->next_sibling_ptr;
           }
         disk_walker->Unmount = TRUE;

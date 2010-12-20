@@ -103,7 +103,7 @@ typedef struct WV_DISK_OPS {
   } WV_S_DISK_OPS, * WV_SP_DISK_OPS;
 
 struct WV_DISK_T {
-    WV_SP_DEV_T device;
+    WV_SP_DEV_T Dev;
     KEVENT SearchEvent;
     KSPIN_LOCK SpinLock;
     winvblock__bool BootDrive;

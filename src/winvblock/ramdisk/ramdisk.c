@@ -192,9 +192,9 @@ ramdisk__create (
    * Populate non-zero device defaults
    */
   ramdisk_ptr->disk = disk_ptr;
-  ramdisk_ptr->prev_free = disk_ptr->device->Ops.Free;
-  disk_ptr->device->Ops.Free = free_ramdisk;
-  disk_ptr->device->Ops.PnpId = query_id;
+  ramdisk_ptr->prev_free = disk_ptr->Dev->Ops.Free;
+  disk_ptr->Dev->Ops.Free = free_ramdisk;
+  disk_ptr->Dev->Ops.PnpId = query_id;
   disk_ptr->disk_ops.Io = io;
   disk_ptr->ext = ramdisk_ptr;
 
@@ -202,7 +202,7 @@ ramdisk__create (
 
 err_noramdisk:
 
-  WvDevFree(disk_ptr->device);
+  WvDevFree(disk_ptr->Dev);
 err_nodisk:
 
   return NULL;

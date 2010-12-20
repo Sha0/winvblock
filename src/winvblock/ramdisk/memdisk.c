@@ -110,8 +110,8 @@ check_mbft (
   ramdisk_ptr->disk->Sectors = mBFT->mdi.sectors;
   ramdisk_ptr->disk->BootDrive = TRUE;
   /* Add the ramdisk to the bus. */
-  if (!WvBusAddChild(driver__bus(), ramdisk_ptr->disk->device)) {
-      WvDevFree(ramdisk_ptr->disk->device);
+  if (!WvBusAddChild(driver__bus(), ramdisk_ptr->disk->Dev)) {
+      WvDevFree(ramdisk_ptr->disk->Dev);
       return FALSE;
     }
   AssociatedHook->Flags = 1;

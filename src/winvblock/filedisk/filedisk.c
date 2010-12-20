@@ -223,7 +223,7 @@ NTSTATUS STDCALL filedisk__attach(IN WV_SP_DEV_T dev, IN PIRP irp) {
       filedisk_ptr->hash += *path_iterator++;
   }
   /* Add the filedisk to the bus. */
-  if (!WvBusAddChild(driver__bus(), filedisk_ptr->disk->device)) {
+  if (!WvBusAddChild(driver__bus(), filedisk_ptr->disk->Dev)) {
       status = STATUS_UNSUCCESSFUL;
       goto err_add_child;
     }
@@ -238,12 +238,13 @@ err_file_open:
 
 err_ansi_to_unicode:
 
-  free_filedisk ( filedisk_ptr->disk->device );
+  free_filedisk(filedisk_ptr->disk->Dev);
   return status;
 }
 
 static void STDCALL close(IN WV_SP_DISK_T disk_ptr) {
-    filedisk__type_ptr filedisk_ptr = filedisk__get_ptr(disk_ptr->device);
+    filedisk__type_ptr filedisk_ptr = filedisk__get_ptr(disk_ptr->Dev);
+
     ZwClose(filedisk_ptr->file);
     return;
   }
@@ -285,9 +286,9 @@ filedisk__create (
    * Populate non-zero device defaults
    */
   filedisk_ptr->disk = disk_ptr;
-  filedisk_ptr->prev_free = disk_ptr->device->Ops.Free;
-  disk_ptr->device->Ops.Free = free_filedisk;
-  disk_ptr->device->Ops.PnpId = query_id;
+  filedisk_ptr->prev_free = disk_ptr->Dev->Ops.Free;
+  disk_ptr->Dev->Ops.Free = free_filedisk;
+  disk_ptr->Dev->Ops.PnpId = query_id;
   disk_ptr->disk_ops.Io = io;
   disk_ptr->disk_ops.Close = close;
   disk_ptr->ext = filedisk_ptr;
@@ -296,7 +297,7 @@ filedisk__create (
 
 err_nofiledisk:
 
-  WvDevFree(disk_ptr->device);
+  WvDevFree(disk_ptr->Dev);
 err_nodisk:
 
   return NULL;
@@ -383,7 +384,7 @@ thread (
 			      FALSE, &timeout );
       KeResetEvent ( &filedisk_ptr->signal );
       /* Are we being torn down?  We abuse the device's Free() member. */
-      if (filedisk_ptr->disk->device->Ops.Free == NULL)
+      if (filedisk_ptr->disk->Dev->Ops.Free == NULL)
         break;
       /* Process each read/write request in the list. */
       while ( walker =
@@ -398,10 +399,8 @@ thread (
     wv_free(req);
 	}
     }
-  /*
-   * Time to tear things down
-   */
-  free_filedisk ( filedisk_ptr->disk->device );
+  /* Time to tear things down. */
+  free_filedisk(filedisk_ptr->disk->Dev);
 }
 
 static NTSTATUS STDCALL threaded_io(
@@ -485,7 +484,7 @@ filedisk__create_threaded (
    */
   filedisk_ptr->sync_io = io;
   filedisk_ptr->disk->disk_ops.Io = threaded_io;
-  filedisk_ptr->disk->device->Ops.Free = free_threaded_filedisk;
+  filedisk_ptr->disk->Dev->Ops.Free = free_threaded_filedisk;
   /*
    * Initialize threading parameters and start the filedisk's thread
    */

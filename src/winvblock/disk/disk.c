@@ -352,7 +352,7 @@ winvblock__lib_func WV_SP_DISK_T disk__create(void) {
         &disk_list_lock
       );
     /* Populate non-zero device defaults. */
-    disk_ptr->device = dev_ptr;
+    disk_ptr->Dev = dev_ptr;
     disk_ptr->prev_free = dev_ptr->Ops.Free;
     disk_ptr->disk_ops.MaxXferLen = default_max_xfer_len;
     disk_ptr->disk_ops.Init = WvDiskDefaultInit_;

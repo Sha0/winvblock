@@ -931,7 +931,7 @@ static winvblock__bool STDCALL init(IN WV_SP_DISK_T disk_ptr) {
     winvblock__uint32 MTU;
     struct aoe__disk_type_ * aoe_disk_ptr;
 
-    aoe_disk_ptr = aoe__get_ ( disk_ptr->device );
+    aoe_disk_ptr = aoe__get_(disk_ptr->Dev);
     /*
      * Allocate our disk search 
      */
@@ -943,7 +943,7 @@ static winvblock__bool STDCALL init(IN WV_SP_DISK_T disk_ptr) {
     /*
      * Initialize the disk search 
      */
-    disk_searcher->device = disk_ptr->device;
+    disk_searcher->device = disk_ptr->Dev;
     disk_searcher->next = NULL;
     aoe_disk_ptr->search_state = aoe__search_state_search_nic_;
     KeResetEvent ( &disk_ptr->SearchEvent );
@@ -1122,9 +1122,10 @@ static winvblock__bool STDCALL init(IN WV_SP_DISK_T disk_ptr) {
            * Find our disk search in the global list of disk searches 
            */
           disk_search_walker = aoe__disk_search_list_;
-          while ( disk_search_walker
-            && disk_search_walker->device != disk_ptr->device )
-      {
+          while (
+              disk_search_walker &&
+              disk_search_walker->device != disk_ptr->Dev
+            ) {
         previous_disk_searcher = disk_search_walker;
         disk_search_walker = disk_search_walker->next;
       }
@@ -1181,7 +1182,7 @@ static winvblock__bool STDCALL init(IN WV_SP_DISK_T disk_ptr) {
       continue;
     }
         tag->type = aoe__tag_type_search_drive_;
-        tag->device = disk_ptr->device;
+        tag->device = disk_ptr->Dev;
 
         /*
          * Establish our tag's AoE packet 
@@ -1934,7 +1935,7 @@ static void STDCALL aoe__thread_(IN void *StartContext)
   }
 
 static winvblock__uint32 max_xfer_len(IN WV_SP_DISK_T disk_ptr) {
-    struct aoe__disk_type_ * aoe_disk_ptr = aoe__get_(disk_ptr->device);
+    struct aoe__disk_type_ * aoe_disk_ptr = aoe__get_(disk_ptr->Dev);
 
     return disk_ptr->SectorSize * aoe_disk_ptr->MaxSectorsPerPacket;
   }
@@ -2085,7 +2086,7 @@ static void aoe__process_abft_(void) {
     aoe_disk->Timeout = 200000;          /* 20 ms. */
     aoe_disk->disk->BootDrive = TRUE;
     aoe_disk->disk->Media = WvDiskMediaTypeHard;
-    WvBusAddChild(driver__bus(), aoe_disk->disk->device);
+    WvBusAddChild(driver__bus(), aoe_disk->disk->Dev);
     return;
 
     out_no_abft:
@@ -2260,7 +2261,7 @@ NTSTATUS STDCALL aoe__mount(
     aoe_disk->Timeout = 200000;             /* 20 ms. */
     aoe_disk->disk->BootDrive = FALSE;
     aoe_disk->disk->Media = WvDiskMediaTypeHard;
-    WvBusAddChild(driver__bus(), aoe_disk->disk->device);
+    WvBusAddChild(driver__bus(), aoe_disk->disk->Dev);
 
     return driver__complete_irp(irp, 0, STATUS_SUCCESS);
   }
@@ -2298,9 +2299,9 @@ static struct aoe__disk_type_ * aoe__create_disk_(void) {
       );
     /* Populate non-zero device defaults. */
     aoe_disk->disk = disk;
-    aoe_disk->prev_free = disk->device->Ops.Free;
-    disk->device->Ops.Free = aoe__free_disk_;
-    disk->device->Ops.PnpId = query_id;
+    aoe_disk->prev_free = disk->Dev->Ops.Free;
+    disk->Dev->Ops.Free = aoe__free_disk_;
+    disk->Dev->Ops.PnpId = query_id;
     disk->disk_ops.Io = io;
     disk->disk_ops.MaxXferLen = max_xfer_len;
     disk->disk_ops.Init = init;
@@ -2311,7 +2312,7 @@ static struct aoe__disk_type_ * aoe__create_disk_(void) {
 
     err_noaoedisk:
 
-    WvDevFree(disk->device);
+    WvDevFree(disk->Dev);
     err_nodisk:
 
     return NULL;
