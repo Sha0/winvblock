@@ -288,8 +288,8 @@ filedisk__create (
   filedisk_ptr->prev_free = disk_ptr->device->Ops.Free;
   disk_ptr->device->Ops.Free = free_filedisk;
   disk_ptr->device->Ops.PnpId = query_id;
-  disk_ptr->disk_ops.io = io;
-  disk_ptr->disk_ops.close = close;
+  disk_ptr->disk_ops.Io = io;
+  disk_ptr->disk_ops.Close = close;
   disk_ptr->ext = filedisk_ptr;
 
   return filedisk_ptr;
@@ -484,7 +484,7 @@ filedisk__create_threaded (
    * Use threaded routines
    */
   filedisk_ptr->sync_io = io;
-  filedisk_ptr->disk->disk_ops.io = threaded_io;
+  filedisk_ptr->disk->disk_ops.Io = threaded_io;
   filedisk_ptr->disk->device->Ops.Free = free_threaded_filedisk;
   /*
    * Initialize threading parameters and start the filedisk's thread

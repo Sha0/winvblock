@@ -2301,10 +2301,10 @@ static struct aoe__disk_type_ * aoe__create_disk_(void) {
     aoe_disk->prev_free = disk->device->Ops.Free;
     disk->device->Ops.Free = aoe__free_disk_;
     disk->device->Ops.PnpId = query_id;
-    disk->disk_ops.io = io;
-    disk->disk_ops.max_xfer_len = max_xfer_len;
-    disk->disk_ops.init = init;
-    disk->disk_ops.close = close;
+    disk->disk_ops.Io = io;
+    disk->disk_ops.MaxXferLen = max_xfer_len;
+    disk->disk_ops.Init = init;
+    disk->disk_ops.Close = close;
     disk->ext = aoe_disk;
 
     return aoe_disk;

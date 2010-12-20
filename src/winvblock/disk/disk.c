@@ -84,7 +84,7 @@ static winvblock__uint32 default_max_xfer_len(IN WV_SP_DISK_T disk_ptr) {
 /* Initialize a disk. */
 static winvblock__bool STDCALL disk__init_(IN WV_SP_DEV_T dev) {
     WV_SP_DISK_T disk_ptr = disk__get_ptr(dev);
-    return disk_ptr->disk_ops.init(disk_ptr);
+    return disk_ptr->disk_ops.Init(disk_ptr);
   }
 
 static winvblock__bool STDCALL WvDiskDefaultInit_(IN WV_SP_DISK_T disk_ptr) {
@@ -93,7 +93,7 @@ static winvblock__bool STDCALL WvDiskDefaultInit_(IN WV_SP_DISK_T disk_ptr) {
 
 static void STDCALL disk__close_(IN WV_SP_DEV_T dev_ptr) {
     WV_SP_DISK_T disk_ptr = disk__get_ptr(dev_ptr);
-    disk_ptr->disk_ops.close(disk_ptr);
+    disk_ptr->disk_ops.Close(disk_ptr);
     return;
   }
 
@@ -354,9 +354,9 @@ winvblock__lib_func WV_SP_DISK_T disk__create(void) {
     /* Populate non-zero device defaults. */
     disk_ptr->device = dev_ptr;
     disk_ptr->prev_free = dev_ptr->Ops.Free;
-    disk_ptr->disk_ops.max_xfer_len = default_max_xfer_len;
-    disk_ptr->disk_ops.init = WvDiskDefaultInit_;
-    disk_ptr->disk_ops.close = WvDiskDefaultClose_;
+    disk_ptr->disk_ops.MaxXferLen = default_max_xfer_len;
+    disk_ptr->disk_ops.Init = WvDiskDefaultInit_;
+    disk_ptr->disk_ops.Close = WvDiskDefaultClose_;
     dev_ptr->Ops.Close = disk__close_;
     dev_ptr->Ops.CreatePdo = create_pdo;
     dev_ptr->Ops.Free = free_disk;
@@ -422,7 +422,7 @@ NTSTATUS STDCALL disk__io(
     /* Establish a pointer to the disk. */
     disk_ptr = disk__get_ptr(dev_ptr);
 
-    return disk_ptr->disk_ops.io(
+    return disk_ptr->disk_ops.Io(
         dev_ptr,
         mode,
         start_sector,
@@ -434,5 +434,5 @@ NTSTATUS STDCALL disk__io(
 
 /* See header for details. */
 winvblock__uint32 disk__max_xfer_len(IN WV_SP_DISK_T disk_ptr) {
-    return disk_ptr->disk_ops.max_xfer_len(disk_ptr);
+    return disk_ptr->disk_ops.MaxXferLen(disk_ptr);
   }

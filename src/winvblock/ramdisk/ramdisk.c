@@ -195,7 +195,7 @@ ramdisk__create (
   ramdisk_ptr->prev_free = disk_ptr->device->Ops.Free;
   disk_ptr->device->Ops.Free = free_ramdisk;
   disk_ptr->device->Ops.PnpId = query_id;
-  disk_ptr->disk_ops.io = io;
+  disk_ptr->disk_ops.Io = io;
   disk_ptr->ext = ramdisk_ptr;
 
   return ramdisk_ptr;

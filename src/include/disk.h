@@ -95,13 +95,12 @@ typedef WV_F_DISK_INIT * WV_FP_DISK_INIT;
 typedef void STDCALL WV_F_DISK_CLOSE(IN WV_SP_DISK_T);
 typedef WV_F_DISK_CLOSE * WV_FP_DISK_CLOSE;
 
-winvblock__def_struct ( disk__ops )
-{
-  WV_FP_DISK_IO io;
-  WV_FP_DISK_MAX_XFER_LEN max_xfer_len;
-  WV_FP_DISK_INIT init;
-  WV_FP_DISK_CLOSE close;
-};
+typedef struct WV_DISK_OPS {
+    WV_FP_DISK_IO Io;
+    WV_FP_DISK_MAX_XFER_LEN MaxXferLen;
+    WV_FP_DISK_INIT Init;
+    WV_FP_DISK_CLOSE Close;
+  } WV_S_DISK_OPS, * WV_SP_DISK_OPS;
 
 struct WV_DISK_T {
     WV_SP_DEV_T device;
@@ -110,7 +109,7 @@ struct WV_DISK_T {
     winvblock__bool BootDrive;
     winvblock__bool Unmount;
     WV_E_DISK_MEDIA_TYPE Media;
-    disk__ops disk_ops;
+    WV_S_DISK_OPS disk_ops;
     ULONGLONG LBADiskSize;
     ULONGLONG Cylinders;
     winvblock__uint32 Heads;
