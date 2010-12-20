@@ -57,6 +57,7 @@ extern WV_F_DEV_PNP disk_pnp__dispatch;
 static WV_F_DEV_FREE free_disk;
 static WV_F_DEV_DISPATCH disk__power_;
 static WV_F_DEV_DISPATCH disk__sys_ctl_;
+static WV_F_DISK_INIT WvDiskDefaultInit_;
 
 /* Globals. */
 static LIST_ENTRY disk_list;
@@ -85,7 +86,7 @@ static winvblock__bool STDCALL disk__init_(IN WV_SP_DEV_T dev) {
     return disk_ptr->disk_ops.init(disk_ptr);
   }
 
-disk__init_decl(default_init) {
+static winvblock__bool STDCALL WvDiskDefaultInit_(IN WV_SP_DISK_T disk_ptr) {
     return TRUE;
   }
 
@@ -353,7 +354,7 @@ winvblock__lib_func WV_SP_DISK_T disk__create(void) {
     disk_ptr->device = dev_ptr;
     disk_ptr->prev_free = dev_ptr->Ops.Free;
     disk_ptr->disk_ops.max_xfer_len = default_max_xfer_len;
-    disk_ptr->disk_ops.init = default_init;
+    disk_ptr->disk_ops.init = WvDiskDefaultInit_;
     disk_ptr->disk_ops.close = default_close;
     dev_ptr->Ops.Close = disk__close_;
     dev_ptr->Ops.CreatePdo = create_pdo;

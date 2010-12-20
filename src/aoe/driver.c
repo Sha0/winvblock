@@ -64,6 +64,7 @@ static struct aoe__disk_type_ * aoe__create_disk_(void);
 static WV_F_DEV_FREE aoe__free_disk_;
 static WV_F_DISK_IO io;
 static WV_F_DISK_MAX_XFER_LEN max_xfer_len;
+static WV_F_DISK_INIT init;
 
 /** Tag types. */
 enum aoe__tag_type_
@@ -914,12 +915,12 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject) {
 /**
  * Search for disk parameters.
  *
- * @v dev_ptr           The device extension for the disk.
+ * @v disk_ptr          The disk to initialize (for AoE, match).
+ * @ret BOOLEAN         See below.
  *
  * Returns TRUE if the disk could be matched, FALSE otherwise.
  */
-static disk__init_decl(init)
-  {
+static winvblock__bool STDCALL init(IN WV_SP_DISK_T disk_ptr) {
     struct aoe__disk_search_
       * disk_searcher, * disk_search_walker, * previous_disk_searcher;
     LARGE_INTEGER Timeout, CurrentTime;

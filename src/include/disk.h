@@ -82,20 +82,10 @@ typedef WV_F_DISK_MAX_XFER_LEN * WV_FP_DISK_MAX_XFER_LEN;
  * Disk initialization routine.
  *
  * @v disk_ptr        The disk device being initialized.
+ * @ret BOOLEAN       FALSE if initialization failed, otherwise TRUE
  */
-#  define disk__init_decl( x ) \
-\
-winvblock__bool STDCALL \
-x ( \
-  IN WV_SP_DISK_T disk_ptr \
- )
-/*
- * Function pointer for a disk initialization routine.
- * 'indent' mangles this, so it looks weird.
- */
-typedef disk__init_decl (
-   ( *disk__init_routine )
- );
+typedef winvblock__bool STDCALL WV_F_DISK_INIT(IN WV_SP_DISK_T);
+typedef WV_F_DISK_INIT * WV_FP_DISK_INIT;
 
 /**
  * Disk close routine.
@@ -120,7 +110,7 @@ winvblock__def_struct ( disk__ops )
 {
   WV_FP_DISK_IO io;
   WV_FP_DISK_MAX_XFER_LEN max_xfer_len;
-  disk__init_routine init;
+  WV_FP_DISK_INIT init;
   disk__close_routine close;
 };
 
