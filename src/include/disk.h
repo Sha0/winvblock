@@ -34,7 +34,8 @@ typedef enum WV_DISK_MEDIA_TYPE {
     WvDiskMediaTypes
   } WV_E_DISK_MEDIA_TYPE, * WV_EP_DISK_MEDIA_TYPE;
 
-typedef char disk__boot_sect_ptr[512];
+typedef char WV_A_DISK_BOOT_SECT[512];
+typedef WV_A_DISK_BOOT_SECT * WV_AP_DISK_BOOT_SECT;
 
 extern winvblock__bool WvDiskIsRemovable[WvDiskMediaTypes];
 extern PWCHAR WvDiskCompatIds[WvDiskMediaTypes];
@@ -217,7 +218,7 @@ extern disk__max_xfer_len_decl (
  * @v disk_ptr          The disk to set the geometry for
  */
 extern winvblock__lib_func void disk__guess_geometry (
-  IN disk__boot_sect_ptr boot_sect_ptr,
+  IN WV_AP_DISK_BOOT_SECT,
   IN OUT disk__type_ptr disk_ptr
  );
 

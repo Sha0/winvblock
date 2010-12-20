@@ -89,7 +89,7 @@ disk__io_decl (
       ZwReadFile ( filedisk_ptr->file, NULL, NULL, NULL, &io_status, buffer,
 		   sector_count * disk_ptr->SectorSize, &offset, NULL );
   if ( !start_sector )
-    disk__guess_geometry ( buffer, disk_ptr );
+    disk__guess_geometry((WV_AP_DISK_BOOT_SECT) buffer, disk_ptr);
   irp->IoStatus.Information = sector_count * disk_ptr->SectorSize;
   irp->IoStatus.Status = status;
   IoCompleteRequest ( irp, IO_NO_INCREMENT );
