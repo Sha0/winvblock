@@ -35,8 +35,8 @@
 #include "debug.h"
 
 /* Forward declarations. */
-static WV_F_DEV_FREE device__free_dev_;
-static WV_F_DEV_CREATE_PDO device__make_pdo_;
+static WV_F_DEV_FREE WvDevFreeDev_;
+static WV_F_DEV_CREATE_PDO WvDevMakePdo_;
 
 /**
  * Initialize device defaults.
@@ -47,8 +47,8 @@ winvblock__lib_func void WvDevInit(WV_SP_DEV_T dev) {
     RtlZeroMemory(dev, sizeof *dev);
     /* Populate non-zero device defaults. */
     dev->DriverObject = driver__obj_ptr;
-    dev->Ops.CreatePdo = device__make_pdo_;
-    dev->Ops.Free = device__free_dev_;
+    dev->Ops.CreatePdo = WvDevMakePdo_;
+    dev->Ops.Free = WvDevFreeDev_;
   }
 
 /**
@@ -93,7 +93,7 @@ winvblock__lib_func PDEVICE_OBJECT STDCALL WvDevCreatePdo(IN WV_SP_DEV_T dev) {
  * This function does nothing, since it doesn't make sense to create a PDO
  * for an unknown type of device.
  */
-static PDEVICE_OBJECT STDCALL device__make_pdo_(IN WV_SP_DEV_T dev) {
+static PDEVICE_OBJECT STDCALL WvDevMakePdo_(IN WV_SP_DEV_T dev) {
     DBG("No specific PDO creation operation for this device!\n");
     return NULL;
   }
@@ -191,7 +191,7 @@ winvblock__lib_func void STDCALL WvDevFree(IN WV_SP_DEV_T dev) {
  *
  * @v dev               Points to the device to delete.
  */
-static void STDCALL device__free_dev_(IN WV_SP_DEV_T dev) {
+static void STDCALL WvDevFreeDev_(IN WV_SP_DEV_T dev) {
     wv_free(dev);
   }
 
