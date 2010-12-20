@@ -46,18 +46,18 @@ typedef enum WV_DISK_IO_MODE {
     WvDiskIoModes
   } WV_E_DISK_IO_MODE, * WV_EP_DISK_IO_MODE;
 
-/* Forward declaration */
+/* Forward declaration. */
 winvblock__def_struct ( disk__type );
 
 /**
- * I/O Request
+ * I/O Request.
  *
- * @v dev_ptr           Points to the disk's device structure
- * @v mode              Read / write mode
- * @v start_sector      First sector for request
- * @v sector_count      Number of sectors to work with
- * @v buffer            Buffer to read / write sectors to / from
- * @v irp               Interrupt request packet for this request
+ * @v dev_ptr           Points to the disk's device structure.
+ * @v mode              Read / write mode.
+ * @v start_sector      First sector for request.
+ * @v sector_count      Number of sectors to work with.
+ * @v buffer            Buffer to read / write sectors to / from.
+ * @v irp               Interrupt request packet for this request.
  */
 #  define disk__io_decl( x ) \
 \
@@ -72,16 +72,16 @@ x ( \
  )
 /*
  * Function pointer for a disk I/O routine.
- * 'indent' mangles this, so it looks weird
+ * 'indent' mangles this, so it looks weird.
  */
 typedef disk__io_decl (
    ( *disk__io_routine )
  );
 
 /**
- * Maximum transfer length response routine
+ * Maximum transfer length response routine.
  *
- * @v disk_ptr        The disk being queried
+ * @v disk_ptr        The disk being queried.
  */
 #  define disk__max_xfer_len_decl( x ) \
 \
@@ -91,16 +91,16 @@ x ( \
  )
 /*
  * Function pointer for a maximum transfer length response routine.
- * 'indent' mangles this, so it looks weird
+ * 'indent' mangles this, so it looks weird.
  */
 typedef disk__max_xfer_len_decl (
    ( *disk__max_xfer_len_routine )
  );
 
 /**
- * Disk initialization routine
+ * Disk initialization routine.
  *
- * @v disk_ptr        The disk device being initialized
+ * @v disk_ptr        The disk device being initialized.
  */
 #  define disk__init_decl( x ) \
 \
@@ -110,16 +110,16 @@ x ( \
  )
 /*
  * Function pointer for a disk initialization routine.
- * 'indent' mangles this, so it looks weird
+ * 'indent' mangles this, so it looks weird.
  */
 typedef disk__init_decl (
    ( *disk__init_routine )
  );
 
 /**
- * Disk close routine
+ * Disk close routine.
  *
- * @v disk_ptr        The disk device being closed
+ * @v disk_ptr        The disk device being closed.
  */
 #  define disk__close_decl( x ) \
 \
@@ -129,7 +129,7 @@ x ( \
  )
 /*
  * Function pointer for a disk close routine.
- * 'indent' mangles this, so it looks weird
+ * 'indent' mangles this, so it looks weird.
  */
 typedef disk__close_decl (
    ( *disk__close_routine )
@@ -164,11 +164,11 @@ struct _disk__type
 };
 
 /*
- * Yield a pointer to the disk
+ * Yield a pointer to the disk.
  */
 #  define disk__get_ptr( dev_ptr ) ( ( disk__type_ptr ) dev_ptr->ext )
 
-/* An MBR C/H/S address and ways to access its components */
+/* An MBR C/H/S address and ways to access its components. */
 typedef winvblock__uint8 chs[3];
 
 #  define     chs_head( chs ) chs[0]
@@ -181,7 +181,7 @@ typedef winvblock__uint8 chs[3];
 #    pragma pack(1)
 #  endif
 
-/* An MBR */
+/* An MBR. */
 winvblock__def_struct ( mbr )
 {
   winvblock__uint8 code[440];
@@ -211,10 +211,10 @@ extern disk__max_xfer_len_decl (
  );
 
 /**
- * Attempt to guess a disk's geometry
+ * Attempt to guess a disk's geometry.
  *
- * @v boot_sect_ptr     The MBR or VBR with possible geometry clues
- * @v disk_ptr          The disk to set the geometry for
+ * @v boot_sect_ptr     The MBR or VBR with possible geometry clues.
+ * @v disk_ptr          The disk to set the geometry for.
  */
 extern winvblock__lib_func void disk__guess_geometry (
   IN WV_AP_DISK_BOOT_SECT,
@@ -222,9 +222,9 @@ extern winvblock__lib_func void disk__guess_geometry (
  );
 
 /**
- * Create a new disk
+ * Create a new disk.
  *
- * @ret disk_ptr        The address of a new disk, or NULL for failure
+ * @ret disk_ptr        The address of a new disk, or NULL for failure.
  *
  * This function should not be confused with a PDO creation routine, which is
  * actually implemented for each device type.  This routine will allocate a
