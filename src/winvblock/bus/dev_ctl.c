@@ -41,12 +41,12 @@
 static device__dispatch_func WvBusDevCtlDiskDetach_;
 
 static NTSTATUS STDCALL WvBusDevCtlDiskDetach_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
     winvblock__uint8_ptr buffer = irp->AssociatedIrp.SystemBuffer;
     winvblock__uint32 disk_num = *(winvblock__uint32_ptr) buffer;
-    struct device__type * dev_walker;
+    WV_SP_DEV_T dev_walker;
     disk__type_ptr disk_walker = NULL, prev_disk_walker;
     WV_SP_BUS_T bus;
 
@@ -86,7 +86,7 @@ static NTSTATUS STDCALL WvBusDevCtlDiskDetach_(
   }
 
 NTSTATUS STDCALL WvBusDevCtlDispatch(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN ULONG POINTER_ALIGNMENT code
   ) {

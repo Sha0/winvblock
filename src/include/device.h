@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _DEVICE_H
-#  define _DEVICE_H
+#ifndef _WV_M_DEVICE_H_
+#  define _WV_M_DEVICE_H_
 
 /**
  * @file
@@ -27,18 +27,19 @@
  * Device specifics.
  */
 
-enum device__state {
-    device__state_not_started,
-    device__state_started,
-    device__state_stop_pending,
-    device__state_stopped,
-    device__state_remove_pending,
-    device__state_surprise_remove_pending,
-    device__state_deleted
-  };
+typedef enum WV_DEV_STATE {
+    WvDevStateNotStarted,
+    WvDevStateStarted,
+    WvDevStateStopPending,
+    WvDevStateStopped,
+    WvDevStateRemovePending,
+    WvDevStateSurpriseRemovePending,
+    WvDevStateDeleted,
+    WvDevStates
+  } WV_E_DEV_STATE, * WV_EP_DEV_STATE;
 
 /* Forward declaration. */
-struct device__type;
+typedef struct WV_DEV_T WV_S_DEV_T, * WV_SP_DEV_T;
 
 /**
  * Device PDO creation routine.
@@ -46,18 +47,17 @@ struct device__type;
  * @v dev               The device whose PDO should be created.
  * @ret pdo             Points to the new PDO, or is NULL upon failure.
  */
-typedef PDEVICE_OBJECT STDCALL device__create_pdo_func(
-    IN struct device__type *
-  );
-
-extern winvblock__lib_func device__create_pdo_func device__create_pdo;
+typedef PDEVICE_OBJECT STDCALL WV_F_DEV_CREATE_PDO(IN WV_SP_DEV_T);
+typedef WV_F_DEV_CREATE_PDO * WV_FP_DEV_CREATE_PDO;
+extern winvblock__lib_func WV_F_DEV_CREATE_PDO WvDevCreatePdo;
 
 /**
  * Device initialization routine.
  *
  * @v dev               The device being initialized.
  */
-typedef winvblock__bool STDCALL device__init_func(IN struct device__type *);
+typedef winvblock__bool STDCALL WV_F_DEV_INIT(IN WV_SP_DEV_T);
+typedef WV_F_DEV_INIT * WV_FP_DEV_INIT;
 
 /**
  * Device PnP ID reponse routine.
@@ -68,41 +68,41 @@ typedef winvblock__bool STDCALL device__init_func(IN struct device__type *);
  *                              ID response.
  * @ret winvblock__uint32       The number of wide characters in the response.
  */
-typedef winvblock__uint32 STDCALL device__pnp_id_func(
-    IN struct device__type *,
+typedef winvblock__uint32 STDCALL WV_F_DEV_PNP_ID(
+    IN WV_SP_DEV_T,
     IN BUS_QUERY_ID_TYPE,
     IN OUT WCHAR (*)[512]
   );
-
-extern winvblock__lib_func device__pnp_id_func device__pnp_id;
+typedef WV_F_DEV_PNP_ID * WV_FP_DEV_PNP_ID;
+extern winvblock__lib_func WV_F_DEV_PNP_ID WvDevPnpId;
 
 /**
  * Device close routine.
  *
  * @v dev               The device being closed.
  */
-typedef void STDCALL device__close_func(IN struct device__type *);
-
-extern winvblock__lib_func device__close_func device__close;
+typedef void STDCALL WV_F_DEV_CLOSE(IN WV_SP_DEV_T);
+typedef WV_F_DEV_CLOSE * WV_FP_DEV_CLOSE;
+extern winvblock__lib_func WV_F_DEV_CLOSE WvDevClose;
 
 /**
  * Device deletion routine.
  *
  * @v dev_ptr           Points to the device to delete.
  */
-typedef void STDCALL device__free_func(IN struct device__type *);
+typedef void STDCALL WV_F_DEV_FREE(IN WV_SP_DEV_T);
+typedef WV_F_DEV_FREE * WV_FP_DEV_FREE;
+extern winvblock__lib_func WV_F_DEV_FREE WvDevFree;
 
-extern winvblock__lib_func device__free_func device__free;
-
-extern winvblock__lib_func void device__init(struct device__type *);
-extern winvblock__lib_func struct device__type * device__create(void);
+extern winvblock__lib_func void WvDevInit(WV_SP_DEV_T);
+extern winvblock__lib_func WV_SP_DEV_T WvDevCreate(void);
 
 winvblock__def_struct(device__ops) {
-    device__create_pdo_func * create_pdo;
-    device__init_func * init;
-    device__pnp_id_func * pnp_id;
-    device__close_func * close;
-    device__free_func * free;
+    WV_FP_DEV_CREATE_PDO create_pdo;
+    WV_FP_DEV_INIT init;
+    WV_FP_DEV_PNP_ID pnp_id;
+    WV_FP_DEV_CLOSE close;
+    WV_FP_DEV_FREE free;
   };
 
 typedef void STDCALL device__thread_func(IN void *);
@@ -114,10 +114,7 @@ typedef void STDCALL device__thread_func(IN void *);
  * @v irp               Points to the IRP.
  * @ret NTSTATUS        The status of processing the IRP for the device.
  */
-typedef NTSTATUS STDCALL device__dispatch_func(
-    IN struct device__type *,
-    IN PIRP
-  );
+typedef NTSTATUS STDCALL device__dispatch_func(IN WV_SP_DEV_T, IN PIRP);
 
 /**
  * The prototype for a device IRP_MJ_DEVICE_CONTROL dispatch.
@@ -128,7 +125,7 @@ typedef NTSTATUS STDCALL device__dispatch_func(
  * @ret NTSTATUS        The status of processing the IRP for the device.
  */
 typedef NTSTATUS STDCALL device__dev_ctl_func(
-    IN struct device__type *,
+    IN WV_SP_DEV_T,
     IN PIRP,
     IN ULONG POINTER_ALIGNMENT
   );
@@ -141,11 +138,7 @@ typedef NTSTATUS STDCALL device__dev_ctl_func(
  * @v code              The SCSI function.
  * @ret NTSTATUS        The status of processing the IRP for the device.
  */
-typedef NTSTATUS STDCALL device__scsi_func(
-    IN struct device__type *,
-    IN PIRP,
-    IN UCHAR
-  );
+typedef NTSTATUS STDCALL device__scsi_func(IN WV_SP_DEV_T, IN PIRP, IN UCHAR);
 
 /**
  * The prototype for a device IRP_MJ_PNP dispatch.
@@ -155,11 +148,7 @@ typedef NTSTATUS STDCALL device__scsi_func(
  * @v code              The minor function.
  * @ret NTSTATUS        The status of processing the IRP for the device.
  */
-typedef NTSTATUS STDCALL device__pnp_func(
-    IN struct device__type *,
-    IN PIRP,
-    IN UCHAR
-  );
+typedef NTSTATUS STDCALL device__pnp_func(IN WV_SP_DEV_T, IN PIRP, IN UCHAR);
 
 /* IRP major function handler table. */
 struct device__irp_mj {
@@ -171,7 +160,7 @@ struct device__irp_mj {
   };
 
 /* Details common to all devices this driver works with */
-struct device__type {
+struct WV_DEV_T {
     /* For debugging */
     winvblock__bool IsBus;
     /* A device's IRP dispatch routine. */
@@ -195,11 +184,11 @@ struct device__type {
     /* Points to the driver. */
     PDRIVER_OBJECT DriverObject;
     /* Current state of the device. */
-    enum device__state state;
+    WV_E_DEV_STATE State;
     /* Previous state of the device. */
-    enum device__state old_state;
+    WV_E_DEV_STATE OldState;
     /* The next device in the parent bus' devices.  TODO: Don't do this. */
-    struct device__type * next_sibling_ptr;
+    WV_SP_DEV_T next_sibling_ptr;
     /* The device operations. */
     device__ops ops;
     /* Tracking for the device module itself. */
@@ -210,11 +199,8 @@ struct device__type {
     struct device__irp_mj * irp_mj;
   };
 
-extern winvblock__lib_func struct device__type * device__get(PDEVICE_OBJECT);
-extern winvblock__lib_func void device__set(
-    PDEVICE_OBJECT,
-    struct device__type *
-  );
+extern winvblock__lib_func WV_SP_DEV_T device__get(PDEVICE_OBJECT);
+extern winvblock__lib_func void device__set(PDEVICE_OBJECT, WV_SP_DEV_T);
 extern device__dispatch_func device__pnp_query_id;
 
-#endif  /* _DEVICE_H */
+#endif  /* _WV_M_DEVICE_H_ */

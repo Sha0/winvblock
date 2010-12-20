@@ -143,7 +143,7 @@ ramdisk_grub4dos__find (
 	  FoundGrub4DosMapping = TRUE;
  	  /* Add the ramdisk to the bus. */
 	  if (!WvBusAddChild(driver__bus(), ramdisk_ptr->disk->device))
-      device__free(ramdisk_ptr->disk->device);
+      WvDevFree(ramdisk_ptr->disk->device);
 	}
       InterruptVector = &SafeMbrHookPtr->PrevHook;
     }

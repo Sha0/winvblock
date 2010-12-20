@@ -143,7 +143,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     WV_SP_BUS_T bus;
     PUNICODE_STRING dev_name = NULL;
     PDEVICE_OBJECT fdo = NULL;
-    struct device__type * dev_ptr;
+    WV_SP_DEV_T dev_ptr;
 
     DBG("Entry\n");
     /* Do we alreay have our main bus? */
@@ -232,7 +232,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     IoDeleteDevice(fdo);
     err_fdo:
 
-    device__free(bus->Dev);
+    WvDevFree(bus->Dev);
     err_bus:
 
     err_already_established:
@@ -393,13 +393,13 @@ static NTSTATUS driver__dispatch_power_(
     IN PIRP irp
   ) {
     /* device__get() checks for a NULL dev_obj */
-    struct device__type * dev = device__get(dev_obj);
+    WV_SP_DEV_T dev = device__get(dev_obj);
 
     #ifdef DEBUGIRPS
     Debug_IrpStart(dev_obj, irp);
     #endif
     /* Check that the device exists. */
-    if (!dev || dev->state == device__state_deleted) {
+    if (!dev || dev->State == WvDevStateDeleted) {
         /* Even if it doesn't, a power IRP is important! */
         PoStartNextPowerIrp(irp);
         return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
@@ -417,13 +417,13 @@ static NTSTATUS driver__dispatch_create_close_(
     IN PIRP irp
   ) {
     /* device__get() checks for a NULL dev_obj */
-    struct device__type * dev = device__get(dev_obj);
+    WV_SP_DEV_T dev = device__get(dev_obj);
 
     #ifdef DEBUGIRPS
     Debug_IrpStart(dev_obj, irp);
     #endif
     /* Check that the device exists. */
-    if (!dev || dev->state == device__state_deleted)
+    if (!dev || dev->State == WvDevStateDeleted)
       return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Always succeed with nothing to do. */
     return driver__complete_irp(irp, 0, STATUS_SUCCESS);
@@ -435,13 +435,13 @@ static NTSTATUS driver__dispatch_sys_ctl_(
     IN PIRP irp
   ) {
     /* device__get() checks for a NULL dev_obj */
-    struct device__type * dev = device__get(dev_obj);
+    WV_SP_DEV_T dev = device__get(dev_obj);
 
     #ifdef DEBUGIRPS
     Debug_IrpStart(dev_obj, irp);
     #endif
     /* Check that the device exists. */
-    if (!dev || dev->state == device__state_deleted)
+    if (!dev || dev->State == WvDevStateDeleted)
       return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Call the particular device's power handler. */
     if (dev->irp_mj && dev->irp_mj->sys_ctl)
@@ -456,14 +456,14 @@ static NTSTATUS driver__dispatch_dev_ctl_(
     IN PIRP irp
   ) {
     /* device__get() checks for a NULL dev_obj */
-    struct device__type * dev = device__get(dev_obj);
+    WV_SP_DEV_T dev = device__get(dev_obj);
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     #ifdef DEBUGIRPS
     Debug_IrpStart(dev_obj, irp);
     #endif
     /* Check that the device exists. */
-    if (!dev || dev->state == device__state_deleted)
+    if (!dev || dev->State == WvDevStateDeleted)
       return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Call the particular device's power handler. */
     if (dev->irp_mj && dev->irp_mj->dev_ctl) {
@@ -483,14 +483,14 @@ static NTSTATUS driver__dispatch_scsi_(
     IN PIRP irp
   ) {
     /* device__get() checks for a NULL dev_obj */
-    struct device__type * dev = device__get(dev_obj);
+    WV_SP_DEV_T dev = device__get(dev_obj);
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     #ifdef DEBUGIRPS
     Debug_IrpStart(dev_obj, irp);
     #endif
     /* Check that the device exists. */
-    if (!dev || dev->state == device__state_deleted)
+    if (!dev || dev->State == WvDevStateDeleted)
       return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Call the particular device's power handler. */
     if (dev->irp_mj && dev->irp_mj->scsi) {
@@ -510,14 +510,14 @@ static NTSTATUS driver__dispatch_pnp_(
     IN PIRP irp
   ) {
     /* device__get() checks for a NULL dev_obj */
-    struct device__type * dev = device__get(dev_obj);
+    WV_SP_DEV_T dev = device__get(dev_obj);
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     #ifdef DEBUGIRPS
     Debug_IrpStart(dev_obj, irp);
     #endif
     /* Check that the device exists. */
-    if (!dev || dev->state == device__state_deleted)
+    if (!dev || dev->State == WvDevStateDeleted)
       return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Call the particular device's power handler. */
     if (dev->irp_mj && dev->irp_mj->pnp) {

@@ -47,7 +47,7 @@ static device__dispatch_func disk_dev_ctl__get_geom_;
 static device__dispatch_func disk_dev_ctl__scsi_get_address_;
 
 static NTSTATUS STDCALL disk_dev_ctl__storage_query_prop_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
     disk__type_ptr disk;
@@ -135,7 +135,7 @@ static NTSTATUS STDCALL disk_dev_ctl__storage_query_prop_(
   }
 
 static NTSTATUS STDCALL disk_dev_ctl__get_geom_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
@@ -165,7 +165,7 @@ static NTSTATUS STDCALL disk_dev_ctl__get_geom_(
   }
 
 static NTSTATUS STDCALL disk_dev_ctl__scsi_get_address_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc= IoGetCurrentIrpStackLocation(irp);
@@ -193,7 +193,7 @@ static NTSTATUS STDCALL disk_dev_ctl__scsi_get_address_(
   }
 
 NTSTATUS STDCALL disk_dev_ctl__dispatch(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN ULONG POINTER_ALIGNMENT code
   ) {

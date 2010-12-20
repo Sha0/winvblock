@@ -46,7 +46,7 @@ static LIST_ENTRY ramdisk_list;
 static KSPIN_LOCK ramdisk_list_lock;
 
 /* Forward declarations. */
-static device__free_func free_ramdisk;
+static WV_F_DEV_FREE free_ramdisk;
 
 /* With thanks to karyonix, who makes FiraDisk */
 static __inline void STDCALL
@@ -115,7 +115,7 @@ disk__io_decl (
 }
 
 static winvblock__uint32 STDCALL query_id(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
   ) {
@@ -198,7 +198,7 @@ ramdisk__create (
 
 err_noramdisk:
 
-  device__free ( disk_ptr->device );
+  WvDevFree(disk_ptr->device);
 err_nodisk:
 
   return NULL;
@@ -222,8 +222,7 @@ NTSTATUS ramdisk__module_init(void) {
  *
  * @v dev_ptr           Points to the RAM disk device to delete.
  */
-static void STDCALL free_ramdisk(IN struct device__type * dev_ptr)
-  {
+static void STDCALL free_ramdisk(IN WV_SP_DEV_T dev_ptr) {
     disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
     ramdisk__type_ptr ramdisk_ptr = ramdisk_get_ptr(dev_ptr);
     /* Free the "inherited class". */

@@ -50,7 +50,7 @@
  * @ret NTSTATUS        The status of the SCSI operation.
  */
 typedef NTSTATUS STDCALL disk_scsi__func(
-    IN struct device__type *,
+    IN WV_SP_DEV_T,
     IN PIRP,
     IN disk__type_ptr,
     IN PSCSI_REQUEST_BLOCK,
@@ -143,7 +143,7 @@ typedef struct _DISK_CDB16
 #endif        /* if _WIN32_WINNT <= 0x0600 */
 
 static NTSTATUS STDCALL disk_scsi__read_write_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN disk__type_ptr disk,
     IN PSCSI_REQUEST_BLOCK srb,
@@ -246,7 +246,7 @@ static NTSTATUS STDCALL disk_scsi__read_write_(
   }
 
 static NTSTATUS STDCALL disk_scsi__verify_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN disk__type_ptr disk,
     IN PSCSI_REQUEST_BLOCK srb,
@@ -281,7 +281,7 @@ static NTSTATUS STDCALL disk_scsi__verify_(
   }
 
 static NTSTATUS STDCALL disk_scsi__read_capacity_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN disk__type_ptr disk,
     IN PSCSI_REQUEST_BLOCK srb,
@@ -304,7 +304,7 @@ static NTSTATUS STDCALL disk_scsi__read_capacity_(
   }
 
 static NTSTATUS STDCALL disk_scsi__read_capacity_16_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN disk__type_ptr disk,
     IN PSCSI_REQUEST_BLOCK srb,
@@ -331,7 +331,7 @@ static NTSTATUS STDCALL disk_scsi__read_capacity_16_(
   }
 
 static NTSTATUS STDCALL disk_scsi__mode_sense_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN disk__type_ptr disk,
     IN PSCSI_REQUEST_BLOCK srb,
@@ -358,7 +358,7 @@ static NTSTATUS STDCALL disk_scsi__mode_sense_(
   }
 
 static NTSTATUS STDCALL disk_scsi__read_toc_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN disk__type_ptr disk,
     IN PSCSI_REQUEST_BLOCK srb,
@@ -384,7 +384,7 @@ static NTSTATUS STDCALL disk_scsi__read_toc_(
   }
 
 NTSTATUS STDCALL disk_scsi__dispatch(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN UCHAR code
   ) {

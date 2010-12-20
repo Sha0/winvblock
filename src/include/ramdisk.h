@@ -30,7 +30,7 @@ winvblock__def_struct ( ramdisk__type )
   disk__type_ptr disk;
   winvblock__uint32 DiskBuf;
   winvblock__uint32 DiskSize;
-  device__free_func * prev_free;
+  WV_FP_DEV_FREE prev_free;
   LIST_ENTRY tracking;
 };
 

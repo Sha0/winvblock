@@ -46,7 +46,7 @@ extern device__dispatch_func aoe__mount;
 
 /* Forward declarations. */
 static device__dev_ctl_func aoe_bus__dev_ctl_dispatch_;
-static device__pnp_id_func aoe_bus__pnp_id_;
+static WV_F_DEV_PNP_ID aoe_bus__pnp_id_;
 winvblock__bool aoe_bus__create(void);
 void aoe_bus__free(void);
 
@@ -64,7 +64,7 @@ static UNICODE_STRING AoeBusDosname_ = {
   };
 
 static NTSTATUS STDCALL aoe_bus__dev_ctl_dispatch_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN ULONG POINTER_ALIGNMENT code
   ) {
@@ -140,7 +140,7 @@ winvblock__bool aoe_bus__create(void) {
     IoDeleteDevice(aoe_bus->Dev->Self);
     err_add_child:
 
-    device__free(new_bus->Dev);
+    WvDevFree(new_bus->Dev);
     err_new_bus:
 
     return FALSE;
@@ -157,12 +157,12 @@ void aoe_bus__free(void) {
     #if 0
     bus__remove_child(driver__bus(), aoe_bus->Dev);
     #endif
-    device__free(aoe_bus->Dev);
+    WvDevFree(aoe_bus->Dev);
     return;
   }
 
 static winvblock__uint32 STDCALL aoe_bus__pnp_id_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
   ) {

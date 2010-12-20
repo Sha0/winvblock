@@ -40,18 +40,18 @@ typedef WV_F_BUS_THREAD * WV_FP_BUS_THREAD;
 
 /* The bus type. */
 typedef struct WV_BUS_T {
-    struct device__type * Dev;
+    WV_SP_DEV_T Dev;
     PDEVICE_OBJECT LowerDeviceObject;
     PDEVICE_OBJECT PhysicalDeviceObject;
     winvblock__uint32 Children;
-    struct device__type * first_child;
+    WV_SP_DEV_T first_child;
     WV_FP_BUS_THREAD Thread;
     KEVENT ThreadSignal;
     winvblock__bool Stop;
     struct {
         LIST_ENTRY Nodes;
         USHORT NodeCount;
-        device__free_func * PrevFree;
+        WV_FP_DEV_FREE PrevFree;
         LIST_ENTRY WorkItems;
         KSPIN_LOCK WorkItemsLock;
       } BusPrivate_;
@@ -75,9 +75,9 @@ extern winvblock__lib_func void WvBusInit(WV_SP_BUS_T);
 extern winvblock__lib_func WV_SP_BUS_T WvBusCreate(void);
 extern winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
     IN OUT WV_SP_BUS_T,
-    IN struct device__type *
+    IN WV_SP_DEV_T
   );
-extern winvblock__lib_func WV_SP_BUS_T WvBusFromDev(struct device__type *);
+extern winvblock__lib_func WV_SP_BUS_T WvBusFromDev(WV_SP_DEV_T);
 extern winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T);
 extern winvblock__lib_func void WvBusCancelWorkItems(WV_SP_BUS_T);
 extern winvblock__lib_func NTSTATUS WvBusStartThread(WV_SP_BUS_T);

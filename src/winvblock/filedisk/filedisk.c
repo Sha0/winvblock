@@ -44,7 +44,7 @@ static LIST_ENTRY filedisk_list;
 static KSPIN_LOCK filedisk_list_lock;
 
 /* Forward declarations. */
-static device__free_func free_filedisk;
+static WV_F_DEV_FREE free_filedisk;
 
 static
 disk__io_decl (
@@ -97,7 +97,7 @@ disk__io_decl (
 }
 
 static winvblock__uint32 STDCALL query_id(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
   ) {
@@ -132,10 +132,7 @@ static winvblock__uint32 STDCALL query_id(
       }
   }
 
-NTSTATUS STDCALL filedisk__attach(
-    IN struct device__type * dev,
-    IN PIRP irp
-  ) {
+NTSTATUS STDCALL filedisk__attach(IN WV_SP_DEV_T dev, IN PIRP irp) {
   ANSI_STRING file_path1;
   winvblock__uint8_ptr buf = irp->AssociatedIrp.SystemBuffer;
   mount__filedisk_ptr params = ( mount__filedisk_ptr ) buf;
@@ -297,7 +294,7 @@ filedisk__create (
 
 err_nofiledisk:
 
-  device__free ( disk_ptr->device );
+  WvDevFree(disk_ptr->device);
 err_nodisk:
 
   return NULL;
@@ -321,7 +318,7 @@ NTSTATUS filedisk__module_init(void) {
  *
  * @v dev_ptr           Points to the file-backed disk device to delete.
  */
-static void STDCALL free_filedisk(IN struct device__type * dev_ptr)
+static void STDCALL free_filedisk(IN WV_SP_DEV_T dev_ptr)
   {
     disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
     filedisk__type_ptr filedisk_ptr = filedisk__get_ptr(dev_ptr);
@@ -346,7 +343,7 @@ static void STDCALL free_filedisk(IN struct device__type * dev_ptr)
 winvblock__def_struct ( thread_req )
 {
   LIST_ENTRY list_entry;
-  struct device__type * dev_ptr;
+  WV_SP_DEV_T dev_ptr;
   disk__io_mode mode;
   LONGLONG start_sector;
   winvblock__uint32 sector_count;
@@ -454,7 +451,7 @@ disk__io_decl (
  *
  * @v dev_ptr           Points to the file-backed disk device to delete.
  */
-static void STDCALL free_threaded_filedisk(IN struct device__type * dev_ptr)
+static void STDCALL free_threaded_filedisk(IN WV_SP_DEV_T dev_ptr)
   {
     /*
      * Queue the tear-down and return.  The thread will catch this on timeout.

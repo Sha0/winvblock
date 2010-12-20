@@ -58,10 +58,7 @@ static NTSTATUS STDCALL WvBusPnpIoCompletion_(
     return STATUS_MORE_PROCESSING_REQUIRED;
   }
 
-static NTSTATUS STDCALL WvBusPnpStartDev_(
-    IN struct device__type * dev,
-    IN PIRP irp
-  ) {
+static NTSTATUS STDCALL WvBusPnpStartDev_(IN WV_SP_DEV_T dev, IN PIRP irp) {
     NTSTATUS status;
     KEVENT event;
     WV_SP_BUS_T bus = WvBusFromDev(dev);
@@ -85,8 +82,8 @@ static NTSTATUS STDCALL WvBusPnpStartDev_(
         KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, NULL);
       }
     if (NT_SUCCESS(status = irp->IoStatus.Status)) {
-        dev->old_state = dev->state;
-        dev->state = device__state_started;
+        dev->OldState = dev->State;
+        dev->State = WvDevStateStarted;
       }
     return driver__complete_irp(
         irp,
@@ -95,17 +92,14 @@ static NTSTATUS STDCALL WvBusPnpStartDev_(
       );
   }
 
-static NTSTATUS STDCALL WvBusPnpRemoveDev_(
-    IN struct device__type * dev,
-    IN PIRP irp
-  ) {
+static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WV_SP_DEV_T dev, IN PIRP irp) {
     NTSTATUS status = STATUS_SUCCESS;
     WV_SP_BUS_T bus = WvBusFromDev(dev);
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
-    struct device__type * walker, * next;
+    WV_SP_DEV_T walker, next;
 
-    dev->old_state = dev->state;
-    dev->state = device__state_deleted;
+    dev->OldState = dev->State;
+    dev->State = WvDevStateDeleted;
     /* Pass the IRP on to any lower DEVICE_OBJECT */
     if (lower) {
         irp->IoStatus.Information = 0;
@@ -117,9 +111,9 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(
     walker = bus->first_child;
     while (walker != NULL) {
         next = walker->next_sibling_ptr;
-        device__close(walker);
+        WvDevClose(walker);
         IoDeleteDevice(walker->Self);
-        device__free(walker);
+        WvDevFree(walker);
         walker = next;
       }
     /* Somewhat redundant, since the bus will be freed shortly. */
@@ -130,12 +124,12 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(
       IoDetachDevice(lower);
     /* Delete and free. */
     IoDeleteDevice(dev->Self);
-    device__free(dev);
+    WvDevFree(dev);
     return status;
   }
 
 static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
     NTSTATUS status;
@@ -143,7 +137,7 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     winvblock__uint32 count;
-    struct device__type * walker;
+    WV_SP_DEV_T walker;
     PDEVICE_RELATIONS dev_relations;
 
     if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
@@ -208,7 +202,7 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
   }
 
 static NTSTATUS STDCALL WvBusPnpQueryCapabilities_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
@@ -239,10 +233,7 @@ static NTSTATUS STDCALL WvBusPnpQueryCapabilities_(
     return driver__complete_irp(irp, irp->IoStatus.Information, STATUS_SUCCESS);
   }
 
-static NTSTATUS STDCALL WvBusPnpQueryDevText_(
-    IN struct device__type * dev,
-    IN PIRP irp
-  ) {
+static NTSTATUS STDCALL WvBusPnpQueryDevText_(IN WV_SP_DEV_T dev, IN PIRP irp) {
     WV_SP_BUS_T bus = WvBusFromDev(dev);
     WCHAR (*str)[512];
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
@@ -276,7 +267,7 @@ static NTSTATUS STDCALL WvBusPnpQueryDevText_(
           goto alloc_info;
 
         case DeviceTextLocationInformation:
-          str_len = device__pnp_id(
+          str_len = WvDevPnpId(
               dev,
               BusQueryInstanceID,
               str
@@ -324,10 +315,7 @@ DEFINE_GUID(
     0xb1
   );
 
-static NTSTATUS STDCALL WvBusPnpQueryBusInfo_(
-    IN struct device__type * dev,
-    IN PIRP irp
-  ) {
+static NTSTATUS STDCALL WvBusPnpQueryBusInfo_(IN WV_SP_DEV_T dev, IN PIRP irp) {
     PPNP_BUS_INFORMATION pnp_bus_info;
     NTSTATUS status;
 
@@ -352,7 +340,7 @@ static NTSTATUS STDCALL WvBusPnpQueryBusInfo_(
   }
 
 static NTSTATUS STDCALL WvBusPnpSimple_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN UCHAR code
   ) {
@@ -369,41 +357,41 @@ static NTSTATUS STDCALL WvBusPnpSimple_(
 
         case IRP_MN_QUERY_STOP_DEVICE:
           DBG("bus_pnp: IRP_MN_QUERY_STOP_DEVICE\n");
-          dev->old_state = dev->state;
-          dev->state = device__state_stop_pending;
+          dev->OldState = dev->State;
+          dev->State = WvDevStateStopPending;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_CANCEL_STOP_DEVICE:
           DBG("bus_pnp: IRP_MN_CANCEL_STOP_DEVICE\n");
-          dev->state = dev->old_state;
+          dev->State = dev->OldState;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_STOP_DEVICE:
           DBG("bus_pnp: IRP_MN_STOP_DEVICE\n");
-          dev->old_state = dev->state;
-          dev->state = device__state_stopped;
+          dev->OldState = dev->State;
+          dev->State = WvDevStateStopped;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_QUERY_REMOVE_DEVICE:
           DBG("bus_pnp: IRP_MN_QUERY_REMOVE_DEVICE\n");
-          dev->old_state = dev->state;
-          dev->state = device__state_remove_pending;
+          dev->OldState = dev->State;
+          dev->State = WvDevStateRemovePending;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_CANCEL_REMOVE_DEVICE:
           DBG("bus_pnp: IRP_MN_CANCEL_REMOVE_DEVICE\n");
-          dev->state = dev->old_state;
+          dev->State = dev->OldState;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_SURPRISE_REMOVAL:
           DBG("bus_pnp: IRP_MN_SURPRISE_REMOVAL\n");
-          dev->old_state = dev->state;
-          dev->state = device__state_surprise_remove_pending;
+          dev->OldState = dev->State;
+          dev->State = WvDevStateSurpriseRemovePending;
           status = STATUS_SUCCESS;
           break;
 
@@ -428,7 +416,7 @@ static NTSTATUS STDCALL WvBusPnpSimple_(
 
 /* Bus PnP dispatch routine. */
 NTSTATUS STDCALL WvBusPnpDispatch(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN UCHAR code
   ) {

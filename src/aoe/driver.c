@@ -61,7 +61,7 @@ static void STDCALL aoe__thread_(IN void *);
 static void aoe__process_abft_(void);
 static void STDCALL aoe__unload_(IN PDRIVER_OBJECT);
 static struct aoe__disk_type_ * aoe__create_disk_(void);
-static device__free_func aoe__free_disk_;
+static WV_F_DEV_FREE aoe__free_disk_;
 
 /** Tag types. */
 enum aoe__tag_type_
@@ -136,7 +136,7 @@ struct aoe__io_req_
 struct aoe__work_tag_
   {
     enum aoe__tag_type_ type;
-    struct device__type * device;
+    WV_SP_DEV_T device;
     struct aoe__io_req_ * request_ptr;
     winvblock__uint32 Id;
     struct aoe__packet_ * packet_data;
@@ -152,7 +152,7 @@ struct aoe__work_tag_
 /** A disk search. */
 struct aoe__disk_search_
   {
-    struct device__type * device;
+    WV_SP_DEV_T device;
     struct aoe__work_tag_ * tag;
     struct aoe__disk_search_ * next;
   };
@@ -181,7 +181,7 @@ struct aoe__disk_type_
     winvblock__uint32 MaxSectorsPerPacket;
     winvblock__uint32 Timeout;
     enum aoe__search_state_ search_state;
-    device__free_func * prev_free;
+    WV_FP_DEV_FREE prev_free;
     LIST_ENTRY tracking;
   };
 
@@ -208,7 +208,7 @@ static LIST_ENTRY aoe__disk_list_;
 static KSPIN_LOCK aoe__disk_list_lock_;
 
 /* Yield a pointer to the AoE disk. */
-static struct aoe__disk_type_ * aoe__get_(struct device__type * dev_ptr)
+static struct aoe__disk_type_ * aoe__get_(WV_SP_DEV_T dev_ptr)
   {
     return disk__get_ptr(dev_ptr)->ext;
   }
@@ -1935,7 +1935,7 @@ static disk__max_xfer_len_decl(max_xfer_len)
   }
 
 static winvblock__uint32 STDCALL query_id(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
   ) {
@@ -2092,7 +2092,7 @@ static void aoe__process_abft_(void) {
   }
 
 NTSTATUS STDCALL aoe__scan(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
     KIRQL irql;
@@ -2151,11 +2151,11 @@ NTSTATUS STDCALL aoe__scan(
   }
 
 NTSTATUS STDCALL aoe__show(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
     winvblock__uint32 count;
-    struct device__type * dev_walker;
+    WV_SP_DEV_T dev_walker;
     WV_SP_BUS_T bus;
     aoe__mount_disks_ptr disks;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
@@ -2220,7 +2220,7 @@ NTSTATUS STDCALL aoe__show(
   }
 
 NTSTATUS STDCALL aoe__mount(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
     winvblock__uint8_ptr buffer = irp->AssociatedIrp.SystemBuffer;
@@ -2306,7 +2306,7 @@ static struct aoe__disk_type_ * aoe__create_disk_(void) {
 
     err_noaoedisk:
 
-    device__free(disk->device);
+    WvDevFree(disk->device);
     err_nodisk:
 
     return NULL;
@@ -2317,7 +2317,7 @@ static struct aoe__disk_type_ * aoe__create_disk_(void) {
  *
  * @v dev               Points to the AoE disk device to delete.
  */
-static void STDCALL aoe__free_disk_(IN struct device__type * dev) {
+static void STDCALL aoe__free_disk_(IN WV_SP_DEV_T dev) {
     struct aoe__disk_type_ * aoe_disk = aoe__get_(dev);
     /* Free the "inherited class". */
     aoe_disk->prev_free(dev);

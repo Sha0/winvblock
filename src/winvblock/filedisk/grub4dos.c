@@ -490,7 +490,7 @@ filedisk_grub4dos__find (
 	  FoundGrub4DosMapping = TRUE;
 	  /* Add the filedisk to the bus. */
 	  if (!WvBusAddChild(driver__bus(), filedisk_ptr->disk->device))
-      device__free(filedisk_ptr->disk->device);
+      WvDevFree(filedisk_ptr->disk->device);
 	}
       InterruptVector = &SafeMbrHookPtr->PrevHook;
     }

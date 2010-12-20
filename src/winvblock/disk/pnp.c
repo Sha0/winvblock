@@ -47,7 +47,7 @@ static device__pnp_func disk_pnp__simple_;
 device__pnp_func disk_pnp__dispatch;
 
 static NTSTATUS STDCALL disk_pnp__query_dev_text_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
     disk__type_ptr disk;
@@ -84,7 +84,7 @@ static NTSTATUS STDCALL disk_pnp__query_dev_text_(
           goto alloc_info;
 
         case DeviceTextLocationInformation:
-          str_len = device__pnp_id(
+          str_len = WvDevPnpId(
               dev,
               BusQueryInstanceID,
               str
@@ -118,7 +118,7 @@ static NTSTATUS STDCALL disk_pnp__query_dev_text_(
   }
 
 static NTSTATUS STDCALL disk_pnp__query_dev_relations_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
@@ -169,7 +169,7 @@ DEFINE_GUID(
   );
 
 static NTSTATUS STDCALL disk_pnp__query_bus_info_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
     PPNP_BUS_INFORMATION pnp_bus_info;
@@ -196,7 +196,7 @@ static NTSTATUS STDCALL disk_pnp__query_bus_info_(
   }
 
 static NTSTATUS STDCALL disk_pnp__query_capabilities_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
@@ -274,7 +274,7 @@ static NTSTATUS STDCALL disk_pnp__query_capabilities_(
   }
 
 static NTSTATUS STDCALL disk_pnp__simple_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN UCHAR code
   ) {
@@ -302,46 +302,46 @@ static NTSTATUS STDCALL disk_pnp__simple_(
 
         case IRP_MN_START_DEVICE:
           DBG("disk_pnp: IRP_MN_START_DEVICE\n");
-          dev->old_state = dev->state;
-          dev->state = device__state_started;
+          dev->OldState = dev->State;
+          dev->State = WvDevStateStarted;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_QUERY_STOP_DEVICE:
           DBG("disk_pnp: IRP_MN_QUERY_STOP_DEVICE\n");
-          dev->old_state = dev->state;
-          dev->state = device__state_stop_pending;
+          dev->OldState = dev->State;
+          dev->State = WvDevStateStopPending;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_CANCEL_STOP_DEVICE:
           DBG("disk_pnp: IRP_MN_CANCEL_STOP_DEVICE\n");
-          dev->state = dev->old_state;
+          dev->State = dev->OldState;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_STOP_DEVICE:
           DBG("disk_pnp: IRP_MN_STOP_DEVICE\n");
-          dev->old_state = dev->state;
-          dev->state = device__state_stopped;
+          dev->OldState = dev->State;
+          dev->State = WvDevStateStopped;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_QUERY_REMOVE_DEVICE:
           DBG("disk_pnp: IRP_MN_QUERY_REMOVE_DEVICE\n");
-          dev->old_state = dev->state;
-          dev->state = device__state_remove_pending;
+          dev->OldState = dev->State;
+          dev->State = WvDevStateRemovePending;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_REMOVE_DEVICE:
           DBG("disk_pnp: IRP_MN_REMOVE_DEVICE\n");
-          dev->old_state = dev->state;
-          dev->state = device__state_not_started;
+          dev->OldState = dev->State;
+          dev->State = WvDevStateNotStarted;
           if (disk->Unmount) {
-              device__close(dev);
+              WvDevClose(dev);
               IoDeleteDevice(dev->Self);
-              device__free(dev);
+              WvDevFree(dev);
               status = STATUS_NO_SUCH_DEVICE;
             } else {
               status = STATUS_SUCCESS;
@@ -350,14 +350,14 @@ static NTSTATUS STDCALL disk_pnp__simple_(
 
         case IRP_MN_CANCEL_REMOVE_DEVICE:
           DBG("disk_pnp: IRP_MN_CANCEL_REMOVE_DEVICE\n");
-          dev->state = dev->old_state;
+          dev->State = dev->OldState;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_SURPRISE_REMOVAL:
           DBG("disk_pnp: IRP_MN_SURPRISE_REMOVAL\n");
-          dev->old_state = dev->state;
-          dev->state = device__state_surprise_remove_pending;
+          dev->OldState = dev->State;
+          dev->State = WvDevStateSurpriseRemovePending;
           status = STATUS_SUCCESS;
           break;
 
@@ -373,7 +373,7 @@ static NTSTATUS STDCALL disk_pnp__simple_(
 
 /* Disk PnP dispatch routine. */
 NTSTATUS STDCALL disk_pnp__dispatch(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN UCHAR code
   ) {

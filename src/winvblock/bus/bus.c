@@ -58,8 +58,8 @@ typedef struct WV_BUS_WORK_ITEM_ {
   } WV_S_BUS_WORK_ITEM_, * WV_SP_BUS_WORK_ITEM_;
 
 /* Forward declarations. */
-static device__free_func WvBusFree_;
-static device__create_pdo_func WvBusCreatePdo_;
+static WV_F_DEV_FREE WvBusFree_;
+static WV_F_DEV_CREATE_PDO WvBusCreatePdo_;
 static device__dispatch_func WvBusPower_;
 static device__dispatch_func WvBusSysCtl_;
 static WV_F_BUS_THREAD WvBusDefaultThread_;
@@ -87,12 +87,12 @@ struct device__irp_mj WvBusIrpMj_ = {
  */
 winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
     IN OUT WV_SP_BUS_T Bus,
-    IN OUT struct device__type * Dev
+    IN OUT WV_SP_DEV_T Dev
   ) {
     /* The new node's device object. */
     PDEVICE_OBJECT dev_obj;
     /* Walks the child nodes. */
-    struct device__type * walker;
+    WV_SP_DEV_T walker;
     winvblock__uint32 dev_num;
 
     DBG("Entry\n");
@@ -101,10 +101,10 @@ winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
         return FALSE;
       }
     /* Create the child device. */
-    dev_obj = device__create_pdo(Dev);
+    dev_obj = WvDevCreatePdo(Dev);
     if (dev_obj == NULL) {
         DBG("PDO creation failed!\n");
-        device__free(Dev);
+        WvDevFree(Dev);
         return FALSE;
       }
 
@@ -159,10 +159,7 @@ winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
   }
 
 /* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
-static NTSTATUS STDCALL WvBusSysCtl_(
-    IN struct device__type * dev,
-    IN PIRP irp
-  ) {
+static NTSTATUS STDCALL WvBusSysCtl_(IN WV_SP_DEV_T dev, IN PIRP irp) {
     WV_SP_BUS_T bus = WvBusFromDev(dev);
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
 
@@ -176,7 +173,7 @@ static NTSTATUS STDCALL WvBusSysCtl_(
 
 /* Handle a power IRP. */
 static NTSTATUS STDCALL WvBusPower_(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
     WV_SP_BUS_T bus = WvBusFromDev(dev);
@@ -245,7 +242,7 @@ NTSTATUS STDCALL WvBusGetDevCapabilities(
   }
 
 /* Initialize a bus. */
-static winvblock__bool STDCALL WvBusDevInit_(IN struct device__type * dev) {
+static winvblock__bool STDCALL WvBusDevInit_(IN WV_SP_DEV_T dev) {
     return TRUE;
   }
 
@@ -255,7 +252,7 @@ static winvblock__bool STDCALL WvBusDevInit_(IN struct device__type * dev) {
  * @v Bus               Points to the bus to initialize with defaults.
  */
 winvblock__lib_func void WvBusInit(WV_SP_BUS_T Bus) {
-    struct device__type * dev = Bus->Dev;
+    WV_SP_DEV_T dev = Bus->Dev;
 
     RtlZeroMemory(Bus, sizeof *Bus);
     /* Populate non-zero bus device defaults. */
@@ -284,11 +281,11 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T Bus) {
  * with default values.
  */
 winvblock__lib_func WV_SP_BUS_T WvBusCreate(void) {
-    struct device__type * dev;
+    WV_SP_DEV_T dev;
     WV_SP_BUS_T bus;
 
     /* Try to create a device. */
-    dev = device__create();
+    dev = WvDevCreate();
     if (dev == NULL)
       goto err_no_dev;
     /*
@@ -305,7 +302,7 @@ winvblock__lib_func WV_SP_BUS_T WvBusCreate(void) {
 
     err_no_bus:
 
-    device__free(dev);
+    WvDevFree(dev);
     err_no_dev:
 
     return NULL;
@@ -319,7 +316,7 @@ winvblock__lib_func WV_SP_BUS_T WvBusCreate(void) {
  *
  * Returns a Physical Device Object pointer on success, NULL for failure.
  */
-static PDEVICE_OBJECT STDCALL WvBusCreatePdo_(IN struct device__type * dev) {
+static PDEVICE_OBJECT STDCALL WvBusCreatePdo_(IN WV_SP_DEV_T dev) {
     PDEVICE_OBJECT pdo = NULL;
     WV_SP_BUS_T bus;
     NTSTATUS status;
@@ -370,7 +367,7 @@ static PDEVICE_OBJECT STDCALL WvBusCreatePdo_(IN struct device__type * dev) {
  *
  * @v dev               Points to the bus device to delete.
  */
-static void STDCALL WvBusFree_(IN struct device__type * dev) {
+static void STDCALL WvBusFree_(IN WV_SP_DEV_T dev) {
     WV_SP_BUS_T bus = WvBusFromDev(dev);
     /* Free the "inherited class". */
     bus->BusPrivate_.PrevFree(dev);
@@ -384,9 +381,7 @@ static void STDCALL WvBusFree_(IN struct device__type * dev) {
  * @v dev       A pointer to a device.
  * @ret         A pointer to the device's associated bus.
  */
-extern winvblock__lib_func WV_SP_BUS_T WvBusFromDev(
-    struct device__type * Dev
-  ) {
+extern winvblock__lib_func WV_SP_BUS_T WvBusFromDev(WV_SP_DEV_T Dev) {
     return Dev->ext;
   }
 
@@ -501,8 +496,8 @@ winvblock__lib_func void WvBusCancelWorkItems(WV_SP_BUS_T Bus) {
     return;
   }
 
-/* The device__type::ops.free implementation for a threaded bus. */
-static void STDCALL WvBusThreadFree_(IN struct device__type * dev) {
+/* The WV_SP_DEV_T::ops.free implementation for a threaded bus. */
+static void STDCALL WvBusThreadFree_(IN WV_SP_DEV_T dev) {
     WV_SP_BUS_T bus = WvBusFromDev(dev);
 
     bus->Stop = TRUE;
@@ -546,7 +541,7 @@ static void STDCALL WvBusDefaultThread_(IN WV_SP_BUS_T bus) {
     /* Wake up at least every 30 seconds. */
     timeout.QuadPart = -300000000LL;
 
-    /* Hook device__type::ops.free() */
+    /* Hook WV_SP_DEV_T::ops.free() */
     bus->Dev->ops.free = WvBusThreadFree_;
 
     /* When bus::Stop is set, we shut down. */

@@ -38,7 +38,7 @@
 #define POOLSIZE 2048
 
 /* An unfortunate forward declaration.  Definition resolved in device.h */
-struct device__type;
+struct WV_DEV_T;
 
 extern PDRIVER_OBJECT driver__obj_ptr;
 extern winvblock__lib_func void STDCALL Driver_CompletePendingIrp(IN PIRP);
@@ -53,7 +53,7 @@ extern NTSTATUS STDCALL DriverEntry(
 
 /* The physical/function device object's (PDO's/FDO's) DeviceExtension */
 winvblock__def_struct(driver__dev_ext) {
-    struct device__type * device;
+    struct WV_DEV_T * device;
   };
 
 /* The prototype for a device IRP dispatch. */

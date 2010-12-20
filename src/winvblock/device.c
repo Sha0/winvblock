@@ -35,15 +35,15 @@
 #include "debug.h"
 
 /* Forward declarations. */
-static device__free_func device__free_dev_;
-static device__create_pdo_func device__make_pdo_;
+static WV_F_DEV_FREE device__free_dev_;
+static WV_F_DEV_CREATE_PDO device__make_pdo_;
 
 /**
  * Initialize device defaults.
  *
  * @v dev               Points to the device to initialize with defaults.
  */
-winvblock__lib_func void device__init(struct device__type * dev) {
+winvblock__lib_func void WvDevInit(WV_SP_DEV_T dev) {
     RtlZeroMemory(dev, sizeof *dev);
     /* Populate non-zero device defaults. */
     dev->DriverObject = driver__obj_ptr;
@@ -58,10 +58,10 @@ winvblock__lib_func void device__init(struct device__type * dev) {
  *
  * This function should not be confused with a PDO creation routine, which is
  * actually implemented for each device type.  This routine will allocate a
- * device__type and populate the device with default values.
+ * WV_DEV_T and populate the device with default values.
  */
-winvblock__lib_func struct device__type * device__create(void) {
-    struct device__type * dev;
+winvblock__lib_func WV_SP_DEV_T WvDevCreate(void) {
+    WV_SP_DEV_T dev;
 
     /*
      * Devices might be used for booting and should
@@ -71,7 +71,7 @@ winvblock__lib_func struct device__type * device__create(void) {
     if (dev == NULL)
       return NULL;
 
-    device__init(dev);
+    WvDevInit(dev);
     return dev;
   }
 
@@ -80,9 +80,7 @@ winvblock__lib_func struct device__type * device__create(void) {
  *
  * @v dev               Points to the device that needs a PDO.
  */
-winvblock__lib_func PDEVICE_OBJECT STDCALL device__create_pdo(
-    IN struct device__type * dev
-  ) {
+winvblock__lib_func PDEVICE_OBJECT STDCALL WvDevCreatePdo(IN WV_SP_DEV_T dev) {
     return dev->ops.create_pdo(dev);
   }
 
@@ -95,7 +93,7 @@ winvblock__lib_func PDEVICE_OBJECT STDCALL device__create_pdo(
  * This function does nothing, since it doesn't make sense to create a PDO
  * for an unknown type of device.
  */
-static PDEVICE_OBJECT STDCALL device__make_pdo_(IN struct device__type * dev) {
+static PDEVICE_OBJECT STDCALL device__make_pdo_(IN WV_SP_DEV_T dev) {
     DBG("No specific PDO creation operation for this device!\n");
     return NULL;
   }
@@ -110,8 +108,8 @@ static PDEVICE_OBJECT STDCALL device__make_pdo_(IN struct device__type * dev) {
  * @ret winvblock__uint32       The number of wide characters in the response,
  *                              or 0 upon a failure.
  */
-winvblock__uint32 STDCALL device__pnp_id(
-    IN struct device__type * dev,
+winvblock__uint32 STDCALL WvDevPnpId(
+    IN WV_SP_DEV_T dev,
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
   ) {
@@ -120,7 +118,7 @@ winvblock__uint32 STDCALL device__pnp_id(
 
 /* An IRP handler for a PnP ID query. */
 NTSTATUS STDCALL device__pnp_query_id(
-    IN struct device__type * dev,
+    IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
     NTSTATUS status;
@@ -136,7 +134,7 @@ NTSTATUS STDCALL device__pnp_query_id(
         goto alloc_str;
       }
     /* Invoke the specific device's ID query. */
-    str_len = device__pnp_id(
+    str_len = WvDevPnpId(
         dev,
         io_stack_loc->Parameters.QueryId.IdType,
         str
@@ -175,9 +173,7 @@ NTSTATUS STDCALL device__pnp_query_id(
  *
  * @v dev               Points to the device to close.
  */
-winvblock__lib_func void STDCALL device__close(
-    IN struct device__type * dev
-  ) {
+winvblock__lib_func void STDCALL WvDevClose(IN WV_SP_DEV_T dev) {
     /* Call the device's close routine. */
     dev->ops.close(dev);
     return;
@@ -188,7 +184,7 @@ winvblock__lib_func void STDCALL device__close(
  *
  * @v dev               Points to the device to delete.
  */
-winvblock__lib_func void STDCALL device__free(IN struct device__type * dev) {
+winvblock__lib_func void STDCALL WvDevFree(IN WV_SP_DEV_T dev) {
     /* Call the device's free routine. */
     dev->ops.free(dev);
   }
@@ -198,7 +194,7 @@ winvblock__lib_func void STDCALL device__free(IN struct device__type * dev) {
  *
  * @v dev               Points to the device to delete.
  */
-static void STDCALL device__free_dev_(IN struct device__type * dev) {
+static void STDCALL device__free_dev_(IN WV_SP_DEV_T dev) {
     wv_free(dev);
   }
 
@@ -208,7 +204,7 @@ static void STDCALL device__free_dev_(IN struct device__type * dev) {
  * @v dev_obj           Points to the DEVICE_OBJECT to get the device from.
  * @ret                 Returns a pointer to the device on success, else NULL.
  */
-winvblock__lib_func struct device__type * device__get(PDEVICE_OBJECT dev_obj) {
+winvblock__lib_func WV_SP_DEV_T device__get(PDEVICE_OBJECT dev_obj) {
     driver__dev_ext_ptr dev_ext;
 
     if (!dev_obj)
@@ -223,10 +219,7 @@ winvblock__lib_func struct device__type * device__get(PDEVICE_OBJECT dev_obj) {
  * @v dev_obj           Points to the DEVICE_OBJECT to set the device for.
  * @v dev               Points to the device to associate with.
  */
-winvblock__lib_func void device__set(
-    PDEVICE_OBJECT dev_obj,
-    struct device__type * dev
-  ) {
+winvblock__lib_func void device__set(PDEVICE_OBJECT dev_obj, WV_SP_DEV_T dev) {
     driver__dev_ext_ptr dev_ext = dev_obj->DeviceExtension;
     dev_ext->device = dev;
     return;

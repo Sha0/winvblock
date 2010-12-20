@@ -54,7 +54,7 @@ extern device__scsi_func disk_scsi__dispatch;
 extern device__pnp_func disk_pnp__dispatch;
 
 /* Forward declarations. */
-static device__free_func free_disk;
+static WV_F_DEV_FREE free_disk;
 static device__dispatch_func disk__power_;
 static device__dispatch_func disk__sys_ctl_;
 
@@ -81,7 +81,7 @@ disk__max_xfer_len_decl (
 }
 
 /* Initialize a disk. */
-static winvblock__bool STDCALL disk__init_(IN struct device__type * dev) {
+static winvblock__bool STDCALL disk__init_(IN WV_SP_DEV_T dev) {
     disk__type_ptr disk_ptr = disk__get_ptr(dev);
     return disk_ptr->disk_ops.init(disk_ptr);
   }
@@ -91,7 +91,7 @@ disk__init_decl ( default_init )
   return TRUE;
 }
 
-static void STDCALL disk__close_(IN struct device__type * dev_ptr) {
+static void STDCALL disk__close_(IN WV_SP_DEV_T dev_ptr) {
     disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
     disk_ptr->disk_ops.close(disk_ptr);
     return;
@@ -102,18 +102,12 @@ disk__close_decl ( default_close )
   return;
 }
 
-static NTSTATUS STDCALL disk__power_(
-    IN struct device__type * dev,
-    IN PIRP irp
-  ) {
+static NTSTATUS STDCALL disk__power_(IN WV_SP_DEV_T dev, IN PIRP irp) {
     PoStartNextPowerIrp(irp);
     return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
-static NTSTATUS STDCALL disk__sys_ctl_(
-    IN struct device__type * dev,
-    IN PIRP irp
-  ) {
+static NTSTATUS STDCALL disk__sys_ctl_(IN WV_SP_DEV_T dev, IN PIRP irp) {
     return driver__complete_irp(irp, 0, irp->IoStatus.Status);
   }
 
@@ -125,7 +119,7 @@ static NTSTATUS STDCALL disk__sys_ctl_(
  *
  * Returns a Physical Device Object pointer on success, NULL for failure.
  */
-static PDEVICE_OBJECT STDCALL create_pdo(IN struct device__type * dev_ptr) {
+static PDEVICE_OBJECT STDCALL create_pdo(IN WV_SP_DEV_T dev_ptr) {
     /**
      * @v disk_ptr          Used for pointing to disk details
      * @v status            Status of last operation
@@ -357,13 +351,11 @@ disk__create (
   void
  )
 {
-  struct device__type * dev_ptr;
+  WV_SP_DEV_T dev_ptr;
   disk__type_ptr disk_ptr;
 
-  /*
-   * Try to create a device
-   */
-  dev_ptr = device__create (  );
+  /* Try to create a device. */
+  dev_ptr = WvDevCreate();
   if ( dev_ptr == NULL )
     goto err_nodev;
   /*
@@ -398,7 +390,7 @@ disk__create (
 
 err_nodisk:
 
-  device__free ( dev_ptr );
+  WvDevFree(dev_ptr);
 err_nodev:
 
   return NULL;
@@ -422,7 +414,7 @@ NTSTATUS disk__module_init(void) {
  *
  * @v dev_ptr           Points to the disk device to delete.
  */
-static void STDCALL free_disk(IN struct device__type * dev_ptr)
+static void STDCALL free_disk(IN WV_SP_DEV_T dev_ptr)
   {
     disk__type_ptr disk_ptr = disk__get_ptr(dev_ptr);
     /* Free the "inherited class". */
