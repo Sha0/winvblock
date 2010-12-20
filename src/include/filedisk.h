@@ -44,7 +44,7 @@ winvblock__def_struct ( filedisk__type )
   UNICODE_STRING filepath_unicode;
 };
 
-extern device__dispatch_func filedisk__attach;
+extern WV_F_DEV_DISPATCH filedisk__attach;
 
 extern NTSTATUS filedisk__module_init(void);
 

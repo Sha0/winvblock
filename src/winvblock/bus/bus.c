@@ -36,9 +36,9 @@
 #include "debug.h"
 
 /* IRP_MJ_DEVICE_CONTROL dispatcher from bus/dev_ctl.c */
-extern device__dev_ctl_func WvBusDevCtlDispatch;
+extern WV_F_DEV_CTL WvBusDevCtlDispatch;
 /* IRP_MJ_PNP dispatcher from bus/pnp.c */
-extern device__pnp_func WvBusPnpDispatch;
+extern WV_F_DEV_PNP WvBusPnpDispatch;
 
 /* Types. */
 typedef enum WV_BUS_WORK_ITEM_CMD_ {
@@ -60,8 +60,8 @@ typedef struct WV_BUS_WORK_ITEM_ {
 /* Forward declarations. */
 static WV_F_DEV_FREE WvBusFree_;
 static WV_F_DEV_CREATE_PDO WvBusCreatePdo_;
-static device__dispatch_func WvBusPower_;
-static device__dispatch_func WvBusSysCtl_;
+static WV_F_DEV_DISPATCH WvBusPower_;
+static WV_F_DEV_DISPATCH WvBusSysCtl_;
 static WV_F_BUS_THREAD WvBusDefaultThread_;
 static winvblock__bool WvBusAddWorkItem_(
     WV_SP_BUS_T,
@@ -70,11 +70,11 @@ static winvblock__bool WvBusAddWorkItem_(
 static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(WV_SP_BUS_T);
 
 /* Globals. */
-struct device__irp_mj WvBusIrpMj_ = {
+WV_S_DEV_IRP_MJ WvBusIrpMj_ = {
     WvBusPower_,
     WvBusSysCtl_,
     WvBusDevCtlDispatch,
-    (device__scsi_func *) 0,
+    (WV_FP_DEV_SCSI) 0,
     WvBusPnpDispatch,
   };
 
@@ -113,7 +113,7 @@ winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
      * Initialize the device.  For disks, this routine is responsible for
      * determining the disk's geometry appropriately for AoE/RAM/file disks.
      */
-    Dev->ops.init(Dev);
+    Dev->Ops.Init(Dev);
     dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
     /* Add the new device's extension to the bus' list of children. */
     dev_num = 0;
@@ -122,31 +122,31 @@ winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
       } else {
         walker = Bus->first_child;
         /* If the first child device number isn't 0... */
-        if (walker->dev_num) {
+        if (walker->DevNum) {
             /* We insert before. */
             Dev->next_sibling_ptr = walker;
             Bus->first_child = Dev;
           } else {
             while (walker->next_sibling_ptr != NULL) {
                 /* If there's a gap in the device numbers for the bus... */
-                if (walker->dev_num < walker->next_sibling_ptr->dev_num - 1) {
+                if (walker->DevNum < walker->next_sibling_ptr->DevNum - 1) {
                     /* Insert here, instead of at the end. */
-                    dev_num = walker->dev_num + 1;
+                    dev_num = walker->DevNum + 1;
                     Dev->next_sibling_ptr = walker->next_sibling_ptr;
                     walker->next_sibling_ptr = Dev;
                     break;
                   }
                 walker = walker->next_sibling_ptr;
-                dev_num = walker->dev_num + 1;
+                dev_num = walker->DevNum + 1;
               }
             /* If we haven't already inserted the device... */
             if (!Dev->next_sibling_ptr) {
                 walker->next_sibling_ptr = Dev;
-                dev_num = walker->dev_num + 1;
+                dev_num = walker->DevNum + 1;
               }
           }
       }
-    Dev->dev_num = dev_num;
+    Dev->DevNum = dev_num;
     Bus->Children++;
     if (Bus->PhysicalDeviceObject != NULL) {
         IoInvalidateDeviceRelations(
@@ -257,16 +257,16 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T Bus) {
     RtlZeroMemory(Bus, sizeof *Bus);
     /* Populate non-zero bus device defaults. */
     Bus->Dev = dev;
-    Bus->BusPrivate_.PrevFree = dev->ops.free;
+    Bus->BusPrivate_.PrevFree = dev->Ops.Free;
     Bus->Thread = WvBusDefaultThread_;
     KeInitializeSpinLock(&Bus->BusPrivate_.WorkItemsLock);
     InitializeListHead(&Bus->BusPrivate_.WorkItems);
     KeInitializeEvent(&Bus->ThreadSignal, SynchronizationEvent, FALSE);
-    dev->ops.create_pdo = WvBusCreatePdo_;
-    dev->ops.init = WvBusDevInit_;
-    dev->ops.free = WvBusFree_;
+    dev->Ops.CreatePdo = WvBusCreatePdo_;
+    dev->Ops.Init = WvBusDevInit_;
+    dev->Ops.Free = WvBusFree_;
     dev->ext = Bus;
-    dev->irp_mj = &WvBusIrpMj_;
+    dev->IrpMj = &WvBusIrpMj_;
     dev->IsBus = TRUE;
   }
 
@@ -343,7 +343,7 @@ static PDEVICE_OBJECT STDCALL WvBusCreatePdo_(IN WV_SP_DEV_T dev) {
       }
 
     /* Set associations for the bus, device, PDO. */
-    device__set(pdo, dev);
+    WvDevForDevObj(pdo, dev);
     dev->Self = bus->PhysicalDeviceObject = pdo;
 
     /* Set some DEVICE_OBJECT status. */
@@ -542,7 +542,7 @@ static void STDCALL WvBusDefaultThread_(IN WV_SP_BUS_T bus) {
     timeout.QuadPart = -300000000LL;
 
     /* Hook WV_SP_DEV_T::ops.free() */
-    bus->Dev->ops.free = WvBusThreadFree_;
+    bus->Dev->Ops.Free = WvBusThreadFree_;
 
     /* When bus::Stop is set, we shut down. */
     while (!bus->Stop) {

@@ -39,12 +39,12 @@
 #include "debug.h"
 
 /* Forward declarations. */
-static device__dispatch_func disk_pnp__query_dev_text_;
-static device__dispatch_func disk_pnp__query_dev_relations_;
-static device__dispatch_func disk_pnp__query_bus_info_;
-static device__dispatch_func disk_pnp__query_capabilities_;
-static device__pnp_func disk_pnp__simple_;
-device__pnp_func disk_pnp__dispatch;
+static WV_F_DEV_DISPATCH disk_pnp__query_dev_text_;
+static WV_F_DEV_DISPATCH disk_pnp__query_dev_relations_;
+static WV_F_DEV_DISPATCH disk_pnp__query_bus_info_;
+static WV_F_DEV_DISPATCH disk_pnp__query_capabilities_;
+static WV_F_DEV_PNP disk_pnp__simple_;
+WV_F_DEV_PNP disk_pnp__dispatch;
 
 static NTSTATUS STDCALL disk_pnp__query_dev_text_(
     IN WV_SP_DEV_T dev,
@@ -215,7 +215,7 @@ static NTSTATUS STDCALL disk_pnp__query_capabilities_(
         goto out;
       }
     disk = disk__get_ptr(dev);
-    bus = WvBusFromDev(device__get(dev->Parent));
+    bus = WvBusFromDev(WvDevFromDevObj(dev->Parent));
     bus_lower = bus->LowerDeviceObject;
     if (bus_lower) {
         status = WvBusGetDevCapabilities(
@@ -380,7 +380,7 @@ NTSTATUS STDCALL disk_pnp__dispatch(
     switch (code) {
         case IRP_MN_QUERY_ID:
           DBG("disk_pnp: IIRP_MN_QUERY_ID\n");
-          return device__pnp_query_id(dev, irp);
+          return WvDevPnpQueryId(dev, irp);
 
         case IRP_MN_QUERY_DEVICE_TEXT:
           DBG("disk_pnp: IRP_MN_QUERY_DEVICE_TEXT\n");

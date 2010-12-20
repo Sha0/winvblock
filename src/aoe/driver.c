@@ -2189,7 +2189,7 @@ NTSTATUS STDCALL aoe__show(
         disk__type_ptr disk = disk__get_ptr(dev_walker);
         struct aoe__disk_type_ * aoe_disk = aoe__get_(dev_walker);
 
-        disks->Disk[count].Disk = dev_walker->dev_num;
+        disks->Disk[count].Disk = dev_walker->DevNum;
         RtlCopyMemory(
             &disks->Disk[count].ClientMac,
             &aoe_disk->ClientMac,
@@ -2293,9 +2293,9 @@ static struct aoe__disk_type_ * aoe__create_disk_(void) {
       );
     /* Populate non-zero device defaults. */
     aoe_disk->disk = disk;
-    aoe_disk->prev_free = disk->device->ops.free;
-    disk->device->ops.free = aoe__free_disk_;
-    disk->device->ops.pnp_id = query_id;
+    aoe_disk->prev_free = disk->device->Ops.Free;
+    disk->device->Ops.Free = aoe__free_disk_;
+    disk->device->Ops.PnpId = query_id;
     disk->disk_ops.io = io;
     disk->disk_ops.max_xfer_len = max_xfer_len;
     disk->disk_ops.init = init;

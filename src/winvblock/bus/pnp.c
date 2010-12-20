@@ -40,14 +40,14 @@
 #include "probe.h"
 
 /* Forward declarations. */
-static device__dispatch_func WvBusPnpStartDev_;
-static device__dispatch_func WvBusPnpRemoveDev_;
-static device__dispatch_func WvBusPnpQueryDevRelations_;
-static device__dispatch_func WvBusPnpQueryCapabilities_;
-static device__dispatch_func WvBusPnpQueryDevText_;
-static device__dispatch_func WvBusPnpQueryBusInfo_;
-static device__pnp_func WvBusPnpSimple_;
-device__pnp_func WvBusPnpDispatch;
+static WV_F_DEV_DISPATCH WvBusPnpStartDev_;
+static WV_F_DEV_DISPATCH WvBusPnpRemoveDev_;
+static WV_F_DEV_DISPATCH WvBusPnpQueryDevRelations_;
+static WV_F_DEV_DISPATCH WvBusPnpQueryCapabilities_;
+static WV_F_DEV_DISPATCH WvBusPnpQueryDevText_;
+static WV_F_DEV_DISPATCH WvBusPnpQueryBusInfo_;
+static WV_F_DEV_PNP WvBusPnpSimple_;
+WV_F_DEV_PNP WvBusPnpDispatch;
 
 static NTSTATUS STDCALL WvBusPnpIoCompletion_(
     IN PDEVICE_OBJECT dev_obj,
@@ -423,7 +423,7 @@ NTSTATUS STDCALL WvBusPnpDispatch(
     switch (code) {
         case IRP_MN_QUERY_ID:
           DBG("bus_pnp: IRP_MN_QUERY_ID\n");
-          return device__pnp_query_id(dev, irp);
+          return WvDevPnpQueryId(dev, irp);
 
         case IRP_MN_QUERY_DEVICE_TEXT:
           DBG("bus_pnp: IRP_MN_QUERY_DEVICE_TEXT\n");

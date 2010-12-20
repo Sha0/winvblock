@@ -47,16 +47,16 @@ __divdi3 (
 #endif
 
 /* IRP_MJ_DEVICE_CONTROL dispatcher from disk/dev_ctl.c */
-extern device__dev_ctl_func disk_dev_ctl__dispatch;
+extern WV_F_DEV_CTL disk_dev_ctl__dispatch;
 /* IRP_MJ_SCSI dispatcher from disk/scsi.c */
-extern device__scsi_func disk_scsi__dispatch;
+extern WV_F_DEV_SCSI disk_scsi__dispatch;
 /* IRP_MJ_PNP dispatcher from disk/pnp.c */
-extern device__pnp_func disk_pnp__dispatch;
+extern WV_F_DEV_PNP disk_pnp__dispatch;
 
 /* Forward declarations. */
 static WV_F_DEV_FREE free_disk;
-static device__dispatch_func disk__power_;
-static device__dispatch_func disk__sys_ctl_;
+static WV_F_DEV_DISPATCH disk__power_;
+static WV_F_DEV_DISPATCH disk__sys_ctl_;
 
 /* Globals. */
 static LIST_ENTRY disk_list;
@@ -64,7 +64,7 @@ static KSPIN_LOCK disk_list_lock;
 winvblock__bool disk__removable[disk__media_count] = { TRUE, FALSE, TRUE };
 PWCHAR disk__compat_ids[disk__media_count] =
   { L"GenSFloppy", L"GenDisk", L"GenCdRom" };
-struct device__irp_mj disk__irp_mj_ = {
+WV_S_DEV_IRP_MJ disk__irp_mj_ = {
     disk__power_,
     disk__sys_ctl_,
     disk_dev_ctl__dispatch,
@@ -159,7 +159,7 @@ static PDEVICE_OBJECT STDCALL create_pdo(IN WV_SP_DEV_T dev_ptr) {
     /*
      * Set associations for the PDO, device, disk
      */
-    device__set(dev_obj_ptr, dev_ptr);
+    WvDevForDevObj(dev_obj_ptr, dev_ptr);
     dev_ptr->Self = dev_obj_ptr;
     KeInitializeEvent ( &disk_ptr->SearchEvent, SynchronizationEvent, FALSE );
     KeInitializeSpinLock ( &disk_ptr->SpinLock );
@@ -374,16 +374,16 @@ disk__create (
    * Populate non-zero device defaults
    */
   disk_ptr->device = dev_ptr;
-  disk_ptr->prev_free = dev_ptr->ops.free;
+  disk_ptr->prev_free = dev_ptr->Ops.Free;
   disk_ptr->disk_ops.max_xfer_len = default_max_xfer_len;
   disk_ptr->disk_ops.init = default_init;
   disk_ptr->disk_ops.close = default_close;
-  dev_ptr->ops.close = disk__close_;
-  dev_ptr->ops.create_pdo = create_pdo;
-  dev_ptr->ops.free = free_disk;
-  dev_ptr->ops.init = disk__init_;
+  dev_ptr->Ops.Close = disk__close_;
+  dev_ptr->Ops.CreatePdo = create_pdo;
+  dev_ptr->Ops.Free = free_disk;
+  dev_ptr->Ops.Init = disk__init_;
   dev_ptr->ext = disk_ptr;
-  dev_ptr->irp_mj = &disk__irp_mj_;
+  dev_ptr->IrpMj = &disk__irp_mj_;
   KeInitializeSpinLock ( &disk_ptr->SpinLock );
 
   return disk_ptr;

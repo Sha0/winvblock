@@ -40,12 +40,12 @@
 #define AOE_M_BUS_DOSNAME_ (L"\\DosDevices\\AoE")
 
 /* TODO: Remove this pull from aoe/driver.c */
-extern device__dispatch_func aoe__scan;
-extern device__dispatch_func aoe__show;
-extern device__dispatch_func aoe__mount;
+extern WV_F_DEV_DISPATCH aoe__scan;
+extern WV_F_DEV_DISPATCH aoe__show;
+extern WV_F_DEV_DISPATCH aoe__mount;
 
 /* Forward declarations. */
-static device__dev_ctl_func aoe_bus__dev_ctl_dispatch_;
+static WV_F_DEV_CTL aoe_bus__dev_ctl_dispatch_;
 static WV_F_DEV_PNP_ID aoe_bus__pnp_id_;
 winvblock__bool aoe_bus__create(void);
 void aoe_bus__free(void);
@@ -82,7 +82,7 @@ static NTSTATUS STDCALL aoe_bus__dev_ctl_dispatch_(
             WV_SP_BUS_T bus = WvBusFromDev(dev);
 
             /* Pretend it's an IOCTL_FILE_DETACH. */
-            return device__get(bus->LowerDeviceObject)->irp_mj->dev_ctl(
+            return WvDevFromDevObj(bus->LowerDeviceObject)->IrpMj->DevCtl(
                 dev,
                 irp,
                 IOCTL_FILE_DETACH
@@ -115,7 +115,7 @@ winvblock__bool aoe_bus__create(void) {
         goto err_new_bus;
       }
     /* When the PDO is created, we need to handle PnP ID queries. */
-    new_bus->Dev->ops.pnp_id = aoe_bus__pnp_id_;
+    new_bus->Dev->Ops.PnpId = aoe_bus__pnp_id_;
     /* Add it as a sub-bus to WinVBlock. */
     if (!WvBusAddChild(driver__bus(), new_bus->Dev)) {
         DBG("Couldn't add AoE bus to WinVBlock bus!\n");

@@ -283,9 +283,9 @@ filedisk__create (
    * Populate non-zero device defaults
    */
   filedisk_ptr->disk = disk_ptr;
-  filedisk_ptr->prev_free = disk_ptr->device->ops.free;
-  disk_ptr->device->ops.free = free_filedisk;
-  disk_ptr->device->ops.pnp_id = query_id;
+  filedisk_ptr->prev_free = disk_ptr->device->Ops.Free;
+  disk_ptr->device->Ops.Free = free_filedisk;
+  disk_ptr->device->Ops.PnpId = query_id;
   disk_ptr->disk_ops.io = io;
   disk_ptr->disk_ops.close = close;
   disk_ptr->ext = filedisk_ptr;
@@ -380,16 +380,10 @@ thread (
       KeWaitForSingleObject ( &filedisk_ptr->signal, Executive, KernelMode,
 			      FALSE, &timeout );
       KeResetEvent ( &filedisk_ptr->signal );
-      /*
-       * Are we being torn down?  We abuse the device's free() member
-       */
-      if ( filedisk_ptr->disk->device->ops.free == NULL )
-	{
-	  break;
-	}
-      /*
-       * Process each read/write request in the list
-       */
+      /* Are we being torn down?  We abuse the device's Free() member. */
+      if (filedisk_ptr->disk->device->Ops.Free == NULL)
+        break;
+      /* Process each read/write request in the list. */
       while ( walker =
 	      ExInterlockedRemoveHeadList ( &filedisk_ptr->req_list,
 					    &filedisk_ptr->req_list_lock ) )
@@ -456,7 +450,7 @@ static void STDCALL free_threaded_filedisk(IN WV_SP_DEV_T dev_ptr)
     /*
      * Queue the tear-down and return.  The thread will catch this on timeout.
      */
-    dev_ptr->ops.free = NULL;
+    dev_ptr->Ops.Free = NULL;
   }
 
 /**
@@ -486,7 +480,7 @@ filedisk__create_threaded (
    */
   filedisk_ptr->sync_io = io;
   filedisk_ptr->disk->disk_ops.io = threaded_io;
-  filedisk_ptr->disk->device->ops.free = free_threaded_filedisk;
+  filedisk_ptr->disk->device->Ops.Free = free_threaded_filedisk;
   /*
    * Initialize threading parameters and start the filedisk's thread
    */

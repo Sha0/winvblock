@@ -227,7 +227,7 @@ Debug_DecodeIrp (
   IN PCHAR DebugMessage
  )
 {
-  WV_SP_DEV_T dev_ptr = device__get(DeviceObject);
+  WV_SP_DEV_T dev_ptr = WvDevFromDevObj(DeviceObject);
   PIO_STACK_LOCATION Stack = IoGetCurrentIrpStackLocation ( Irp );
   PSCSI_REQUEST_BLOCK Srb;
   PCDB Cdb;

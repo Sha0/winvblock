@@ -42,9 +42,9 @@
 #include "debug.h"
 
 /* Forward declarations. */
-static device__dispatch_func disk_dev_ctl__storage_query_prop_;
-static device__dispatch_func disk_dev_ctl__get_geom_;
-static device__dispatch_func disk_dev_ctl__scsi_get_address_;
+static WV_F_DEV_DISPATCH disk_dev_ctl__storage_query_prop_;
+static WV_F_DEV_DISPATCH disk_dev_ctl__get_geom_;
+static WV_F_DEV_DISPATCH disk_dev_ctl__scsi_get_address_;
 
 static NTSTATUS STDCALL disk_dev_ctl__storage_query_prop_(
     IN WV_SP_DEV_T dev,
@@ -181,7 +181,7 @@ static NTSTATUS STDCALL disk_dev_ctl__scsi_get_address_(
     scsi_address.Length = sizeof (SCSI_ADDRESS);
     scsi_address.PortNumber = 0;
     scsi_address.PathId = 0;
-    scsi_address.TargetId = (winvblock__uint8) dev->dev_num;
+    scsi_address.TargetId = (winvblock__uint8) dev->DevNum;
     scsi_address.Lun = 0;
     RtlCopyMemory(
         irp->AssociatedIrp.SystemBuffer,

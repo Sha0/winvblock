@@ -183,7 +183,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
         goto err_dos_symlink;
       }
     /* Set associations for the bus, device, FDO, PDO. */
-    device__set(fdo, bus->Dev);
+    WvDevForDevObj(fdo, bus->Dev);
     bus->Dev->Self = fdo;
     bus->PhysicalDeviceObject = PhysicalDeviceObject;
     fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
@@ -392,8 +392,8 @@ static NTSTATUS driver__dispatch_power_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    /* device__get() checks for a NULL dev_obj */
-    WV_SP_DEV_T dev = device__get(dev_obj);
+    /* WvDevFromDevObj() checks for a NULL dev_obj */
+    WV_SP_DEV_T dev = WvDevFromDevObj(dev_obj);
 
     #ifdef DEBUGIRPS
     Debug_IrpStart(dev_obj, irp);
@@ -405,8 +405,8 @@ static NTSTATUS driver__dispatch_power_(
         return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
       }
     /* Call the particular device's power handler. */
-    if (dev->irp_mj && dev->irp_mj->power)
-      return dev->irp_mj->power(dev, irp);
+    if (dev->IrpMj && dev->IrpMj->Power)
+      return dev->IrpMj->Power(dev, irp);
     /* Otherwise, we don't support the IRP. */
     return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
   }
@@ -416,8 +416,8 @@ static NTSTATUS driver__dispatch_create_close_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    /* device__get() checks for a NULL dev_obj */
-    WV_SP_DEV_T dev = device__get(dev_obj);
+    /* WvDevFromDevObj() checks for a NULL dev_obj */
+    WV_SP_DEV_T dev = WvDevFromDevObj(dev_obj);
 
     #ifdef DEBUGIRPS
     Debug_IrpStart(dev_obj, irp);
@@ -434,8 +434,8 @@ static NTSTATUS driver__dispatch_sys_ctl_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    /* device__get() checks for a NULL dev_obj */
-    WV_SP_DEV_T dev = device__get(dev_obj);
+    /* WvDevFromDevObj() checks for a NULL dev_obj */
+    WV_SP_DEV_T dev = WvDevFromDevObj(dev_obj);
 
     #ifdef DEBUGIRPS
     Debug_IrpStart(dev_obj, irp);
@@ -444,8 +444,8 @@ static NTSTATUS driver__dispatch_sys_ctl_(
     if (!dev || dev->State == WvDevStateDeleted)
       return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Call the particular device's power handler. */
-    if (dev->irp_mj && dev->irp_mj->sys_ctl)
-      return dev->irp_mj->sys_ctl(dev, irp);
+    if (dev->IrpMj && dev->IrpMj->SysCtl)
+      return dev->IrpMj->SysCtl(dev, irp);
     /* Otherwise, we don't support the IRP. */
     return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
   }
@@ -455,8 +455,8 @@ static NTSTATUS driver__dispatch_dev_ctl_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    /* device__get() checks for a NULL dev_obj */
-    WV_SP_DEV_T dev = device__get(dev_obj);
+    /* WvDevFromDevObj() checks for a NULL dev_obj */
+    WV_SP_DEV_T dev = WvDevFromDevObj(dev_obj);
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     #ifdef DEBUGIRPS
@@ -466,8 +466,8 @@ static NTSTATUS driver__dispatch_dev_ctl_(
     if (!dev || dev->State == WvDevStateDeleted)
       return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Call the particular device's power handler. */
-    if (dev->irp_mj && dev->irp_mj->dev_ctl) {
-        return dev->irp_mj->dev_ctl(
+    if (dev->IrpMj && dev->IrpMj->DevCtl) {
+        return dev->IrpMj->DevCtl(
             dev,
             irp,
             io_stack_loc->Parameters.DeviceIoControl.IoControlCode
@@ -482,8 +482,8 @@ static NTSTATUS driver__dispatch_scsi_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    /* device__get() checks for a NULL dev_obj */
-    WV_SP_DEV_T dev = device__get(dev_obj);
+    /* WvDevFromDevObj() checks for a NULL dev_obj */
+    WV_SP_DEV_T dev = WvDevFromDevObj(dev_obj);
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     #ifdef DEBUGIRPS
@@ -493,8 +493,8 @@ static NTSTATUS driver__dispatch_scsi_(
     if (!dev || dev->State == WvDevStateDeleted)
       return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Call the particular device's power handler. */
-    if (dev->irp_mj && dev->irp_mj->scsi) {
-        return dev->irp_mj->scsi(
+    if (dev->IrpMj && dev->IrpMj->Scsi) {
+        return dev->IrpMj->Scsi(
             dev,
             irp,
             io_stack_loc->Parameters.Scsi.Srb->Function
@@ -509,8 +509,8 @@ static NTSTATUS driver__dispatch_pnp_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    /* device__get() checks for a NULL dev_obj */
-    WV_SP_DEV_T dev = device__get(dev_obj);
+    /* WvDevFromDevObj() checks for a NULL dev_obj */
+    WV_SP_DEV_T dev = WvDevFromDevObj(dev_obj);
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     #ifdef DEBUGIRPS
@@ -520,8 +520,8 @@ static NTSTATUS driver__dispatch_pnp_(
     if (!dev || dev->State == WvDevStateDeleted)
       return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Call the particular device's power handler. */
-    if (dev->irp_mj && dev->irp_mj->pnp) {
-        return dev->irp_mj->pnp(
+    if (dev->IrpMj && dev->IrpMj->Pnp) {
+        return dev->IrpMj->Pnp(
             dev,
             irp,
             io_stack_loc->MinorFunction
@@ -568,5 +568,5 @@ winvblock__lib_func WV_SP_BUS_T driver__bus(void) {
         DBG("No driver bus device!\n");
         return NULL;
       }
-    return WvBusFromDev(device__get(driver__bus_fdo_));
+    return WvBusFromDev(WvDevFromDevObj(driver__bus_fdo_));
   }

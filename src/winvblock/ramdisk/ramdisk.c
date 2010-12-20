@@ -188,9 +188,9 @@ ramdisk__create (
    * Populate non-zero device defaults
    */
   ramdisk_ptr->disk = disk_ptr;
-  ramdisk_ptr->prev_free = disk_ptr->device->ops.free;
-  disk_ptr->device->ops.free = free_ramdisk;
-  disk_ptr->device->ops.pnp_id = query_id;
+  ramdisk_ptr->prev_free = disk_ptr->device->Ops.Free;
+  disk_ptr->device->Ops.Free = free_ramdisk;
+  disk_ptr->device->Ops.PnpId = query_id;
   disk_ptr->disk_ops.io = io;
   disk_ptr->ext = ramdisk_ptr;
 

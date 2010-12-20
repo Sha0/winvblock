@@ -38,7 +38,7 @@
 #include "filedisk.h"
 
 /* Forward declarations. */
-static device__dispatch_func WvBusDevCtlDiskDetach_;
+static WV_F_DEV_DISPATCH WvBusDevCtlDiskDetach_;
 
 static NTSTATUS STDCALL WvBusDevCtlDiskDetach_(
     IN WV_SP_DEV_T dev,
@@ -56,7 +56,7 @@ static NTSTATUS STDCALL WvBusDevCtlDiskDetach_(
     if (dev_walker != NULL)
       disk_walker = disk__get_ptr(dev_walker);
     prev_disk_walker = disk_walker;
-    while ((disk_walker != NULL) && (dev_walker->dev_num != disk_num)) {
+    while ((disk_walker != NULL) && (dev_walker->DevNum != disk_num)) {
         prev_disk_walker = disk_walker;
         dev_walker = dev_walker->next_sibling_ptr;
         if (dev_walker != NULL)
@@ -68,7 +68,7 @@ static NTSTATUS STDCALL WvBusDevCtlDiskDetach_(
             irp->IoStatus.Information = 0;
             return STATUS_INVALID_DEVICE_REQUEST;
           }
-        DBG("Deleting disk %d\n", dev_walker->dev_num);
+        DBG("Deleting disk %d\n", dev_walker->DevNum);
         if (disk_walker == disk__get_ptr(bus->first_child))
           bus->first_child = dev_walker->next_sibling_ptr;
           else {

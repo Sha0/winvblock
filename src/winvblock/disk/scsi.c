@@ -65,7 +65,7 @@ disk_scsi__func disk_scsi__read_capacity_;
 disk_scsi__func disk_scsi__read_capacity_16_;
 disk_scsi__func disk_scsi__mode_sense_;
 disk_scsi__func disk_scsi__read_toc_;
-device__scsi_func disk_scsi__dispatch;
+WV_F_DEV_SCSI disk_scsi__dispatch;
 
 #if _WIN32_WINNT <= 0x0600
 #  if 0        /* FIXME: To build with WINDDK 6001.18001 */

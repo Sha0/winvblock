@@ -97,15 +97,13 @@ extern winvblock__lib_func WV_F_DEV_FREE WvDevFree;
 extern winvblock__lib_func void WvDevInit(WV_SP_DEV_T);
 extern winvblock__lib_func WV_SP_DEV_T WvDevCreate(void);
 
-winvblock__def_struct(device__ops) {
-    WV_FP_DEV_CREATE_PDO create_pdo;
-    WV_FP_DEV_INIT init;
-    WV_FP_DEV_PNP_ID pnp_id;
-    WV_FP_DEV_CLOSE close;
-    WV_FP_DEV_FREE free;
-  };
-
-typedef void STDCALL device__thread_func(IN void *);
+typedef struct WV_DEV_OPS {
+    WV_FP_DEV_CREATE_PDO CreatePdo;
+    WV_FP_DEV_INIT Init;
+    WV_FP_DEV_PNP_ID PnpId;
+    WV_FP_DEV_CLOSE Close;
+    WV_FP_DEV_FREE Free;
+  } WV_S_DEV_OPS, * WV_SP_DEV_OPS;
 
 /**
  * The prototype for a device IRP dispatch.
@@ -114,7 +112,8 @@ typedef void STDCALL device__thread_func(IN void *);
  * @v irp               Points to the IRP.
  * @ret NTSTATUS        The status of processing the IRP for the device.
  */
-typedef NTSTATUS STDCALL device__dispatch_func(IN WV_SP_DEV_T, IN PIRP);
+typedef NTSTATUS STDCALL WV_F_DEV_DISPATCH(IN WV_SP_DEV_T, IN PIRP);
+typedef WV_F_DEV_DISPATCH * WV_FP_DEV_DISPATCH;
 
 /**
  * The prototype for a device IRP_MJ_DEVICE_CONTROL dispatch.
@@ -124,11 +123,12 @@ typedef NTSTATUS STDCALL device__dispatch_func(IN WV_SP_DEV_T, IN PIRP);
  * @v code              The I/O control code.
  * @ret NTSTATUS        The status of processing the IRP for the device.
  */
-typedef NTSTATUS STDCALL device__dev_ctl_func(
+typedef NTSTATUS STDCALL WV_F_DEV_CTL(
     IN WV_SP_DEV_T,
     IN PIRP,
     IN ULONG POINTER_ALIGNMENT
   );
+typedef WV_F_DEV_CTL * WV_FP_DEV_CTL;
 
 /**
  * The prototype for a device IRP_MJ_SCSI dispatch.
@@ -138,7 +138,8 @@ typedef NTSTATUS STDCALL device__dev_ctl_func(
  * @v code              The SCSI function.
  * @ret NTSTATUS        The status of processing the IRP for the device.
  */
-typedef NTSTATUS STDCALL device__scsi_func(IN WV_SP_DEV_T, IN PIRP, IN UCHAR);
+typedef NTSTATUS STDCALL WV_F_DEV_SCSI(IN WV_SP_DEV_T, IN PIRP, IN UCHAR);
+typedef WV_F_DEV_SCSI * WV_FP_DEV_SCSI;
 
 /**
  * The prototype for a device IRP_MJ_PNP dispatch.
@@ -148,39 +149,28 @@ typedef NTSTATUS STDCALL device__scsi_func(IN WV_SP_DEV_T, IN PIRP, IN UCHAR);
  * @v code              The minor function.
  * @ret NTSTATUS        The status of processing the IRP for the device.
  */
-typedef NTSTATUS STDCALL device__pnp_func(IN WV_SP_DEV_T, IN PIRP, IN UCHAR);
+typedef NTSTATUS STDCALL WV_F_DEV_PNP(IN WV_SP_DEV_T, IN PIRP, IN UCHAR);
+typedef WV_F_DEV_PNP * WV_FP_DEV_PNP;
 
 /* IRP major function handler table. */
-struct device__irp_mj {
-    device__dispatch_func * power;
-    device__dispatch_func * sys_ctl;
-    device__dev_ctl_func * dev_ctl;
-    device__scsi_func * scsi;
-    device__pnp_func * pnp;
-  };
+typedef struct WV_DEV_IRP_MJ {
+    WV_FP_DEV_DISPATCH Power;
+    WV_FP_DEV_DISPATCH SysCtl;
+    WV_FP_DEV_CTL DevCtl;
+    WV_FP_DEV_SCSI Scsi;
+    WV_FP_DEV_PNP Pnp;
+  } WV_S_DEV_IRP_MJ, * WV_SP_DEV_IRP_MJ;
 
 /* Details common to all devices this driver works with */
 struct WV_DEV_T {
     /* For debugging */
     winvblock__bool IsBus;
-    /* A device's IRP dispatch routine. */
-    driver__dispatch_func * dispatch;
-    /* The device's thread routine. */
-    device__thread_func * thread;
-    /* The device's thread wakeup signal. */
-    KEVENT thread_wakeup;
-    /* The device's IRP queue. */
-    LIST_ENTRY irp_list;
-    /* The device's IRP queue lock. */
-    KSPIN_LOCK irp_list_lock;
     /* Self is self-explanatory. */
     PDEVICE_OBJECT Self;
-    /* Flag to create/delete a PDO on a threaded bus. */
-    winvblock__bool thread_pdo;
     /* Points to the parent bus' DEVICE_OBJECT */
     PDEVICE_OBJECT Parent;
     /* The device's child ID relative to the parent bus. */
-    winvblock__uint32 dev_num;
+    winvblock__uint32 DevNum;
     /* Points to the driver. */
     PDRIVER_OBJECT DriverObject;
     /* Current state of the device. */
@@ -190,17 +180,15 @@ struct WV_DEV_T {
     /* The next device in the parent bus' devices.  TODO: Don't do this. */
     WV_SP_DEV_T next_sibling_ptr;
     /* The device operations. */
-    device__ops ops;
-    /* Tracking for the device module itself. */
-    LIST_ENTRY tracking;
+    WV_S_DEV_OPS Ops;
     /* Points to further extensions. */
     winvblock__any_ptr ext;
     /* How to handle IRPs based on major function code. */
-    struct device__irp_mj * irp_mj;
+    WV_SP_DEV_IRP_MJ IrpMj;
   };
 
-extern winvblock__lib_func WV_SP_DEV_T device__get(PDEVICE_OBJECT);
-extern winvblock__lib_func void device__set(PDEVICE_OBJECT, WV_SP_DEV_T);
-extern device__dispatch_func device__pnp_query_id;
+extern winvblock__lib_func WV_SP_DEV_T WvDevFromDevObj(PDEVICE_OBJECT);
+extern winvblock__lib_func void WvDevForDevObj(PDEVICE_OBJECT, WV_SP_DEV_T);
+extern WV_F_DEV_DISPATCH WvDevPnpQueryId;
 
 #endif  /* _WV_M_DEVICE_H_ */

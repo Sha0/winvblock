@@ -47,8 +47,8 @@ winvblock__lib_func void WvDevInit(WV_SP_DEV_T dev) {
     RtlZeroMemory(dev, sizeof *dev);
     /* Populate non-zero device defaults. */
     dev->DriverObject = driver__obj_ptr;
-    dev->ops.create_pdo = device__make_pdo_;
-    dev->ops.free = device__free_dev_;
+    dev->Ops.CreatePdo = device__make_pdo_;
+    dev->Ops.Free = device__free_dev_;
   }
 
 /**
@@ -81,7 +81,7 @@ winvblock__lib_func WV_SP_DEV_T WvDevCreate(void) {
  * @v dev               Points to the device that needs a PDO.
  */
 winvblock__lib_func PDEVICE_OBJECT STDCALL WvDevCreatePdo(IN WV_SP_DEV_T dev) {
-    return dev->ops.create_pdo(dev);
+    return dev->Ops.CreatePdo(dev);
   }
 
 /**
@@ -113,14 +113,11 @@ winvblock__uint32 STDCALL WvDevPnpId(
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
   ) {
-    return dev->ops.pnp_id ? dev->ops.pnp_id(dev, query_type, buf) : 0;
+    return dev->Ops.PnpId ? dev->Ops.PnpId(dev, query_type, buf) : 0;
   }
 
 /* An IRP handler for a PnP ID query. */
-NTSTATUS STDCALL device__pnp_query_id(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp
-  ) {
+NTSTATUS STDCALL WvDevPnpQueryId(IN WV_SP_DEV_T dev, IN PIRP irp) {
     NTSTATUS status;
     WCHAR (*str)[512];
     winvblock__uint32 str_len;
@@ -175,7 +172,7 @@ NTSTATUS STDCALL device__pnp_query_id(
  */
 winvblock__lib_func void STDCALL WvDevClose(IN WV_SP_DEV_T dev) {
     /* Call the device's close routine. */
-    dev->ops.close(dev);
+    dev->Ops.Close(dev);
     return;
   }
 
@@ -186,7 +183,7 @@ winvblock__lib_func void STDCALL WvDevClose(IN WV_SP_DEV_T dev) {
  */
 winvblock__lib_func void STDCALL WvDevFree(IN WV_SP_DEV_T dev) {
     /* Call the device's free routine. */
-    dev->ops.free(dev);
+    dev->Ops.Free(dev);
   }
 
 /**
@@ -204,7 +201,7 @@ static void STDCALL device__free_dev_(IN WV_SP_DEV_T dev) {
  * @v dev_obj           Points to the DEVICE_OBJECT to get the device from.
  * @ret                 Returns a pointer to the device on success, else NULL.
  */
-winvblock__lib_func WV_SP_DEV_T device__get(PDEVICE_OBJECT dev_obj) {
+winvblock__lib_func WV_SP_DEV_T WvDevFromDevObj(PDEVICE_OBJECT dev_obj) {
     driver__dev_ext_ptr dev_ext;
 
     if (!dev_obj)
@@ -219,7 +216,7 @@ winvblock__lib_func WV_SP_DEV_T device__get(PDEVICE_OBJECT dev_obj) {
  * @v dev_obj           Points to the DEVICE_OBJECT to set the device for.
  * @v dev               Points to the device to associate with.
  */
-winvblock__lib_func void device__set(PDEVICE_OBJECT dev_obj, WV_SP_DEV_T dev) {
+winvblock__lib_func void WvDevForDevObj(PDEVICE_OBJECT dev_obj, WV_SP_DEV_T dev) {
     driver__dev_ext_ptr dev_ext = dev_obj->DeviceExtension;
     dev_ext->device = dev;
     return;
