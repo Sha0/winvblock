@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _disk_h
-#  define _disk_h
+#ifndef _WV_M_DISK_H_
+#  define _WV_M_DISK_H_
 
 /**
  * @file
@@ -239,4 +239,4 @@ extern winvblock__lib_func disk__type_ptr disk__create (
 
 extern NTSTATUS disk__module_init(void);
 
-#endif				/* _disk_h */
+#endif  /* _WV_M_DISK_H_ */
