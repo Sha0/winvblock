@@ -45,12 +45,17 @@ static KSPIN_LOCK filedisk_list_lock;
 
 /* Forward declarations. */
 static WV_F_DEV_FREE free_filedisk;
+static WV_F_DISK_IO io;
+static WV_F_DISK_IO threaded_io;
 
-static
-disk__io_decl (
-  io
- )
-{
+static NTSTATUS STDCALL io(
+    IN WV_SP_DEV_T dev_ptr,
+    IN WV_E_DISK_IO_MODE mode,
+    IN LONGLONG start_sector,
+    IN winvblock__uint32 sector_count,
+    IN winvblock__uint8_ptr buffer,
+    IN PIRP irp
+  ) {
   WV_SP_DISK_T disk_ptr;
   filedisk__type_ptr filedisk_ptr;
   LARGE_INTEGER offset;
@@ -402,11 +407,14 @@ thread (
   free_filedisk ( filedisk_ptr->disk->device );
 }
 
-static
-disk__io_decl (
-  threaded_io
- )
-{
+static NTSTATUS STDCALL threaded_io(
+    IN WV_SP_DEV_T dev_ptr,
+    IN WV_E_DISK_IO_MODE mode,
+    IN LONGLONG start_sector,
+    IN winvblock__uint32 sector_count,
+    IN winvblock__uint8_ptr buffer,
+    IN PIRP irp
+  ) {
   filedisk__type_ptr filedisk_ptr;
   thread_req_ptr req;
 

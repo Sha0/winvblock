@@ -62,6 +62,7 @@ static void aoe__process_abft_(void);
 static void STDCALL aoe__unload_(IN PDRIVER_OBJECT);
 static struct aoe__disk_type_ * aoe__create_disk_(void);
 static WV_F_DEV_FREE aoe__free_disk_;
+static WV_F_DISK_IO io;
 
 /** Tag types. */
 enum aoe__tag_type_
@@ -1268,8 +1269,14 @@ static disk__init_decl(init)
       }
   }
 
-static disk__io_decl(io)
-  {
+static NTSTATUS STDCALL io(
+    IN WV_SP_DEV_T dev_ptr,
+    IN WV_E_DISK_IO_MODE mode,
+    IN LONGLONG start_sector,
+    IN winvblock__uint32 sector_count,
+    IN winvblock__uint8_ptr buffer,
+    IN PIRP irp
+  ) {
     struct aoe__io_req_ * request_ptr;
     struct aoe__work_tag_ * tag, * new_tag_list = NULL, * previous_tag = NULL;
     KIRQL Irql;

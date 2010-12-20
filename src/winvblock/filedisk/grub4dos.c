@@ -42,7 +42,11 @@
 #include "byte.h"
 #include "msvhd.h"
 
-static disk__io_routine sync_io;
+/* Globals. */
+static WV_FP_DISK_IO sync_io;
+
+/* Forward declarations. */
+static WV_F_DISK_IO io;
 
 /**
  * Check if a disk might be the matching backing disk for
@@ -119,13 +123,16 @@ err_alloc:
 
 /**
  * Temporarily used by established disks in order to access the
- * backing disk late(r) during the boot process
+ * backing disk late(r) during the boot process.
  */
-static
-disk__io_decl (
-  io
- )
-{
+static NTSTATUS STDCALL io(
+    IN WV_SP_DEV_T dev_ptr,
+    IN WV_E_DISK_IO_MODE mode,
+    IN LONGLONG start_sector,
+    IN winvblock__uint32 sector_count,
+    IN winvblock__uint8_ptr buffer,
+    IN PIRP irp
+  ) {
   filedisk__type_ptr filedisk_ptr;
   NTSTATUS status;
   GUID disk_guid = GUID_DEVINTERFACE_DISK;

@@ -39,7 +39,7 @@ winvblock__def_struct ( filedisk__type )
   LIST_ENTRY req_list;
   KSPIN_LOCK req_list_lock;
   KEVENT signal;
-  disk__io_routine sync_io;
+  WV_FP_DISK_IO sync_io;
   char *filepath;
   UNICODE_STRING filepath_unicode;
 };

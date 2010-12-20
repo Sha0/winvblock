@@ -47,6 +47,7 @@ static KSPIN_LOCK ramdisk_list_lock;
 
 /* Forward declarations. */
 static WV_F_DEV_FREE free_ramdisk;
+static WV_F_DISK_IO io;
 
 /* With thanks to karyonix, who makes FiraDisk */
 static __inline void STDCALL
@@ -59,11 +60,14 @@ fast_copy (
   __movsd ( dest, src, count >> 2 );
 }
 
-static
-disk__io_decl (
-  io
- )
-{
+static NTSTATUS STDCALL io(
+    IN WV_SP_DEV_T dev_ptr,
+    IN WV_E_DISK_IO_MODE mode,
+    IN LONGLONG start_sector,
+    IN winvblock__uint32 sector_count,
+    IN winvblock__uint8_ptr buffer,
+    IN PIRP irp
+  ) {
   PHYSICAL_ADDRESS PhysicalAddress;
   winvblock__uint8_ptr PhysicalMemory;
   WV_SP_DISK_T disk_ptr;

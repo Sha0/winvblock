@@ -59,24 +59,15 @@ typedef struct WV_DISK_T WV_S_DISK_T, * WV_SP_DISK_T;
  * @v buffer            Buffer to read / write sectors to / from.
  * @v irp               Interrupt request packet for this request.
  */
-#  define disk__io_decl( x ) \
-\
-NTSTATUS STDCALL \
-x ( \
-  IN WV_SP_DEV_T dev_ptr, \
-  IN WV_E_DISK_IO_MODE mode, \
-  IN LONGLONG start_sector, \
-  IN winvblock__uint32 sector_count, \
-  IN winvblock__uint8_ptr buffer, \
-  IN PIRP irp \
- )
-/*
- * Function pointer for a disk I/O routine.
- * 'indent' mangles this, so it looks weird.
- */
-typedef disk__io_decl (
-   ( *disk__io_routine )
- );
+typedef NTSTATUS STDCALL WV_F_DISK_IO(
+    IN WV_SP_DEV_T,
+    IN WV_E_DISK_IO_MODE,
+    IN LONGLONG,
+    IN winvblock__uint32,
+    IN winvblock__uint8_ptr,
+    IN PIRP
+  );
+typedef WV_F_DISK_IO * WV_FP_DISK_IO;
 
 /**
  * Maximum transfer length response routine.
@@ -137,7 +128,7 @@ typedef disk__close_decl (
 
 winvblock__def_struct ( disk__ops )
 {
-  disk__io_routine io;
+  WV_FP_DISK_IO io;
   disk__max_xfer_len_routine max_xfer_len;
   disk__init_routine init;
   disk__close_routine close;
@@ -200,9 +191,7 @@ winvblock__def_struct ( mbr )
 #    pragma pack()
 #  endif
 
-extern disk__io_decl (
-  disk__io
- );
+extern WV_F_DISK_IO disk__io;
 extern disk__max_xfer_len_decl (
   disk__max_xfer_len
  );

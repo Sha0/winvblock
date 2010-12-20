@@ -407,7 +407,14 @@ static void STDCALL free_disk(IN WV_SP_DEV_T dev_ptr) {
   }
 
 /* See header for details. */
-disk__io_decl(disk__io) {
+NTSTATUS STDCALL disk__io(
+    IN WV_SP_DEV_T dev_ptr,
+    IN WV_E_DISK_IO_MODE mode,
+    IN LONGLONG start_sector,
+    IN winvblock__uint32 sector_count,
+    IN winvblock__uint8_ptr buffer,
+    IN PIRP irp
+  ) {
     WV_SP_DISK_T disk_ptr;
 
     /* Establish a pointer to the disk. */
