@@ -1,7 +1,7 @@
 [Project]
 FileName=WinVBlock.dev
 Name=WinVBlock
-UnitCount=61
+UnitCount=62
 PchHead=-1
 PchSource=-1
 Ver=3
@@ -755,6 +755,16 @@ BuildCmd=
 FileName=src\include\mdi.h
 CompileCpp=1
 Folder=Include
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit62]
+FileName=src\aoe\registry.c
+CompileCpp=1
+Folder=AoE
 Compile=1
 Link=1
 Priority=1000
