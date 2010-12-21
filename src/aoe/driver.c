@@ -77,10 +77,8 @@ typedef enum AOE_TAG_TYPE_ {
 #ifdef _MSC_VER
 #  pragma pack(1)
 #endif
-
 /** AoE packet. */
-struct aoe__packet_
-  {
+struct AOE_PACKET_ {
     winvblock__uint8 ReservedFlag:2;
     winvblock__uint8 ErrorFlag:1;
     winvblock__uint8 ResponseFlag:1;
@@ -98,14 +96,12 @@ struct aoe__packet_
     winvblock__uint8 Reserved2AFlag:1;
     winvblock__uint8 ExtendedAFlag:1;
     winvblock__uint8 Reserved3AFlag:1;
-    union
-      {
+    union {
         winvblock__uint8 Err;
         winvblock__uint8 Feature;
       };
     winvblock__uint8 Count;
-    union
-      {
+    union {
         winvblock__uint8 Cmd;
         winvblock__uint8 Status;
       };
@@ -120,7 +116,7 @@ struct aoe__packet_
 
     winvblock__uint8 Data[];
   } __attribute__((__packed__));
-
+typedef struct AOE_PACKET_ AOE_S_PACKET_, * AOE_SP_PACKET_;
 #ifdef _MSC_VER
 #  pragma pack()
 #endif
@@ -143,7 +139,7 @@ struct aoe__work_tag_
     WV_SP_DEV_T device;
     struct aoe__io_req_ * request_ptr;
     winvblock__uint32 Id;
-    struct aoe__packet_ * packet_data;
+    AOE_SP_PACKET_ packet_data;
     winvblock__uint32 PacketSize;
     LARGE_INTEGER FirstSendTime;
     LARGE_INTEGER SendTime;
@@ -749,7 +745,7 @@ NTSTATUS STDCALL DriverEntry(
       }
 
     /* Set up the probe tag's AoE packet reference. */
-    aoe__probe_tag_->PacketSize = sizeof (struct aoe__packet_);
+    aoe__probe_tag_->PacketSize = sizeof (AOE_S_PACKET_);
     /* Allocate and zero-fill the probe tag's packet reference. */
     aoe__probe_tag_->packet_data = wv_mallocz(aoe__probe_tag_->PacketSize);
     if (aoe__probe_tag_->packet_data == NULL) {
@@ -1186,7 +1182,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
         /*
          * Establish our tag's AoE packet 
          */
-        tag->PacketSize = sizeof (struct aoe__packet_);
+        tag->PacketSize = sizeof (AOE_S_PACKET_);
         if ((tag->packet_data = wv_mallocz(tag->PacketSize)) == NULL) {
       DBG ( "Couldn't allocate tag->packet_data\n" );
       wv_free(tag);
@@ -1383,7 +1379,7 @@ static NTSTATUS STDCALL AoeDiskIo_(
         /*
          * Allocate and initialize each tag's AoE packet 
          */
-        tag->PacketSize = sizeof (struct aoe__packet_);
+        tag->PacketSize = sizeof (AOE_S_PACKET_);
         if (mode == WvDiskIoModeWrite)
     tag->PacketSize += tag->SectorCount * disk_ptr->SectorSize;
         if ((tag->packet_data = wv_mallocz(tag->PacketSize)) == NULL) {
@@ -1565,7 +1561,7 @@ NTSTATUS STDCALL aoe__reply(
     IN winvblock__uint32 DataSize
   )
   {
-    struct aoe__packet_ * reply = (struct aoe__packet_ *) Data;
+    AOE_SP_PACKET_ reply = (AOE_SP_PACKET_) Data;
     LONGLONG LBASize;
     struct aoe__work_tag_ * tag;
     KIRQL Irql;
@@ -1705,7 +1701,7 @@ NTSTATUS STDCALL aoe__reply(
             aoe__search_state_get_max_sectors_per_packet_;
           break;
         case aoe__search_state_getting_max_sectors_per_packet_:
-          DataSize -= sizeof (struct aoe__packet_);
+          DataSize -= sizeof (AOE_S_PACKET_);
           if ( DataSize <
          ( aoe_disk_ptr->MaxSectorsPerPacket *
            disk_ptr->SectorSize ) )
@@ -1717,7 +1713,7 @@ NTSTATUS STDCALL aoe__reply(
         aoe_disk_ptr->search_state = aoe__search_state_done_;
       }
           else if ( aoe_disk_ptr->MTU <
-        ( sizeof (struct aoe__packet_) +
+        ( sizeof (AOE_S_PACKET_) +
           ( ( aoe_disk_ptr->MaxSectorsPerPacket +
               1 ) * disk_ptr->SectorSize ) ) )
       {
