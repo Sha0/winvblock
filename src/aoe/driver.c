@@ -63,7 +63,7 @@ static void STDCALL AoeUnload_(IN PDRIVER_OBJECT);
 static struct AOE_DISK_ * AoeDiskCreate_(void);
 static WV_F_DEV_FREE AoeDiskFree_;
 static WV_F_DISK_IO AoeDiskIo_;
-static WV_F_DISK_MAX_XFER_LEN max_xfer_len;
+static WV_F_DISK_MAX_XFER_LEN AoeDiskMaxXferLen_;
 static WV_F_DISK_INIT init;
 static WV_F_DISK_CLOSE close;
 
@@ -1933,7 +1933,7 @@ static void STDCALL AoeThread_(IN void *StartContext)
     DBG ( "Exit\n" );
   }
 
-static winvblock__uint32 max_xfer_len(IN WV_SP_DISK_T disk_ptr) {
+static winvblock__uint32 AoeDiskMaxXferLen_(IN WV_SP_DISK_T disk_ptr) {
     AOE_SP_DISK_ aoe_disk_ptr = aoe__get_(disk_ptr->Dev);
 
     return disk_ptr->SectorSize * aoe_disk_ptr->MaxSectorsPerPacket;
@@ -2302,7 +2302,7 @@ static AOE_SP_DISK_ AoeDiskCreate_(void) {
     disk->Dev->Ops.Free = AoeDiskFree_;
     disk->Dev->Ops.PnpId = query_id;
     disk->disk_ops.Io = AoeDiskIo_;
-    disk->disk_ops.MaxXferLen = max_xfer_len;
+    disk->disk_ops.MaxXferLen = AoeDiskMaxXferLen_;
     disk->disk_ops.Init = init;
     disk->disk_ops.Close = close;
     disk->ext = aoe_disk;
