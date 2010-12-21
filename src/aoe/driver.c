@@ -59,7 +59,7 @@ extern void AoeBusFree(void);
 struct AOE_DISK_;
 static void STDCALL AoeThread_(IN void *);
 static void AoeProcessAbft_(void);
-static void STDCALL aoe__unload_(IN PDRIVER_OBJECT);
+static void STDCALL AoeUnload_(IN PDRIVER_OBJECT);
 static struct AOE_DISK_ * aoe__create_disk_(void);
 static WV_F_DEV_FREE aoe__free_disk_;
 static WV_F_DISK_IO io;
@@ -809,11 +809,11 @@ NTSTATUS STDCALL DriverEntry(
         KeSetEvent(&aoe__thread_sig_evt_, 0, FALSE);
       }
 
-    DriverObject->DriverUnload = aoe__unload_;
+    DriverObject->DriverUnload = AoeUnload_;
     aoe__started_ = TRUE;
     if (!AoeBusCreate()) {
         DBG("Unable to create AoE bus!\n");
-        aoe__unload_(DriverObject);
+        AoeUnload_(DriverObject);
         return STATUS_INSUFFICIENT_RESOURCES;
       }
     AoeProcessAbft_();
@@ -824,7 +824,7 @@ NTSTATUS STDCALL DriverEntry(
 /**
  * Stop AoE operations.
  */
-static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject) {
+static void STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
     NTSTATUS Status;
     struct aoe__disk_search_ * disk_searcher, * previous_disk_searcher;
     struct aoe__work_tag_ * tag;
