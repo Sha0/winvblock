@@ -181,14 +181,13 @@ typedef struct AOE_DISK_ {
     LIST_ENTRY tracking;
   } AOE_S_DISK_, * AOE_SP_DISK_;
 
-struct aoe__target_list_
-  {
+typedef struct AOE_TARGET_LIST_ {
     aoe__mount_target Target;
-    struct aoe__target_list_ * next;
-  };
+    struct AOE_TARGET_LIST_ * next;
+  } AOE_S_TARGET_LIST_, * AOE_SP_TARGET_LIST_;
 
 /** Private globals. */
-static struct aoe__target_list_ * aoe__target_list_ = NULL;
+static AOE_SP_TARGET_LIST_ aoe__target_list_ = NULL;
 static KSPIN_LOCK aoe__target_list_spinlock_;
 static winvblock__bool aoe__stop_ = FALSE;
 static KSPIN_LOCK aoe__spinlock_;
@@ -822,7 +821,7 @@ static void STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
     AOE_SP_DISK_SEARCH_ disk_searcher, previous_disk_searcher;
     AOE_SP_WORK_TAG_ tag;
     KIRQL Irql, Irql2;
-    struct aoe__target_list_ * Walker, * Next;
+    AOE_SP_TARGET_LIST_ Walker, Next;
 
     DBG("Entry\n");
     /* If we're not already started, there's nothing to do. */
@@ -1494,7 +1493,7 @@ static void STDCALL add_target(
     LONGLONG LBASize
   )
   {
-    struct aoe__target_list_ * Walker, * Last;
+    AOE_SP_TARGET_LIST_ Walker, Last;
     KIRQL Irql;
 
     KeAcquireSpinLock ( &aoe__target_list_spinlock_, &Irql );
@@ -2095,7 +2094,7 @@ NTSTATUS STDCALL aoe__scan(
   ) {
     KIRQL irql;
     winvblock__uint32 count;
-    struct aoe__target_list_ * target_walker;
+    AOE_SP_TARGET_LIST_ target_walker;
     aoe__mount_targets_ptr targets;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
