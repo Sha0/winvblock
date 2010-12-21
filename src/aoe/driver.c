@@ -65,7 +65,7 @@ static WV_F_DEV_FREE AoeDiskFree_;
 static WV_F_DISK_IO AoeDiskIo_;
 static WV_F_DISK_MAX_XFER_LEN AoeDiskMaxXferLen_;
 static WV_F_DISK_INIT AoeDiskInit_;
-static WV_F_DISK_CLOSE close;
+static WV_F_DISK_CLOSE AoeDiskClose_;
 
 /** Tag types. */
 enum aoe__tag_type_
@@ -1997,7 +1997,7 @@ winvblock__def_struct(abft) {
 #  pragma pack()
 #endif
 
-static void STDCALL close(IN WV_SP_DISK_T disk_ptr) {
+static void STDCALL AoeDiskClose_(IN WV_SP_DISK_T disk_ptr) {
     return;
   }
 
@@ -2304,7 +2304,7 @@ static AOE_SP_DISK_ AoeDiskCreate_(void) {
     disk->disk_ops.Io = AoeDiskIo_;
     disk->disk_ops.MaxXferLen = AoeDiskMaxXferLen_;
     disk->disk_ops.Init = AoeDiskInit_;
-    disk->disk_ops.Close = close;
+    disk->disk_ops.Close = AoeDiskClose_;
     disk->ext = aoe_disk;
 
     return aoe_disk;
