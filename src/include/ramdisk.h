@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _ramdisk_h
-#  define _ramdisk_h
+#ifndef WV_M_RAMDISK_H_
+#  define WV_M_RAMDISK_H_
 
 /**
  * @file
@@ -50,4 +50,4 @@ extern ramdisk__type_ptr ramdisk__create (
   void
  );
 
-#endif				/* _ramdisk_h */
+#endif  /* WV_M_RAMDISK_H_ */

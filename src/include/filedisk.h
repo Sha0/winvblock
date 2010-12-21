@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _filedisk_h
-#  define _filedisk_h
+#ifndef WV_M_FILEDISK_H_
+#  define WV_M_FILEDISK_H_
 
 /**
  * @file
@@ -83,4 +83,4 @@ extern void STDCALL filedisk__hot_swap_thread (
   IN void *StartContext
  );
 
-#endif				/* _filedisk_h */
+#endif  /* WV_M_FILEDISK_H_ */

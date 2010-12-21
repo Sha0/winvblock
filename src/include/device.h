@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _WV_M_DEVICE_H_
-#  define _WV_M_DEVICE_H_
+#ifndef WV_M_DEVICE_H_
+#  define WV_M_DEVICE_H_
 
 /**
  * @file
@@ -191,4 +191,4 @@ extern winvblock__lib_func WV_SP_DEV_T WvDevFromDevObj(PDEVICE_OBJECT);
 extern winvblock__lib_func void WvDevForDevObj(PDEVICE_OBJECT, WV_SP_DEV_T);
 extern WV_F_DEV_DISPATCH WvDevPnpQueryId;
 
-#endif  /* _WV_M_DEVICE_H_ */
+#endif  /* WV_M_DEVICE_H_ */

@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _msvhd_h
-#  define _msvhd_h
+#ifndef WV_M_MSVHD_H_
+#  define WV_M_MSVHD_H_
 
 /**
  * @file
@@ -80,4 +80,4 @@ msvhd__footer_swap_endian (
   byte__rev_array_union ( footer_ptr->checksum );
 }
 
-#endif				/* _msvhd_h */
+#endif  /* WV_M_MSVHD_H_ */

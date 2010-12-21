@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _memdisk_h
-#  define _memdisk_h
+#ifndef WV_M_MEMDISK_H_
+#  define WV_M_MEMDISK_H_
 
 /**
  * @file
@@ -30,4 +30,4 @@ extern void memdisk__find (
   void
  );
 
-#endif				/* _memdisk_h */
+#endif  /* WV_M_MEMDISK_H_ */

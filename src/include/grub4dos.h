@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _grub4dos_h
-#  define _grub4dos_h
+#ifndef WV_M_GRUB4DOS_H_
+#  define WV_M_GRUB4DOS_H_
 
 /**
  * @file
@@ -53,4 +53,4 @@ extern void filedisk_grub4dos__find (
   void
  );
 
-#endif				/* _grub4dos_h */
+#endif  /* WV_M_GRUB4DOS_H_ */

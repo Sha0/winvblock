@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _PROTOCOL_H
-#  define _PROTOCOL_H
+#ifndef AOE_M_PROTOCOL_H_
+#  define AOE_M_PROTOCOL_H_
 
 /**
  * @file
@@ -48,4 +48,4 @@ extern void Protocol_Stop (
   void
  );
 
-#endif				/* _PROTOCOL_H */
+#endif  /* AOE_M_PROTOCOL_H_ */

@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _PORTABLE_H
-#  define _PORTABLE_H
+#ifndef WV_M_PORTABLE_H_
+#  define WV_M_PORTABLE_H_
 
 /**
  * @file
@@ -56,4 +56,4 @@ typedef unsigned int UINT,
 #    endif
 #  endif
 
-#endif				/* _PORTABLE_H */
+#endif  /* WV_M_PORTABLE_H_ */

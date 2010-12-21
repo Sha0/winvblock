@@ -11,8 +11,8 @@
  *   Boston MA 02111-1307, USA; either version 2 of the License, or
  *   (at your option) any later version; incorporated herein by reference.
  */
-#ifndef _mdi_h
-#  define _mdi_h
+#ifndef WV_M_MDI_H_
+#  define WV_M_MDI_H_
 
 /**
  * @file
@@ -89,4 +89,4 @@ __attribute__ ( ( __packed__ ) );
 #    pragma pack()
 #  endif
 
-#endif				/* _mdi_h */
+#endif  /* WV_M_MDI_H_ */

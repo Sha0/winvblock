@@ -16,12 +16,12 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _wv_string_h
-#  define _wv_string_h
+#ifndef WV_M_STRING_H_
+#  define WV_M_STRING_H_
 #  include "wv_stdbool.h"
 #  include "wv_stddef.h"
 
 /* Test two byte ranges in memory for equality. */
 bool wv_memcmpeq(const void *s1, const void *s2, wv_size_t n);
 
-#endif /* _wv_string_h */
+#endif  /* WV_M_STRING_H_ */

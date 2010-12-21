@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _WV_STDLIB_H
-#  define _WV_STDLIB_H
+#ifndef WV_M_STDLIB_H_
+#  define WV_M_STDLIB_H_
 
 #include "wv_stddef.h"
 
@@ -36,4 +36,4 @@ void *wv_pallocz(wv_size_t size);
 /* Free allocated memory. */
 void wv_free(void *ptr);
 
-#endif  /* _WV_STDLIB_H */
+#endif  /* WV_M_STDLIB_H_ */

@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _WV_M_PROBE_H_
-#  define _WV_M_PROBE_H_
+#ifndef WV_M_PROBE_H_
+#  define WV_M_PROBE_H_
 
 /**
  * @file
@@ -56,4 +56,4 @@ extern WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
   );
 extern void WvProbeDisks(void);
 
-#endif  /* _WV_M_PROBE_H_ */
+#endif  /* WV_M_PROBE_H_ */

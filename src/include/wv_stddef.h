@@ -16,11 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _wv_stddef_h
-#  define _wv_stddef_h
+#ifndef WV_M_STDDEF_H_
+#  define WV_M_STDDEF_H_
 #  include "stddef.h"
 
 /* Type for the size, in bytes, of any object. */
 typedef size_t wv_size_t;
 
-#endif /* _wv_stddef_h */
+#endif  /* WV_M_STDDEF_H_ */

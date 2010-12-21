@@ -20,8 +20,8 @@
  * Jul-03-2009@22:39: Initial revision.
  */
 
-#ifndef _DEBUG_H
-#  define _DEBUG_H
+#ifndef WV_M_DEBUG_H_
+#  define WV_M_DEBUG_H_
 
 /**
  * @file
@@ -65,4 +65,4 @@ extern void STDCALL Debug_IrpEnd (
   IN NTSTATUS Status
  );
 
-#endif				/* _DEBUG_H */
+#endif  /* WV_M_DEBUG_H_ */

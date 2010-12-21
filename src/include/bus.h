@@ -48,6 +48,7 @@ typedef struct WV_BUS_T {
     WV_FP_BUS_THREAD Thread;
     KEVENT ThreadSignal;
     winvblock__bool Stop;
+    KEVENT ThreadStopped;
     struct {
         LIST_ENTRY Nodes;
         USHORT NodeCount;

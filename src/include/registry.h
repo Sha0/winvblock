@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _REGISTRY_H
-#  define _REGISTRY_H
+#ifndef WV_M_REGISTRY_H_
+#  define WV_M_REGISTRY_H_
 
 /**
  * @file
@@ -138,4 +138,4 @@ extern winvblock__lib_func NTSTATUS registry__store_dword (
   winvblock__uint32 value
  );
 
-#endif				/* _REGISTRY_H */
+#endif  /* WV_M_REGISTRY_H_ */

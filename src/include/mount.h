@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _MOUNT_H
-#  define _MOUNT_H
+#ifndef WV_M_MOUNT_H_
+#  define WV_M_MOUNT_H_
 
 /**
  * @file
@@ -51,4 +51,4 @@ winvblock__def_struct ( mount__filedisk )
   int sectors;
 };
 
-#endif				/* _MOUNT_H */
+#endif  /* WV_M_MOUNT_H_ */

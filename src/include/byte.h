@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _byte_h
-#  define _byte_h
+#ifndef WV_M_BYTE_H_
+#  define WV_M_BYTE_H_
 
 /**
  * @file
@@ -58,4 +58,4 @@ byte__order_swap (
 #  define byte__rev_array_union( x ) \
   byte__order_swap ( x.bytes, sizeof(x.bytes) )
 
-#endif				/* _byte_h */
+#endif  /* WV_M_BYTE_H_ */

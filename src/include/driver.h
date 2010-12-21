@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _DRIVER_H
-#  define _DRIVER_H
+#ifndef WV_M_DRIVER_H_
+#  define WV_M_DRIVER_H_
 
 /**
  * @file
@@ -68,4 +68,4 @@ extern winvblock__lib_func NTSTATUS STDCALL driver__complete_irp(
     IN NTSTATUS
   );
 
-#endif	/* _DRIVER_H */
+#endif	/* WV_M_DRIVER_H_ */

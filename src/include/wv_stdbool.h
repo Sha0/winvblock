@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _wv_stdbool_h
-#  define _wv_stdbool_h
+#ifndef WV_M_STDBOOL_H_
+#  define WV_M_STDBOOL_H_
 
 /* Boolean type. */
 typedef unsigned short bool;
@@ -26,4 +26,4 @@ typedef unsigned short bool;
 #define false (0)
 #define true (1)
 
-#endif /* _wv_stdbool_h */
+#endif  /* WV_M_STDBOOL_H_ */

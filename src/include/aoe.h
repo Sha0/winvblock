@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _aoe_h
-#  define _aoe_h
+#ifndef AOE_M_AOE_H_
+#  define AOE_M_AOE_H_
 
 /**
  * @file
@@ -95,4 +95,4 @@ winvblock__def_struct(aoe__mount_disks)
 
 extern void aoe__reset_probe(void);
 
-#endif  /* _aoe_h */
+#endif  /* AOE_M_AOE_H_ */

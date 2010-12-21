@@ -259,6 +259,7 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T Bus) {
     KeInitializeSpinLock(&Bus->BusPrivate_.WorkItemsLock);
     InitializeListHead(&Bus->BusPrivate_.WorkItems);
     KeInitializeEvent(&Bus->ThreadSignal, SynchronizationEvent, FALSE);
+    KeInitializeEvent(&Bus->ThreadStopped, SynchronizationEvent, FALSE);
     Bus->Dev.Ops.CreatePdo = WvBusCreatePdo_;
     Bus->Dev.Ops.Init = WvBusDevInit_;
     Bus->Dev.Ops.Free = WvBusFree_;
@@ -482,7 +483,7 @@ winvblock__lib_func void WvBusCancelWorkItems(WV_SP_BUS_T Bus) {
     return;
   }
 
-/* The WV_SP_DEV_T::ops.free implementation for a threaded bus. */
+/* The WV_S_DEV_T::Ops.Free implementation for a threaded bus. */
 static void STDCALL WvBusThreadFree_(IN WV_SP_DEV_T dev) {
     WV_SP_BUS_T bus = WvBusFromDev(dev);
 
@@ -496,6 +497,11 @@ static void STDCALL WvBusThreadFree_(IN WV_SP_DEV_T dev) {
  *
  * @v context           The thread context.  In our case, it points to
  *                      the bus that the thread should use in processing.
+ *
+ * Note that we do not attempt to free the bus data; this is a bus
+ * implementor's responsibility.  We do, however, set the ThreadStopped
+ * signal which should mean that resources can be freed, from a completed
+ * thread's perspective.
  */
 static void STDCALL WvBusThread_(IN void * context) {
     WV_SP_BUS_T bus = context;
@@ -506,6 +512,7 @@ static void STDCALL WvBusThread_(IN void * context) {
       }
 
     bus->Thread(bus);
+    KeSetEvent(&bus->ThreadStopped, 0, FALSE);
     return;
   }
 
@@ -527,10 +534,10 @@ static void STDCALL WvBusDefaultThread_(IN WV_SP_BUS_T bus) {
     /* Wake up at least every 30 seconds. */
     timeout.QuadPart = -300000000LL;
 
-    /* Hook WV_SP_DEV_T::ops.free() */
+    /* Hook WV_S_DEV_T::Ops.Free() */
     bus->Dev.Ops.Free = WvBusThreadFree_;
 
-    /* When bus::Stop is set, we shut down. */
+    /* When WV_S_BUS_T::Stop is set, we shut down. */
     while (!bus->Stop) {
         DBG("Alive.\n");
 
@@ -546,10 +553,9 @@ static void STDCALL WvBusDefaultThread_(IN WV_SP_BUS_T bus) {
         KeResetEvent(&bus->ThreadSignal);
 
         WvBusProcessWorkItems(bus);
-      } /* while bus->alive */
+      } /* while !bus->Stop */
 
     WvBusCancelWorkItems(bus);
-    WvBusFree_(&bus->Dev);
     return;
   }
 
@@ -560,8 +566,8 @@ static void STDCALL WvBusDefaultThread_(IN WV_SP_BUS_T bus) {
  * @ret NTSTATUS        The status of the thread creation operation.
  *
  * Also see WV_F_BUS_THREAD in the header for details about the prototype
- * for implementing your own bus thread routine.  You set bus::Thread to
- * specify your own thread routine, then call this function to start it.
+ * for implementing your own bus thread routine.  You set WV_S_BUS_T::Thread
+ * to specify your own thread routine, then call this function to start it.
  */
 winvblock__lib_func NTSTATUS WvBusStartThread(
     WV_SP_BUS_T Bus
