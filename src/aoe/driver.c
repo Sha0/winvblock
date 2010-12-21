@@ -51,7 +51,7 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject(
   );
 
 /* From aoe/bus.c */
-extern WV_SP_BUS_T aoe_bus;
+extern WV_SP_BUS_T AoeBusMain;
 extern winvblock__bool aoe_bus__create(void);
 extern void aoe_bus__free(void);
 

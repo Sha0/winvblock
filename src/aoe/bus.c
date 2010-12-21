@@ -51,7 +51,7 @@ winvblock__bool aoe_bus__create(void);
 void aoe_bus__free(void);
 
 /* Globals. */
-WV_SP_BUS_T aoe_bus = NULL;
+WV_SP_BUS_T AoeBusMain = NULL;
 static UNICODE_STRING AoeBusName_ = {
     sizeof AOE_M_BUS_NAME_,
     sizeof AOE_M_BUS_NAME_,
@@ -104,7 +104,7 @@ winvblock__bool aoe_bus__create(void) {
     NTSTATUS status;
 
     /* We should only be called once. */
-    if (aoe_bus) {
+    if (AoeBusMain) {
         DBG("AoE bus already created\n");
         return FALSE;
       }
@@ -131,13 +131,13 @@ winvblock__bool aoe_bus__create(void) {
         goto err_dos_symlink;
       }
     /* All done. */
-    aoe_bus = new_bus;
+    AoeBusMain = new_bus;
     return TRUE;
 
     IoDeleteSymbolicLink(&AoeBusDosname_);
     err_dos_symlink:
 
-    IoDeleteDevice(aoe_bus->Dev->Self);
+    IoDeleteDevice(AoeBusMain->Dev->Self);
     err_add_child:
 
     WvDevFree(new_bus->Dev);
@@ -148,16 +148,16 @@ winvblock__bool aoe_bus__create(void) {
 
 /* Destroy the AoE bus. */
 void aoe_bus__free(void) {
-    if (!aoe_bus)
+    if (!AoeBusMain)
       /* Nothing to do. */
       return;
 
     IoDeleteSymbolicLink(&AoeBusDosname_);
-    IoDeleteDevice(aoe_bus->Dev->Self);
+    IoDeleteDevice(AoeBusMain->Dev->Self);
     #if 0
-    bus__remove_child(driver__bus(), aoe_bus->Dev);
+    bus__remove_child(driver__bus(), AoeBusMain->Dev);
     #endif
-    WvDevFree(aoe_bus->Dev);
+    WvDevFree(AoeBusMain->Dev);
     return;
   }
 
