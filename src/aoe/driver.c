@@ -154,17 +154,17 @@ typedef struct AOE_DISK_SEARCH_ {
     struct AOE_DISK_SEARCH_ * next;
   } AOE_S_DISK_SEARCH_, * AOE_SP_DISK_SEARCH_;
 
-enum aoe__search_state_
-  {
-    aoe__search_state_search_nic_,
-    aoe__search_state_get_size_,
-    aoe__search_state_getting_size_,
-    aoe__search_state_get_geometry_,
-    aoe__search_state_getting_geometry_,
-    aoe__search_state_get_max_sectors_per_packet_,
-    aoe__search_state_getting_max_sectors_per_packet_,
-    aoe__search_state_done_
-  };
+typedef enum AOE_SEARCH_STATE_ {
+    AoeSearchStateSearchNic_,
+    AoeSearchStateGetSize_,
+    AoeSearchStateGettingSize_,
+    AoeSearchStateGetGeometry_,
+    AoeSearchStateGettingGeometry_,
+    AoeSearchStateGetMaxSectsPerPacket_,
+    AoeSearchStateGettingMaxSectsPerPacket_,
+    AoeSearchStateDone_,
+    AoeSearchStates
+  } AOE_E_SEARCH_STATE_, * AOE_EP_SEARCH_STATE_;
 
 /** The AoE disk type. */
 typedef struct AOE_DISK_ {
@@ -176,7 +176,7 @@ typedef struct AOE_DISK_ {
     winvblock__uint32 Minor;
     winvblock__uint32 MaxSectorsPerPacket;
     winvblock__uint32 Timeout;
-    enum aoe__search_state_ search_state;
+    AOE_E_SEARCH_STATE_ search_state;
     WV_FP_DEV_FREE prev_free;
     LIST_ENTRY tracking;
   } AOE_S_DISK_, * AOE_SP_DISK_;
@@ -937,7 +937,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
      */
     disk_searcher->device = disk_ptr->Dev;
     disk_searcher->next = NULL;
-    aoe_disk_ptr->search_state = aoe__search_state_search_nic_;
+    aoe_disk_ptr->search_state = AoeSearchStateSearchNic_;
     KeResetEvent ( &disk_ptr->SearchEvent );
 
     /*
@@ -993,7 +993,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
          */
         KeAcquireSpinLock ( &disk_ptr->SpinLock, &Irql );
 
-        if (aoe_disk_ptr->search_state == aoe__search_state_search_nic_)
+        if (aoe_disk_ptr->search_state == AoeSearchStateSearchNic_)
     {
       if ( !Protocol_SearchNIC ( aoe_disk_ptr->ClientMac ) )
         {
@@ -1006,11 +1006,11 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
            * We found the adapter to use, get MTU next 
            */
           aoe_disk_ptr->MTU = Protocol_GetMTU ( aoe_disk_ptr->ClientMac );
-          aoe_disk_ptr->search_state = aoe__search_state_get_size_;
+          aoe_disk_ptr->search_state = AoeSearchStateGetSize_;
         }
     }
 
-        if (aoe_disk_ptr->search_state == aoe__search_state_getting_size_)
+        if (aoe_disk_ptr->search_state == AoeSearchStateGettingSize_)
     {
       /*
        * Still getting the disk's size 
@@ -1018,7 +1018,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
       KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
       continue;
     }
-        if (aoe_disk_ptr->search_state == aoe__search_state_getting_geometry_)
+        if (aoe_disk_ptr->search_state == AoeSearchStateGettingGeometry_)
     {
       /*
        * Still getting the disk's geometry 
@@ -1027,7 +1027,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
       continue;
     }
         if (aoe_disk_ptr->search_state ==
-          aoe__search_state_getting_max_sectors_per_packet_)
+          AoeSearchStateGettingMaxSectsPerPacket_)
     {
       KeQuerySystemTime ( &CurrentTime );
       /*
@@ -1042,7 +1042,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
           DBG ( "No reply after 250ms for MaxSectorsPerPacket %d, "
           "giving up\n", aoe_disk_ptr->MaxSectorsPerPacket );
           aoe_disk_ptr->MaxSectorsPerPacket--;
-          aoe_disk_ptr->search_state = aoe__search_state_done_;
+          aoe_disk_ptr->search_state = AoeSearchStateDone_;
         }
       else
         {
@@ -1054,7 +1054,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
         }
     }
 
-        if (aoe_disk_ptr->search_state == aoe__search_state_done_)
+        if (aoe_disk_ptr->search_state == AoeSearchStateDone_)
     {
       /*
        * We've finished the disk search; perform clean-up 
@@ -1160,7 +1160,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
     }
 
         #if 0
-        if ( aoe_disk_ptr->search_state == aoe__search_state_done_)
+        if ( aoe_disk_ptr->search_state == AoeSearchStateDone_)
         #endif
         /*
          * Establish our tag 
@@ -1201,23 +1201,23 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
          */
         switch ( aoe_disk_ptr->search_state )
     {
-      case aoe__search_state_get_size_:
+      case AoeSearchStateGetSize_:
         /*
          * TODO: Make the below value into a #defined constant 
          */
         tag->packet_data->Cmd = 0xec;  /* IDENTIFY DEVICE */
         tag->packet_data->Count = 1;
-        aoe_disk_ptr->search_state = aoe__search_state_getting_size_;
+        aoe_disk_ptr->search_state = AoeSearchStateGettingSize_;
         break;
-      case aoe__search_state_get_geometry_:
+      case AoeSearchStateGetGeometry_:
         /*
          * TODO: Make the below value into a #defined constant 
          */
         tag->packet_data->Cmd = 0x24;  /* READ SECTOR */
         tag->packet_data->Count = 1;
-        aoe_disk_ptr->search_state = aoe__search_state_getting_geometry_;
+        aoe_disk_ptr->search_state = AoeSearchStateGettingGeometry_;
         break;
-      case aoe__search_state_get_max_sectors_per_packet_:
+      case AoeSearchStateGetMaxSectsPerPacket_:
         /*
          * TODO: Make the below value into a #defined constant 
          */
@@ -1226,7 +1226,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
           ( winvblock__uint8 ) ( ++aoe_disk_ptr->MaxSectorsPerPacket );
         KeQuerySystemTime ( &MaxSectorsPerPacketSendTime );
         aoe_disk_ptr->search_state =
-          aoe__search_state_getting_max_sectors_per_packet_;
+          AoeSearchStateGettingMaxSectsPerPacket_;
         /*
          * TODO: Make the below value into a #defined constant 
          */
@@ -1668,7 +1668,7 @@ NTSTATUS STDCALL aoe__reply(
     KeAcquireSpinLock ( &disk_ptr->SpinLock, &Irql );
     switch ( aoe_disk_ptr->search_state )
       {
-        case aoe__search_state_getting_size_:
+        case AoeSearchStateGettingSize_:
           /*
            * The reply tells us the disk size
            */
@@ -1677,9 +1677,9 @@ NTSTATUS STDCALL aoe__reply(
           /*
            * Next we are concerned with the disk geometry
            */
-          aoe_disk_ptr->search_state = aoe__search_state_get_geometry_;
+          aoe_disk_ptr->search_state = AoeSearchStateGetGeometry_;
           break;
-        case aoe__search_state_getting_geometry_:
+        case AoeSearchStateGettingGeometry_:
           /*
            * FIXME: use real values from partition table.
            * We used to truncate a fractional end cylinder, but
@@ -1695,9 +1695,9 @@ NTSTATUS STDCALL aoe__reply(
            * Next we are concerned with the maximum sectors per packet
            */
           aoe_disk_ptr->search_state =
-            aoe__search_state_get_max_sectors_per_packet_;
+            AoeSearchStateGetMaxSectsPerPacket_;
           break;
-        case aoe__search_state_getting_max_sectors_per_packet_:
+        case AoeSearchStateGettingMaxSectsPerPacket_:
           DataSize -= sizeof (AOE_S_PACKET_);
           if ( DataSize <
          ( aoe_disk_ptr->MaxSectorsPerPacket *
@@ -1707,7 +1707,7 @@ NTSTATUS STDCALL aoe__reply(
         "MaxSectorsPerPacket (tried %d, got size of %d)\n",
         aoe_disk_ptr->MaxSectorsPerPacket, DataSize );
         aoe_disk_ptr->MaxSectorsPerPacket--;
-        aoe_disk_ptr->search_state = aoe__search_state_done_;
+        aoe_disk_ptr->search_state = AoeSearchStateDone_;
       }
           else if ( aoe_disk_ptr->MTU <
         ( sizeof (AOE_S_PACKET_) +
@@ -1718,7 +1718,7 @@ NTSTATUS STDCALL aoe__reply(
         "MTU of %d reached\n",
         aoe_disk_ptr->MaxSectorsPerPacket, DataSize,
         aoe_disk_ptr->MTU );
-        aoe_disk_ptr->search_state = aoe__search_state_done_;
+        aoe_disk_ptr->search_state = AoeSearchStateDone_;
       }
           else
       {
@@ -1726,7 +1726,7 @@ NTSTATUS STDCALL aoe__reply(
         "trying next...\n", aoe_disk_ptr->MaxSectorsPerPacket,
         DataSize );
         aoe_disk_ptr->search_state =
-          aoe__search_state_get_max_sectors_per_packet_;
+          AoeSearchStateGetMaxSectsPerPacket_;
       }
           break;
         default:
