@@ -60,8 +60,8 @@ struct AOE_DISK_;
 static void STDCALL AoeThread_(IN void *);
 static void AoeProcessAbft_(void);
 static void STDCALL AoeUnload_(IN PDRIVER_OBJECT);
-static struct AOE_DISK_ * aoe__create_disk_(void);
-static WV_F_DEV_FREE aoe__free_disk_;
+static struct AOE_DISK_ * AoeDiskCreate_(void);
+static WV_F_DEV_FREE AoeDiskFree_;
 static WV_F_DISK_IO io;
 static WV_F_DISK_MAX_XFER_LEN max_xfer_len;
 static WV_F_DISK_INIT init;
@@ -2060,7 +2060,7 @@ static void AoeProcessAbft_(void) {
 
     if (!FoundAbft)
       goto out_no_abft;
-    aoe_disk = aoe__create_disk_();
+    aoe_disk = AoeDiskCreate_();
     if(aoe_disk == NULL) {
         DBG("Could not create AoE disk from aBFT!\n");
         return;
@@ -2243,7 +2243,7 @@ NTSTATUS STDCALL aoe__mount(
         *(winvblock__uint16_ptr) (buffer + 6),
         (winvblock__uint8) buffer[8]
       );
-    aoe_disk = aoe__create_disk_();
+    aoe_disk = AoeDiskCreate_();
     if (aoe_disk == NULL) {
         DBG("Could not create AoE disk!\n");
         return driver__complete_irp(
@@ -2275,7 +2275,7 @@ NTSTATUS STDCALL aoe__mount(
  * AOE_S_DISK_, track it in a global list, as well as populate the disk
  * with default values.
  */
-static AOE_SP_DISK_ aoe__create_disk_(void) {
+static AOE_SP_DISK_ AoeDiskCreate_(void) {
     WV_SP_DISK_T disk;
     AOE_SP_DISK_ aoe_disk;
 
@@ -2299,7 +2299,7 @@ static AOE_SP_DISK_ aoe__create_disk_(void) {
     /* Populate non-zero device defaults. */
     aoe_disk->disk = disk;
     aoe_disk->prev_free = disk->Dev->Ops.Free;
-    disk->Dev->Ops.Free = aoe__free_disk_;
+    disk->Dev->Ops.Free = AoeDiskFree_;
     disk->Dev->Ops.PnpId = query_id;
     disk->disk_ops.Io = io;
     disk->disk_ops.MaxXferLen = max_xfer_len;
@@ -2322,7 +2322,7 @@ static AOE_SP_DISK_ aoe__create_disk_(void) {
  *
  * @v dev               Points to the AoE disk device to delete.
  */
-static void STDCALL aoe__free_disk_(IN WV_SP_DEV_T dev) {
+static void STDCALL AoeDiskFree_(IN WV_SP_DEV_T dev) {
     AOE_SP_DISK_ aoe_disk = aoe__get_(dev);
     /* Free the "inherited class". */
     aoe_disk->prev_free(dev);
