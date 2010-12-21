@@ -184,7 +184,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
       }
     /* Set associations for the bus, device, FDO, PDO. */
     WvDevForDevObj(fdo, &bus->Dev);
-    bus->Dev.Self = fdo;
+    bus->Dev.Self = bus->Fdo = fdo;
     bus->PhysicalDeviceObject = PhysicalDeviceObject;
     fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
     fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */

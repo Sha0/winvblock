@@ -43,6 +43,7 @@ typedef struct WV_BUS_T {
     WV_S_DEV_T Dev;
     PDEVICE_OBJECT LowerDeviceObject;
     PDEVICE_OBJECT PhysicalDeviceObject;
+    PDEVICE_OBJECT Fdo;
     winvblock__uint32 Children;
     WV_SP_DEV_T first_child;
     WV_FP_BUS_THREAD Thread;
