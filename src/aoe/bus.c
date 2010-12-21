@@ -45,10 +45,10 @@ extern WV_F_DEV_DISPATCH aoe__show;
 extern WV_F_DEV_DISPATCH aoe__mount;
 
 /* Forward declarations. */
-static WV_F_DEV_CTL aoe_bus__dev_ctl_dispatch_;
-static WV_F_DEV_PNP_ID aoe_bus__pnp_id_;
-winvblock__bool aoe_bus__create(void);
-void aoe_bus__free(void);
+static WV_F_DEV_CTL AoeBusDevCtlDispatch_;
+static WV_F_DEV_PNP_ID AoeBusPnpId_;
+winvblock__bool AoeBusCreate(void);
+void AoeBusFree(void);
 
 /* Globals. */
 WV_SP_BUS_T AoeBusMain = NULL;
@@ -63,7 +63,7 @@ static UNICODE_STRING AoeBusDosname_ = {
     AOE_M_BUS_DOSNAME_
   };
 
-static NTSTATUS STDCALL aoe_bus__dev_ctl_dispatch_(
+static NTSTATUS STDCALL AoeBusDevCtlDispatch_(
     IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN ULONG POINTER_ALIGNMENT code
@@ -88,6 +88,7 @@ static NTSTATUS STDCALL aoe_bus__dev_ctl_dispatch_(
                 IOCTL_FILE_DETACH
               );
           }
+
         default:
           DBG("Unsupported IOCTL\n");
           return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
@@ -99,7 +100,7 @@ static NTSTATUS STDCALL aoe_bus__dev_ctl_dispatch_(
  *
  * @ret         TRUE for success, else FALSE.
  */
-winvblock__bool aoe_bus__create(void) {
+winvblock__bool AoeBusCreate(void) {
     WV_SP_BUS_T new_bus;
     NTSTATUS status;
 
@@ -115,7 +116,7 @@ winvblock__bool aoe_bus__create(void) {
         goto err_new_bus;
       }
     /* When the PDO is created, we need to handle PnP ID queries. */
-    new_bus->Dev->Ops.PnpId = aoe_bus__pnp_id_;
+    new_bus->Dev->Ops.PnpId = AoeBusPnpId_;
     /* Add it as a sub-bus to WinVBlock. */
     if (!WvBusAddChild(driver__bus(), new_bus->Dev)) {
         DBG("Couldn't add AoE bus to WinVBlock bus!\n");
@@ -147,7 +148,7 @@ winvblock__bool aoe_bus__create(void) {
   }
 
 /* Destroy the AoE bus. */
-void aoe_bus__free(void) {
+void AoeBusFree(void) {
     if (!AoeBusMain)
       /* Nothing to do. */
       return;
@@ -161,7 +162,7 @@ void aoe_bus__free(void) {
     return;
   }
 
-static winvblock__uint32 STDCALL aoe_bus__pnp_id_(
+static winvblock__uint32 STDCALL AoeBusPnpId_(
     IN WV_SP_DEV_T dev,
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]

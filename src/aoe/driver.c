@@ -52,8 +52,8 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject(
 
 /* From aoe/bus.c */
 extern WV_SP_BUS_T AoeBusMain;
-extern winvblock__bool aoe_bus__create(void);
-extern void aoe_bus__free(void);
+extern winvblock__bool AoeBusCreate(void);
+extern void AoeBusFree(void);
 
 /* Forward declarations. */
 struct aoe__disk_type_;
@@ -812,7 +812,7 @@ NTSTATUS STDCALL DriverEntry(
 
     DriverObject->DriverUnload = aoe__unload_;
     aoe__started_ = TRUE;
-    if (!aoe_bus__create()) {
+    if (!AoeBusCreate()) {
         DBG("Unable to create AoE bus!\n");
         aoe__unload_(DriverObject);
         return STATUS_INSUFFICIENT_RESOURCES;
@@ -837,7 +837,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject) {
     if (!aoe__started_)
       return;
     /* Destroy the AoE bus. */
-    aoe_bus__free();
+    AoeBusFree();
     /* Stop the AoE protocol. */
     Protocol_Stop();
     /* If we're not already shutting down, signal the event. */
@@ -908,7 +908,7 @@ static void STDCALL aoe__unload_(IN PDRIVER_OBJECT DriverObject) {
 
     /* Release the global spin-lock. */
     KeReleaseSpinLock(&aoe__spinlock_, Irql);
-    aoe_bus__free();
+    AoeBusFree();
     aoe__started_ = FALSE;
     DBG("Exit\n");
   }
