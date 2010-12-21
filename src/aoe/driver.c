@@ -148,12 +148,11 @@ typedef struct AOE_WORK_TAG_ {
   } AOE_S_WORK_TAG_, * AOE_SP_WORK_TAG_;
 
 /** A disk search. */
-struct aoe__disk_search_
-  {
+typedef struct AOE_DISK_SEARCH_ {
     WV_SP_DEV_T device;
     AOE_SP_WORK_TAG_ tag;
-    struct aoe__disk_search_ * next;
-  };
+    struct AOE_DISK_SEARCH_ * next;
+  } AOE_S_DISK_SEARCH_, * AOE_SP_DISK_SEARCH_;
 
 enum aoe__search_state_
   {
@@ -197,7 +196,7 @@ static KEVENT aoe__thread_sig_evt_;
 static AOE_SP_WORK_TAG_ aoe__tag_list_ = NULL;
 static AOE_SP_WORK_TAG_ aoe__tag_list_last_ = NULL;
 static AOE_SP_WORK_TAG_ aoe__probe_tag_ = NULL;
-static struct aoe__disk_search_ * aoe__disk_search_list_ = NULL;
+static AOE_SP_DISK_SEARCH_ aoe__disk_search_list_ = NULL;
 static LONG aoe__outstanding_tags_ = 0;
 static HANDLE aoe__thread_handle_;
 static winvblock__bool aoe__started_ = FALSE;
@@ -820,7 +819,7 @@ NTSTATUS STDCALL DriverEntry(
  */
 static void STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
     NTSTATUS Status;
-    struct aoe__disk_search_ * disk_searcher, * previous_disk_searcher;
+    AOE_SP_DISK_SEARCH_ disk_searcher, previous_disk_searcher;
     AOE_SP_WORK_TAG_ tag;
     KIRQL Irql, Irql2;
     struct aoe__target_list_ * Walker, * Next;
@@ -915,8 +914,8 @@ static void STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
  * Returns TRUE if the disk could be matched, FALSE otherwise.
  */
 static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
-    struct aoe__disk_search_
-      * disk_searcher, * disk_search_walker, * previous_disk_searcher;
+    AOE_SP_DISK_SEARCH_
+      disk_searcher, disk_search_walker, previous_disk_searcher;
     LARGE_INTEGER Timeout, CurrentTime;
     AOE_SP_WORK_TAG_ tag, tag_walker;
     KIRQL Irql, InnerIrql;
