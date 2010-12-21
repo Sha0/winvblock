@@ -58,7 +58,7 @@ extern void AoeBusFree(void);
 /* Forward declarations. */
 struct AOE_DISK_;
 static void STDCALL AoeThread_(IN void *);
-static void aoe__process_abft_(void);
+static void AoeProcessAbft_(void);
 static void STDCALL aoe__unload_(IN PDRIVER_OBJECT);
 static struct AOE_DISK_ * aoe__create_disk_(void);
 static WV_F_DEV_FREE aoe__free_disk_;
@@ -816,7 +816,7 @@ NTSTATUS STDCALL DriverEntry(
         aoe__unload_(DriverObject);
         return STATUS_INSUFFICIENT_RESOURCES;
       }
-    aoe__process_abft_();
+    AoeProcessAbft_();
     DBG("Exit\n");
     return Status;
   }
@@ -2001,7 +2001,7 @@ static void STDCALL close(IN WV_SP_DISK_T disk_ptr) {
     return;
   }
 
-static void aoe__process_abft_(void) {
+static void AoeProcessAbft_(void) {
     PHYSICAL_ADDRESS PhysicalAddress;
     winvblock__uint8_ptr PhysicalMemory;
     winvblock__uint32 Offset, Checksum, i;
