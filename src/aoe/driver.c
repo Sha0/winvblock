@@ -57,7 +57,7 @@ extern void AoeBusFree(void);
 
 /* Forward declarations. */
 struct AOE_DISK_;
-static void STDCALL aoe__thread_(IN void *);
+static void STDCALL AoeThread_(IN void *);
 static void aoe__process_abft_(void);
 static void STDCALL aoe__unload_(IN PDRIVER_OBJECT);
 static struct AOE_DISK_ * aoe__create_disk_(void);
@@ -790,7 +790,7 @@ NTSTATUS STDCALL DriverEntry(
         &ObjectAttributes,
         NULL,
         NULL,
-        aoe__thread_,
+        AoeThread_,
         NULL
       )))
       return Error("PsCreateSystemThread", Status);
@@ -1778,7 +1778,7 @@ void aoe__reset_probe(void)
     aoe__probe_tag_->SendTime.QuadPart = 0LL;
   }
 
-static void STDCALL aoe__thread_(IN void *StartContext)
+static void STDCALL AoeThread_(IN void *StartContext)
   {
     LARGE_INTEGER Timeout, CurrentTime, ProbeTime, ReportTime;
     winvblock__uint32 NextTagId = 1;
