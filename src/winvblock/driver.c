@@ -183,8 +183,8 @@ static NTSTATUS STDCALL driver__attach_fdo_(
         goto err_dos_symlink;
       }
     /* Set associations for the bus, device, FDO, PDO. */
-    WvDevForDevObj(fdo, bus->Dev);
-    bus->Dev->Self = fdo;
+    WvDevForDevObj(fdo, &bus->Dev);
+    bus->Dev.Self = fdo;
     bus->PhysicalDeviceObject = PhysicalDeviceObject;
     fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
     fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
@@ -232,7 +232,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     IoDeleteDevice(fdo);
     err_fdo:
 
-    WvDevFree(bus->Dev);
+    WvDevFree(&bus->Dev);
     err_bus:
 
     err_already_established:

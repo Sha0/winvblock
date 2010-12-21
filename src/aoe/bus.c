@@ -116,9 +116,9 @@ winvblock__bool AoeBusCreate(void) {
         goto err_new_bus;
       }
     /* When the PDO is created, we need to handle PnP ID queries. */
-    new_bus->Dev->Ops.PnpId = AoeBusPnpId_;
+    new_bus->Dev.Ops.PnpId = AoeBusPnpId_;
     /* Add it as a sub-bus to WinVBlock. */
-    if (!WvBusAddChild(driver__bus(), new_bus->Dev)) {
+    if (!WvBusAddChild(driver__bus(), &new_bus->Dev)) {
         DBG("Couldn't add AoE bus to WinVBlock bus!\n");
         goto err_add_child;
       }
@@ -138,10 +138,10 @@ winvblock__bool AoeBusCreate(void) {
     IoDeleteSymbolicLink(&AoeBusDosname_);
     err_dos_symlink:
 
-    IoDeleteDevice(AoeBusMain->Dev->Self);
+    IoDeleteDevice(AoeBusMain->Dev.Self);
     err_add_child:
 
-    WvDevFree(new_bus->Dev);
+    WvDevFree(&new_bus->Dev);
     err_new_bus:
 
     return FALSE;
@@ -154,11 +154,11 @@ void AoeBusFree(void) {
       return;
 
     IoDeleteSymbolicLink(&AoeBusDosname_);
-    IoDeleteDevice(AoeBusMain->Dev->Self);
+    IoDeleteDevice(AoeBusMain->Dev.Self);
     #if 0
-    bus__remove_child(driver__bus(), AoeBusMain->Dev);
+    bus__remove_child(driver__bus(), &AoeBusMain->Dev);
     #endif
-    WvDevFree(AoeBusMain->Dev);
+    WvDevFree(&AoeBusMain->Dev);
     return;
   }
 

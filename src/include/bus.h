@@ -40,7 +40,7 @@ typedef WV_F_BUS_THREAD * WV_FP_BUS_THREAD;
 
 /* The bus type. */
 typedef struct WV_BUS_T {
-    WV_SP_DEV_T Dev;
+    WV_S_DEV_T Dev;
     PDEVICE_OBJECT LowerDeviceObject;
     PDEVICE_OBJECT PhysicalDeviceObject;
     winvblock__uint32 Children;
@@ -51,7 +51,6 @@ typedef struct WV_BUS_T {
     struct {
         LIST_ENTRY Nodes;
         USHORT NodeCount;
-        WV_FP_DEV_FREE PrevFree;
         LIST_ENTRY WorkItems;
         KSPIN_LOCK WorkItemsLock;
       } BusPrivate_;

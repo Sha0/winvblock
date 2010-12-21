@@ -108,7 +108,7 @@ winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
         return FALSE;
       }
 
-    Dev->Parent = Bus->Dev->Self;
+    Dev->Parent = Bus->Dev.Self;
     /*
      * Initialize the device.  For disks, this routine is responsible for
      * determining the disk's geometry appropriately for AoE/RAM/file disks.
@@ -252,22 +252,19 @@ static winvblock__bool STDCALL WvBusDevInit_(IN WV_SP_DEV_T dev) {
  * @v Bus               Points to the bus to initialize with defaults.
  */
 winvblock__lib_func void WvBusInit(WV_SP_BUS_T Bus) {
-    WV_SP_DEV_T dev = Bus->Dev;
-
     RtlZeroMemory(Bus, sizeof *Bus);
     /* Populate non-zero bus device defaults. */
-    Bus->Dev = dev;
-    Bus->BusPrivate_.PrevFree = dev->Ops.Free;
+    WvDevInit(&Bus->Dev);
     Bus->Thread = WvBusDefaultThread_;
     KeInitializeSpinLock(&Bus->BusPrivate_.WorkItemsLock);
     InitializeListHead(&Bus->BusPrivate_.WorkItems);
     KeInitializeEvent(&Bus->ThreadSignal, SynchronizationEvent, FALSE);
-    dev->Ops.CreatePdo = WvBusCreatePdo_;
-    dev->Ops.Init = WvBusDevInit_;
-    dev->Ops.Free = WvBusFree_;
-    dev->ext = Bus;
-    dev->IrpMj = &WvBusIrpMj_;
-    dev->IsBus = TRUE;
+    Bus->Dev.Ops.CreatePdo = WvBusCreatePdo_;
+    Bus->Dev.Ops.Init = WvBusDevInit_;
+    Bus->Dev.Ops.Free = WvBusFree_;
+    Bus->Dev.ext = Bus;
+    Bus->Dev.IrpMj = &WvBusIrpMj_;
+    Bus->Dev.IsBus = TRUE;
   }
 
 /**
@@ -277,17 +274,11 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T Bus) {
  *
  * This function should not be confused with a PDO creation routine, which is
  * actually implemented for each device type.  This routine will allocate a
- * WV_S_BUS_T, track it in a global list, as well as populate the bus
- * with default values.
+ * WV_S_BUS_T as well as populate the bus with default values.
  */
 winvblock__lib_func WV_SP_BUS_T WvBusCreate(void) {
-    WV_SP_DEV_T dev;
     WV_SP_BUS_T bus;
 
-    /* Try to create a device. */
-    dev = WvDevCreate();
-    if (dev == NULL)
-      goto err_no_dev;
     /*
      * Bus devices might be used for booting and should
      * not be allocated from a paged memory pool.
@@ -296,14 +287,11 @@ winvblock__lib_func WV_SP_BUS_T WvBusCreate(void) {
     if (bus == NULL)
       goto err_no_bus;
 
-    bus->Dev = dev;
     WvBusInit(bus);
     return bus;
 
+    wv_free(bus);
     err_no_bus:
-
-    WvDevFree(dev);
-    err_no_dev:
 
     return NULL;
   }
@@ -369,8 +357,6 @@ static PDEVICE_OBJECT STDCALL WvBusCreatePdo_(IN WV_SP_DEV_T dev) {
  */
 static void STDCALL WvBusFree_(IN WV_SP_DEV_T dev) {
     WV_SP_BUS_T bus = WvBusFromDev(dev);
-    /* Free the "inherited class". */
-    bus->BusPrivate_.PrevFree(dev);
 
     wv_free(bus);
   }
@@ -466,7 +452,7 @@ winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T Bus) {
             case WvBusWorkItemCmdProcessIrp_:
               irp = work_item->Context.Irp;
               io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-              dev_obj = Bus->Dev->Self;
+              dev_obj = Bus->Dev.Self;
               driver_obj = dev_obj->DriverObject;
               driver_obj->MajorFunction[io_stack_loc->MajorFunction](
                   dev_obj,
@@ -542,7 +528,7 @@ static void STDCALL WvBusDefaultThread_(IN WV_SP_BUS_T bus) {
     timeout.QuadPart = -300000000LL;
 
     /* Hook WV_SP_DEV_T::ops.free() */
-    bus->Dev->Ops.Free = WvBusThreadFree_;
+    bus->Dev.Ops.Free = WvBusThreadFree_;
 
     /* When bus::Stop is set, we shut down. */
     while (!bus->Stop) {
@@ -563,7 +549,7 @@ static void STDCALL WvBusDefaultThread_(IN WV_SP_BUS_T bus) {
       } /* while bus->alive */
 
     WvBusCancelWorkItems(bus);
-    WvBusFree_(bus->Dev);
+    WvBusFree_(&bus->Dev);
     return;
   }
 
@@ -645,7 +631,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
     if (
         !Bus ||
         !Node ||
-        Bus->Dev->Self->DriverObject != Node->BusPrivate_.Pdo->DriverObject
+        Bus->Dev.Self->DriverObject != Node->BusPrivate_.Pdo->DriverObject
       )
       return STATUS_INVALID_PARAMETER;
 
