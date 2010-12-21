@@ -122,42 +122,40 @@ struct WV_DISK_T {
   };
 
 /* Yield a pointer to the disk. */
-#  define disk__get_ptr(dev_ptr) ((WV_SP_DISK_T) dev_ptr->ext)
+#define disk__get_ptr(dev_ptr) ((WV_SP_DISK_T) dev_ptr->ext)
 
 /* An MBR C/H/S address and ways to access its components. */
 typedef winvblock__uint8 chs[3];
 
-#  define     chs_head( chs ) chs[0]
-#  define   chs_sector( chs ) ( chs[1] & 0x3F )
-#  define chs_cyl_high( chs ) ( ( ( winvblock__uint16 ) ( chs[1] & 0xC0 ) ) << 2 )
-#  define  chs_cyl_low( chs ) ( ( winvblock__uint16 ) chs[2] )
-#  define chs_cylinder( chs ) ( chs_cyl_high ( chs ) | chs_cyl_low ( chs ) )
+#define     chs_head(chs) chs[0]
+#define   chs_sector(chs) (chs[1] & 0x3F)
+#define chs_cyl_high(chs) (((winvblock__uint16) (chs[1] & 0xC0)) << 2)
+#define  chs_cyl_low(chs) ((winvblock__uint16) chs[2])
+#define chs_cylinder(chs) (chs_cyl_high(chs) | chs_cyl_low(chs))
 
-#  ifdef _MSC_VER
-#    pragma pack(1)
-#  endif
+#ifdef _MSC_VER
+#  pragma pack(1)
+#endif
 
 /* An MBR. */
-winvblock__def_struct ( mbr )
-{
-  winvblock__uint8 code[440];
-  winvblock__uint32 disk_sig;
-  winvblock__uint16 pad;
-  struct
-  {
-    winvblock__uint8 status;
-    chs chs_start;
-    winvblock__uint8 type;
-    chs chs_end;
-    winvblock__uint32 lba_start;
-    winvblock__uint32 lba_count;
-  } partition[4] __attribute__ ( ( packed ) );
-  winvblock__uint16 mbr_sig;
-} __attribute__ ( ( __packed__ ) );
+winvblock__def_struct (mbr) {
+    winvblock__uint8 code[440];
+    winvblock__uint32 disk_sig;
+    winvblock__uint16 pad;
+    struct {
+        winvblock__uint8 status;
+        chs chs_start;
+        winvblock__uint8 type;
+        chs chs_end;
+        winvblock__uint32 lba_start;
+        winvblock__uint32 lba_count;
+      } partition[4] __attribute__((packed));
+    winvblock__uint16 mbr_sig;
+  } __attribute__((__packed__));
 
-#  ifdef _MSC_VER
-#    pragma pack()
-#  endif
+#ifdef _MSC_VER
+#  pragma pack()
+#endif
 
 extern WV_F_DISK_IO disk__io;
 extern WV_F_DISK_MAX_XFER_LEN disk__max_xfer_len;
@@ -168,10 +166,10 @@ extern WV_F_DISK_MAX_XFER_LEN disk__max_xfer_len;
  * @v boot_sect_ptr     The MBR or VBR with possible geometry clues.
  * @v disk_ptr          The disk to set the geometry for.
  */
-extern winvblock__lib_func void disk__guess_geometry (
-  IN WV_AP_DISK_BOOT_SECT,
-  IN OUT WV_SP_DISK_T disk_ptr
- );
+extern winvblock__lib_func void disk__guess_geometry(
+    IN WV_AP_DISK_BOOT_SECT,
+    IN OUT WV_SP_DISK_T disk_ptr
+  );
 
 /**
  * Create a new disk.
