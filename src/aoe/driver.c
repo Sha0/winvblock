@@ -187,20 +187,20 @@ typedef struct AOE_TARGET_LIST_ {
   } AOE_S_TARGET_LIST_, * AOE_SP_TARGET_LIST_;
 
 /** Private globals. */
-static AOE_SP_TARGET_LIST_ aoe__target_list_ = NULL;
-static KSPIN_LOCK aoe__target_list_spinlock_;
-static winvblock__bool aoe__stop_ = FALSE;
-static KSPIN_LOCK aoe__spinlock_;
-static KEVENT aoe__thread_sig_evt_;
-static AOE_SP_WORK_TAG_ aoe__tag_list_ = NULL;
-static AOE_SP_WORK_TAG_ aoe__tag_list_last_ = NULL;
-static AOE_SP_WORK_TAG_ aoe__probe_tag_ = NULL;
-static AOE_SP_DISK_SEARCH_ aoe__disk_search_list_ = NULL;
-static LONG aoe__outstanding_tags_ = 0;
-static HANDLE aoe__thread_handle_;
-static winvblock__bool aoe__started_ = FALSE;
-static LIST_ENTRY aoe__disk_list_;
-static KSPIN_LOCK aoe__disk_list_lock_;
+static AOE_SP_TARGET_LIST_ AoeTargetList_ = NULL;
+static KSPIN_LOCK AoeTargetListLock_;
+static winvblock__bool AoeStop_ = FALSE;
+static KSPIN_LOCK AoeLock_;
+static KEVENT AoeSignal_;
+static AOE_SP_WORK_TAG_ AoeTagListFirst_ = NULL;
+static AOE_SP_WORK_TAG_ AoeTagListLast_ = NULL;
+static AOE_SP_WORK_TAG_ AoeProbeTag_ = NULL;
+static AOE_SP_DISK_SEARCH_ AoeDiskSearchList_ = NULL;
+static LONG AoePendingTags_ = 0;
+static HANDLE AoeThreadHandle_;
+static winvblock__bool AoeStarted_ = FALSE;
+static LIST_ENTRY AoeDiskList_;
+static KSPIN_LOCK AoeDiskListLock_;
 
 /* Yield a pointer to the AoE disk. */
 static AOE_SP_DISK_ aoe__get_(WV_SP_DEV_T dev_ptr)
@@ -716,11 +716,11 @@ NTSTATUS STDCALL DriverEntry(
 
     DBG("Entry\n");
 
-    if (aoe__started_)
+    if (AoeStarted_)
       return STATUS_SUCCESS;
     /* Initialize the global list of AoE disks. */
-    InitializeListHead(&aoe__disk_list_);
-    KeInitializeSpinLock(&aoe__disk_list_lock_);
+    InitializeListHead(&AoeDiskList_);
+    KeInitializeSpinLock(&AoeDiskListLock_);
     /* Setup the Registry. */
     if (!NT_SUCCESS(setup_reg(&Status))) {
         DBG("Could not update Registry!\n");
@@ -734,37 +734,37 @@ NTSTATUS STDCALL DriverEntry(
         return Status;
       }
     /* Allocate and zero-fill the global probe tag. */
-    aoe__probe_tag_ = wv_mallocz(sizeof *aoe__probe_tag_);
-    if (aoe__probe_tag_ == NULL) {
+    AoeProbeTag_ = wv_mallocz(sizeof *AoeProbeTag_);
+    if (AoeProbeTag_ == NULL) {
         DBG("Couldn't allocate probe tag; bye!\n");
         return STATUS_INSUFFICIENT_RESOURCES;
       }
 
     /* Set up the probe tag's AoE packet reference. */
-    aoe__probe_tag_->PacketSize = sizeof (AOE_S_PACKET_);
+    AoeProbeTag_->PacketSize = sizeof (AOE_S_PACKET_);
     /* Allocate and zero-fill the probe tag's packet reference. */
-    aoe__probe_tag_->packet_data = wv_mallocz(aoe__probe_tag_->PacketSize);
-    if (aoe__probe_tag_->packet_data == NULL) {
-        DBG("Couldn't allocate aoe__probe_tag_->packet_data\n");
-        wv_free(aoe__probe_tag_);
+    AoeProbeTag_->packet_data = wv_mallocz(AoeProbeTag_->PacketSize);
+    if (AoeProbeTag_->packet_data == NULL) {
+        DBG("Couldn't allocate AoeProbeTag_->packet_data\n");
+        wv_free(AoeProbeTag_);
         return STATUS_INSUFFICIENT_RESOURCES;
       }
-    aoe__probe_tag_->SendTime.QuadPart = 0LL;
+    AoeProbeTag_->SendTime.QuadPart = 0LL;
 
     /* Initialize the probe tag's AoE packet. */
-    aoe__probe_tag_->packet_data->Ver = AOEPROTOCOLVER;
-    aoe__probe_tag_->packet_data->Major =
+    AoeProbeTag_->packet_data->Ver = AOEPROTOCOLVER;
+    AoeProbeTag_->packet_data->Major =
       htons((winvblock__uint16) -1);
-    aoe__probe_tag_->packet_data->Minor = (winvblock__uint8) -1;
-    aoe__probe_tag_->packet_data->Cmd = 0xec;           /* IDENTIFY DEVICE */
-    aoe__probe_tag_->packet_data->Count = 1;
+    AoeProbeTag_->packet_data->Minor = (winvblock__uint8) -1;
+    AoeProbeTag_->packet_data->Cmd = 0xec;           /* IDENTIFY DEVICE */
+    AoeProbeTag_->packet_data->Count = 1;
 
     /* Initialize global target-list spinlock. */
-    KeInitializeSpinLock(&aoe__target_list_spinlock_);
+    KeInitializeSpinLock(&AoeTargetListLock_);
 
     /* Initialize global spin-lock and global thread signal event. */
-    KeInitializeSpinLock(&aoe__spinlock_);
-    KeInitializeEvent(&aoe__thread_sig_evt_, SynchronizationEvent, FALSE);
+    KeInitializeSpinLock(&AoeLock_);
+    KeInitializeEvent(&AoeSignal_, SynchronizationEvent, FALSE);
 
     /* Initialize object attributes for thread. */
     InitializeObjectAttributes(
@@ -777,7 +777,7 @@ NTSTATUS STDCALL DriverEntry(
 
     /* Create global thread. */
     if (!NT_SUCCESS(Status = PsCreateSystemThread(
-        &aoe__thread_handle_,
+        &AoeThreadHandle_,
         THREAD_ALL_ACCESS,
         &ObjectAttributes,
         NULL,
@@ -788,21 +788,21 @@ NTSTATUS STDCALL DriverEntry(
       return Error("PsCreateSystemThread", Status);
 
     if (!NT_SUCCESS(Status = ObReferenceObjectByHandle(
-        aoe__thread_handle_,
+        AoeThreadHandle_,
         THREAD_ALL_ACCESS,
         NULL,
         KernelMode,
         &ThreadObject,
         NULL
       ))) {
-        ZwClose(aoe__thread_handle_);
+        ZwClose(AoeThreadHandle_);
         Error("ObReferenceObjectByHandle", Status);
-        aoe__stop_ = TRUE;
-        KeSetEvent(&aoe__thread_sig_evt_, 0, FALSE);
+        AoeStop_ = TRUE;
+        KeSetEvent(&AoeSignal_, 0, FALSE);
       }
 
     DriverObject->DriverUnload = AoeUnload_;
-    aoe__started_ = TRUE;
+    AoeStarted_ = TRUE;
     if (!AoeBusCreate()) {
         DBG("Unable to create AoE bus!\n");
         AoeUnload_(DriverObject);
@@ -825,41 +825,41 @@ static void STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
 
     DBG("Entry\n");
     /* If we're not already started, there's nothing to do. */
-    if (!aoe__started_)
+    if (!AoeStarted_)
       return;
     /* Destroy the AoE bus. */
     AoeBusFree();
     /* Stop the AoE protocol. */
     Protocol_Stop();
     /* If we're not already shutting down, signal the event. */
-    if (!aoe__stop_) {
-        aoe__stop_ = TRUE;
-        KeSetEvent(&aoe__thread_sig_evt_, 0, FALSE);
+    if (!AoeStop_) {
+        AoeStop_ = TRUE;
+        KeSetEvent(&AoeSignal_, 0, FALSE);
         /* Wait until the event has been signalled. */
         if (!NT_SUCCESS(Status = ZwWaitForSingleObject(
-            aoe__thread_handle_,
+            AoeThreadHandle_,
             FALSE,
             NULL
           )))
           Error("AoE_Stop ZwWaitForSingleObject", Status);
-        ZwClose(aoe__thread_handle_);
+        ZwClose(AoeThreadHandle_);
       }
 
     /* Free the target list. */
-    KeAcquireSpinLock(&aoe__target_list_spinlock_, &Irql2);
-    Walker = aoe__target_list_;
+    KeAcquireSpinLock(&AoeTargetListLock_, &Irql2);
+    Walker = AoeTargetList_;
     while (Walker != NULL) {
         Next = Walker->next;
         wv_free(Walker);
         Walker = Next;
       }
-    KeReleaseSpinLock(&aoe__target_list_spinlock_, Irql2);
+    KeReleaseSpinLock(&AoeTargetListLock_, Irql2);
 
     /* Wait until we have the global spin-lock. */
-    KeAcquireSpinLock(&aoe__spinlock_, &Irql);
+    KeAcquireSpinLock(&AoeLock_, &Irql);
 
     /* Free disk searches in the global disk search list. */
-    disk_searcher = aoe__disk_search_list_;
+    disk_searcher = AoeDiskSearchList_;
     while (disk_searcher != NULL) {
         KeSetEvent(
             &(disk__get_ptr(disk_searcher->device)->SearchEvent),
@@ -872,7 +872,7 @@ static void STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
       }
 
     /* Cancel and free all tags in the global tag list. */
-    tag = aoe__tag_list_;
+    tag = AoeTagListFirst_;
     while (tag != NULL) {
         if (tag->request_ptr != NULL && --tag->request_ptr->TagCount == 0) {
             tag->request_ptr->Irp->IoStatus.Information = 0;
@@ -890,17 +890,17 @@ static void STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
             wv_free(tag->previous);
           }
       }
-    aoe__tag_list_ = NULL;
-    aoe__tag_list_last_ = NULL;
+    AoeTagListFirst_ = NULL;
+    AoeTagListLast_ = NULL;
 
     /* Free the global probe tag and its AoE packet. */
-    wv_free(aoe__probe_tag_->packet_data);
-    wv_free(aoe__probe_tag_);
+    wv_free(AoeProbeTag_->packet_data);
+    wv_free(AoeProbeTag_);
 
     /* Release the global spin-lock. */
-    KeReleaseSpinLock(&aoe__spinlock_, Irql);
+    KeReleaseSpinLock(&AoeLock_, Irql);
     AoeBusFree();
-    aoe__started_ = FALSE;
+    AoeStarted_ = FALSE;
     DBG("Exit\n");
   }
 
@@ -942,18 +942,18 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
     /*
      * Wait until we have the global spin-lock 
      */
-    KeAcquireSpinLock ( &aoe__spinlock_, &Irql );
+    KeAcquireSpinLock ( &AoeLock_, &Irql );
 
     /*
      * Add our disk search to the global list of disk searches 
      */
-    if ( aoe__disk_search_list_ == NULL )
+    if ( AoeDiskSearchList_ == NULL )
       {
-        aoe__disk_search_list_ = disk_searcher;
+        AoeDiskSearchList_ = disk_searcher;
       }
     else
       {
-        disk_search_walker = aoe__disk_search_list_;
+        disk_search_walker = AoeDiskSearchList_;
         while ( disk_search_walker->next )
     disk_search_walker = disk_search_walker->next;
         disk_search_walker->next = disk_searcher;
@@ -962,7 +962,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
     /*
      * Release the global spin-lock 
      */
-    KeReleaseSpinLock ( &aoe__spinlock_, Irql );
+    KeReleaseSpinLock ( &AoeLock_, Irql );
 
     /*
      * We go through all the states until the disk is ready for use 
@@ -981,7 +981,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
         Timeout.QuadPart = -500000LL;
         KeWaitForSingleObject ( &disk_ptr->SearchEvent, Executive, KernelMode,
               FALSE, &Timeout );
-        if ( aoe__stop_ )
+        if ( AoeStop_ )
     {
       DBG ( "AoE is shutting down; bye!\n" );
       return FALSE;
@@ -1058,12 +1058,12 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
       /*
        * We've finished the disk search; perform clean-up 
        */
-      KeAcquireSpinLock ( &aoe__spinlock_, &InnerIrql );
+      KeAcquireSpinLock ( &AoeLock_, &InnerIrql );
 
       /*
        * Tag clean-up: Find out if our tag is in the global tag list 
        */
-      tag_walker = aoe__tag_list_;
+      tag_walker = AoeTagListFirst_;
       while ( tag_walker != NULL && tag_walker != tag )
         tag_walker = tag_walker->next;
       if ( tag_walker != NULL )
@@ -1073,7 +1073,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
            * the list to point the the next tag
            */
           if ( tag->previous == NULL )
-      aoe__tag_list_ = tag->next;
+      AoeTagListFirst_ = tag->next;
           else
       /*
        * Remove our tag from the list 
@@ -1084,15 +1084,15 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
            * point to the penultimate tag
            */
           if ( tag->next == NULL )
-      aoe__tag_list_last_ = tag->previous;
+      AoeTagListLast_ = tag->previous;
           else
       /*
        * Remove our tag from the list 
        */
       tag->next->previous = tag->previous;
-          aoe__outstanding_tags_--;
-          if ( aoe__outstanding_tags_ < 0 )
-      DBG ( "aoe__outstanding_tags_ < 0!!\n" );
+          AoePendingTags_--;
+          if ( AoePendingTags_ < 0 )
+      DBG ( "AoePendingTags_ < 0!!\n" );
           /*
            * Free our tag and its AoE packet 
            */
@@ -1103,16 +1103,16 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
       /*
        * Disk search clean-up 
        */
-      if ( aoe__disk_search_list_ == NULL )
+      if ( AoeDiskSearchList_ == NULL )
         {
-          DBG ( "aoe__disk_search_list_ == NULL!!\n" );
+          DBG ( "AoeDiskSearchList_ == NULL!!\n" );
         }
       else
         {
           /*
            * Find our disk search in the global list of disk searches 
            */
-          disk_search_walker = aoe__disk_search_list_;
+          disk_search_walker = AoeDiskSearchList_;
           while (
               disk_search_walker &&
               disk_search_walker->device != disk_ptr->Dev
@@ -1126,8 +1126,8 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
          * We found our disk search.  If it's the first one in
          * the list, adjust the list and remove it
          */
-        if ( disk_search_walker == aoe__disk_search_list_ )
-          aoe__disk_search_list_ = disk_search_walker->next;
+        if ( disk_search_walker == AoeDiskSearchList_ )
+          AoeDiskSearchList_ = disk_search_walker->next;
         else
           /*
            * Just remove it 
@@ -1140,14 +1140,14 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
       }
           else
       {
-        DBG ( "Disk not found in aoe__disk_search_list_!!\n" );
+        DBG ( "Disk not found in AoeDiskSearchList_!!\n" );
       }
         }
 
       /*
        * Release global and device extension spin-locks 
        */
-      KeReleaseSpinLock ( &aoe__spinlock_, InnerIrql );
+      KeReleaseSpinLock ( &AoeLock_, InnerIrql );
       KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
 
       DBG ( "Disk size: %I64uM cylinders: %I64u heads: %u "
@@ -1247,19 +1247,19 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
          * Enqueue our tag 
          */
         tag->next = NULL;
-        KeAcquireSpinLock ( &aoe__spinlock_, &InnerIrql );
-        if ( aoe__tag_list_ == NULL )
+        KeAcquireSpinLock ( &AoeLock_, &InnerIrql );
+        if ( AoeTagListFirst_ == NULL )
     {
-      aoe__tag_list_ = tag;
+      AoeTagListFirst_ = tag;
       tag->previous = NULL;
     }
         else
     {
-      aoe__tag_list_last_->next = tag;
-      tag->previous = aoe__tag_list_last_;
+      AoeTagListLast_->next = tag;
+      tag->previous = AoeTagListLast_;
     }
-        aoe__tag_list_last_ = tag;
-        KeReleaseSpinLock ( &aoe__spinlock_, InnerIrql );
+        AoeTagListLast_ = tag;
+        KeReleaseSpinLock ( &AoeLock_, InnerIrql );
         KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
       }
   }
@@ -1287,7 +1287,7 @@ static NTSTATUS STDCALL AoeDiskIo_(
     disk_ptr = disk__get_ptr ( dev_ptr );
     aoe_disk_ptr = aoe__get_ ( dev_ptr );
 
-    if ( aoe__stop_ )
+    if ( AoeStop_ )
       {
         /*
          * Shutting down AoE; we can't service this request 
@@ -1457,31 +1457,31 @@ static NTSTATUS STDCALL AoeDiskIo_(
     /*
      * Wait until we have the global spin-lock 
      */
-    KeAcquireSpinLock ( &aoe__spinlock_, &Irql );
+    KeAcquireSpinLock ( &AoeLock_, &Irql );
 
     /*
      * Enqueue our request's tag list to the global tag list 
      */
-    if ( aoe__tag_list_last_ == NULL )
+    if ( AoeTagListLast_ == NULL )
       {
-        aoe__tag_list_ = new_tag_list;
+        AoeTagListFirst_ = new_tag_list;
       }
     else
       {
-        aoe__tag_list_last_->next = new_tag_list;
-        new_tag_list->previous = aoe__tag_list_last_;
+        AoeTagListLast_->next = new_tag_list;
+        new_tag_list->previous = AoeTagListLast_;
       }
     /*
      * Adjust the global list to reflect our last tag 
      */
-    aoe__tag_list_last_ = tag;
+    AoeTagListLast_ = tag;
 
     irp->IoStatus.Information = 0;
     irp->IoStatus.Status = STATUS_PENDING;
     IoMarkIrpPending ( irp );
 
-    KeReleaseSpinLock ( &aoe__spinlock_, Irql );
-    KeSetEvent ( &aoe__thread_sig_evt_, 0, FALSE );
+    KeReleaseSpinLock ( &AoeLock_, Irql );
+    KeSetEvent ( &AoeSignal_, 0, FALSE );
     return STATUS_PENDING;
   }
 
@@ -1496,8 +1496,8 @@ static void STDCALL add_target(
     AOE_SP_TARGET_LIST_ Walker, Last;
     KIRQL Irql;
 
-    KeAcquireSpinLock ( &aoe__target_list_spinlock_, &Irql );
-    Walker = Last = aoe__target_list_;
+    KeAcquireSpinLock ( &AoeTargetListLock_, &Irql );
+    Walker = Last = AoeTargetList_;
     while ( Walker != NULL )
       {
         if (wv_memcmpeq(&Walker->Target.ClientMac, ClientMac, 6) &&
@@ -1511,7 +1511,7 @@ static void STDCALL add_target(
           Walker->Target.LBASize = LBASize;
         }
       KeQuerySystemTime ( &Walker->Target.ProbeTime );
-      KeReleaseSpinLock ( &aoe__target_list_spinlock_, Irql );
+      KeReleaseSpinLock ( &AoeTargetListLock_, Irql );
       return;
     }
         Last = Walker;
@@ -1520,7 +1520,7 @@ static void STDCALL add_target(
 
     if ((Walker = wv_malloc(sizeof *Walker)) == NULL) {
         DBG("wv_malloc Walker\n");
-        KeReleaseSpinLock ( &aoe__target_list_spinlock_, Irql );
+        KeReleaseSpinLock ( &AoeTargetListLock_, Irql );
         return;
       }
     Walker->next = NULL;
@@ -1533,13 +1533,13 @@ static void STDCALL add_target(
 
     if ( Last == NULL )
       {
-        aoe__target_list_ = Walker;
+        AoeTargetList_ = Walker;
       }
     else
       {
         Last->next = Walker;
       }
-    KeReleaseSpinLock ( &aoe__target_list_spinlock_, Irql );
+    KeReleaseSpinLock ( &AoeTargetListLock_, Irql );
   }
 
 /**
@@ -1575,7 +1575,7 @@ NTSTATUS STDCALL aoe__reply(
     /*
      * If the response matches our probe, add the AoE disk device 
      */
-    if ( aoe__probe_tag_->Id == reply->Tag )
+    if ( AoeProbeTag_->Id == reply->Tag )
       {
         RtlCopyMemory ( &LBASize, &reply->Data[200], sizeof ( LONGLONG ) );
         add_target ( DestinationMac, SourceMac, ntohs ( reply->Major ),
@@ -1586,17 +1586,17 @@ NTSTATUS STDCALL aoe__reply(
     /*
      * Wait until we have the global spin-lock 
      */
-    KeAcquireSpinLock ( &aoe__spinlock_, &Irql );
+    KeAcquireSpinLock ( &AoeLock_, &Irql );
 
     /*
      * Search for request tag 
      */
-    if ( aoe__tag_list_ == NULL )
+    if ( AoeTagListFirst_ == NULL )
       {
-        KeReleaseSpinLock ( &aoe__spinlock_, Irql );
+        KeReleaseSpinLock ( &AoeLock_, Irql );
         return STATUS_SUCCESS;
       }
-    tag = aoe__tag_list_;
+    tag = AoeTagListFirst_;
     while ( tag != NULL )
       {
         if ( ( tag->Id == reply->Tag )
@@ -1610,7 +1610,7 @@ NTSTATUS STDCALL aoe__reply(
       }
     if ( !Found )
       {
-        KeReleaseSpinLock ( &aoe__spinlock_, Irql );
+        KeReleaseSpinLock ( &AoeLock_, Irql );
         return STATUS_SUCCESS;
       }
     else
@@ -1619,19 +1619,19 @@ NTSTATUS STDCALL aoe__reply(
          * Remove the tag from the global tag list 
          */
         if ( tag->previous == NULL )
-    aoe__tag_list_ = tag->next;
+    AoeTagListFirst_ = tag->next;
         else
     tag->previous->next = tag->next;
         if ( tag->next == NULL )
-    aoe__tag_list_last_ = tag->previous;
+    AoeTagListLast_ = tag->previous;
         else
     tag->next->previous = tag->previous;
-        aoe__outstanding_tags_--;
-        if ( aoe__outstanding_tags_ < 0 )
-    DBG ( "aoe__outstanding_tags_ < 0!!\n" );
-        KeSetEvent ( &aoe__thread_sig_evt_, 0, FALSE );
+        AoePendingTags_--;
+        if ( AoePendingTags_ < 0 )
+    DBG ( "AoePendingTags_ < 0!!\n" );
+        KeSetEvent ( &AoeSignal_, 0, FALSE );
       }
-    KeReleaseSpinLock ( &aoe__spinlock_, Irql );
+    KeReleaseSpinLock ( &AoeLock_, Irql );
 
     /*
      * Establish pointers to the disk device and AoE disk
@@ -1759,7 +1759,7 @@ NTSTATUS STDCALL aoe__reply(
     break;
       }
 
-    KeSetEvent ( &aoe__thread_sig_evt_, 0, FALSE );
+    KeSetEvent ( &AoeSignal_, 0, FALSE );
     wv_free(tag->packet_data);
     wv_free(tag);
     return STATUS_SUCCESS;
@@ -1767,7 +1767,7 @@ NTSTATUS STDCALL aoe__reply(
 
 void aoe__reset_probe(void)
   {
-    aoe__probe_tag_->SendTime.QuadPart = 0LL;
+    AoeProbeTag_->SendTime.QuadPart = 0LL;
   }
 
 static void STDCALL AoeThread_(IN void *StartContext)
@@ -1797,10 +1797,10 @@ static void STDCALL AoeThread_(IN void *StartContext)
          * 100.000 * 100ns = 10.000.000 ns = 10ms
          */
         Timeout.QuadPart = -100000LL;
-        KeWaitForSingleObject ( &aoe__thread_sig_evt_, Executive,
+        KeWaitForSingleObject ( &AoeSignal_, Executive,
               KernelMode, FALSE, &Timeout );
-        KeResetEvent ( &aoe__thread_sig_evt_ );
-        if ( aoe__stop_ )
+        KeResetEvent ( &AoeSignal_ );
+        if ( AoeStop_ )
     {
       DBG ( "Stopping...\n" );
       PsTerminateSystemThread ( STATUS_SUCCESS );
@@ -1813,8 +1813,8 @@ static void STDCALL AoeThread_(IN void *StartContext)
         if ( CurrentTime.QuadPart > ( ReportTime.QuadPart + 10000000LL ) )
     {
       DBG ( "Sends: %d  Resends: %d  ResendFails: %d  Fails: %d  "
-      "aoe__outstanding_tags_: %d  RequestTimeout: %d\n", Sends,
-      Resends, ResendFails, Fails, aoe__outstanding_tags_,
+      "AoePendingTags_: %d  RequestTimeout: %d\n", Sends,
+      Resends, ResendFails, Fails, AoePendingTags_,
       RequestTimeout );
       Sends = 0;
       Resends = 0;
@@ -1827,27 +1827,27 @@ static void STDCALL AoeThread_(IN void *StartContext)
          * TODO: Make the below value a #defined constant 
          */
         if ( CurrentTime.QuadPart >
-       ( aoe__probe_tag_->SendTime.QuadPart + 100000000LL ) )
+       ( AoeProbeTag_->SendTime.QuadPart + 100000000LL ) )
     {
-      aoe__probe_tag_->Id = NextTagId++;
+      AoeProbeTag_->Id = NextTagId++;
       if ( NextTagId == 0 )
         NextTagId++;
-      aoe__probe_tag_->packet_data->Tag = aoe__probe_tag_->Id;
+      AoeProbeTag_->packet_data->Tag = AoeProbeTag_->Id;
       Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
           "\xff\xff\xff\xff\xff\xff",
-          ( winvblock__uint8_ptr ) aoe__probe_tag_->
-          packet_data, aoe__probe_tag_->PacketSize,
+          ( winvblock__uint8_ptr ) AoeProbeTag_->
+          packet_data, AoeProbeTag_->PacketSize,
           NULL );
-      KeQuerySystemTime ( &aoe__probe_tag_->SendTime );
+      KeQuerySystemTime ( &AoeProbeTag_->SendTime );
     }
 
-        KeAcquireSpinLock ( &aoe__spinlock_, &Irql );
-        if ( aoe__tag_list_ == NULL )
+        KeAcquireSpinLock ( &AoeLock_, &Irql );
+        if ( AoeTagListFirst_ == NULL )
     {
-      KeReleaseSpinLock ( &aoe__spinlock_, Irql );
+      KeReleaseSpinLock ( &AoeLock_, Irql );
       continue;
     }
-        tag = aoe__tag_list_;
+        tag = AoeTagListFirst_;
         while ( tag != NULL )
     {
       /*
@@ -1859,13 +1859,13 @@ static void STDCALL AoeThread_(IN void *StartContext)
       RequestTimeout = aoe_disk_ptr->Timeout;
       if ( tag->Id == 0 )
         {
-          if ( aoe__outstanding_tags_ <= 64 )
+          if ( AoePendingTags_ <= 64 )
       {
         /*
-         * if ( aoe__outstanding_tags_ <= 102400 ) { 
+         * if ( AoePendingTags_ <= 102400 ) { 
          */
-        if ( aoe__outstanding_tags_ < 0 )
-          DBG ( "aoe__outstanding_tags_ < 0!!\n" );
+        if ( AoePendingTags_ < 0 )
+          DBG ( "AoePendingTags_ < 0!!\n" );
         tag->Id = NextTagId++;
         if ( NextTagId == 0 )
           NextTagId++;
@@ -1877,7 +1877,7 @@ static void STDCALL AoeThread_(IN void *StartContext)
           {
             KeQuerySystemTime ( &tag->FirstSendTime );
             KeQuerySystemTime ( &tag->SendTime );
-            aoe__outstanding_tags_++;
+            AoePendingTags_++;
             Sends++;
           }
         else
@@ -1914,13 +1914,13 @@ static void STDCALL AoeThread_(IN void *StartContext)
       }
         }
       tag = tag->next;
-      if ( tag == aoe__tag_list_ )
+      if ( tag == AoeTagListFirst_ )
         {
           DBG ( "Taglist Cyclic!!\n" );
           break;
         }
     }
-        KeReleaseSpinLock ( &aoe__spinlock_, Irql );
+        KeReleaseSpinLock ( &AoeLock_, Irql );
       }
     DBG ( "Exit\n" );
   }
@@ -2099,10 +2099,10 @@ NTSTATUS STDCALL aoe__scan(
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     DBG("Got IOCTL_AOE_SCAN...\n");
-    KeAcquireSpinLock(&aoe__target_list_spinlock_, &irql);
+    KeAcquireSpinLock(&AoeTargetListLock_, &irql);
 
     count = 0;
-    target_walker = aoe__target_list_;
+    target_walker = AoeTargetList_;
     while (target_walker != NULL) {
         count++;
         target_walker = target_walker->next;
@@ -2122,7 +2122,7 @@ NTSTATUS STDCALL aoe__scan(
     targets->Count = count;
 
     count = 0;
-    target_walker = aoe__target_list_;
+    target_walker = AoeTargetList_;
     while (target_walker != NULL) {
         RtlCopyMemory(
             &targets->Target[count],
@@ -2143,7 +2143,7 @@ NTSTATUS STDCALL aoe__scan(
       );
     wv_free(targets);
 
-    KeReleaseSpinLock(&aoe__target_list_spinlock_, irql);
+    KeReleaseSpinLock(&AoeTargetListLock_, irql);
     return driver__complete_irp(irp, irp->IoStatus.Information, STATUS_SUCCESS);
   }
 
@@ -2284,9 +2284,9 @@ static AOE_SP_DISK_ AoeDiskCreate_(void) {
       goto err_noaoedisk;
     /* Track the new AoE disk in our global list. */
     ExInterlockedInsertTailList(
-        &aoe__disk_list_,
+        &AoeDiskList_,
         &aoe_disk->tracking,
-        &aoe__disk_list_lock_
+        &AoeDiskListLock_
       );
     /* Populate non-zero device defaults. */
     aoe_disk->disk = disk;
@@ -2325,7 +2325,7 @@ static void STDCALL AoeDiskFree_(IN WV_SP_DEV_T dev) {
      */
     ExInterlockedRemoveHeadList(
         aoe_disk->tracking.Blink,
-        &aoe__disk_list_lock_
+        &AoeDiskListLock_
       );
 
     wv_free(aoe_disk);
