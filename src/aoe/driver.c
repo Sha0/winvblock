@@ -64,7 +64,7 @@ static struct AOE_DISK_ * AoeDiskCreate_(void);
 static WV_F_DEV_FREE AoeDiskFree_;
 static WV_F_DISK_IO AoeDiskIo_;
 static WV_F_DISK_MAX_XFER_LEN AoeDiskMaxXferLen_;
-static WV_F_DISK_INIT init;
+static WV_F_DISK_INIT AoeDiskInit_;
 static WV_F_DISK_CLOSE close;
 
 /** Tag types. */
@@ -920,7 +920,7 @@ static void STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
  *
  * Returns TRUE if the disk could be matched, FALSE otherwise.
  */
-static winvblock__bool STDCALL init(IN WV_SP_DISK_T disk_ptr) {
+static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
     struct aoe__disk_search_
       * disk_searcher, * disk_search_walker, * previous_disk_searcher;
     LARGE_INTEGER Timeout, CurrentTime;
@@ -2303,7 +2303,7 @@ static AOE_SP_DISK_ AoeDiskCreate_(void) {
     disk->Dev->Ops.PnpId = query_id;
     disk->disk_ops.Io = AoeDiskIo_;
     disk->disk_ops.MaxXferLen = AoeDiskMaxXferLen_;
-    disk->disk_ops.Init = init;
+    disk->disk_ops.Init = AoeDiskInit_;
     disk->disk_ops.Close = close;
     disk->ext = aoe_disk;
 
