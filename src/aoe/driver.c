@@ -122,22 +122,21 @@ typedef struct AOE_PACKET_ AOE_S_PACKET_, * AOE_SP_PACKET_;
 #endif
 
 /** An I/O request. */
-struct aoe__io_req_
-  {
+typedef struct AOE_IO_REQ_ {
     WV_E_DISK_IO_MODE Mode;
     winvblock__uint32 SectorCount;
     winvblock__uint8_ptr Buffer;
     PIRP Irp;
     winvblock__uint32 TagCount;
     winvblock__uint32 TotalTags;
-  };
+  } AOE_S_IO_REQ_, * AOE_SP_IO_REQ_;
 
 /** A work item "tag". */
 struct aoe__work_tag_
   {
     AOE_E_TAG_TYPE_ type;
     WV_SP_DEV_T device;
-    struct aoe__io_req_ * request_ptr;
+    AOE_SP_IO_REQ_ request_ptr;
     winvblock__uint32 Id;
     AOE_SP_PACKET_ packet_data;
     winvblock__uint32 PacketSize;
@@ -1276,7 +1275,7 @@ static NTSTATUS STDCALL AoeDiskIo_(
     IN winvblock__uint8_ptr buffer,
     IN PIRP irp
   ) {
-    struct aoe__io_req_ * request_ptr;
+    AOE_SP_IO_REQ_ request_ptr;
     struct aoe__work_tag_ * tag, * new_tag_list = NULL, * previous_tag = NULL;
     KIRQL Irql;
     winvblock__uint32 i;
