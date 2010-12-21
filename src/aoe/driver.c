@@ -68,11 +68,11 @@ static WV_F_DISK_INIT AoeDiskInit_;
 static WV_F_DISK_CLOSE AoeDiskClose_;
 
 /** Tag types. */
-enum aoe__tag_type_
-  {
-    aoe__tag_type_io_,
-    aoe__tag_type_search_drive_
-  };
+typedef enum AOE_TAG_TYPE_ {
+    AoeTagTypeIo_,
+    AoeTagTypeSearchDrive_,
+    AoeTagTypes_
+  } AOE_E_TAG_TYPE_, * AOE_EP_TAG_TYPE_;
 
 #ifdef _MSC_VER
 #  pragma pack(1)
@@ -139,7 +139,7 @@ struct aoe__io_req_
 /** A work item "tag". */
 struct aoe__work_tag_
   {
-    enum aoe__tag_type_ type;
+    AOE_E_TAG_TYPE_ type;
     WV_SP_DEV_T device;
     struct aoe__io_req_ * request_ptr;
     winvblock__uint32 Id;
@@ -1180,7 +1180,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
        */
       continue;
     }
-        tag->type = aoe__tag_type_search_drive_;
+        tag->type = AoeTagTypeSearchDrive_;
         tag->device = disk_ptr->Dev;
 
         /*
@@ -1369,7 +1369,7 @@ static NTSTATUS STDCALL AoeDiskIo_(
         /*
          * Initialize each tag 
          */
-        tag->type = aoe__tag_type_io_;
+        tag->type = AoeTagTypeIo_;
         tag->request_ptr = request_ptr;
         tag->device = dev_ptr;
         request_ptr->TagCount++;
@@ -1671,7 +1671,7 @@ NTSTATUS STDCALL aoe__reply(
 
     switch ( tag->type )
       {
-        case aoe__tag_type_search_drive_:
+        case AoeTagTypeSearchDrive_:
     KeAcquireSpinLock ( &disk_ptr->SpinLock, &Irql );
     switch ( aoe_disk_ptr->search_state )
       {
@@ -1743,7 +1743,7 @@ NTSTATUS STDCALL aoe__reply(
     KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
     KeSetEvent ( &disk_ptr->SearchEvent, 0, FALSE );
     break;
-        case aoe__tag_type_io_:
+        case AoeTagTypeIo_:
     /* If the reply is in response to a read request, get our data! */
     if (tag->request_ptr->Mode == WvDiskIoModeRead)
       RtlCopyMemory ( &tag->request_ptr->Buffer[tag->BufferOffset],
