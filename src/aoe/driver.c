@@ -203,8 +203,7 @@ static LIST_ENTRY AoeDiskList_;
 static KSPIN_LOCK AoeDiskListLock_;
 
 /* Yield a pointer to the AoE disk. */
-static AOE_SP_DISK_ aoe__get_(WV_SP_DEV_T dev_ptr)
-  {
+static AOE_SP_DISK_ AoeDiskFromDev_(WV_SP_DEV_T dev_ptr) {
     return disk__get_ptr(dev_ptr)->ext;
   }
 
@@ -922,7 +921,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
     winvblock__uint32 MTU;
     AOE_SP_DISK_ aoe_disk_ptr;
 
-    aoe_disk_ptr = aoe__get_(disk_ptr->Dev);
+    aoe_disk_ptr = AoeDiskFromDev_(disk_ptr->Dev);
     /*
      * Allocate our disk search 
      */
@@ -1285,7 +1284,7 @@ static NTSTATUS STDCALL AoeDiskIo_(
      * Establish pointers to the disk and AoE disk
      */
     disk_ptr = disk__get_ptr ( dev_ptr );
-    aoe_disk_ptr = aoe__get_ ( dev_ptr );
+    aoe_disk_ptr = AoeDiskFromDev_(dev_ptr);
 
     if ( AoeStop_ )
       {
@@ -1637,7 +1636,7 @@ NTSTATUS STDCALL aoe__reply(
      * Establish pointers to the disk device and AoE disk
      */
     disk_ptr = disk__get_ptr ( tag->device );
-    aoe_disk_ptr = aoe__get_ ( tag->device );
+    aoe_disk_ptr = AoeDiskFromDev_(tag->device);
 
     /*
      * If our tag was a discovery request, note the server 
@@ -1854,7 +1853,7 @@ static void STDCALL AoeThread_(IN void *StartContext)
        * Establish pointers to the disk and AoE disk
        */
       disk_ptr = disk__get_ptr ( tag->device );
-      aoe_disk_ptr = aoe__get_ ( tag->device );
+      aoe_disk_ptr = AoeDiskFromDev_(tag->device);
 
       RequestTimeout = aoe_disk_ptr->Timeout;
       if ( tag->Id == 0 )
@@ -1926,7 +1925,7 @@ static void STDCALL AoeThread_(IN void *StartContext)
   }
 
 static winvblock__uint32 AoeDiskMaxXferLen_(IN WV_SP_DISK_T disk_ptr) {
-    AOE_SP_DISK_ aoe_disk_ptr = aoe__get_(disk_ptr->Dev);
+    AOE_SP_DISK_ aoe_disk_ptr = AoeDiskFromDev_(disk_ptr->Dev);
 
     return disk_ptr->SectorSize * aoe_disk_ptr->MaxSectorsPerPacket;
   }
@@ -1936,7 +1935,7 @@ static winvblock__uint32 STDCALL query_id(
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
   ) {
-    AOE_SP_DISK_ aoe_disk = aoe__get_(dev);
+    AOE_SP_DISK_ aoe_disk = AoeDiskFromDev_(dev);
 
     switch (query_type) {
         case BusQueryDeviceID:
@@ -2184,7 +2183,7 @@ NTSTATUS STDCALL aoe__show(
     dev_walker = bus->first_child;
     while (dev_walker != NULL) {
         WV_SP_DISK_T disk = disk__get_ptr(dev_walker);
-        AOE_SP_DISK_ aoe_disk = aoe__get_(dev_walker);
+        AOE_SP_DISK_ aoe_disk = AoeDiskFromDev_(dev_walker);
 
         disks->Disk[count].Disk = dev_walker->DevNum;
         RtlCopyMemory(
@@ -2315,7 +2314,7 @@ static AOE_SP_DISK_ AoeDiskCreate_(void) {
  * @v dev               Points to the AoE disk device to delete.
  */
 static void STDCALL AoeDiskFree_(IN WV_SP_DEV_T dev) {
-    AOE_SP_DISK_ aoe_disk = aoe__get_(dev);
+    AOE_SP_DISK_ aoe_disk = AoeDiskFromDev_(dev);
     /* Free the "inherited class". */
     aoe_disk->prev_free(dev);
     /*
