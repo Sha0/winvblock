@@ -56,11 +56,11 @@ extern winvblock__bool AoeBusCreate(void);
 extern void AoeBusFree(void);
 
 /* Forward declarations. */
-struct aoe__disk_type_;
+struct AOE_DISK_;
 static void STDCALL aoe__thread_(IN void *);
 static void aoe__process_abft_(void);
 static void STDCALL aoe__unload_(IN PDRIVER_OBJECT);
-static struct aoe__disk_type_ * aoe__create_disk_(void);
+static struct AOE_DISK_ * aoe__create_disk_(void);
 static WV_F_DEV_FREE aoe__free_disk_;
 static WV_F_DISK_IO io;
 static WV_F_DISK_MAX_XFER_LEN max_xfer_len;
@@ -174,8 +174,7 @@ enum aoe__search_state_
   };
 
 /** The AoE disk type. */
-struct aoe__disk_type_
-  {
+typedef struct AOE_DISK_ {
     WV_SP_DISK_T disk;
     winvblock__uint32 MTU;
     winvblock__uint8 ClientMac[6];
@@ -187,7 +186,7 @@ struct aoe__disk_type_
     enum aoe__search_state_ search_state;
     WV_FP_DEV_FREE prev_free;
     LIST_ENTRY tracking;
-  };
+  } AOE_S_DISK_, * AOE_SP_DISK_;
 
 struct aoe__target_list_
   {
@@ -212,7 +211,7 @@ static LIST_ENTRY aoe__disk_list_;
 static KSPIN_LOCK aoe__disk_list_lock_;
 
 /* Yield a pointer to the AoE disk. */
-static struct aoe__disk_type_ * aoe__get_(WV_SP_DEV_T dev_ptr)
+static AOE_SP_DISK_ aoe__get_(WV_SP_DEV_T dev_ptr)
   {
     return disk__get_ptr(dev_ptr)->ext;
   }
@@ -929,7 +928,7 @@ static winvblock__bool STDCALL init(IN WV_SP_DISK_T disk_ptr) {
     KIRQL Irql, InnerIrql;
     LARGE_INTEGER MaxSectorsPerPacketSendTime;
     winvblock__uint32 MTU;
-    struct aoe__disk_type_ * aoe_disk_ptr;
+    AOE_SP_DISK_ aoe_disk_ptr;
 
     aoe_disk_ptr = aoe__get_(disk_ptr->Dev);
     /*
@@ -1288,7 +1287,7 @@ static NTSTATUS STDCALL io(
     PHYSICAL_ADDRESS PhysicalAddress;
     winvblock__uint8_ptr PhysicalMemory;
     WV_SP_DISK_T disk_ptr;
-    struct aoe__disk_type_ * aoe_disk_ptr;
+    AOE_SP_DISK_ aoe_disk_ptr;
 
     /*
      * Establish pointers to the disk and AoE disk
@@ -1573,7 +1572,7 @@ NTSTATUS STDCALL aoe__reply(
     winvblock__bool Found = FALSE;
     LARGE_INTEGER CurrentTime;
     WV_SP_DISK_T disk_ptr;
-    struct aoe__disk_type_ * aoe_disk_ptr;
+    AOE_SP_DISK_ aoe_disk_ptr;
 
     /*
      * Discard non-responses 
@@ -1791,7 +1790,7 @@ static void STDCALL aoe__thread_(IN void *StartContext)
     winvblock__uint32 Fails = 0;
     winvblock__uint32 RequestTimeout = 0;
     WV_SP_DISK_T disk_ptr;
-    struct aoe__disk_type_ * aoe_disk_ptr;
+    AOE_SP_DISK_ aoe_disk_ptr;
 
     DBG ( "Entry\n" );
     ReportTime.QuadPart = 0LL;
@@ -1935,7 +1934,7 @@ static void STDCALL aoe__thread_(IN void *StartContext)
   }
 
 static winvblock__uint32 max_xfer_len(IN WV_SP_DISK_T disk_ptr) {
-    struct aoe__disk_type_ * aoe_disk_ptr = aoe__get_(disk_ptr->Dev);
+    AOE_SP_DISK_ aoe_disk_ptr = aoe__get_(disk_ptr->Dev);
 
     return disk_ptr->SectorSize * aoe_disk_ptr->MaxSectorsPerPacket;
   }
@@ -1945,7 +1944,7 @@ static winvblock__uint32 STDCALL query_id(
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
   ) {
-    struct aoe__disk_type_ * aoe_disk = aoe__get_(dev);
+    AOE_SP_DISK_ aoe_disk = aoe__get_(dev);
 
     switch (query_type) {
         case BusQueryDeviceID:
@@ -2008,7 +2007,7 @@ static void aoe__process_abft_(void) {
     winvblock__uint32 Offset, Checksum, i;
     winvblock__bool FoundAbft = FALSE;
     abft AoEBootRecord;
-    struct aoe__disk_type_ * aoe_disk;
+    AOE_SP_DISK_ aoe_disk;
 
     /* Find aBFT. */
     PhysicalAddress.QuadPart = 0LL;
@@ -2193,7 +2192,7 @@ NTSTATUS STDCALL aoe__show(
     dev_walker = bus->first_child;
     while (dev_walker != NULL) {
         WV_SP_DISK_T disk = disk__get_ptr(dev_walker);
-        struct aoe__disk_type_ * aoe_disk = aoe__get_(dev_walker);
+        AOE_SP_DISK_ aoe_disk = aoe__get_(dev_walker);
 
         disks->Disk[count].Disk = dev_walker->DevNum;
         RtlCopyMemory(
@@ -2230,7 +2229,7 @@ NTSTATUS STDCALL aoe__mount(
     IN PIRP irp
   ) {
     winvblock__uint8_ptr buffer = irp->AssociatedIrp.SystemBuffer;
-    struct aoe__disk_type_ * aoe_disk;
+    AOE_SP_DISK_ aoe_disk;
 
     DBG(
         "Got IOCTL_AOE_MOUNT for client: %02x:%02x:%02x:%02x:%02x:%02x "
@@ -2269,16 +2268,16 @@ NTSTATUS STDCALL aoe__mount(
 /**
  * Create a new AoE disk.
  *
- * @ret aoe_disk *      The address of a new AoE disk, or NULL for failure.
+ * @ret aoe_disk        The address of a new AoE disk, or NULL for failure.
  *
  * This function should not be confused with a PDO creation routine, which is
- * actually implemented for each device type.  This routine will allocate a
- * aoe__disk_type_, track it in a global list, as well as populate the disk
+ * actually implemented for each device type.  This routine will allocate an
+ * AOE_S_DISK_, track it in a global list, as well as populate the disk
  * with default values.
  */
-static struct aoe__disk_type_ * aoe__create_disk_(void) {
+static AOE_SP_DISK_ aoe__create_disk_(void) {
     WV_SP_DISK_T disk;
-    struct aoe__disk_type_ * aoe_disk;
+    AOE_SP_DISK_ aoe_disk;
 
     /* Try to create a disk. */
     disk = disk__create();
@@ -2324,7 +2323,7 @@ static struct aoe__disk_type_ * aoe__create_disk_(void) {
  * @v dev               Points to the AoE disk device to delete.
  */
 static void STDCALL aoe__free_disk_(IN WV_SP_DEV_T dev) {
-    struct aoe__disk_type_ * aoe_disk = aoe__get_(dev);
+    AOE_SP_DISK_ aoe_disk = aoe__get_(dev);
     /* Free the "inherited class". */
     aoe_disk->prev_free(dev);
     /*
