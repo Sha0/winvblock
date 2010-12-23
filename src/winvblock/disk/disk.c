@@ -142,7 +142,7 @@ static PDEVICE_OBJECT STDCALL create_pdo(IN WV_SP_DEV_T dev_ptr) {
     disk_ptr = disk__get_ptr(dev_ptr);
     /* Create the disk PDO. */
     status = IoCreateDevice(
-        driver__obj_ptr,
+        WvDriverObj,
         sizeof (driver__dev_ext),
         NULL,
         disk_types[disk_ptr->Media],

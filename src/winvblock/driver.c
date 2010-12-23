@@ -48,7 +48,7 @@
 #define WV_M_BUS_DOSNAME_ (L"\\DosDevices\\" winvblock__literal_w)
 
 /* Exported. */
-PDRIVER_OBJECT driver__obj_ptr = NULL;
+PDRIVER_OBJECT WvDriverObj = NULL;
 
 /* Globals. */
 static void * driver__state_handle_;
@@ -249,7 +249,7 @@ NTSTATUS STDCALL driver__create_bus_(void) {
 
     /* Create the PDO. */
     IoReportDetectedDevice(
-        driver__obj_ptr,
+        WvDriverObj,
         InterfaceTypeUndefined,
         -1,
         -1,
@@ -264,7 +264,7 @@ NTSTATUS STDCALL driver__create_bus_(void) {
         goto err_driver_bus;
       }
     /* Attach FDO to PDO. */
-    status = driver__attach_fdo_(driver__obj_ptr, bus_pdo);
+    status = driver__attach_fdo_(WvDriverObj, bus_pdo);
     if (!NT_SUCCESS(status)) {
         DBG("driver__attach_fdo_() went wrong!\n");
         goto err_add_dev;
@@ -292,11 +292,11 @@ NTSTATUS STDCALL DriverEntry(
     int i;
 
     DBG("Entry\n");
-    if (driver__obj_ptr) {
+    if (WvDriverObj) {
         DBG("Re-entry not allowed!\n");
         return STATUS_NOT_SUPPORTED;
       }
-    driver__obj_ptr = DriverObject;
+    WvDriverObj = DriverObject;
     if (driver__started_)
       return STATUS_SUCCESS;
     Debug_Initialize();

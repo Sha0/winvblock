@@ -46,7 +46,7 @@ static WV_F_DEV_CREATE_PDO WvDevMakePdo_;
 winvblock__lib_func void WvDevInit(WV_SP_DEV_T dev) {
     RtlZeroMemory(dev, sizeof *dev);
     /* Populate non-zero device defaults. */
-    dev->DriverObject = driver__obj_ptr;
+    dev->DriverObject = WvDriverObj;
     dev->Ops.CreatePdo = WvDevMakePdo_;
     dev->Ops.Free = WvDevFreeDev_;
   }

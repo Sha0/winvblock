@@ -40,7 +40,7 @@
 /* An unfortunate forward declaration.  Definition resolved in device.h */
 struct WV_DEV_T;
 
-extern PDRIVER_OBJECT driver__obj_ptr;
+extern PDRIVER_OBJECT WvDriverObj;
 extern winvblock__lib_func void STDCALL Driver_CompletePendingIrp(IN PIRP);
 /* Note the exception to the function naming convention. */
 extern winvblock__lib_func NTSTATUS STDCALL Error(IN PCHAR, IN NTSTATUS);
