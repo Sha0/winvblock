@@ -1259,7 +1259,7 @@ NTSTATUS STDCALL aoe__reply(
         tag->request_ptr->Irp->IoStatus.Information =
           tag->request_ptr->SectorCount * disk_ptr->SectorSize;
         tag->request_ptr->Irp->IoStatus.Status = STATUS_SUCCESS;
-        Driver_CompletePendingIrp ( tag->request_ptr->Irp );
+        WvDriverCompletePendingIrp(tag->request_ptr->Irp);
         wv_free(tag->request_ptr);
       }
     break;

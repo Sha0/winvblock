@@ -542,7 +542,7 @@ static void STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
     DBG("Done\n");
   }
 
-winvblock__lib_func void STDCALL Driver_CompletePendingIrp(IN PIRP Irp) {
+winvblock__lib_func void STDCALL WvDriverCompletePendingIrp(IN PIRP Irp) {
     #ifdef DEBUGIRPS
     Debug_IrpEnd(Irp, Irp->IoStatus.Status);
     #endif

@@ -41,7 +41,7 @@
 struct WV_DEV_T;
 
 extern PDRIVER_OBJECT WvDriverObj;
-extern winvblock__lib_func void STDCALL Driver_CompletePendingIrp(IN PIRP);
+extern winvblock__lib_func void STDCALL WvDriverCompletePendingIrp(IN PIRP);
 /* Note the exception to the function naming convention. */
 extern winvblock__lib_func NTSTATUS STDCALL Error(IN PCHAR, IN NTSTATUS);
 extern winvblock__lib_func struct WV_BUS_T * driver__bus(void);
