@@ -94,5 +94,9 @@ extern winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
   );
 extern winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(WV_SP_BUS_NODE);
 extern winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueIrp(WV_SP_BUS_T, PIRP);
+extern winvblock__lib_func NTSTATUS STDCALL WvBusSysCtl(
+    IN WV_SP_BUS_T,
+    IN PIRP
+  );
 
 #endif  /* WV_M_BUS_H_ */

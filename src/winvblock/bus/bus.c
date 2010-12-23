@@ -61,7 +61,6 @@ typedef struct WV_BUS_WORK_ITEM_ {
 static WV_F_DEV_FREE WvBusFree_;
 static WV_F_DEV_CREATE_PDO WvBusCreatePdo_;
 static WV_F_DEV_DISPATCH WvBusPower_;
-static WV_F_DEV_DISPATCH WvBusSysCtl_;
 static WV_F_BUS_THREAD WvBusDefaultThread_;
 static winvblock__bool WvBusAddWorkItem_(
     WV_SP_BUS_T,
@@ -72,7 +71,7 @@ static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(WV_SP_BUS_T);
 /* Globals. */
 WV_S_DEV_IRP_MJ WvBusIrpMj_ = {
     WvBusPower_,
-    WvBusSysCtl_,
+    (WV_FP_DEV_DISPATCH) 0,
     WvBusDevCtlDispatch,
     (WV_FP_DEV_SCSI) 0,
     WvBusPnpDispatch,
@@ -159,16 +158,18 @@ winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
   }
 
 /* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
-static NTSTATUS STDCALL WvBusSysCtl_(IN WV_SP_DEV_T dev, IN PIRP irp) {
-    WV_SP_BUS_T bus = WvBusFromDev(dev);
-    PDEVICE_OBJECT lower = bus->LowerDeviceObject;
+winvblock__lib_func NTSTATUS STDCALL WvBusSysCtl(
+    IN WV_SP_BUS_T Bus,
+    IN PIRP Irp
+  ) {
+    PDEVICE_OBJECT lower = Bus->LowerDeviceObject;
 
     if (lower) {
         DBG("Passing IRP_MJ_SYSTEM_CONTROL down\n");
-        IoSkipCurrentIrpStackLocation(irp);
-        return IoCallDriver(lower, irp);
+        IoSkipCurrentIrpStackLocation(Irp);
+        return IoCallDriver(lower, Irp);
       }
-    return driver__complete_irp(irp, 0, STATUS_SUCCESS);
+    return driver__complete_irp(Irp, 0, STATUS_SUCCESS);
   }
 
 /* Handle a power IRP. */

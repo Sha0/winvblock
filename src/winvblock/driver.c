@@ -79,6 +79,7 @@ static driver__dispatch_func driver__dispatch_dev_ctl_;
 static driver__dispatch_func driver__dispatch_scsi_;
 static driver__dispatch_func driver__dispatch_pnp_;
 static void STDCALL driver__unload_(IN PDRIVER_OBJECT);
+static WV_F_DEV_DISPATCH WvDriverBusSysCtl_;
 
 static LPWSTR STDCALL get_opt(IN LPWSTR opt_name) {
     LPWSTR our_opts, the_opt;
@@ -181,6 +182,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     WvDevForDevObj(fdo, &WvDriverBus_.Dev);
     WvDriverBus_.Dev.Self = WvDriverBus_.Fdo = fdo;
     WvDriverBus_.Dev.IsBus = TRUE;
+    WvDriverBus_.Dev.IrpMj->SysCtl = WvDriverBusSysCtl_;
     WvDriverBus_.PhysicalDeviceObject = PhysicalDeviceObject;
     fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
     fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
@@ -562,4 +564,11 @@ winvblock__lib_func WV_SP_BUS_T driver__bus(void) {
         return NULL;
       }
     return WvBusFromDev(WvDevFromDevObj(WvDriverBusFdo_));
+  }
+
+/* Pass an IRP_MJ_SYSTEM_CONTROL IRP to the bus. */
+static NTSTATUS STDCALL WvDriverBusSysCtl_(IN WV_SP_DEV_T dev, IN PIRP irp) {
+    WV_SP_BUS_T bus = WvBusFromDev(dev);
+
+    return WvBusSysCtl(bus, irp);
   }
