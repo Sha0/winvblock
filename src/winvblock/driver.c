@@ -143,7 +143,6 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     WV_SP_BUS_T bus;
     PUNICODE_STRING dev_name = NULL;
     PDEVICE_OBJECT fdo = NULL;
-    WV_SP_DEV_T dev_ptr;
 
     DBG("Entry\n");
     /* Do we alreay have our main bus? */
@@ -185,6 +184,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     /* Set associations for the bus, device, FDO, PDO. */
     WvDevForDevObj(fdo, &bus->Dev);
     bus->Dev.Self = bus->Fdo = fdo;
+    bus->Dev.IsBus = TRUE;
     bus->PhysicalDeviceObject = PhysicalDeviceObject;
     fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
     fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
