@@ -60,7 +60,6 @@ typedef struct WV_BUS_WORK_ITEM_ {
 /* Forward declarations. */
 static WV_F_DEV_FREE WvBusFree_;
 static WV_F_DEV_CREATE_PDO WvBusCreatePdo_;
-static WV_F_DEV_DISPATCH WvBusPower_;
 static WV_F_BUS_THREAD WvBusDefaultThread_;
 static winvblock__bool WvBusAddWorkItem_(
     WV_SP_BUS_T,
@@ -70,7 +69,7 @@ static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(WV_SP_BUS_T);
 
 /* Globals. */
 WV_S_DEV_IRP_MJ WvBusIrpMj_ = {
-    WvBusPower_,
+    (WV_FP_DEV_DISPATCH) 0,
     (WV_FP_DEV_DISPATCH) 0,
     WvBusDevCtlDispatch,
     (WV_FP_DEV_SCSI) 0,
@@ -173,19 +172,18 @@ winvblock__lib_func NTSTATUS STDCALL WvBusSysCtl(
   }
 
 /* Handle a power IRP. */
-static NTSTATUS STDCALL WvBusPower_(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp
+winvblock__lib_func NTSTATUS STDCALL WvBusPower(
+    IN WV_SP_BUS_T Bus,
+    IN PIRP Irp
   ) {
-    WV_SP_BUS_T bus = WvBusFromDev(dev);
-    PDEVICE_OBJECT lower = bus->LowerDeviceObject;
+    PDEVICE_OBJECT lower = Bus->LowerDeviceObject;
 
-    PoStartNextPowerIrp(irp);
+    PoStartNextPowerIrp(Irp);
     if (lower) {
-        IoSkipCurrentIrpStackLocation(irp);
-        return PoCallDriver(lower, irp);
+        IoSkipCurrentIrpStackLocation(Irp);
+        return PoCallDriver(lower, Irp);
       }
-    return driver__complete_irp(irp, 0, STATUS_SUCCESS);
+    return driver__complete_irp(Irp, 0, STATUS_SUCCESS);
   }
 
 NTSTATUS STDCALL WvBusGetDevCapabilities(

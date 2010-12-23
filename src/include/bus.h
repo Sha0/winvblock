@@ -98,5 +98,9 @@ extern winvblock__lib_func NTSTATUS STDCALL WvBusSysCtl(
     IN WV_SP_BUS_T,
     IN PIRP
   );
+extern winvblock__lib_func NTSTATUS STDCALL WvBusPower(
+    IN WV_SP_BUS_T,
+    IN PIRP
+  );
 
 #endif  /* WV_M_BUS_H_ */
