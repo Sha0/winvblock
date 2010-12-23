@@ -39,15 +39,6 @@
 #include "debug.h"
 #include "probe.h"
 
-/* Forward declarations. */
-static WV_F_DEV_DISPATCH WvBusPnpStartDev_;
-static WV_F_DEV_DISPATCH WvBusPnpRemoveDev_;
-static WV_F_DEV_DISPATCH WvBusPnpQueryDevRelations_;
-static WV_F_DEV_DISPATCH WvBusPnpQueryCapabilities_;
-static WV_F_DEV_DISPATCH WvBusPnpQueryDevText_;
-static WV_F_DEV_DISPATCH WvBusPnpQueryBusInfo_;
-static WV_F_DEV_PNP WvBusPnpSimple_;
-
 static NTSTATUS STDCALL WvBusPnpIoCompletion_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
@@ -57,10 +48,9 @@ static NTSTATUS STDCALL WvBusPnpIoCompletion_(
     return STATUS_MORE_PROCESSING_REQUIRED;
   }
 
-static NTSTATUS STDCALL WvBusPnpStartDev_(IN WV_SP_DEV_T dev, IN PIRP irp) {
+static NTSTATUS STDCALL WvBusPnpStartDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
     NTSTATUS status;
     KEVENT event;
-    WV_SP_BUS_T bus = WvBusFromDev(dev);
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
 
     if (!lower)
@@ -81,8 +71,8 @@ static NTSTATUS STDCALL WvBusPnpStartDev_(IN WV_SP_DEV_T dev, IN PIRP irp) {
         KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, NULL);
       }
     if (NT_SUCCESS(status = irp->IoStatus.Status)) {
-        dev->OldState = dev->State;
-        dev->State = WvDevStateStarted;
+        bus->Dev.OldState = bus->Dev.State;
+        bus->Dev.State = WvDevStateStarted;
       }
     return driver__complete_irp(
         irp,
@@ -91,9 +81,9 @@ static NTSTATUS STDCALL WvBusPnpStartDev_(IN WV_SP_DEV_T dev, IN PIRP irp) {
       );
   }
 
-static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WV_SP_DEV_T dev, IN PIRP irp) {
+static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
     NTSTATUS status = STATUS_SUCCESS;
-    WV_SP_BUS_T bus = WvBusFromDev(dev);
+    WV_SP_DEV_T dev = &bus->Dev;
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
     WV_SP_DEV_T walker, next;
 
@@ -128,11 +118,11 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WV_SP_DEV_T dev, IN PIRP irp) {
   }
 
 static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
-    IN WV_SP_DEV_T dev,
+    IN WV_SP_BUS_T bus,
     IN PIRP irp
   ) {
     NTSTATUS status;
-    WV_SP_BUS_T bus = WvBusFromDev(dev);
+    WV_SP_DEV_T dev = &bus->Dev;
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     winvblock__uint32 count;
@@ -201,14 +191,14 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
   }
 
 static NTSTATUS STDCALL WvBusPnpQueryCapabilities_(
-    IN WV_SP_DEV_T dev,
+    IN WV_SP_BUS_T bus,
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     PDEVICE_CAPABILITIES DeviceCapabilities =
       io_stack_loc->Parameters.DeviceCapabilities.Capabilities;
     NTSTATUS status;
-    WV_SP_BUS_T bus = WvBusFromDev(dev);
+    WV_SP_DEV_T dev = &bus->Dev;
     DEVICE_CAPABILITIES ParentDeviceCapabilities;
     PDEVICE_OBJECT lower;
 
@@ -232,8 +222,8 @@ static NTSTATUS STDCALL WvBusPnpQueryCapabilities_(
     return driver__complete_irp(irp, irp->IoStatus.Information, STATUS_SUCCESS);
   }
 
-static NTSTATUS STDCALL WvBusPnpQueryDevText_(IN WV_SP_DEV_T dev, IN PIRP irp) {
-    WV_SP_BUS_T bus = WvBusFromDev(dev);
+static NTSTATUS STDCALL WvBusPnpQueryDevText_(IN WV_SP_BUS_T bus, IN PIRP irp) {
+    WV_SP_DEV_T dev = &bus->Dev;
     WCHAR (*str)[512];
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
@@ -314,7 +304,7 @@ DEFINE_GUID(
     0xb1
   );
 
-static NTSTATUS STDCALL WvBusPnpQueryBusInfo_(IN WV_SP_DEV_T dev, IN PIRP irp) {
+static NTSTATUS STDCALL WvBusPnpQueryBusInfo_(IN WV_SP_BUS_T bus, IN PIRP irp) {
     PPNP_BUS_INFORMATION pnp_bus_info;
     NTSTATUS status;
 
@@ -339,12 +329,12 @@ static NTSTATUS STDCALL WvBusPnpQueryBusInfo_(IN WV_SP_DEV_T dev, IN PIRP irp) {
   }
 
 static NTSTATUS STDCALL WvBusPnpSimple_(
-    IN WV_SP_DEV_T dev,
+    IN WV_SP_BUS_T bus,
     IN PIRP irp,
     IN UCHAR code
   ) {
     NTSTATUS status;
-    WV_SP_BUS_T bus = WvBusFromDev(dev);
+    WV_SP_DEV_T dev = &bus->Dev;
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
 
     switch (code) {
@@ -428,29 +418,29 @@ winvblock__lib_func NTSTATUS STDCALL WvBusPnp(
 
         case IRP_MN_QUERY_DEVICE_TEXT:
           DBG("bus_pnp: IRP_MN_QUERY_DEVICE_TEXT\n");
-          return WvBusPnpQueryDevText_(dev, irp);
+          return WvBusPnpQueryDevText_(bus, irp);
 
         case IRP_MN_QUERY_BUS_INFORMATION:
           DBG("bus_pnp: IRP_MN_QUERY_BUS_INFORMATION\n");
-          return WvBusPnpQueryBusInfo_(dev, irp);
+          return WvBusPnpQueryBusInfo_(bus, irp);
 
         case IRP_MN_QUERY_DEVICE_RELATIONS:
           DBG("bus_pnp: IRP_MJ_QUERY_DEVICE_RELATIONS\n");
-          return WvBusPnpQueryDevRelations_(dev, irp);
+          return WvBusPnpQueryDevRelations_(bus, irp);
 
         case IRP_MN_QUERY_CAPABILITIES:
           DBG("bus_pnp: IRP_MN_QUERY_CAPABILITIES\n");
-          return WvBusPnpQueryCapabilities_(dev, irp);
+          return WvBusPnpQueryCapabilities_(bus, irp);
 
         case IRP_MN_REMOVE_DEVICE:
           DBG("bus_pnp: IRP_MN_REMOVE_DEVICE\n");
-          return WvBusPnpRemoveDev_(dev, irp);
+          return WvBusPnpRemoveDev_(bus, irp);
 
         case IRP_MN_START_DEVICE:
           DBG("bus_pnp: IRP_MN_START_DEVICE\n");
-          return WvBusPnpStartDev_(dev, irp);
+          return WvBusPnpStartDev_(bus, irp);
 
         default:
-          return WvBusPnpSimple_(dev, irp, code);
+          return WvBusPnpSimple_(bus, irp, code);
       }
   }
