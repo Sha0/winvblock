@@ -37,8 +37,6 @@
 
 /* IRP_MJ_DEVICE_CONTROL dispatcher from bus/dev_ctl.c */
 extern WV_F_DEV_CTL WvBusDevCtlDispatch;
-/* IRP_MJ_PNP dispatcher from bus/pnp.c */
-extern WV_F_DEV_PNP WvBusPnpDispatch;
 
 /* Types. */
 typedef enum WV_BUS_WORK_ITEM_CMD_ {
@@ -73,7 +71,7 @@ WV_S_DEV_IRP_MJ WvBusIrpMj_ = {
     (WV_FP_DEV_DISPATCH) 0,
     WvBusDevCtlDispatch,
     (WV_FP_DEV_SCSI) 0,
-    WvBusPnpDispatch,
+    (WV_FP_DEV_PNP) 0,
   };
 
 /**

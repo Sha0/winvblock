@@ -47,7 +47,6 @@ static WV_F_DEV_DISPATCH WvBusPnpQueryCapabilities_;
 static WV_F_DEV_DISPATCH WvBusPnpQueryDevText_;
 static WV_F_DEV_DISPATCH WvBusPnpQueryBusInfo_;
 static WV_F_DEV_PNP WvBusPnpSimple_;
-WV_F_DEV_PNP WvBusPnpDispatch;
 
 static NTSTATUS STDCALL WvBusPnpIoCompletion_(
     IN PDEVICE_OBJECT dev_obj,
@@ -415,11 +414,13 @@ static NTSTATUS STDCALL WvBusPnpSimple_(
   }
 
 /* Bus PnP dispatch routine. */
-NTSTATUS STDCALL WvBusPnpDispatch(
-    IN WV_SP_DEV_T dev,
+winvblock__lib_func NTSTATUS STDCALL WvBusPnp(
+    IN WV_SP_BUS_T bus,
     IN PIRP irp,
     IN UCHAR code
   ) {
+    WV_SP_DEV_T dev = &bus->Dev;
+
     switch (code) {
         case IRP_MN_QUERY_ID:
           DBG("bus_pnp: IRP_MN_QUERY_ID\n");

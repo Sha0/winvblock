@@ -102,5 +102,11 @@ extern winvblock__lib_func NTSTATUS STDCALL WvBusPower(
     IN WV_SP_BUS_T,
     IN PIRP
   );
+/* IRP_MJ_PNP dispatcher in bus/pnp.c */
+extern winvblock__lib_func NTSTATUS STDCALL WvBusPnp(
+    IN WV_SP_BUS_T,
+    IN PIRP,
+    IN UCHAR
+  );
 
 #endif  /* WV_M_BUS_H_ */
