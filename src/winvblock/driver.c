@@ -51,22 +51,22 @@
 PDRIVER_OBJECT WvDriverObj = NULL;
 
 /* Globals. */
-static void * driver__state_handle_;
-static winvblock__bool driver__started_ = FALSE;
-static PDEVICE_OBJECT driver__bus_fdo_ = NULL;
-static KSPIN_LOCK driver__bus_fdo_lock_;
-static UNICODE_STRING WvBusName_ = {
+static void * WvDriverStateHandle_;
+static winvblock__bool WvDriverStarted_ = FALSE;
+static PDEVICE_OBJECT WvDriverBusFdo_ = NULL;
+static KSPIN_LOCK WvDriverBusFdoLock_;
+static UNICODE_STRING WvDriverBusName_ = {
     sizeof WV_M_BUS_NAME_,
     sizeof WV_M_BUS_NAME_,
     WV_M_BUS_NAME_
   };
-static UNICODE_STRING WvBusDosname_ = {
+static UNICODE_STRING WvDriverBusDosname_ = {
     sizeof WV_M_BUS_DOSNAME_,
     sizeof WV_M_BUS_DOSNAME_,
     WV_M_BUS_DOSNAME_
   };
 /* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters. */
-static LPWSTR driver__os_load_opts_ = NULL;
+static LPWSTR WvDriverOsLoadOpts_ = NULL;
 
 /* Forward declarations. */
 static driver__dispatch_func driver__dispatch_not_supported_;
@@ -88,11 +88,11 @@ static LPWSTR STDCALL get_opt(IN LPWSTR opt_name) {
       };
     size_t opt_name_len, opt_name_len_bytes;
 
-    if (!driver__os_load_opts_ || !opt_name)
+    if (!WvDriverOsLoadOpts_ || !opt_name)
       return NULL;
 
     /* Find /WINVBLOCK= options. */
-    our_opts = driver__os_load_opts_;
+    our_opts = WvDriverOsLoadOpts_;
     while (*our_opts != L'\0') {
         if (!wv_memcmpeq(our_opts, our_sig, our_sig_len_bytes)) {
             our_opts++;
@@ -146,7 +146,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
 
     DBG("Entry\n");
     /* Do we alreay have our main bus? */
-    if (driver__bus_fdo_) {
+    if (WvDriverBusFdo_) {
         DBG("Already have the main bus.  Refusing.\n");
         status = STATUS_NOT_SUPPORTED;
         goto err_already_established;
@@ -162,7 +162,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     status = IoCreateDevice(
         DriverObject,
         sizeof (driver__dev_ext),
-        &WvBusName_,
+        &WvDriverBusName_,
         FILE_DEVICE_CONTROLLER,
         FILE_DEVICE_SECURE_OPEN,
         FALSE,
@@ -174,8 +174,8 @@ static NTSTATUS STDCALL driver__attach_fdo_(
       }
     /* DosDevice symlink. */
     status = IoCreateSymbolicLink(
-        &WvBusDosname_,
-        &WvBusName_
+        &WvDriverBusDosname_,
+        &WvDriverBusName_
       );
     if (!NT_SUCCESS(status)) {
         DBG("IoCreateSymbolicLink() failed!\n");
@@ -204,9 +204,9 @@ static NTSTATUS STDCALL driver__attach_fdo_(
         goto err_thread;
       }
     /* Ok! */
-    KeAcquireSpinLock(&driver__bus_fdo_lock_, &irql);
-    if (driver__bus_fdo_) {
-        KeReleaseSpinLock(&driver__bus_fdo_lock_, irql);
+    KeAcquireSpinLock(&WvDriverBusFdoLock_, &irql);
+    if (WvDriverBusFdo_) {
+        KeReleaseSpinLock(&WvDriverBusFdoLock_, irql);
         DBG("Beaten to it!\n");
         status = STATUS_NOT_SUPPORTED;
         goto err_race_failed;
@@ -215,8 +215,8 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     #ifdef RIS
     bus->device->State = Started;
     #endif
-    driver__bus_fdo_ = fdo;
-    KeReleaseSpinLock(&driver__bus_fdo_lock_, irql);
+    WvDriverBusFdo_ = fdo;
+    KeReleaseSpinLock(&WvDriverBusFdoLock_, irql);
     DBG("Exit\n");
     return STATUS_SUCCESS;
 
@@ -226,7 +226,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
 
     err_attach:
 
-    IoDeleteSymbolicLink(&WvBusDosname_);
+    IoDeleteSymbolicLink(&WvDriverBusDosname_);
     err_dos_symlink:
 
     IoDeleteDevice(fdo);
@@ -297,17 +297,17 @@ NTSTATUS STDCALL DriverEntry(
         return STATUS_NOT_SUPPORTED;
       }
     WvDriverObj = DriverObject;
-    if (driver__started_)
+    if (WvDriverStarted_)
       return STATUS_SUCCESS;
     Debug_Initialize();
-    status = registry__note_os_load_opts(&driver__os_load_opts_);
+    status = registry__note_os_load_opts(&WvDriverOsLoadOpts_);
     if (!NT_SUCCESS(status))
       return Error("registry__note_driver__os_load_opts", status);
 
-    driver__state_handle_ = NULL;
-    KeInitializeSpinLock(&driver__bus_fdo_lock_);
+    WvDriverStateHandle_ = NULL;
+    KeInitializeSpinLock(&WvDriverBusFdoLock_);
 
-    if ((driver__state_handle_ = PoRegisterSystemState(
+    if ((WvDriverStateHandle_ = PoRegisterSystemState(
         NULL,
         ES_CONTINUOUS
       )) == NULL) {
@@ -345,7 +345,7 @@ NTSTATUS STDCALL DriverEntry(
     if(!NT_SUCCESS(status))
       goto err_bus;
 
-    driver__started_ = TRUE;
+    WvDriverStarted_ = TRUE;
     DBG("Exit\n");
     return STATUS_SUCCESS;
 
@@ -533,12 +533,12 @@ static NTSTATUS driver__dispatch_pnp_(
 
 static void STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
     DBG("Unloading...\n");
-    if (driver__state_handle_ != NULL)
-      PoUnregisterSystemState(driver__state_handle_);
-    IoDeleteSymbolicLink(&WvBusDosname_);
-    driver__bus_fdo_ = NULL;
-    wv_free(driver__os_load_opts_);
-    driver__started_ = FALSE;
+    if (WvDriverStateHandle_ != NULL)
+      PoUnregisterSystemState(WvDriverStateHandle_);
+    IoDeleteSymbolicLink(&WvDriverBusDosname_);
+    WvDriverBusFdo_ = NULL;
+    wv_free(WvDriverOsLoadOpts_);
+    WvDriverStarted_ = FALSE;
     DBG("Done\n");
   }
 
@@ -564,9 +564,9 @@ winvblock__lib_func NTSTATUS STDCALL Error(
  * @ret         A pointer to the driver bus, or NULL.
  */
 winvblock__lib_func WV_SP_BUS_T driver__bus(void) {
-    if (!driver__bus_fdo_) {
+    if (!WvDriverBusFdo_) {
         DBG("No driver bus device!\n");
         return NULL;
       }
-    return WvBusFromDev(WvDevFromDevObj(driver__bus_fdo_));
+    return WvBusFromDev(WvDevFromDevObj(WvDriverBusFdo_));
   }
