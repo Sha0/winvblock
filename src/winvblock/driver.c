@@ -65,6 +65,8 @@ static UNICODE_STRING WvDriverBusDosname_ = {
     sizeof WV_M_BUS_DOSNAME_,
     WV_M_BUS_DOSNAME_
   };
+/* The main bus. */
+static WV_S_BUS_T WvDriverBus_ = {0};
 /* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters. */
 static LPWSTR WvDriverOsLoadOpts_ = NULL;
 
@@ -140,7 +142,6 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     KIRQL irql;
     NTSTATUS status;
     PLIST_ENTRY walker;
-    WV_SP_BUS_T bus;
     PUNICODE_STRING dev_name = NULL;
     PDEVICE_OBJECT fdo = NULL;
 
@@ -151,13 +152,8 @@ static NTSTATUS STDCALL driver__attach_fdo_(
         status = STATUS_NOT_SUPPORTED;
         goto err_already_established;
       }
-    /* Create the bus. */
-    bus = WvBusCreate();
-    if (!bus) {
-        DBG("WvBusCreate() failed for the main bus.\n");
-        status = STATUS_INSUFFICIENT_RESOURCES;
-        goto err_bus;
-      }
+    /* Initialize the bus. */
+    WvBusInit(&WvDriverBus_);
     /* Create the bus FDO. */
     status = IoCreateDevice(
         DriverObject,
@@ -182,23 +178,23 @@ static NTSTATUS STDCALL driver__attach_fdo_(
         goto err_dos_symlink;
       }
     /* Set associations for the bus, device, FDO, PDO. */
-    WvDevForDevObj(fdo, &bus->Dev);
-    bus->Dev.Self = bus->Fdo = fdo;
-    bus->Dev.IsBus = TRUE;
-    bus->PhysicalDeviceObject = PhysicalDeviceObject;
+    WvDevForDevObj(fdo, &WvDriverBus_.Dev);
+    WvDriverBus_.Dev.Self = WvDriverBus_.Fdo = fdo;
+    WvDriverBus_.Dev.IsBus = TRUE;
+    WvDriverBus_.PhysicalDeviceObject = PhysicalDeviceObject;
     fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
     fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
     /* Attach the FDO to the PDO. */
-    bus->LowerDeviceObject = IoAttachDeviceToDeviceStack(
+    WvDriverBus_.LowerDeviceObject = IoAttachDeviceToDeviceStack(
         fdo,
         PhysicalDeviceObject
       );
-    if (bus->LowerDeviceObject == NULL) {
+    if (WvDriverBus_.LowerDeviceObject == NULL) {
         status = STATUS_NO_SUCH_DEVICE;
         DBG("IoAttachDeviceToDeviceStack() failed!\n");
         goto err_attach;
       }
-    status = WvBusStartThread(bus);
+    status = WvBusStartThread(&WvDriverBus_);
     if (!NT_SUCCESS(status)) {
         DBG("Couldn't start bus thread!\n");
         goto err_thread;
@@ -213,7 +209,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
       }
     fdo->Flags &= ~DO_DEVICE_INITIALIZING;
     #ifdef RIS
-    bus->device->State = Started;
+    WvDriverBus_.Dev.State = Started;
     #endif
     WvDriverBusFdo_ = fdo;
     KeReleaseSpinLock(&WvDriverBusFdoLock_, irql);
@@ -231,9 +227,6 @@ static NTSTATUS STDCALL driver__attach_fdo_(
 
     IoDeleteDevice(fdo);
     err_fdo:
-
-    WvDevFree(&bus->Dev);
-    err_bus:
 
     err_already_established:
 
