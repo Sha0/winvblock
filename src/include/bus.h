@@ -64,6 +64,8 @@ typedef struct WV_BUS_NODE {
         LIST_ENTRY Link;
         PDEVICE_OBJECT Pdo;
         WV_SP_BUS_T Bus;
+        /* The child's unit number relative to the parent bus. */
+        winvblock__uint32 Num;
       } BusPrivate_;
   } WV_S_BUS_NODE, * WV_SP_BUS_NODE;
 

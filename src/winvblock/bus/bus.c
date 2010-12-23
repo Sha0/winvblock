@@ -416,6 +416,53 @@ static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(
   }
 
 /**
+ * Add a PDO node to a bus' list of children.  Internal.
+ *
+ * @v bus               The bus to add the node to.
+ * @v new_node          The PDO node to add to the bus.
+ *
+ * Don't call this function yourself.  It expects to have exclusive
+ * access to the bus' list of children.
+ */
+static void STDCALL WvBusAddNode_(WV_SP_BUS_T bus, WV_SP_BUS_NODE new_node) {
+    PLIST_ENTRY walker;
+
+    DBG("Adding PDO to bus...\n");
+    ObReferenceObject(new_node->BusPrivate_.Pdo);
+    bus->BusPrivate_.NodeCount++;
+    /* It's too bad about having both linked list and bus ref. */
+    new_node->BusPrivate_.Bus = bus;
+
+    /* Find a slot for the new child. */
+    walker = &bus->BusPrivate_.Nodes;
+    new_node->BusPrivate_.Num = 0;
+    while ((walker = walker->Flink) != &bus->BusPrivate_.Nodes) {
+        WV_SP_BUS_NODE node = CONTAINING_RECORD(
+            walker,
+            WV_S_BUS_NODE,
+            BusPrivate_.Link
+          );
+
+        if (
+            node->BusPrivate_.Num &&
+            (node->BusPrivate_.Link.Blink == &bus->BusPrivate_.Nodes)
+          ) {
+            /* The first node's unit number is != 0.  Insert here. */
+            break;
+          }
+        if (node->BusPrivate_.Num > new_node->BusPrivate_.Num) {
+            /* There is a gap so insert here. */
+            break;
+          }
+        /* Continue trying to find a slot. */
+        new_node->BusPrivate_.Num++;
+      } /* while */
+    /* Insert before walker. */
+    InsertTailList(walker, &new_node->BusPrivate_.Link);
+    return;
+  }
+
+/**
  * Process work items for a bus.
  *
  * @v Bus               The bus to process its work items.
@@ -431,14 +478,8 @@ winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T Bus) {
     while (work_item = WvBusGetWorkItem_(Bus)) {
         switch (work_item->Cmd) {
             case WvBusWorkItemCmdAddPdo_:
-              DBG("Adding PDO to bus...\n");
-
               node = work_item->Context.Node;
-              /* It's too bad about having both linked list and bus ref. */
-              node->BusPrivate_.Bus = Bus;
-              ObReferenceObject(node->BusPrivate_.Pdo);
-              InsertTailList(&Bus->BusPrivate_.Nodes, &node->BusPrivate_.Link);
-              Bus->BusPrivate_.NodeCount++;
+              WvBusAddNode_(Bus, node);
               break;
 
             case WvBusWorkItemCmdRemovePdo_:
