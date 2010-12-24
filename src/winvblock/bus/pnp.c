@@ -438,7 +438,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusPnp(
           return WvBusPnpQueryBusInfo_(bus, irp);
 
         case IRP_MN_QUERY_DEVICE_RELATIONS:
-          DBG("bus_pnp: IRP_MJ_QUERY_DEVICE_RELATIONS\n");
+          DBG("bus_pnp: IRP_MN_QUERY_DEVICE_RELATIONS\n");
           return WvBusPnpQueryDevRelations_(bus, irp);
 
         case IRP_MN_QUERY_CAPABILITIES:
