@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -22,12 +22,9 @@
 /**
  * @file
  *
- * MEMDISK specifics
- *
+ * MEMDISK specifics.
  */
 
-extern void memdisk__find (
-  void
- );
+extern void WvMemdiskFind(void);
 
 #endif  /* WV_M_MEMDISK_H_ */

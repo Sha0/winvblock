@@ -73,7 +73,7 @@ void WvProbeDisks(void) {
 
     if (probed)
       return;
-    memdisk__find();
+    WvMemdiskFind();
     ramdisk_grub4dos__find();
     filedisk_grub4dos__find();
     probed = TRUE;

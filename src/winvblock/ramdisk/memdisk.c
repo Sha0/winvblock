@@ -38,131 +38,108 @@
 #include "mdi.h"
 #include "probe.h"
 
-winvblock__bool STDCALL
-check_mbft (
-  winvblock__uint8_ptr PhysicalMemory,
-  winvblock__uint32 Offset
- )
-{
-  mdi__mbft_ptr mBFT = ( mdi__mbft_ptr ) ( PhysicalMemory + Offset );
-  winvblock__uint32 i;
-  winvblock__uint8 Checksum = 0;
-  WV_SP_PROBE_SAFE_MBR_HOOK AssociatedHook;
-  ramdisk__type_ptr ramdisk_ptr;
+static winvblock__bool STDCALL WvMemdiskCheckMbft_(
+    winvblock__uint8_ptr phys_mem,
+    winvblock__uint32 offset
+  ) {
+    mdi__mbft_ptr mbft = (mdi__mbft_ptr) (phys_mem + offset);
+    winvblock__uint32 i;
+    winvblock__uint8 chksum = 0;
+    WV_SP_PROBE_SAFE_MBR_HOOK assoc_hook;
+    ramdisk__type_ptr ramdisk;
 
-  if ( Offset >= 0x100000 )
-    {
-      DBG ( "mBFT physical pointer too high!\n" );
-      return FALSE;
-    }
-  if (!wv_memcmpeq(mBFT->Signature, "mBFT", sizeof "mBFT" - 1)) return FALSE;
-  if ( Offset + mBFT->Length >= 0x100000 )
-    {
-      DBG ( "mBFT length out-of-bounds\n" );
-      return FALSE;
-    }
-  for ( i = 0; i < mBFT->Length; i++ )
-    Checksum += ( ( winvblock__uint8 * ) mBFT )[i];
-  if ( Checksum )
-    {
-      DBG ( "Invalid mBFT checksum\n" );
-      return FALSE;
-    }
-  DBG ( "Found mBFT: 0x%08x\n", mBFT );
-  if ( mBFT->SafeHook >= 0x100000 )
-    {
-      DBG ( "mBFT safe hook physical pointer too high!\n" );
-      return FALSE;
-    }
-  AssociatedHook =
-    (WV_SP_PROBE_SAFE_MBR_HOOK) (PhysicalMemory + mBFT->SafeHook);
-  if ( AssociatedHook->Flags )
-    {
-      DBG ( "This MEMDISK already processed\n" );
-      return TRUE;
-    }
-  DBG ( "MEMDISK DiskBuf: 0x%08x\n", mBFT->mdi.diskbuf );
-  DBG ( "MEMDISK DiskSize: %d sectors\n", mBFT->mdi.disksize );
-  ramdisk_ptr = ramdisk__create (  );
-  if ( ramdisk_ptr == NULL )
-    {
-      DBG ( "Could not create MEMDISK disk!\n" );
-      return FALSE;
-    }
-  ramdisk_ptr->DiskBuf = mBFT->mdi.diskbuf;
-  ramdisk_ptr->disk->LBADiskSize = ramdisk_ptr->DiskSize = mBFT->mdi.disksize;
-  if ( mBFT->mdi.driveno == 0xE0 )
-    {
-      ramdisk_ptr->disk->Media = WvDiskMediaTypeOptical;
-      ramdisk_ptr->disk->SectorSize = 2048;
-    }
-  else
-    {
-      if ( mBFT->mdi.driveno & 0x80 )
-	ramdisk_ptr->disk->Media = WvDiskMediaTypeHard;
-      else
-	ramdisk_ptr->disk->Media = WvDiskMediaTypeFloppy;
-      ramdisk_ptr->disk->SectorSize = 512;
-    }
-  DBG ( "RAM Drive is type: %d\n", ramdisk_ptr->disk->Media );
-  ramdisk_ptr->disk->Cylinders = mBFT->mdi.cylinders;
-  ramdisk_ptr->disk->Heads = mBFT->mdi.heads;
-  ramdisk_ptr->disk->Sectors = mBFT->mdi.sectors;
-  ramdisk_ptr->disk->BootDrive = TRUE;
-  /* Add the ramdisk to the bus. */
-  if (!WvBusAddChild(driver__bus(), ramdisk_ptr->disk->Dev)) {
-      WvDevFree(ramdisk_ptr->disk->Dev);
-      return FALSE;
-    }
-  AssociatedHook->Flags = 1;
-  return TRUE;
-}
+    if (offset >= 0x100000) {
+        DBG("mBFT physical pointer too high!\n");
+        return FALSE;
+      }
+    if (!wv_memcmpeq(mbft->Signature, "mBFT", sizeof "mBFT" - 1)) return FALSE;
+    if (offset + mbft->Length >= 0x100000) {
+        DBG("mBFT length out-of-bounds\n");
+        return FALSE;
+      }
+    for (i = 0; i < mbft->Length; i++)
+      chksum += ((winvblock__uint8 *) mbft)[i];
+    if (chksum) {
+        DBG("Invalid mBFT checksum\n");
+        return FALSE;
+      }
+    DBG("Found mBFT: 0x%08x\n", mbft);
+    if (mbft->SafeHook >= 0x100000) {
+        DBG("mBFT safe hook physical pointer too high!\n");
+        return FALSE;
+      }
+    assoc_hook =
+      (WV_SP_PROBE_SAFE_MBR_HOOK) (phys_mem + mbft->SafeHook);
+    if (assoc_hook->Flags) {
+        DBG("This MEMDISK already processed\n");
+        return TRUE;
+      }
+    DBG("MEMDISK DiskBuf: 0x%08x\n", mbft->mdi.diskbuf);
+    DBG("MEMDISK DiskSize: %d sectors\n", mbft->mdi.disksize);
+    ramdisk = ramdisk__create();
+    if (ramdisk == NULL) {
+        DBG("Could not create MEMDISK disk!\n");
+        return FALSE;
+      }
+    ramdisk->DiskBuf = mbft->mdi.diskbuf;
+    ramdisk->disk->LBADiskSize = ramdisk->DiskSize = mbft->mdi.disksize;
+    if (mbft->mdi.driveno == 0xE0) {
+        ramdisk->disk->Media = WvDiskMediaTypeOptical;
+        ramdisk->disk->SectorSize = 2048;
+      } else {
+        if (mbft->mdi.driveno & 0x80)
+        	ramdisk->disk->Media = WvDiskMediaTypeHard;
+          else
+        	ramdisk->disk->Media = WvDiskMediaTypeFloppy;
+        ramdisk->disk->SectorSize = 512;
+      }
+    DBG("RAM Drive is type: %d\n", ramdisk->disk->Media);
+    ramdisk->disk->Cylinders = mbft->mdi.cylinders;
+    ramdisk->disk->Heads = mbft->mdi.heads;
+    ramdisk->disk->Sectors = mbft->mdi.sectors;
+    ramdisk->disk->BootDrive = TRUE;
 
-void
-memdisk__find (
-  void
- )
-{
-  PHYSICAL_ADDRESS PhysicalAddress;
-  winvblock__uint8_ptr PhysicalMemory;
-  WV_SP_PROBE_INT_VECTOR InterruptVector;
-  WV_SP_PROBE_SAFE_MBR_HOOK SafeMbrHookPtr;
-  winvblock__uint32 Offset;
-  winvblock__bool FoundMemdisk = FALSE;
+    /* Add the ramdisk to the bus. */
+    if (!WvBusAddChild(driver__bus(), ramdisk->disk->Dev)) {
+        WvDevFree(ramdisk->disk->Dev);
+        return FALSE;
+      }
+    assoc_hook->Flags = 1;
+    return TRUE;
+  }
 
-  /*
-   * Find a MEMDISK.  We check the "safe hook" chain, then scan for mBFTs
-   */
-  PhysicalAddress.QuadPart = 0LL;
-  PhysicalMemory = MmMapIoSpace ( PhysicalAddress, 0x100000, MmNonCached );
-  if ( !PhysicalMemory )
-    {
-      DBG ( "Could not map low memory\n" );
-      return;
-    }
-  InterruptVector =
-    (WV_SP_PROBE_INT_VECTOR) (PhysicalMemory + 0x13 * sizeof *InterruptVector);
-  /* Walk the "safe hook" chain of INT 13h hooks as far as possible. */
-  while (SafeMbrHookPtr = WvProbeGetSafeHook(PhysicalMemory, InterruptVector)) {
-      if (!wv_memcmpeq(SafeMbrHookPtr->VendorId, "MEMDISK ", 8)) {
-	  DBG ( "Non-MEMDISK INT 0x13 Safe Hook\n" );
-	}
-      else
-	{
-	  FoundMemdisk |= check_mbft ( PhysicalMemory, SafeMbrHookPtr->Mbft );
-	}
-      InterruptVector = &SafeMbrHookPtr->PrevHook;
-    }
-  /*
-   * Now search for "floating" mBFTs
-   */
-  for ( Offset = 0; Offset < 0xFFFF0; Offset += 0x10 )
-    {
-      FoundMemdisk |= check_mbft ( PhysicalMemory, Offset );
-    }
-  MmUnmapIoSpace ( PhysicalMemory, 0x100000 );
-  if ( !FoundMemdisk )
-    {
-      DBG ( "No MEMDISKs found\n" );
-    }
-}
+void WvMemdiskFind(void) {
+    PHYSICAL_ADDRESS phys_addr;
+    winvblock__uint8_ptr phys_mem;
+    WV_SP_PROBE_INT_VECTOR int_vector;
+    WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook;
+    winvblock__uint32 offset;
+    winvblock__bool found = FALSE;
+
+    /* Find a MEMDISK.  We check the "safe hook" chain, then scan for mBFTs. */
+    phys_addr.QuadPart = 0LL;
+    phys_mem = MmMapIoSpace(phys_addr, 0x100000, MmNonCached);
+    if (!phys_mem) {
+        DBG("Could not map low memory\n");
+        return;
+      }
+    int_vector =
+      (WV_SP_PROBE_INT_VECTOR) (phys_mem + 0x13 * sizeof *int_vector);
+    /* Walk the "safe hook" chain of INT 13h hooks as far as possible. */
+    while (safe_mbr_hook = WvProbeGetSafeHook(phys_mem, int_vector)) {
+        if (!wv_memcmpeq(safe_mbr_hook->VendorId, "MEMDISK ", 8)) {
+        	  DBG("Non-MEMDISK INT 0x13 Safe Hook\n");
+        	} else {
+        	  found |= WvMemdiskCheckMbft_(phys_mem, safe_mbr_hook->Mbft);
+        	}
+        int_vector = &safe_mbr_hook->PrevHook;
+      }
+    /* Now search for "floating" mBFTs. */
+    for (offset = 0; offset < 0xFFFF0; offset += 0x10) {
+        found |= WvMemdiskCheckMbft_(phys_mem, offset);
+      }
+    MmUnmapIoSpace(phys_mem, 0x100000);
+    if (!found) {
+        DBG("No MEMDISKs found\n");
+      }
+  }
