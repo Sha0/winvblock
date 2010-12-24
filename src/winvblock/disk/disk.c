@@ -352,7 +352,6 @@ winvblock__lib_func WV_SP_DISK_T disk__create(void) {
         &disk_list_lock
       );
     /* Populate non-zero device defaults. */
-    disk_ptr->prev_free = dev_ptr->Ops.Free;
     disk_ptr->disk_ops.MaxXferLen = default_max_xfer_len;
     disk_ptr->disk_ops.Init = WvDiskDefaultInit_;
     disk_ptr->disk_ops.Close = WvDiskDefaultClose_;
@@ -392,8 +391,6 @@ NTSTATUS disk__module_init(void) {
 static void STDCALL free_disk(IN WV_SP_DEV_T dev_ptr) {
     WV_SP_DISK_T disk_ptr = disk__get_ptr(dev_ptr);
 
-    /* Free the "inherited class". */
-    disk_ptr->prev_free(dev_ptr);
     /*
      * Track the disk deletion in our global list.  Unfortunately,
      * for now we have faith that a disk won't be deleted twice and

@@ -116,7 +116,6 @@ struct WV_DISK_T {
     winvblock__uint32 Sectors;
     winvblock__uint32 SectorSize;
     winvblock__uint32 SpecialFileCount;
-    WV_FP_DEV_FREE prev_free;
     LIST_ENTRY tracking;
     winvblock__any_ptr ext;
   };
