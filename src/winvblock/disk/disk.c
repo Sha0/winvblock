@@ -334,10 +334,6 @@ winvblock__lib_func WV_SP_DISK_T disk__create(void) {
     WV_SP_DEV_T dev_ptr;
     WV_SP_DISK_T disk_ptr;
 
-    /* Try to create a device. */
-    dev_ptr = WvDevCreate();
-    if (dev_ptr == NULL)
-      goto err_nodev;
     /*
      * Disk devices might be used for booting and should
      * not be allocated from a paged memory pool.
@@ -345,6 +341,10 @@ winvblock__lib_func WV_SP_DISK_T disk__create(void) {
     disk_ptr = wv_mallocz(sizeof *disk_ptr);
     if (disk_ptr == NULL)
       goto err_nodisk;
+
+    dev_ptr = disk_ptr->Dev;
+    WvDevInit(dev_ptr);
+
     /* Track the new disk in our global list. */
     ExInterlockedInsertTailList(
         &disk_list,
@@ -352,7 +352,6 @@ winvblock__lib_func WV_SP_DISK_T disk__create(void) {
         &disk_list_lock
       );
     /* Populate non-zero device defaults. */
-    disk_ptr->Dev = dev_ptr;
     disk_ptr->prev_free = dev_ptr->Ops.Free;
     disk_ptr->disk_ops.MaxXferLen = default_max_xfer_len;
     disk_ptr->disk_ops.Init = WvDiskDefaultInit_;
@@ -368,9 +367,6 @@ winvblock__lib_func WV_SP_DISK_T disk__create(void) {
     return disk_ptr;
 
     err_nodisk:
-
-    WvDevFree(dev_ptr);
-    err_nodev:
 
     return NULL;
   }
