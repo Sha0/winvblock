@@ -82,11 +82,24 @@ static NTSTATUS STDCALL WvBusPnpStartDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
   }
 
 static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
-    NTSTATUS status = STATUS_SUCCESS;
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    NTSTATUS status;
+    PDEVICE_OBJECT lower;
     WV_SP_DEV_T dev = &bus->Dev;
-    PDEVICE_OBJECT lower = bus->LowerDeviceObject;
     WV_SP_DEV_T walker, next;
 
+    if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
+        /* Enqueue the IRP. */
+        status = WvBusEnqueueIrp(bus, irp);
+        if (status != STATUS_PENDING)
+          /* Problem. */
+          return driver__complete_irp(irp, 0, status);
+        /* Ok. */
+        return status;
+      }
+    /* If we get here, we should be called by WvBusProcessWorkItems() */
+    status = STATUS_SUCCESS;
+    lower = bus->LowerDeviceObject;
     dev->OldState = dev->State;
     dev->State = WvDevStateDeleted;
     /* Pass the IRP on to any lower DEVICE_OBJECT */
