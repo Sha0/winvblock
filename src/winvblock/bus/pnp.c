@@ -87,6 +87,7 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
     PDEVICE_OBJECT lower;
     WV_SP_DEV_T dev = &bus->Dev;
     WV_SP_DEV_T walker, next;
+    PLIST_ENTRY node_link;
 
     if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
         /* Enqueue the IRP. */
@@ -117,6 +118,19 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
         IoDeleteDevice(walker->Self);
         WvDevFree(walker);
         walker = next;
+      }
+    node_link = &bus->BusPrivate_.Nodes;
+    while ((node_link = node_link->Flink) != &bus->BusPrivate_.Nodes) {
+        WV_SP_BUS_NODE node = CONTAINING_RECORD(
+            node_link,
+            WV_S_BUS_NODE,
+            BusPrivate_.Link
+          );
+
+        DBG("Removing PDO from bus...\n");
+        RemoveEntryList(&node->BusPrivate_.Link);
+        ObDereferenceObject(node->BusPrivate_.Pdo);
+        bus->BusPrivate_.NodeCount--;
       }
     /* Somewhat redundant, since the bus will be freed shortly. */
     bus->Children = 0;
