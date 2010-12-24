@@ -460,6 +460,26 @@ static void STDCALL WvBusAddNode_(WV_SP_BUS_T bus, WV_SP_BUS_NODE new_node) {
   }
 
 /**
+ * Remove a PDO node from a bus.  Internal.
+ *
+ * @v bus             The bus to remove the node from.
+ * @v node            The PDO node to remove from its parent bus.
+ *
+ * Don't call this function yourself.  It expects to have exclusive
+ * access to the bus' list of children.
+ */
+static void STDCALL WvBusRemoveNode_(
+    WV_SP_BUS_T bus,
+    WV_SP_BUS_NODE node
+  ) {
+    DBG("Removing PDO from bus...\n");
+    RemoveEntryList(&node->BusPrivate_.Link);
+    ObDereferenceObject(node->BusPrivate_.Pdo);
+    bus->BusPrivate_.NodeCount--;
+    return;    
+  }
+
+/**
  * Process work items for a bus.
  *
  * @v Bus               The bus to process its work items.
@@ -480,12 +500,8 @@ winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T Bus) {
               break;
 
             case WvBusWorkItemCmdRemovePdo_:
-              DBG("Removing PDO from bus...\n");
-
               node = work_item->Context.Node;
-              RemoveEntryList(&node->BusPrivate_.Link);
-              ObDereferenceObject(node->BusPrivate_.Pdo);
-              Bus->BusPrivate_.NodeCount--;
+              WvBusRemoveNode_(Bus, node);
               break;
 
             case WvBusWorkItemCmdProcessIrp_:
