@@ -253,6 +253,7 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T Bus) {
     /* Populate non-zero bus device defaults. */
     WvDevInit(&Bus->Dev);
     Bus->Thread = WvBusDefaultThread_;
+    InitializeListHead(&Bus->BusPrivate_.Nodes);
     KeInitializeSpinLock(&Bus->BusPrivate_.WorkItemsLock);
     InitializeListHead(&Bus->BusPrivate_.WorkItems);
     KeInitializeEvent(&Bus->ThreadSignal, SynchronizationEvent, FALSE);
