@@ -155,6 +155,7 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
     winvblock__uint32 count;
     WV_SP_DEV_T walker;
     PDEVICE_RELATIONS dev_relations;
+    PLIST_ENTRY node_link;
 
     if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
         /* Enqueue the IRP. */
@@ -187,6 +188,7 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
         count++;
         walker = walker->next_sibling_ptr;
       }
+    count += bus->BusPrivate_.NodeCount;
     dev_relations = wv_malloc(
         sizeof *dev_relations + (sizeof (PDEVICE_OBJECT) * count)
       );
@@ -207,6 +209,17 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
         dev_relations->Objects[count] = walker->Self;
         count++;
         walker = walker->next_sibling_ptr;
+      }
+    node_link = &bus->BusPrivate_.Nodes;
+    while ((node_link = node_link->Flink) != &bus->BusPrivate_.Nodes) {
+        WV_SP_BUS_NODE node = CONTAINING_RECORD(
+            node_link,
+            WV_S_BUS_NODE,
+            BusPrivate_.Link
+          );
+
+        dev_relations->Objects[count] = node->BusPrivate_.Pdo;
+        count++;
       }
     irp->IoStatus.Information = (ULONG_PTR) dev_relations;
     irp->IoStatus.Status = status = STATUS_SUCCESS;
