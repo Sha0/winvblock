@@ -56,7 +56,6 @@ typedef struct WV_BUS_WORK_ITEM_ {
   } WV_S_BUS_WORK_ITEM_, * WV_SP_BUS_WORK_ITEM_;
 
 /* Forward declarations. */
-static WV_F_DEV_FREE WvBusFree_;
 static WV_F_BUS_THREAD WvBusDefaultThread_;
 static winvblock__bool WvBusAddWorkItem_(
     WV_SP_BUS_T,
@@ -178,7 +177,6 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T Bus) {
     KeInitializeEvent(&Bus->ThreadSignal, SynchronizationEvent, FALSE);
     KeInitializeEvent(&Bus->ThreadStopped, SynchronizationEvent, FALSE);
     Bus->Dev.Ops.Init = WvBusDevInit_;
-    Bus->Dev.Ops.Free = WvBusFree_;
     Bus->Dev.ext = Bus;
     Bus->Dev.IrpMj = &WvBusIrpMj_;
     Bus->Dev.IsBus = TRUE;
@@ -211,17 +209,6 @@ winvblock__lib_func WV_SP_BUS_T WvBusCreate(void) {
     err_no_bus:
 
     return NULL;
-  }
-
-/**
- * Default bus deletion operation.
- *
- * @v dev               Points to the bus device to delete.
- */
-static void STDCALL WvBusFree_(IN WV_SP_DEV_T dev) {
-    WV_SP_BUS_T bus = WvBusFromDev(dev);
-
-    wv_free(bus);
   }
 
 /**
@@ -412,15 +399,6 @@ winvblock__lib_func void WvBusCancelWorkItems(WV_SP_BUS_T Bus) {
     return;
   }
 
-/* The WV_S_DEV_T::Ops.Free implementation for a threaded bus. */
-static void STDCALL WvBusThreadFree_(IN WV_SP_DEV_T dev) {
-    WV_SP_BUS_T bus = WvBusFromDev(dev);
-
-    bus->Stop = TRUE;
-    KeSetEvent(&bus->ThreadSignal, 0, FALSE);
-    return;
-  }
-
 /**
  * The bus thread wrapper.
  *
@@ -462,9 +440,6 @@ static void STDCALL WvBusDefaultThread_(IN WV_SP_BUS_T bus) {
 
     /* Wake up at least every 30 seconds. */
     timeout.QuadPart = -300000000LL;
-
-    /* Hook WV_S_DEV_T::Ops.Free() */
-    bus->Dev.Ops.Free = WvBusThreadFree_;
 
     /* When WV_S_BUS_T::Stop is set, we shut down. */
     while (!bus->Stop) {
