@@ -57,7 +57,6 @@ typedef struct WV_BUS_WORK_ITEM_ {
 
 /* Forward declarations. */
 static WV_F_DEV_FREE WvBusFree_;
-static WV_F_DEV_CREATE_PDO WvBusCreatePdo_;
 static WV_F_BUS_THREAD WvBusDefaultThread_;
 static winvblock__bool WvBusAddWorkItem_(
     WV_SP_BUS_T,
@@ -178,7 +177,6 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T Bus) {
     InitializeListHead(&Bus->BusPrivate_.WorkItems);
     KeInitializeEvent(&Bus->ThreadSignal, SynchronizationEvent, FALSE);
     KeInitializeEvent(&Bus->ThreadStopped, SynchronizationEvent, FALSE);
-    Bus->Dev.Ops.CreatePdo = WvBusCreatePdo_;
     Bus->Dev.Ops.Init = WvBusDevInit_;
     Bus->Dev.Ops.Free = WvBusFree_;
     Bus->Dev.ext = Bus;
@@ -211,60 +209,6 @@ winvblock__lib_func WV_SP_BUS_T WvBusCreate(void) {
 
     wv_free(bus);
     err_no_bus:
-
-    return NULL;
-  }
-
-/**
- * Create a bus PDO.
- *
- * @v dev               Populate PDO dev. ext. space from these details.
- * @ret PDEVICE_OBJECT  Points to the new PDO, or is NULL upon failure.
- *
- * Returns a Physical Device Object pointer on success, NULL for failure.
- */
-static PDEVICE_OBJECT STDCALL WvBusCreatePdo_(IN WV_SP_DEV_T dev) {
-    PDEVICE_OBJECT pdo = NULL;
-    WV_SP_BUS_T bus;
-    NTSTATUS status;
-
-    /* Note the bus device needing a PDO. */
-    if (dev == NULL) {
-        DBG("No device passed\n");
-        return NULL;
-      }
-    bus = WvBusFromDev(dev);
-    /* Create the PDO. */
-    status = IoCreateDevice(
-        dev->DriverObject,
-        sizeof (driver__dev_ext),
-        NULL,
-        FILE_DEVICE_CONTROLLER,
-        FILE_DEVICE_SECURE_OPEN,
-        FALSE,
-        &pdo
-      );
-    if (pdo == NULL) {
-        DBG("IoCreateDevice() failed!\n");
-        goto err_pdo;
-      }
-
-    /* Set associations for the bus, device, PDO. */
-    WvDevForDevObj(pdo, dev);
-    dev->Self = bus->PhysicalDeviceObject = pdo;
-
-    /* Set some DEVICE_OBJECT status. */
-    pdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
-    pdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
-    pdo->Flags &= ~DO_DEVICE_INITIALIZING;
-    #ifdef RIS
-    dev->State = Started;
-    #endif
-
-    return pdo;
-
-    IoDeleteDevice(pdo);
-    err_pdo:
 
     return NULL;
   }
