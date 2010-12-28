@@ -60,15 +60,6 @@ static winvblock__bool WvBusAddWorkItem_(
   );
 static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(WV_SP_BUS_T);
 
-/* Globals. */
-WV_S_DEV_IRP_MJ WvBusIrpMj_ = {
-    (WV_FP_DEV_DISPATCH) 0,
-    (WV_FP_DEV_DISPATCH) 0,
-    (WV_FP_DEV_CTL) 0,
-    (WV_FP_DEV_SCSI) 0,
-    (WV_FP_DEV_PNP) 0,
-  };
-
 /* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
 winvblock__lib_func NTSTATUS STDCALL WvBusSysCtl(
     IN WV_SP_BUS_T Bus,
@@ -175,7 +166,6 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T Bus) {
     KeInitializeEvent(&Bus->ThreadStopped, SynchronizationEvent, FALSE);
     Bus->Dev.Ops.Init = WvBusDevInit_;
     Bus->Dev.ext = Bus;
-    Bus->Dev.IrpMj = &WvBusIrpMj_;
     Bus->Dev.IsBus = TRUE;
   }
 
