@@ -35,9 +35,6 @@
 #include "bus.h"
 #include "debug.h"
 
-/* IRP_MJ_DEVICE_CONTROL dispatcher from bus/dev_ctl.c */
-extern WV_F_DEV_CTL WvBusDevCtlDispatch;
-
 /* Types. */
 typedef enum WV_BUS_WORK_ITEM_CMD_ {
     WvBusWorkItemCmdAddPdo_,
@@ -67,7 +64,7 @@ static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(WV_SP_BUS_T);
 WV_S_DEV_IRP_MJ WvBusIrpMj_ = {
     (WV_FP_DEV_DISPATCH) 0,
     (WV_FP_DEV_DISPATCH) 0,
-    WvBusDevCtlDispatch,
+    (WV_FP_DEV_CTL) 0,
     (WV_FP_DEV_SCSI) 0,
     (WV_FP_DEV_PNP) 0,
   };

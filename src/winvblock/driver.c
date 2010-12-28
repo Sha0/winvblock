@@ -80,6 +80,7 @@ static driver__dispatch_func driver__dispatch_scsi_;
 static driver__dispatch_func driver__dispatch_pnp_;
 static void STDCALL driver__unload_(IN PDRIVER_OBJECT);
 static WV_F_DEV_DISPATCH WvDriverBusSysCtl_;
+static WV_F_DEV_CTL WvDriverBusDevCtl_;
 static WV_F_DEV_DISPATCH WvDriverBusPower_;
 static WV_F_DEV_PNP WvDriverBusPnp_;
 
@@ -185,6 +186,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     WvDriverBus_.Dev.Self = WvDriverBus_.Fdo = fdo;
     WvDriverBus_.Dev.IsBus = TRUE;
     WvDriverBus_.Dev.IrpMj->SysCtl = WvDriverBusSysCtl_;
+    WvDriverBus_.Dev.IrpMj->DevCtl = WvDriverBusDevCtl_;
     WvDriverBus_.Dev.IrpMj->Power = WvDriverBusPower_;
     WvDriverBus_.Dev.IrpMj->Pnp = WvDriverBusPnp_;
     WvDriverBus_.PhysicalDeviceObject = PhysicalDeviceObject;
@@ -639,4 +641,75 @@ winvblock__lib_func winvblock__bool STDCALL WvDriverBusAddDev(
 
     DBG("Exit\n");
     return TRUE;
+  }
+
+static NTSTATUS STDCALL WvDriverBusDevCtlDiskDetach_(
+    IN WV_SP_DEV_T dev,
+    IN PIRP irp
+  ) {
+    winvblock__uint8_ptr buffer = irp->AssociatedIrp.SystemBuffer;
+    winvblock__uint32 disk_num = *(winvblock__uint32_ptr) buffer;
+    WV_SP_DEV_T dev_walker;
+    WV_SP_DISK_T disk_walker = NULL, prev_disk_walker;
+    WV_SP_BUS_T bus;
+
+    DBG("Request to detach disk: %d\n", disk_num);
+    bus = WvBusFromDev(dev);
+    dev_walker = bus->first_child;
+    if (dev_walker != NULL)
+      disk_walker = disk__get_ptr(dev_walker);
+    prev_disk_walker = disk_walker;
+    while ((disk_walker != NULL) && (dev_walker->DevNum != disk_num)) {
+        prev_disk_walker = disk_walker;
+        dev_walker = dev_walker->next_sibling_ptr;
+        if (dev_walker != NULL)
+          disk_walker = disk__get_ptr(dev_walker);
+      }
+    if (disk_walker != NULL) {
+        if (disk_walker->BootDrive) {
+            DBG("Cannot unmount a boot drive.\n");
+            irp->IoStatus.Information = 0;
+            return STATUS_INVALID_DEVICE_REQUEST;
+          }
+        DBG("Deleting disk %d\n", dev_walker->DevNum);
+        if (disk_walker == disk__get_ptr(bus->first_child))
+          bus->first_child = dev_walker->next_sibling_ptr;
+          else {
+            prev_disk_walker->Dev->next_sibling_ptr =
+              dev_walker->next_sibling_ptr;
+          }
+        disk_walker->Unmount = TRUE;
+        dev_walker->next_sibling_ptr = NULL;
+        if (bus->PhysicalDeviceObject != NULL)
+          IoInvalidateDeviceRelations(bus->PhysicalDeviceObject, BusRelations);
+      }
+    bus->Children--;
+    irp->IoStatus.Information = 0;
+    return STATUS_SUCCESS;
+  }
+
+NTSTATUS STDCALL WvDriverBusDevCtl_(
+    IN WV_SP_DEV_T dev,
+    IN PIRP irp,
+    IN ULONG POINTER_ALIGNMENT code
+  ) {
+    NTSTATUS status;
+
+    switch (code) {
+        case IOCTL_FILE_ATTACH:
+          status = filedisk__attach(dev, irp);
+          break;
+
+        case IOCTL_FILE_DETACH:
+          status = WvDriverBusDevCtlDiskDetach_(dev, irp);
+          break;
+
+        default:
+          irp->IoStatus.Information = 0;
+          status = STATUS_INVALID_DEVICE_REQUEST;
+      }
+
+    irp->IoStatus.Status = status;
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    return status;
   }
