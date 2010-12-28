@@ -51,7 +51,7 @@ winvblock__bool AoeBusCreate(void);
 void AoeBusFree(void);
 
 /* Globals. */
-WV_SP_BUS_T AoeBusMain = NULL;
+WV_S_BUS_T AoeBusMain = {0};
 static UNICODE_STRING AoeBusName_ = {
     sizeof AOE_M_BUS_NAME_,
     sizeof AOE_M_BUS_NAME_,
@@ -101,24 +101,14 @@ static NTSTATUS STDCALL AoeBusDevCtlDispatch_(
  * @ret         TRUE for success, else FALSE.
  */
 winvblock__bool AoeBusCreate(void) {
-    WV_SP_BUS_T new_bus;
     NTSTATUS status;
 
-    /* We should only be called once. */
-    if (AoeBusMain) {
-        DBG("AoE bus already created\n");
-        return FALSE;
-      }
-    /* Try to create the AoE bus. */
-    new_bus = WvBusCreate();
-    if (!new_bus) {
-        DBG("Failed to create AoE bus!\n");
-        goto err_new_bus;
-      }
+    /* Initialize the AoE bus. */
+    WvBusInit(&AoeBusMain);
     /* When the PDO is created, we need to handle PnP ID queries. */
-    new_bus->Dev.Ops.PnpId = AoeBusPnpId_;
+    AoeBusMain.Dev.Ops.PnpId = AoeBusPnpId_;
     /* Add it as a sub-bus to WinVBlock. */
-    if (!WvDriverBusAddDev(&new_bus->Dev)) {
+    if (!WvDriverBusAddDev(&AoeBusMain.Dev)) {
         DBG("Couldn't add AoE bus to WinVBlock bus!\n");
         goto err_add_child;
       }
@@ -132,33 +122,25 @@ winvblock__bool AoeBusCreate(void) {
         goto err_dos_symlink;
       }
     /* All done. */
-    AoeBusMain = new_bus;
     return TRUE;
 
     IoDeleteSymbolicLink(&AoeBusDosname_);
     err_dos_symlink:
 
-    IoDeleteDevice(AoeBusMain->Dev.Self);
+    IoDeleteDevice(AoeBusMain.Dev.Self);
     err_add_child:
-
-    WvDevFree(&new_bus->Dev);
-    err_new_bus:
 
     return FALSE;
   }
 
 /* Destroy the AoE bus. */
 void AoeBusFree(void) {
-    if (!AoeBusMain)
-      /* Nothing to do. */
-      return;
-
     IoDeleteSymbolicLink(&AoeBusDosname_);
-    IoDeleteDevice(AoeBusMain->Dev.Self);
+    IoDeleteDevice(AoeBusMain.Dev.Self);
     #if 0
-    bus__remove_child(driver__bus(), &AoeBusMain->Dev);
+    bus__remove_child(driver__bus(), &AoeBusMain.Dev);
     #endif
-    WvDevFree(&AoeBusMain->Dev);
+    WvDevFree(&AoeBusMain.Dev);
     return;
   }
 
