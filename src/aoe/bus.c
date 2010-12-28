@@ -78,16 +78,13 @@ static NTSTATUS STDCALL AoeBusDevCtlDispatch_(
         case IOCTL_AOE_MOUNT:
           return aoe__mount(dev, irp);
 
-        case IOCTL_AOE_UMOUNT: {
-            WV_SP_BUS_T bus = WvBusFromDev(dev);
-
-            /* Pretend it's an IOCTL_FILE_DETACH. */
-            return WvDevFromDevObj(bus->LowerDeviceObject)->IrpMj->DevCtl(
-                dev,
-                irp,
-                IOCTL_FILE_DETACH
-              );
-          }
+        case IOCTL_AOE_UMOUNT:
+          /* Pretend it's an IOCTL_FILE_DETACH. */
+          return AoeBusMain.Dev.IrpMj->DevCtl(
+              dev,
+              irp,
+              IOCTL_FILE_DETACH
+            );
 
         default:
           DBG("Unsupported IOCTL\n");
