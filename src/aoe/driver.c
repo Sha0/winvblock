@@ -51,7 +51,7 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject(
   );
 
 /* From aoe/bus.c */
-extern WV_SP_BUS_T AoeBusMain;
+extern WV_S_BUS_T AoeBusMain;
 extern winvblock__bool AoeBusCreate(void);
 extern void AoeBusFree(void);
 /* From aoe/registry.c */
@@ -1668,7 +1668,7 @@ NTSTATUS STDCALL aoe__show(
 
     DBG("Got IOCTL_AOE_SHOW...\n");
 
-    bus = WvBusFromDev(dev);
+    bus = &AoeBusMain;
     dev_walker = bus->first_child;
     count = 0;
     while (dev_walker != NULL) {
