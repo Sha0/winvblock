@@ -595,3 +595,48 @@ static NTSTATUS STDCALL WvDriverBusPnp_(
     return WvBusPnp(bus, irp, code);
   }
     
+/**
+ * Add a child node to the bus.
+ *
+ * @v Dev               Points to the child device to add.
+ * @ret                 TRUE for success, FALSE for failure.
+ */
+winvblock__lib_func winvblock__bool STDCALL WvDriverBusAddDev(
+    IN OUT WV_SP_DEV_T Dev
+  ) {
+    /* The new node's device object. */
+    PDEVICE_OBJECT dev_obj;
+
+    DBG("Entry\n");
+    if (!WvDriverBusFdo_ || !Dev) {
+        DBG("No bus or no device!\n");
+        return FALSE;
+      }
+    /* Create the child device. */
+    dev_obj = WvDevCreatePdo(Dev);
+    if (!dev_obj) {
+        DBG("PDO creation failed!\n");
+        return FALSE;
+      }
+    /* Create a node.  TODO: Put the node somewhere better. */
+    Dev->BusNode = wv_malloc(sizeof *(Dev->BusNode));
+    if (!Dev->BusNode) {
+        DBG("Couldn't allocate node storage!\n");
+        IoDeleteDevice(dev_obj);
+        return FALSE;
+      }
+    WvBusInitNode(Dev->BusNode, dev_obj);
+    /* Associate the parent bus. */
+    Dev->Parent = WvDriverBus_.Dev.Self;
+    /*
+     * Initialize the device.  For disks, this routine is responsible for
+     * determining the disk's geometry appropriately for AoE/RAM/file disks.
+     */
+    Dev->Ops.Init(Dev);
+    dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
+    /* Add the new PDO device to the bus' list of children. */
+    WvBusAddNode(&WvDriverBus_, Dev->BusNode);
+
+    DBG("Exit\n");
+    return TRUE;
+  }

@@ -1586,7 +1586,7 @@ static void AoeProcessAbft_(void) {
     aoe_disk->Timeout = 200000;          /* 20 ms. */
     aoe_disk->disk->BootDrive = TRUE;
     aoe_disk->disk->Media = WvDiskMediaTypeHard;
-    WvBusAddChild(driver__bus(), aoe_disk->disk->Dev);
+    WvDriverBusAddDev(aoe_disk->disk->Dev);
     return;
 
     out_no_abft:
@@ -1761,7 +1761,7 @@ NTSTATUS STDCALL aoe__mount(
     aoe_disk->Timeout = 200000;             /* 20 ms. */
     aoe_disk->disk->BootDrive = FALSE;
     aoe_disk->disk->Media = WvDiskMediaTypeHard;
-    WvBusAddChild(driver__bus(), aoe_disk->disk->Dev);
+    WvDriverBusAddDev(aoe_disk->disk->Dev);
 
     return driver__complete_irp(irp, 0, STATUS_SUCCESS);
   }

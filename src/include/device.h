@@ -38,7 +38,7 @@ typedef enum WV_DEV_STATE {
     WvDevStates
   } WV_E_DEV_STATE, * WV_EP_DEV_STATE;
 
-/* Forward declaration. */
+/* Forward declarations. */
 typedef struct WV_DEV_T WV_S_DEV_T, * WV_SP_DEV_T;
 
 /**
@@ -177,6 +177,8 @@ struct WV_DEV_T {
     WV_E_DEV_STATE State;
     /* Previous state of the device. */
     WV_E_DEV_STATE OldState;
+    /* Support being a node on a bus. */
+    struct WV_BUS_NODE * BusNode;
     /* The next device in the parent bus' devices.  TODO: Don't do this. */
     WV_SP_DEV_T next_sibling_ptr;
     /* The device operations. */

@@ -76,10 +76,6 @@ extern NTSTATUS STDCALL WvBusGetDevCapabilities(
   );
 extern winvblock__lib_func void WvBusInit(WV_SP_BUS_T);
 extern winvblock__lib_func WV_SP_BUS_T WvBusCreate(void);
-extern winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
-    IN OUT WV_SP_BUS_T,
-    IN WV_SP_DEV_T
-  );
 extern winvblock__lib_func WV_SP_BUS_T WvBusFromDev(WV_SP_DEV_T);
 extern winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T);
 extern winvblock__lib_func void WvBusCancelWorkItems(WV_SP_BUS_T);

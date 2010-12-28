@@ -74,86 +74,6 @@ WV_S_DEV_IRP_MJ WvBusIrpMj_ = {
     (WV_FP_DEV_PNP) 0,
   };
 
-/**
- * Add a child node to the bus.
- *
- * @v Bus               Points to the bus receiving the child.
- * @v Dev               Points to the child device to add.
- * @ret                 TRUE for success, FALSE for failure.
- */
-winvblock__lib_func winvblock__bool STDCALL WvBusAddChild(
-    IN OUT WV_SP_BUS_T Bus,
-    IN OUT WV_SP_DEV_T Dev
-  ) {
-    /* The new node's device object. */
-    PDEVICE_OBJECT dev_obj;
-    /* Walks the child nodes. */
-    WV_SP_DEV_T walker;
-    winvblock__uint32 dev_num;
-
-    DBG("Entry\n");
-    if ((Bus == NULL) || (Dev == NULL)) {
-        DBG("No bus or no device!\n");
-        return FALSE;
-      }
-    /* Create the child device. */
-    dev_obj = WvDevCreatePdo(Dev);
-    if (dev_obj == NULL) {
-        DBG("PDO creation failed!\n");
-        WvDevFree(Dev);
-        return FALSE;
-      }
-
-    Dev->Parent = Bus->Dev.Self;
-    /*
-     * Initialize the device.  For disks, this routine is responsible for
-     * determining the disk's geometry appropriately for AoE/RAM/file disks.
-     */
-    Dev->Ops.Init(Dev);
-    dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
-    /* Add the new device's extension to the bus' list of children. */
-    dev_num = 0;
-    if (Bus->first_child == NULL) {
-        Bus->first_child = Dev;
-      } else {
-        walker = Bus->first_child;
-        /* If the first child device number isn't 0... */
-        if (walker->DevNum) {
-            /* We insert before. */
-            Dev->next_sibling_ptr = walker;
-            Bus->first_child = Dev;
-          } else {
-            while (walker->next_sibling_ptr != NULL) {
-                /* If there's a gap in the device numbers for the bus... */
-                if (walker->DevNum < walker->next_sibling_ptr->DevNum - 1) {
-                    /* Insert here, instead of at the end. */
-                    dev_num = walker->DevNum + 1;
-                    Dev->next_sibling_ptr = walker->next_sibling_ptr;
-                    walker->next_sibling_ptr = Dev;
-                    break;
-                  }
-                walker = walker->next_sibling_ptr;
-                dev_num = walker->DevNum + 1;
-              }
-            /* If we haven't already inserted the device... */
-            if (!Dev->next_sibling_ptr) {
-                walker->next_sibling_ptr = Dev;
-                dev_num = walker->DevNum + 1;
-              }
-          }
-      }
-    Dev->DevNum = dev_num;
-    Bus->Children++;
-    if (Bus->PhysicalDeviceObject != NULL) {
-        IoInvalidateDeviceRelations(
-            Bus->PhysicalDeviceObject,
-            BusRelations
-          );
-      }
-    DBG("Exit\n");
-    return TRUE;
-  }
-
 /* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
 winvblock__lib_func NTSTATUS STDCALL WvBusSysCtl(
     IN WV_SP_BUS_T Bus,
@@ -492,17 +412,20 @@ winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T Bus) {
     PIO_STACK_LOCATION io_stack_loc;
     PDEVICE_OBJECT dev_obj;
     PDRIVER_OBJECT driver_obj;
+    winvblock__bool nodes_changed;
 
     while (work_item = WvBusGetWorkItem_(Bus)) {
         switch (work_item->Cmd) {
             case WvBusWorkItemCmdAddPdo_:
               node = work_item->Context.Node;
               WvBusAddNode_(Bus, node);
+              nodes_changed = TRUE;
               break;
 
             case WvBusWorkItemCmdRemovePdo_:
               node = work_item->Context.Node;
               WvBusRemoveNode_(Bus, node);
+              nodes_changed = TRUE;
               break;
 
             case WvBusWorkItemCmdProcessIrp_:
@@ -520,6 +443,13 @@ winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T Bus) {
               DBG("Unknown work item type!\n");
           }
         wv_free(work_item);
+      }
+    if (nodes_changed && Bus->PhysicalDeviceObject) {
+        nodes_changed = FALSE;
+        IoInvalidateDeviceRelations(
+            Bus->PhysicalDeviceObject,
+            BusRelations
+          );
       }
     return;
   }

@@ -67,5 +67,8 @@ extern winvblock__lib_func NTSTATUS STDCALL driver__complete_irp(
     IN ULONG_PTR,
     IN NTSTATUS
   );
+extern winvblock__lib_func winvblock__bool STDCALL WvDriverBusAddDev(
+    IN WV_SP_DEV_T
+  );
 
 #endif	/* WV_M_DRIVER_H_ */

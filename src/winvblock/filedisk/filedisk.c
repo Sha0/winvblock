@@ -223,7 +223,7 @@ NTSTATUS STDCALL filedisk__attach(IN WV_SP_DEV_T dev, IN PIRP irp) {
       filedisk_ptr->hash += *path_iterator++;
   }
   /* Add the filedisk to the bus. */
-  if (!WvBusAddChild(driver__bus(), filedisk_ptr->disk->Dev)) {
+  if (!WvDriverBusAddDev(filedisk_ptr->disk->Dev)) {
       status = STATUS_UNSUCCESSFUL;
       goto err_add_child;
     }

@@ -100,7 +100,7 @@ static winvblock__bool STDCALL WvMemdiskCheckMbft_(
     ramdisk->disk->BootDrive = TRUE;
 
     /* Add the ramdisk to the bus. */
-    if (!WvBusAddChild(driver__bus(), ramdisk->disk->Dev)) {
+    if (!WvDriverBusAddDev(ramdisk->disk->Dev)) {
         WvDevFree(ramdisk->disk->Dev);
         return FALSE;
       }
