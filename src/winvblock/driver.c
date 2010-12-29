@@ -517,6 +517,7 @@ static NTSTATUS driver__dispatch_pnp_(
     /* WvDevFromDevObj() checks for a NULL dev_obj */
     WV_SP_DEV_T dev = WvDevFromDevObj(dev_obj);
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    NTSTATUS status;
 
     #ifdef DEBUGIRPS
     Debug_IrpStart(dev_obj, irp);
@@ -526,11 +527,16 @@ static NTSTATUS driver__dispatch_pnp_(
       return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Call the particular device's power handler. */
     if (dev->IrpMj && dev->IrpMj->Pnp) {
-        return dev->IrpMj->Pnp(
+        status = dev->IrpMj->Pnp(
             dev,
             irp,
             io_stack_loc->MinorFunction
           );
+        if (dev->IsBus) {
+            dev->OldState = WvDriverBus_.OldState;
+            dev->State = WvDriverBus_.State;
+          }
+        return status;
       }
     /* Otherwise, we don't support the IRP. */
     return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);

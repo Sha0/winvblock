@@ -38,6 +38,18 @@
 typedef void STDCALL WV_F_BUS_THREAD(IN WV_SP_BUS_T);
 typedef WV_F_BUS_THREAD * WV_FP_BUS_THREAD;
 
+/* Device state. */
+typedef enum WV_BUS_STATE {
+    WvBusStateNotStarted,
+    WvBusStateStarted,
+    WvBusStateStopPending,
+    WvBusStateStopped,
+    WvBusStateRemovePending,
+    WvBusStateSurpriseRemovePending,
+    WvBusStateDeleted,
+    WvBusStates
+  } WV_E_BUS_STATE, * WV_EP_BUS_STATE;
+
 /* The bus type. */
 typedef struct WV_BUS_T {
     WV_S_DEV_T Dev;
@@ -50,6 +62,8 @@ typedef struct WV_BUS_T {
     KEVENT ThreadSignal;
     winvblock__bool Stop;
     KEVENT ThreadStopped;
+    WV_E_BUS_STATE OldState;
+    WV_E_BUS_STATE State;
     struct {
         LIST_ENTRY Nodes;
         USHORT NodeCount;

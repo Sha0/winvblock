@@ -71,8 +71,8 @@ static NTSTATUS STDCALL WvBusPnpStartDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
         KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, NULL);
       }
     if (NT_SUCCESS(status = irp->IoStatus.Status)) {
-        bus->Dev.OldState = bus->Dev.State;
-        bus->Dev.State = WvDevStateStarted;
+        bus->OldState = bus->State;
+        bus->State = WvBusStateStarted;
       }
     return driver__complete_irp(
         irp,
@@ -101,8 +101,8 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
     /* If we get here, we should be called by WvBusProcessWorkItems() */
     status = STATUS_SUCCESS;
     lower = bus->LowerDeviceObject;
-    dev->OldState = dev->State;
-    dev->State = WvDevStateDeleted;
+    bus->OldState = bus->State;
+    bus->State = WvBusStateDeleted;
     /* Pass the IRP on to any lower DEVICE_OBJECT */
     if (lower) {
         irp->IoStatus.Information = 0;
@@ -363,7 +363,6 @@ static NTSTATUS STDCALL WvBusPnpSimple_(
     IN UCHAR code
   ) {
     NTSTATUS status;
-    WV_SP_DEV_T dev = &bus->Dev;
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
 
     switch (code) {
@@ -375,41 +374,41 @@ static NTSTATUS STDCALL WvBusPnpSimple_(
 
         case IRP_MN_QUERY_STOP_DEVICE:
           DBG("bus_pnp: IRP_MN_QUERY_STOP_DEVICE\n");
-          dev->OldState = dev->State;
-          dev->State = WvDevStateStopPending;
+          bus->OldState = bus->State;
+          bus->State = WvBusStateStopPending;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_CANCEL_STOP_DEVICE:
           DBG("bus_pnp: IRP_MN_CANCEL_STOP_DEVICE\n");
-          dev->State = dev->OldState;
+          bus->State = bus->OldState;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_STOP_DEVICE:
           DBG("bus_pnp: IRP_MN_STOP_DEVICE\n");
-          dev->OldState = dev->State;
-          dev->State = WvDevStateStopped;
+          bus->OldState = bus->State;
+          bus->State = WvBusStateStopped;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_QUERY_REMOVE_DEVICE:
           DBG("bus_pnp: IRP_MN_QUERY_REMOVE_DEVICE\n");
-          dev->OldState = dev->State;
-          dev->State = WvDevStateRemovePending;
+          bus->OldState = bus->State;
+          bus->State = WvBusStateRemovePending;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_CANCEL_REMOVE_DEVICE:
           DBG("bus_pnp: IRP_MN_CANCEL_REMOVE_DEVICE\n");
-          dev->State = dev->OldState;
+          bus->State = bus->OldState;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_SURPRISE_REMOVAL:
           DBG("bus_pnp: IRP_MN_SURPRISE_REMOVAL\n");
-          dev->OldState = dev->State;
-          dev->State = WvDevStateSurpriseRemovePending;
+          bus->OldState = bus->State;
+          bus->State = WvBusStateSurpriseRemovePending;
           status = STATUS_SUCCESS;
           break;
 
