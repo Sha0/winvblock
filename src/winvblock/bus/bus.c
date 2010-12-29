@@ -90,11 +90,6 @@ winvblock__lib_func NTSTATUS STDCALL WvBusPower(
     return driver__complete_irp(Irp, 0, STATUS_SUCCESS);
   }
 
-/* Initialize a bus. */
-static winvblock__bool STDCALL WvBusDevInit_(IN WV_SP_DEV_T dev) {
-    return TRUE;
-  }
-
 /**
  * Initialize bus defaults.
  *
@@ -110,7 +105,6 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T Bus) {
     InitializeListHead(&Bus->BusPrivate_.WorkItems);
     KeInitializeEvent(&Bus->ThreadSignal, SynchronizationEvent, FALSE);
     KeInitializeEvent(&Bus->ThreadStopped, SynchronizationEvent, FALSE);
-    Bus->Dev.Ops.Init = WvBusDevInit_;
     Bus->Dev.ext = Bus;
     Bus->Dev.IsBus = TRUE;
   }
