@@ -279,7 +279,7 @@ winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T Bus) {
             case WvBusWorkItemCmdProcessIrp_:
               irp = work_item->Context.Irp;
               io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-              dev_obj = Bus->Dev.Self;
+              dev_obj = Bus->Fdo;
               driver_obj = dev_obj->DriverObject;
               driver_obj->MajorFunction[io_stack_loc->MajorFunction](
                   dev_obj,
@@ -458,7 +458,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
     if (
         !Bus ||
         !Node ||
-        Bus->Dev.Self->DriverObject != Node->BusPrivate_.Pdo->DriverObject
+        Bus->Fdo->DriverObject != Node->BusPrivate_.Pdo->DriverObject
       )
       return STATUS_INVALID_PARAMETER;
 
