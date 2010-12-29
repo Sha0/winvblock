@@ -563,19 +563,6 @@ winvblock__lib_func NTSTATUS STDCALL Error(
     return Status;
   }
 
-/**
- * Get a pointer to the driver bus device.
- *
- * @ret         A pointer to the driver bus, or NULL.
- */
-winvblock__lib_func WV_SP_BUS_T driver__bus(void) {
-    if (!WvDriverBusFdo_) {
-        DBG("No driver bus device!\n");
-        return NULL;
-      }
-    return WvBusFromDev(WvDevFromDevObj(WvDriverBusFdo_));
-  }
-
 /* Pass an IRP_MJ_SYSTEM_CONTROL IRP to the bus. */
 static NTSTATUS STDCALL WvDriverBusSysCtl_(IN WV_SP_DEV_T dev, IN PIRP irp) {
     WV_SP_BUS_T bus = WvBusFromDev(dev);

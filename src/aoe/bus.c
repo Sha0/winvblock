@@ -134,10 +134,7 @@ winvblock__bool AoeBusCreate(void) {
 void AoeBusFree(void) {
     IoDeleteSymbolicLink(&AoeBusDosname_);
     IoDeleteDevice(AoeBusMain.Dev.Self);
-    #if 0
-    bus__remove_child(driver__bus(), &AoeBusMain.Dev);
-    #endif
-    WvDevFree(&AoeBusMain.Dev);
+    WvBusRemoveNode(AoeBusMain.Dev.BusNode);
     return;
   }
 
