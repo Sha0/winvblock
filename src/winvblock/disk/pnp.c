@@ -204,9 +204,7 @@ static NTSTATUS STDCALL disk_pnp__query_capabilities_(
       io_stack_loc->Parameters.DeviceCapabilities.Capabilities;
     NTSTATUS status;
     WV_SP_DISK_T disk;
-    WV_SP_BUS_T bus;
     DEVICE_CAPABILITIES ParentDeviceCapabilities;
-    PDEVICE_OBJECT bus_lower;
 
     if (DeviceCapabilities->Version != 1 ||
         DeviceCapabilities->Size < sizeof (DEVICE_CAPABILITIES)
@@ -215,19 +213,7 @@ static NTSTATUS STDCALL disk_pnp__query_capabilities_(
         goto out;
       }
     disk = disk__get_ptr(dev);
-    bus = WvBusFromDev(WvDevFromDevObj(dev->Parent));
-    bus_lower = bus->LowerDeviceObject;
-    if (bus_lower) {
-        status = WvDriverGetDevCapabilities(
-            bus_lower,
-            &ParentDeviceCapabilities
-          );
-      } else {
-        status = WvDriverGetDevCapabilities(
-            bus->Dev.Self,
-            &ParentDeviceCapabilities
-          );
-      }      
+    status = WvDriverGetDevCapabilities(dev->Parent, &ParentDeviceCapabilities);
     if (!NT_SUCCESS(status))
       goto out;
 
