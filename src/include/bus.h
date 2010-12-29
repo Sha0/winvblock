@@ -38,6 +38,16 @@
 typedef void STDCALL WV_F_BUS_THREAD(IN WV_SP_BUS_T);
 typedef WV_F_BUS_THREAD * WV_FP_BUS_THREAD;
 
+/**
+ * A bus PnP routine.
+ *
+ * @v bus               The bus to receive the PnP IRP.
+ * @v irp               The IRP to process.
+ * @ret NTSTATUS        The status of the operation.
+ */
+typedef NTSTATUS STDCALL WV_F_BUS_PNP(IN WV_SP_BUS_T, IN PIRP);
+typedef WV_F_BUS_PNP * WV_FP_BUS_PNP;
+
 /* Device state. */
 typedef enum WV_BUS_STATE {
     WvBusStateNotStarted,
@@ -64,6 +74,7 @@ typedef struct WV_BUS_T {
     KEVENT ThreadStopped;
     WV_E_BUS_STATE OldState;
     WV_E_BUS_STATE State;
+    WV_FP_BUS_PNP QueryDevText;
     struct {
         LIST_ENTRY Nodes;
         USHORT NodeCount;
