@@ -72,7 +72,6 @@ typedef struct WV_BUS_NODE {
 /* Exports. */
 extern winvblock__lib_func void WvBusInit(WV_SP_BUS_T);
 extern winvblock__lib_func WV_SP_BUS_T WvBusCreate(void);
-extern winvblock__lib_func WV_SP_BUS_T WvBusFromDev(WV_SP_DEV_T);
 extern winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T);
 extern winvblock__lib_func void WvBusCancelWorkItems(WV_SP_BUS_T);
 extern winvblock__lib_func NTSTATUS WvBusStartThread(WV_SP_BUS_T);

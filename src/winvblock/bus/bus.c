@@ -145,16 +145,6 @@ winvblock__lib_func WV_SP_BUS_T WvBusCreate(void) {
   }
 
 /**
- * Get a bus from a device.
- *
- * @v dev       A pointer to a device.
- * @ret         A pointer to the device's associated bus.
- */
-extern winvblock__lib_func WV_SP_BUS_T WvBusFromDev(WV_SP_DEV_T Dev) {
-    return Dev->ext;
-  }
-
-/**
  * Add a work item for a bus to process.
  *
  * @v bus                       The bus to process the work item.
