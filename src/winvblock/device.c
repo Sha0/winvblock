@@ -41,14 +41,14 @@ static WV_F_DEV_CREATE_PDO WvDevMakePdo_;
 /**
  * Initialize device defaults.
  *
- * @v dev               Points to the device to initialize with defaults.
+ * @v Dev               Points to the device to initialize with defaults.
  */
-winvblock__lib_func void WvDevInit(WV_SP_DEV_T dev) {
-    RtlZeroMemory(dev, sizeof *dev);
+winvblock__lib_func void WvDevInit(WV_SP_DEV_T Dev) {
+    RtlZeroMemory(Dev, sizeof *Dev);
     /* Populate non-zero device defaults. */
-    dev->DriverObject = WvDriverObj;
-    dev->Ops.CreatePdo = WvDevMakePdo_;
-    dev->Ops.Free = WvDevFreeDev_;
+    Dev->DriverObject = WvDriverObj;
+    Dev->Ops.CreatePdo = WvDevMakePdo_;
+    Dev->Ops.Free = WvDevFreeDev_;
   }
 
 /**
@@ -78,10 +78,10 @@ winvblock__lib_func WV_SP_DEV_T WvDevCreate(void) {
 /**
  * Create a device PDO.
  *
- * @v dev               Points to the device that needs a PDO.
+ * @v Dev               Points to the device that needs a PDO.
  */
-winvblock__lib_func PDEVICE_OBJECT STDCALL WvDevCreatePdo(IN WV_SP_DEV_T dev) {
-    return dev->Ops.CreatePdo(dev);
+winvblock__lib_func PDEVICE_OBJECT STDCALL WvDevCreatePdo(IN WV_SP_DEV_T Dev) {
+    return Dev->Ops.CreatePdo ? Dev->Ops.CreatePdo(Dev) : NULL;
   }
 
 /**
@@ -168,22 +168,25 @@ NTSTATUS STDCALL WvDevPnpQueryId(IN WV_SP_DEV_T dev, IN PIRP irp) {
 /**
  * Close a device.
  *
- * @v dev               Points to the device to close.
+ * @v Dev               Points to the device to close.
  */
-winvblock__lib_func void STDCALL WvDevClose(IN WV_SP_DEV_T dev) {
+winvblock__lib_func void STDCALL WvDevClose(IN WV_SP_DEV_T Dev) {
     /* Call the device's close routine. */
-    dev->Ops.Close(dev);
+    if (Dev->Ops.Close)
+      Dev->Ops.Close(Dev);
     return;
   }
 
 /**
  * Delete a device.
  *
- * @v dev               Points to the device to delete.
+ * @v Dev               Points to the device to delete.
  */
-winvblock__lib_func void STDCALL WvDevFree(IN WV_SP_DEV_T dev) {
+winvblock__lib_func void STDCALL WvDevFree(IN WV_SP_DEV_T Dev) {
     /* Call the device's free routine. */
-    dev->Ops.Free(dev);
+    if (Dev->Ops.Free)
+      Dev->Ops.Free(Dev);
+    return;
   }
 
 /**
