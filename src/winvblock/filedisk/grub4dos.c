@@ -493,7 +493,7 @@ filedisk_grub4dos__find (
 	  filedisk_ptr->hash = 'G4DX';
 	  ( ( winvblock__uint8 * ) & filedisk_ptr->hash )[0] =
 	    Grub4DosDriveMapSlotPtr[i].SourceDrive;
-	  filedisk_ptr->disk->BootDrive = TRUE;
+	  filedisk_ptr->disk->Dev->Boot = TRUE;
 	  FoundGrub4DosMapping = TRUE;
 	  /* Add the filedisk to the bus. */
 	  if (!WvDriverBusAddDev(filedisk_ptr->disk->Dev))

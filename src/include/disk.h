@@ -106,7 +106,6 @@ struct WV_DISK_T {
     WV_S_DEV_T Dev[1];
     KEVENT SearchEvent;
     KSPIN_LOCK SpinLock;
-    winvblock__bool BootDrive;
     winvblock__bool Unmount;
     WV_E_DISK_MEDIA_TYPE Media;
     WV_S_DISK_OPS disk_ops;

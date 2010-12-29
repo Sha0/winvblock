@@ -187,6 +187,8 @@ struct WV_DEV_T {
     winvblock__any_ptr ext;
     /* How to handle IRPs based on major function code. */
     WV_SP_DEV_IRP_MJ IrpMj;
+    /* Was the device established at boot time? */
+    winvblock__bool Boot;
   };
 
 extern winvblock__lib_func WV_SP_DEV_T WvDevFromDevObj(PDEVICE_OBJECT);

@@ -97,7 +97,7 @@ static winvblock__bool STDCALL WvMemdiskCheckMbft_(
     ramdisk->disk->Cylinders = mbft->mdi.cylinders;
     ramdisk->disk->Heads = mbft->mdi.heads;
     ramdisk->disk->Sectors = mbft->mdi.sectors;
-    ramdisk->disk->BootDrive = TRUE;
+    ramdisk->disk->Dev->Boot = TRUE;
 
     /* Add the ramdisk to the bus. */
     if (!WvDriverBusAddDev(ramdisk->disk->Dev)) {

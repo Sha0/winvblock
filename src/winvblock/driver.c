@@ -666,7 +666,7 @@ static NTSTATUS STDCALL WvDriverBusDevCtlDiskDetach_(
           disk_walker = disk__get_ptr(dev_walker);
       }
     if (disk_walker != NULL) {
-        if (disk_walker->BootDrive) {
+        if (disk_walker->Dev->Boot) {
             DBG("Cannot unmount a boot drive.\n");
             irp->IoStatus.Information = 0;
             return STATUS_INVALID_DEVICE_REQUEST;

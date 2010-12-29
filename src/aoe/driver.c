@@ -1584,7 +1584,7 @@ static void AoeProcessAbft_(void) {
     aoe_disk->Minor = AoEBootRecord.Minor;
     aoe_disk->MaxSectorsPerPacket = 1;
     aoe_disk->Timeout = 200000;          /* 20 ms. */
-    aoe_disk->disk->BootDrive = TRUE;
+    aoe_disk->disk->Dev->Boot = TRUE;
     aoe_disk->disk->Media = WvDiskMediaTypeHard;
     WvDriverBusAddDev(aoe_disk->disk->Dev);
     return;
@@ -1759,7 +1759,7 @@ NTSTATUS STDCALL aoe__mount(
     aoe_disk->Minor = (winvblock__uint8) buffer[8];
     aoe_disk->MaxSectorsPerPacket = 1;
     aoe_disk->Timeout = 200000;             /* 20 ms. */
-    aoe_disk->disk->BootDrive = FALSE;
+    aoe_disk->disk->Dev->Boot = FALSE;
     aoe_disk->disk->Media = WvDiskMediaTypeHard;
     WvDriverBusAddDev(aoe_disk->disk->Dev);
 

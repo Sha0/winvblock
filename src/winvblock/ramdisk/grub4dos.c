@@ -139,7 +139,7 @@ ramdisk_grub4dos__find (
 	  ramdisk_ptr->disk->Cylinders =
 	    ramdisk_ptr->disk->LBADiskSize / ( ramdisk_ptr->disk->Heads *
 					       ramdisk_ptr->disk->Sectors );
-	  ramdisk_ptr->disk->BootDrive = TRUE;
+	  ramdisk_ptr->disk->Dev->Boot = TRUE;
 	  FoundGrub4DosMapping = TRUE;
  	  /* Add the ramdisk to the bus. */
 	  if (!WvDriverBusAddDev(ramdisk_ptr->disk->Dev))
