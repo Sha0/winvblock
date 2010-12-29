@@ -70,10 +70,6 @@ typedef struct WV_BUS_NODE {
   } WV_S_BUS_NODE, * WV_SP_BUS_NODE;
 
 /* Exports. */
-extern NTSTATUS STDCALL WvBusGetDevCapabilities(
-    IN PDEVICE_OBJECT,
-    IN PDEVICE_CAPABILITIES
-  );
 extern winvblock__lib_func void WvBusInit(WV_SP_BUS_T);
 extern winvblock__lib_func WV_SP_BUS_T WvBusCreate(void);
 extern winvblock__lib_func WV_SP_BUS_T WvBusFromDev(WV_SP_DEV_T);

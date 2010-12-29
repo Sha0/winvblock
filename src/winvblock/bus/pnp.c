@@ -253,7 +253,7 @@ static NTSTATUS STDCALL WvBusPnpQueryCapabilities_(
         return IoCallDriver(lower, irp);
       }
     /* Otherwise, return our parent's capabilities. */
-    status = WvBusGetDevCapabilities(
+    status = WvDriverGetDevCapabilities(
         dev->Parent,
         DeviceCapabilities
       );

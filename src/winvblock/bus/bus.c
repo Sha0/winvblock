@@ -90,60 +90,6 @@ winvblock__lib_func NTSTATUS STDCALL WvBusPower(
     return driver__complete_irp(Irp, 0, STATUS_SUCCESS);
   }
 
-NTSTATUS STDCALL WvBusGetDevCapabilities(
-    IN PDEVICE_OBJECT DevObj,
-    IN PDEVICE_CAPABILITIES DevCapabilities
-  ) {
-    IO_STATUS_BLOCK io_status;
-    KEVENT pnp_event;
-    NTSTATUS status;
-    PDEVICE_OBJECT target_obj;
-    PIO_STACK_LOCATION io_stack_loc;
-    PIRP pnp_irp;
-
-    RtlZeroMemory(DevCapabilities, sizeof *DevCapabilities);
-    DevCapabilities->Size = sizeof *DevCapabilities;
-    DevCapabilities->Version = 1;
-    DevCapabilities->Address = -1;
-    DevCapabilities->UINumber = -1;
-
-    KeInitializeEvent(&pnp_event, NotificationEvent, FALSE);
-    target_obj = IoGetAttachedDeviceReference(DevObj);
-    pnp_irp = IoBuildSynchronousFsdRequest(
-        IRP_MJ_PNP,
-        target_obj,
-        NULL,
-        0,
-        NULL,
-        &pnp_event,
-        &io_status
-      );
-    if (pnp_irp == NULL) {
-        status = STATUS_INSUFFICIENT_RESOURCES;
-      } else {
-        pnp_irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
-        io_stack_loc = IoGetNextIrpStackLocation(pnp_irp);
-        RtlZeroMemory(io_stack_loc, sizeof *io_stack_loc);
-        io_stack_loc->MajorFunction = IRP_MJ_PNP;
-        io_stack_loc->MinorFunction = IRP_MN_QUERY_CAPABILITIES;
-        io_stack_loc->Parameters.DeviceCapabilities.Capabilities =
-          DevCapabilities;
-        status = IoCallDriver(target_obj, pnp_irp);
-        if (status == STATUS_PENDING) {
-            KeWaitForSingleObject(
-                &pnp_event,
-                Executive,
-                KernelMode,
-                FALSE,
-                NULL
-              );
-            status = io_status.Status;
-          }
-      }
-    ObDereferenceObject(target_obj);
-    return status;
-  }
-
 /* Initialize a bus. */
 static winvblock__bool STDCALL WvBusDevInit_(IN WV_SP_DEV_T dev) {
     return TRUE;

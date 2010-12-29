@@ -218,12 +218,12 @@ static NTSTATUS STDCALL disk_pnp__query_capabilities_(
     bus = WvBusFromDev(WvDevFromDevObj(dev->Parent));
     bus_lower = bus->LowerDeviceObject;
     if (bus_lower) {
-        status = WvBusGetDevCapabilities(
+        status = WvDriverGetDevCapabilities(
             bus_lower,
             &ParentDeviceCapabilities
           );
       } else {
-        status = WvBusGetDevCapabilities(
+        status = WvDriverGetDevCapabilities(
             bus->Dev.Self,
             &ParentDeviceCapabilities
           );
