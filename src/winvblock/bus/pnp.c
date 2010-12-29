@@ -238,7 +238,6 @@ static NTSTATUS STDCALL WvBusPnpQueryCapabilities_(
     PDEVICE_CAPABILITIES DeviceCapabilities =
       io_stack_loc->Parameters.DeviceCapabilities.Capabilities;
     NTSTATUS status;
-    WV_SP_DEV_T dev = &bus->Dev;
     DEVICE_CAPABILITIES ParentDeviceCapabilities;
     PDEVICE_OBJECT lower;
 
@@ -246,20 +245,10 @@ static NTSTATUS STDCALL WvBusPnpQueryCapabilities_(
         DeviceCapabilities->Size < sizeof (DEVICE_CAPABILITIES)
       )
       return driver__complete_irp(irp, 0, STATUS_UNSUCCESSFUL);
-    /* If there's a lower DEVICE_OBJECT, let it handle the IRP. */
+    /* Let the lower DEVICE_OBJECT handle the IRP. */
     lower = bus->LowerDeviceObject;
-    if (lower) {
-        IoSkipCurrentIrpStackLocation(irp);
-        return IoCallDriver(lower, irp);
-      }
-    /* Otherwise, return our parent's capabilities. */
-    status = WvDriverGetDevCapabilities(
-        dev->Parent,
-        DeviceCapabilities
-      );
-    if (!NT_SUCCESS(status))
-      return driver__complete_irp(irp, 0, status);
-    return driver__complete_irp(irp, irp->IoStatus.Information, STATUS_SUCCESS);
+    IoSkipCurrentIrpStackLocation(irp);
+    return IoCallDriver(lower, irp);
   }
 
 static NTSTATUS STDCALL WvBusPnpQueryDevText_(IN WV_SP_BUS_T bus, IN PIRP irp) {
