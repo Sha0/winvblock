@@ -15,38 +15,36 @@
 */
 
 #ifndef _HTTP_DISK_
-#  define _HTTP_DISK_
+#define _HTTP_DISK_
 
-#  ifndef __T
-#    ifdef _NTDDK_
-#      define __T(x)  L ## x
-#    else
-#      define __T(x)  x
-#    endif
-#  endif
+#ifndef __T
+#ifdef _NTDDK_
+#define __T(x)  L ## x
+#else
+#define __T(x)  x
+#endif
+#endif
 
-#  ifndef _T
-#    define _T(x)   __T(x)
-#  endif
+#ifndef _T
+#define _T(x)   __T(x)
+#endif
 
-#  define DEVICE_BASE_NAME    _T("\\HttpDisk")
-#  define DEVICE_DIR_NAME     _T("\\Device")      DEVICE_BASE_NAME
-#  define DEVICE_NAME_PREFIX  DEVICE_DIR_NAME     _T("\\Http")
+#define DEVICE_BASE_NAME    _T("\\HttpDisk")
+#define DEVICE_DIR_NAME     _T("\\Device")      DEVICE_BASE_NAME
+#define DEVICE_NAME_PREFIX  DEVICE_DIR_NAME     _T("\\Http")
 
-#  define FILE_DEVICE_HTTP_DISK       0x8000
+#define FILE_DEVICE_HTTP_DISK       0x8000
 
-#  define IOCTL_HTTP_DISK_CONNECT     CTL_CODE(FILE_DEVICE_HTTP_DISK, 0x800, METHOD_BUFFERED, FILE_READ_ACCESS | FILE_WRITE_ACCESS)
-#  define IOCTL_HTTP_DISK_DISCONNECT  CTL_CODE(FILE_DEVICE_HTTP_DISK, 0x801, METHOD_BUFFERED, FILE_READ_ACCESS | FILE_WRITE_ACCESS)
+#define IOCTL_HTTP_DISK_CONNECT     CTL_CODE(FILE_DEVICE_HTTP_DISK, 0x800, METHOD_BUFFERED, FILE_READ_ACCESS | FILE_WRITE_ACCESS)
+#define IOCTL_HTTP_DISK_DISCONNECT  CTL_CODE(FILE_DEVICE_HTTP_DISK, 0x801, METHOD_BUFFERED, FILE_READ_ACCESS | FILE_WRITE_ACCESS)
 
-typedef struct _HTTP_DISK_INFORMATION
-{
-  ULONG Address;
-  USHORT Port;
-  USHORT HostNameLength;
-  UCHAR HostName[256];
-  USHORT FileNameLength;
-  UCHAR FileName[1];
-} HTTP_DISK_INFORMATION,
-*PHTTP_DISK_INFORMATION;
+typedef struct _HTTP_DISK_INFORMATION {
+    ULONG   Address;
+    USHORT  Port;
+    USHORT  HostNameLength;
+    UCHAR   HostName[256];
+    USHORT  FileNameLength;
+    UCHAR   FileName[1];
+} HTTP_DISK_INFORMATION, *PHTTP_DISK_INFORMATION;
 
 #endif
