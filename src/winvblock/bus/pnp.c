@@ -367,13 +367,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusPnp(
     IN PIRP irp,
     IN UCHAR code
   ) {
-    WV_SP_DEV_T dev = &bus->Dev;
-
     switch (code) {
-        case IRP_MN_QUERY_ID:
-          DBG("bus_pnp: IRP_MN_QUERY_ID\n");
-          return WvDevPnpQueryId(dev, irp);
-
         case IRP_MN_QUERY_DEVICE_TEXT:
           DBG("bus_pnp: IRP_MN_QUERY_DEVICE_TEXT\n");
           return bus->QueryDevText(bus, irp);
