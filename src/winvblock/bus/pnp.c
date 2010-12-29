@@ -147,7 +147,6 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
     IN PIRP irp
   ) {
     NTSTATUS status;
-    WV_SP_DEV_T dev = &bus->Dev;
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     winvblock__uint32 count;
