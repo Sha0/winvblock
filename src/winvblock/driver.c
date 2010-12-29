@@ -565,16 +565,12 @@ winvblock__lib_func NTSTATUS STDCALL Error(
 
 /* Pass an IRP_MJ_SYSTEM_CONTROL IRP to the bus. */
 static NTSTATUS STDCALL WvDriverBusSysCtl_(IN WV_SP_DEV_T dev, IN PIRP irp) {
-    WV_SP_BUS_T bus = WvBusFromDev(dev);
-
-    return WvBusSysCtl(bus, irp);
+    return WvBusSysCtl(&WvDriverBus_, irp);
   }
 
 /* Pass a power IRP to the bus. */
 static NTSTATUS STDCALL WvDriverBusPower_(IN WV_SP_DEV_T dev, IN PIRP irp) {
-    WV_SP_BUS_T bus = WvBusFromDev(dev);
-
-    return WvBusPower(bus, irp);
+    return WvBusPower(&WvDriverBus_, irp);
   }
 
 /* Pass an IRP_MJ_PNP to the bus. */
@@ -583,9 +579,7 @@ static NTSTATUS STDCALL WvDriverBusPnp_(
     IN PIRP irp,
     IN UCHAR code
   ) {
-    WV_SP_BUS_T bus = WvBusFromDev(dev);
-
-    return WvBusPnp(bus, irp, code);
+    return WvBusPnp(&WvDriverBus_, irp, code);
   }
     
 /**
