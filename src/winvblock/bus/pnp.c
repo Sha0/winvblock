@@ -85,7 +85,6 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
     PDEVICE_OBJECT lower;
-    WV_SP_DEV_T dev = &bus->Dev;
     WV_SP_DEV_T walker, next;
     PLIST_ENTRY node_link;
 
@@ -138,9 +137,8 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
     /* Detach from any lower DEVICE_OBJECT */
     if (lower)
       IoDetachDevice(lower);
-    /* Delete and free. */
-    IoDeleteDevice(dev->Self);
-    WvDevFree(dev);
+    /* Delete. */
+    IoDeleteDevice(bus->Fdo);
     return status;
   }
 
