@@ -52,6 +52,7 @@ void AoeBusFree(void);
 
 /* Globals. */
 WV_S_BUS_T AoeBusMain = {0};
+static WV_S_DEV_T AoeBusMainDev_ = {0};
 static UNICODE_STRING AoeBusName_ = {
     sizeof AOE_M_BUS_NAME_,
     sizeof AOE_M_BUS_NAME_,
@@ -80,8 +81,8 @@ static NTSTATUS STDCALL AoeBusDevCtlDispatch_(
 
         case IOCTL_AOE_UMOUNT:
           /* Pretend it's an IOCTL_FILE_DETACH. */
-          return AoeBusMain.Dev.IrpMj->DevCtl(
-              dev,
+          return AoeBusMainDev_.IrpMj->DevCtl(
+              &AoeBusMainDev_,
               irp,
               IOCTL_FILE_DETACH
             );
@@ -102,10 +103,11 @@ winvblock__bool AoeBusCreate(void) {
 
     /* Initialize the AoE bus. */
     WvBusInit(&AoeBusMain);
+    WvDevInit(&AoeBusMainDev_);
     /* When the PDO is created, we need to handle PnP ID queries. */
-    AoeBusMain.Dev.Ops.PnpId = AoeBusPnpId_;
+    AoeBusMainDev_.Ops.PnpId = AoeBusPnpId_;
     /* Add it as a sub-bus to WinVBlock. */
-    if (!WvDriverBusAddDev(&AoeBusMain.Dev)) {
+    if (!WvDriverBusAddDev(&AoeBusMainDev_)) {
         DBG("Couldn't add AoE bus to WinVBlock bus!\n");
         goto err_add_child;
       }
@@ -124,7 +126,7 @@ winvblock__bool AoeBusCreate(void) {
     IoDeleteSymbolicLink(&AoeBusDosname_);
     err_dos_symlink:
 
-    IoDeleteDevice(AoeBusMain.Dev.Self);
+    IoDeleteDevice(AoeBusMain.Fdo);
     err_add_child:
 
     return FALSE;
@@ -133,8 +135,8 @@ winvblock__bool AoeBusCreate(void) {
 /* Destroy the AoE bus. */
 void AoeBusFree(void) {
     IoDeleteSymbolicLink(&AoeBusDosname_);
-    IoDeleteDevice(AoeBusMain.Dev.Self);
-    WvBusRemoveNode(AoeBusMain.Dev.BusNode);
+    IoDeleteDevice(AoeBusMain.Fdo);
+    WvBusRemoveNode(AoeBusMainDev_.BusNode);
     return;
   }
 

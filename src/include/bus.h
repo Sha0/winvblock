@@ -62,7 +62,6 @@ typedef enum WV_BUS_STATE {
 
 /* The bus type. */
 typedef struct WV_BUS_T {
-    WV_S_DEV_T Dev;
     PDEVICE_OBJECT LowerDeviceObject;
     PDEVICE_OBJECT PhysicalDeviceObject;
     PDEVICE_OBJECT Fdo;

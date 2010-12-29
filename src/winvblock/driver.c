@@ -67,6 +67,7 @@ static UNICODE_STRING WvDriverBusDosname_ = {
   };
 /* The main bus. */
 static WV_S_BUS_T WvDriverBus_ = {0};
+static WV_S_DEV_T WvDriverBusDev_ = {0};
 /* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters. */
 static LPWSTR WvDriverOsLoadOpts_ = NULL;
 
@@ -166,6 +167,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
       }
     /* Initialize the bus. */
     WvBusInit(&WvDriverBus_);
+    WvDevInit(&WvDriverBusDev_);
     /* Create the bus FDO. */
     status = IoCreateDevice(
         DriverObject,
@@ -190,10 +192,10 @@ static NTSTATUS STDCALL driver__attach_fdo_(
         goto err_dos_symlink;
       }
     /* Set associations for the bus, device, FDO, PDO. */
-    WvDevForDevObj(fdo, &WvDriverBus_.Dev);
-    WvDriverBus_.Dev.Self = WvDriverBus_.Fdo = fdo;
-    WvDriverBus_.Dev.IsBus = TRUE;
-    WvDriverBus_.Dev.IrpMj = &irp_mj;
+    WvDevForDevObj(fdo, &WvDriverBusDev_);
+    WvDriverBusDev_.Self = WvDriverBus_.Fdo = fdo;
+    WvDriverBusDev_.IsBus = TRUE;
+    WvDriverBusDev_.IrpMj = &irp_mj;
     WvDriverBus_.QueryDevText = WvDriverBusPnpQueryDevText_;
     WvDriverBus_.PhysicalDeviceObject = PhysicalDeviceObject;
     fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
@@ -622,7 +624,7 @@ winvblock__lib_func winvblock__bool STDCALL WvDriverBusAddDev(
       }
     WvBusInitNode(Dev->BusNode, dev_obj);
     /* Associate the parent bus. */
-    Dev->Parent = WvDriverBus_.Dev.Self;
+    Dev->Parent = WvDriverBus_.Fdo;
     /*
      * Initialize the device.  For disks, this routine is responsible for
      * determining the disk's geometry appropriately for AoE/RAM/file disks.
@@ -796,7 +798,7 @@ static NTSTATUS STDCALL WvDriverBusPnpQueryDevText_(
 
         case DeviceTextLocationInformation:
           str_len = WvDevPnpId(
-              &WvDriverBus_.Dev,
+              &WvDriverBusDev_,
               BusQueryInstanceID,
               str
             );
