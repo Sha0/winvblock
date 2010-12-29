@@ -148,6 +148,13 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     PLIST_ENTRY walker;
     PUNICODE_STRING dev_name = NULL;
     PDEVICE_OBJECT fdo = NULL;
+    static WV_S_DEV_IRP_MJ irp_mj = {
+        WvDriverBusPower_,
+        WvDriverBusSysCtl_,
+        WvDriverBusDevCtl_,
+        (WV_FP_DEV_SCSI) 0,
+        WvDriverBusPnp_,
+      };
 
     DBG("Entry\n");
     /* Do we alreay have our main bus? */
@@ -185,10 +192,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     WvDevForDevObj(fdo, &WvDriverBus_.Dev);
     WvDriverBus_.Dev.Self = WvDriverBus_.Fdo = fdo;
     WvDriverBus_.Dev.IsBus = TRUE;
-    WvDriverBus_.Dev.IrpMj->SysCtl = WvDriverBusSysCtl_;
-    WvDriverBus_.Dev.IrpMj->DevCtl = WvDriverBusDevCtl_;
-    WvDriverBus_.Dev.IrpMj->Power = WvDriverBusPower_;
-    WvDriverBus_.Dev.IrpMj->Pnp = WvDriverBusPnp_;
+    WvDriverBus_.Dev.IrpMj = &irp_mj;
     WvDriverBus_.PhysicalDeviceObject = PhysicalDeviceObject;
     fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
     fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
