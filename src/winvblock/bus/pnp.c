@@ -248,73 +248,6 @@ static NTSTATUS STDCALL WvBusPnpQueryCapabilities_(
     return IoCallDriver(lower, irp);
   }
 
-static NTSTATUS STDCALL WvBusPnpQueryDevText_(IN WV_SP_BUS_T bus, IN PIRP irp) {
-    WV_SP_DEV_T dev = &bus->Dev;
-    WCHAR (*str)[512];
-    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-    NTSTATUS status;
-    winvblock__uint32 str_len;
-
-    /* Allocate a string buffer. */
-    str = wv_mallocz(sizeof *str);
-    if (str == NULL) {
-        DBG("wv_malloc IRP_MN_QUERY_DEVICE_TEXT\n");
-        status = STATUS_INSUFFICIENT_RESOURCES;
-        goto alloc_str;
-      }
-    /* Determine the query type. */
-    switch (io_stack_loc->Parameters.QueryDeviceText.DeviceTextType) {
-        case DeviceTextDescription:
-          str_len = swprintf(*str, winvblock__literal_w L" Bus") + 1;
-          irp->IoStatus.Information =
-            (ULONG_PTR) wv_palloc(str_len * sizeof *str);
-          if (irp->IoStatus.Information == 0) {
-              DBG("wv_palloc DeviceTextDescription\n");
-              status = STATUS_INSUFFICIENT_RESOURCES;
-              goto alloc_info;
-            }
-          RtlCopyMemory(
-              (PWCHAR) irp->IoStatus.Information,
-              str,
-              str_len * sizeof (WCHAR)
-            );
-          status = STATUS_SUCCESS;
-          goto alloc_info;
-
-        case DeviceTextLocationInformation:
-          str_len = WvDevPnpId(
-              dev,
-              BusQueryInstanceID,
-              str
-            );
-          irp->IoStatus.Information =
-            (ULONG_PTR) wv_palloc(str_len * sizeof *str);
-          if (irp->IoStatus.Information == 0) {
-              DBG("wv_palloc DeviceTextLocationInformation\n");
-              status = STATUS_INSUFFICIENT_RESOURCES;
-              goto alloc_info;
-            }
-          RtlCopyMemory(
-              (PWCHAR) irp->IoStatus.Information,
-              str,
-              str_len * sizeof (WCHAR)
-            );
-          status = STATUS_SUCCESS;
-          goto alloc_info;
-
-        default:
-          irp->IoStatus.Information = 0;
-          status = STATUS_NOT_SUPPORTED;
-      }
-    /* irp->IoStatus.Information not freed. */
-    alloc_info:
-
-    wv_free(str);
-    alloc_str:
-
-    return driver__complete_irp(irp, irp->IoStatus.Information, status);
-  }
-
 DEFINE_GUID(
     GUID_BUS_TYPE_INTERNAL,
     0x2530ea73L,
@@ -443,7 +376,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusPnp(
 
         case IRP_MN_QUERY_DEVICE_TEXT:
           DBG("bus_pnp: IRP_MN_QUERY_DEVICE_TEXT\n");
-          return WvBusPnpQueryDevText_(bus, irp);
+          return bus->QueryDevText(bus, irp);
 
         case IRP_MN_QUERY_BUS_INFORMATION:
           DBG("bus_pnp: IRP_MN_QUERY_BUS_INFORMATION\n");

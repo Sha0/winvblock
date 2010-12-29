@@ -83,6 +83,7 @@ static WV_F_DEV_DISPATCH WvDriverBusSysCtl_;
 static WV_F_DEV_CTL WvDriverBusDevCtl_;
 static WV_F_DEV_DISPATCH WvDriverBusPower_;
 static WV_F_DEV_PNP WvDriverBusPnp_;
+static WV_F_BUS_PNP WvDriverBusPnpQueryDevText_;
 
 static LPWSTR STDCALL get_opt(IN LPWSTR opt_name) {
     LPWSTR our_opts, the_opt;
@@ -193,6 +194,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     WvDriverBus_.Dev.Self = WvDriverBus_.Fdo = fdo;
     WvDriverBus_.Dev.IsBus = TRUE;
     WvDriverBus_.Dev.IrpMj = &irp_mj;
+    WvDriverBus_.QueryDevText = WvDriverBusPnpQueryDevText_;
     WvDriverBus_.PhysicalDeviceObject = PhysicalDeviceObject;
     fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
     fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
@@ -755,4 +757,73 @@ NTSTATUS STDCALL WvDriverGetDevCapabilities(
       }
     ObDereferenceObject(target_obj);
     return status;
+  }
+
+static NTSTATUS STDCALL WvDriverBusPnpQueryDevText_(
+    IN WV_SP_BUS_T bus,
+    IN PIRP irp
+  ) {
+    WCHAR (*str)[512];
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    NTSTATUS status;
+    winvblock__uint32 str_len;
+
+    /* Allocate a string buffer. */
+    str = wv_mallocz(sizeof *str);
+    if (str == NULL) {
+        DBG("wv_malloc IRP_MN_QUERY_DEVICE_TEXT\n");
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto alloc_str;
+      }
+    /* Determine the query type. */
+    switch (io_stack_loc->Parameters.QueryDeviceText.DeviceTextType) {
+        case DeviceTextDescription:
+          str_len = swprintf(*str, winvblock__literal_w L" Bus") + 1;
+          irp->IoStatus.Information =
+            (ULONG_PTR) wv_palloc(str_len * sizeof *str);
+          if (irp->IoStatus.Information == 0) {
+              DBG("wv_palloc DeviceTextDescription\n");
+              status = STATUS_INSUFFICIENT_RESOURCES;
+              goto alloc_info;
+            }
+          RtlCopyMemory(
+              (PWCHAR) irp->IoStatus.Information,
+              str,
+              str_len * sizeof (WCHAR)
+            );
+          status = STATUS_SUCCESS;
+          goto alloc_info;
+
+        case DeviceTextLocationInformation:
+          str_len = WvDevPnpId(
+              &WvDriverBus_.Dev,
+              BusQueryInstanceID,
+              str
+            );
+          irp->IoStatus.Information =
+            (ULONG_PTR) wv_palloc(str_len * sizeof *str);
+          if (irp->IoStatus.Information == 0) {
+              DBG("wv_palloc DeviceTextLocationInformation\n");
+              status = STATUS_INSUFFICIENT_RESOURCES;
+              goto alloc_info;
+            }
+          RtlCopyMemory(
+              (PWCHAR) irp->IoStatus.Information,
+              str,
+              str_len * sizeof (WCHAR)
+            );
+          status = STATUS_SUCCESS;
+          goto alloc_info;
+
+        default:
+          irp->IoStatus.Information = 0;
+          status = STATUS_NOT_SUPPORTED;
+      }
+    /* irp->IoStatus.Information not freed. */
+    alloc_info:
+
+    wv_free(str);
+    alloc_str:
+
+    return driver__complete_irp(irp, irp->IoStatus.Information, status);
   }
