@@ -643,18 +643,16 @@ winvblock__lib_func winvblock__bool STDCALL WvDriverBusAddDev(
     return TRUE;
   }
 
-static NTSTATUS STDCALL WvDriverBusDevCtlDiskDetach_(
-    IN WV_SP_DEV_T dev,
+static NTSTATUS STDCALL WvDriverBusDevCtlDetach_(
     IN PIRP irp
   ) {
-    winvblock__uint8_ptr buffer = irp->AssociatedIrp.SystemBuffer;
-    winvblock__uint32 disk_num = *(winvblock__uint32_ptr) buffer;
+    winvblock__uint32 disk_num =
+      *((winvblock__uint32_ptr) irp->AssociatedIrp.SystemBuffer);
     WV_SP_DEV_T dev_walker;
     WV_SP_DISK_T disk_walker = NULL, prev_disk_walker;
-    WV_SP_BUS_T bus;
+    WV_SP_BUS_T bus = &WvDriverBus_;
 
     DBG("Request to detach disk: %d\n", disk_num);
-    bus = WvBusFromDev(dev);
     dev_walker = bus->first_child;
     if (dev_walker != NULL)
       disk_walker = disk__get_ptr(dev_walker);
@@ -701,7 +699,7 @@ NTSTATUS STDCALL WvDriverBusDevCtl_(
           break;
 
         case IOCTL_FILE_DETACH:
-          status = WvDriverBusDevCtlDiskDetach_(dev, irp);
+          status = WvDriverBusDevCtlDetach_(irp);
           break;
 
         default:
