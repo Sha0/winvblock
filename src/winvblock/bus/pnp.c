@@ -85,7 +85,6 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
     PDEVICE_OBJECT lower;
-    WV_SP_DEV_T walker, next;
     PLIST_ENTRY node_link;
 
     if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
@@ -110,14 +109,6 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
         status = IoCallDriver(lower, irp);
       }
     /* Remove all children. */
-    walker = bus->first_child;
-    while (walker != NULL) {
-        next = walker->next_sibling_ptr;
-        WvDevClose(walker);
-        IoDeleteDevice(walker->Self);
-        WvDevFree(walker);
-        walker = next;
-      }
     node_link = &bus->BusPrivate_.Nodes;
     while ((node_link = node_link->Flink) != &bus->BusPrivate_.Nodes) {
         WV_SP_BUS_NODE node = CONTAINING_RECORD(
@@ -131,9 +122,6 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
         ObDereferenceObject(node->BusPrivate_.Pdo);
         bus->BusPrivate_.NodeCount--;
       }
-    /* Somewhat redundant, since the bus will be freed shortly. */
-    bus->Children = 0;
-    bus->first_child = NULL;
     /* Detach from any lower DEVICE_OBJECT */
     if (lower)
       IoDetachDevice(lower);
@@ -149,8 +137,7 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
     NTSTATUS status;
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-    winvblock__uint32 count;
-    WV_SP_DEV_T walker;
+    winvblock__uint32 i;
     PDEVICE_RELATIONS dev_relations;
     PLIST_ENTRY node_link;
 
@@ -179,15 +166,9 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
           );
       }
     WvProbeDisks();
-    count = 0;
-    walker = bus->first_child;
-    while (walker != NULL) {
-        count++;
-        walker = walker->next_sibling_ptr;
-      }
-    count += bus->BusPrivate_.NodeCount;
     dev_relations = wv_malloc(
-        sizeof *dev_relations + (sizeof (PDEVICE_OBJECT) * count)
+        sizeof *dev_relations +
+          (sizeof (PDEVICE_OBJECT) * bus->BusPrivate_.NodeCount)
       );
     if (dev_relations == NULL) {
         /* Couldn't allocate dev_relations, but silently succeed. */
@@ -197,16 +178,9 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
           }
         return driver__complete_irp(irp, 0, STATUS_SUCCESS);
       }
-    dev_relations->Count = count;
+    dev_relations->Count = bus->BusPrivate_.NodeCount;
 
-    count = 0;
-    walker = bus->first_child;
-    while (walker != NULL) {
-        ObReferenceObject(walker->Self);
-        dev_relations->Objects[count] = walker->Self;
-        count++;
-        walker = walker->next_sibling_ptr;
-      }
+    i = 0;
     node_link = &bus->BusPrivate_.Nodes;
     while ((node_link = node_link->Flink) != &bus->BusPrivate_.Nodes) {
         WV_SP_BUS_NODE node = CONTAINING_RECORD(
@@ -215,8 +189,8 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
             BusPrivate_.Link
           );
 
-        dev_relations->Objects[count] = node->BusPrivate_.Pdo;
-        count++;
+        dev_relations->Objects[i] = node->BusPrivate_.Pdo;
+        i++;
       }
     irp->IoStatus.Information = (ULONG_PTR) dev_relations;
     irp->IoStatus.Status = status = STATUS_SUCCESS;
