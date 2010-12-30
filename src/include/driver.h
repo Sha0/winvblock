@@ -73,5 +73,10 @@ extern NTSTATUS STDCALL WvDriverGetDevCapabilities(
     IN PDEVICE_OBJECT,
     IN PDEVICE_CAPABILITIES
   );
+extern winvblock__lib_func NTSTATUS STDCALL WvDriverAddDummy(
+    IN WV_FP_DEV_PNP_ID,
+    IN DEVICE_TYPE,
+    IN ULONG
+  );
 
 #endif	/* WV_M_DRIVER_H_ */

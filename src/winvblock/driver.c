@@ -829,3 +829,140 @@ static NTSTATUS STDCALL WvDriverBusPnpQueryDevText_(
 
     return driver__complete_irp(irp, irp->IoStatus.Information, status);
   }
+
+/**
+ * Dummy device feature.
+ */
+
+/* Prototype safety. */
+WV_F_DEV_PNP WvDriverDummyPnp_;
+
+/* Dummy PnP IRP handler. */
+static NTSTATUS STDCALL WvDriverDummyPnp_(
+    IN WV_SP_DEV_T dev,
+    IN PIRP irp,
+    IN UCHAR code
+  ) {
+    if (code != IRP_MN_QUERY_ID)
+      return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+
+    return WvDevPnpQueryId(dev, irp);
+  }
+
+typedef struct WV_DRIVER_ADD_DUMMY_ {
+    WV_FP_DEV_PNP_ID PnpIdFunc;
+    DEVICE_TYPE DevType;
+    ULONG DevCharacteristics;
+    PKEVENT Event;
+    NTSTATUS Status;
+  } WV_S_DRIVER_ADD_DUMMY_, * WV_SP_DRIVER_ADD_DUMMY_;
+
+/* Prototype safety. */
+static WV_F_BUS_WORK_ITEM WvDriverAddDummy_;
+/**
+ * Add a dummy PDO child node in the context of the bus' thread.
+ *
+ * @v context           Points to the WV_S_DRIVER_ADD_DUMMY_ to process.
+ */
+static void STDCALL WvDriverAddDummy_(void * context) {
+    WV_SP_DRIVER_ADD_DUMMY_ dummy_context = context;
+    NTSTATUS status;
+    PDEVICE_OBJECT pdo = NULL;
+    WV_SP_DEV_T dev;
+    static WV_S_DEV_IRP_MJ irp_mj = {
+        (WV_FP_DEV_DISPATCH) 0,
+        (WV_FP_DEV_DISPATCH) 0,
+        (WV_FP_DEV_CTL) 0,
+        (WV_FP_DEV_SCSI) 0,
+        WvDriverDummyPnp_,
+      };
+
+    status = IoCreateDevice(
+        WvDriverObj,
+        sizeof (driver__dev_ext),
+        NULL,
+        dummy_context->DevType,
+        dummy_context->DevCharacteristics,
+        FALSE,
+        &pdo
+      );
+    if (!NT_SUCCESS(status) || !pdo) {
+        DBG("Couldn't create dummy device.\n");
+        dummy_context->Status = STATUS_INSUFFICIENT_RESOURCES;
+        goto out;
+      }
+
+    dev = wv_malloc(sizeof *dev);
+    if (!dev) {
+        DBG("Couldn't allocate dummy device.\n");
+        dummy_context->Status = STATUS_INSUFFICIENT_RESOURCES;
+        IoDeleteDevice(pdo);
+        goto out;
+      }
+
+    WvDevInit(dev);
+    dev->IrpMj = &irp_mj;
+    dev->Ops.PnpId = dummy_context->PnpIdFunc;
+    dev->Self = pdo;
+    WvDevForDevObj(pdo, dev);
+    WvBusInitNode(&dev->BusNode, pdo);
+    /* Associate the parent bus. */
+    dev->Parent = WvDriverBus_.Fdo;
+    /* Add the new PDO device to the bus' list of children. */
+    WvBusAddNode(&WvDriverBus_, &dev->BusNode);
+    dev->DevNum = WvBusGetNodeNum(&dev->BusNode);
+    pdo->Flags &= ~DO_DEVICE_INITIALIZING;
+    dummy_context->Status = STATUS_SUCCESS;
+
+    out:
+    KeSetEvent(dummy_context->Event, 0, FALSE);
+    return;
+  }
+
+/**
+ * Produce a dummy PDO node on the main bus.
+ *
+ * @v PnpIdFunc                 The PnP ID query handler for the dummy.
+ * @v DevType                   The type for the dummy device.
+ * @v DevCharacteristics        The dummy device characteristics.
+ * @ret NTSTATUS                The status of the operation.
+ */
+winvblock__lib_func NTSTATUS STDCALL WvDriverAddDummy(
+    IN WV_FP_DEV_PNP_ID PnpIdFunc,
+    IN DEVICE_TYPE DevType,
+    IN ULONG DevCharacteristics
+  ) {
+    KEVENT event;
+    WV_S_DRIVER_ADD_DUMMY_ context = {
+        PnpIdFunc,
+        DevType,
+        DevCharacteristics,
+        &event,
+        STATUS_UNSUCCESSFUL
+      };
+    WV_S_BUS_CUSTOM_WORK_ITEM work_item = {
+        WvDriverAddDummy_,
+        &context
+      };
+    NTSTATUS status;
+
+    if (!PnpIdFunc)
+      return STATUS_INVALID_PARAMETER;
+
+    KeInitializeEvent(&event, SynchronizationEvent, FALSE);
+
+    status = WvBusEnqueueCustomWorkItem(&WvDriverBus_, &work_item);
+    if (!NT_SUCCESS(status))
+      return status;
+
+    /* Wait for WvDriverAddDummy_() to complete. */
+    KeWaitForSingleObject(
+        &event,
+        Executive,
+        KernelMode,
+        FALSE,
+        NULL
+      );
+
+    return context.Status;
+  }
