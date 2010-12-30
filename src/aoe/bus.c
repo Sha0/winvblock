@@ -29,8 +29,8 @@
 #include "winvblock.h"
 #include "portable.h"
 #include "driver.h"
-#include "device.h"
 #include "bus.h"
+#include "device.h"
 #include "aoe.h"
 #include "mount.h"
 #include "debug.h"
@@ -136,7 +136,7 @@ winvblock__bool AoeBusCreate(void) {
 void AoeBusFree(void) {
     IoDeleteSymbolicLink(&AoeBusDosname_);
     IoDeleteDevice(AoeBusMain.Fdo);
-    WvBusRemoveNode(AoeBusMainDev_.BusNode);
+    WvBusRemoveNode(&AoeBusMainDev_.BusNode);
     return;
   }
 

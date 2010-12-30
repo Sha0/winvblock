@@ -34,6 +34,7 @@
 #include "wv_string.h"
 #include "portable.h"
 #include "driver.h"
+#include "bus.h"
 #include "device.h"
 #include "disk.h"
 #include "mount.h"

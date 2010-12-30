@@ -178,9 +178,7 @@ struct WV_DEV_T {
     /* Previous state of the device. */
     WV_E_DEV_STATE OldState;
     /* Support being a node on a bus. */
-    struct WV_BUS_NODE * BusNode;
-    /* The next device in the parent bus' devices.  TODO: Don't do this. */
-    WV_SP_DEV_T next_sibling_ptr;
+    WV_S_BUS_NODE BusNode;
     /* The device operations. */
     WV_S_DEV_OPS Ops;
     /* Points to further extensions. */

@@ -30,6 +30,7 @@
 #include "wv_stdlib.h"
 #include "portable.h"
 #include "driver.h"
+#include "bus.h"
 #include "device.h"
 #include "disk.h"
 #include "ramdisk.h"

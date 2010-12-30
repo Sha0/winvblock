@@ -34,11 +34,11 @@
 #include "wv_string.h"
 #include "portable.h"
 #include "driver.h"
+#include "bus.h"
 #include "device.h"
 #include "disk.h"
 #include "registry.h"
 #include "mount.h"
-#include "bus.h"
 #include "filedisk.h"
 #include "ramdisk.h"
 #include "debug.h"
@@ -615,14 +615,7 @@ winvblock__lib_func winvblock__bool STDCALL WvDriverBusAddDev(
         DBG("PDO creation failed!\n");
         return FALSE;
       }
-    /* Create a node.  TODO: Put the node somewhere better. */
-    Dev->BusNode = wv_malloc(sizeof *(Dev->BusNode));
-    if (!Dev->BusNode) {
-        DBG("Couldn't allocate node storage!\n");
-        IoDeleteDevice(dev_obj);
-        return FALSE;
-      }
-    WvBusInitNode(Dev->BusNode, dev_obj);
+    WvBusInitNode(&Dev->BusNode, dev_obj);
     /* Associate the parent bus. */
     Dev->Parent = WvDriverBus_.Fdo;
     /*
@@ -632,8 +625,8 @@ winvblock__lib_func winvblock__bool STDCALL WvDriverBusAddDev(
     Dev->Ops.Init(Dev);
     dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
     /* Add the new PDO device to the bus' list of children. */
-    WvBusAddNode(&WvDriverBus_, Dev->BusNode);
-    Dev->DevNum = WvBusGetNodeNum(Dev->BusNode);
+    WvBusAddNode(&WvDriverBus_, &Dev->BusNode);
+    Dev->DevNum = WvBusGetNodeNum(&Dev->BusNode);
 
     DBG("Exit\n");
     return TRUE;
