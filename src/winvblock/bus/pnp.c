@@ -33,8 +33,6 @@
 #include "wv_stdlib.h"
 #include "portable.h"
 #include "driver.h"
-#include "device.h"
-#include "disk.h"
 #include "bus.h"
 #include "debug.h"
 #include "probe.h"
