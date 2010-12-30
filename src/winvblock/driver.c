@@ -642,44 +642,51 @@ winvblock__lib_func winvblock__bool STDCALL WvDriverBusAddDev(
 static NTSTATUS STDCALL WvDriverBusDevCtlDetach_(
     IN PIRP irp
   ) {
-    winvblock__uint32 disk_num =
-      *((winvblock__uint32_ptr) irp->AssociatedIrp.SystemBuffer);
-    WV_SP_DEV_T dev_walker;
-    WV_SP_DISK_T disk_walker = NULL, prev_disk_walker;
-    WV_SP_BUS_T bus = &WvDriverBus_;
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    winvblock__uint32 unit_num;
+    WV_SP_BUS_NODE walker;
 
-    DBG("Request to detach disk: %d\n", disk_num);
-    dev_walker = bus->first_child;
-    if (dev_walker != NULL)
-      disk_walker = disk__get_ptr(dev_walker);
-    prev_disk_walker = disk_walker;
-    while ((disk_walker != NULL) && (dev_walker->DevNum != disk_num)) {
-        prev_disk_walker = disk_walker;
-        dev_walker = dev_walker->next_sibling_ptr;
-        if (dev_walker != NULL)
-          disk_walker = disk__get_ptr(dev_walker);
+    if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
+        NTSTATUS status;
+
+        /* Enqueue the IRP. */
+        status = WvBusEnqueueIrp(&WvDriverBus_, irp);
+        if (status != STATUS_PENDING)
+          /* Problem. */
+          return driver__complete_irp(irp, 0, status);
+        /* Ok. */
+        return status;
       }
-    if (disk_walker != NULL) {
-        if (disk_walker->Dev->Boot) {
-            DBG("Cannot unmount a boot drive.\n");
-            irp->IoStatus.Information = 0;
-            return STATUS_INVALID_DEVICE_REQUEST;
+    /* If we get here, we should be called by WvBusProcessWorkItems() */
+    unit_num = *((winvblock__uint32_ptr) irp->AssociatedIrp.SystemBuffer);
+    DBG("Request to detach unit: %d\n", unit_num);
+
+    walker = NULL;
+    /* For each node on the bus... */
+    while (walker = WvBusGetNextNode(&WvDriverBus_, walker)) {
+        WV_SP_DEV_T dev = WvDevFromDevObj(WvBusGetNodePdo(walker));
+
+        /* If the unit number matches... */
+        if (WvBusGetNodeNum(walker) == unit_num) {
+            /* If it's not a boot-time device... */
+            if (dev->Boot) {
+                DBG("Cannot detach a boot-time device.\n");
+                /* Signal error. */
+                walker = NULL;
+                break;
+              }
+            /* Detach the node and free it. */
+            DBG("Removing unit %d\n", unit_num);
+            WvBusRemoveNode(walker);
+            WvDevClose(dev);
+            IoDeleteDevice(dev->Self);
+            WvDevFree(dev);
+            break;
           }
-        DBG("Deleting disk %d\n", dev_walker->DevNum);
-        if (disk_walker == disk__get_ptr(bus->first_child))
-          bus->first_child = dev_walker->next_sibling_ptr;
-          else {
-            prev_disk_walker->Dev->next_sibling_ptr =
-              dev_walker->next_sibling_ptr;
-          }
-        disk_walker->Unmount = TRUE;
-        dev_walker->next_sibling_ptr = NULL;
-        if (bus->PhysicalDeviceObject != NULL)
-          IoInvalidateDeviceRelations(bus->PhysicalDeviceObject, BusRelations);
       }
-    bus->Children--;
-    irp->IoStatus.Information = 0;
-    return STATUS_SUCCESS;
+    if (!walker)
+      return driver__complete_irp(irp, 0, STATUS_INVALID_PARAMETER);
+    return driver__complete_irp(irp, 0, STATUS_SUCCESS);
   }
 
 NTSTATUS STDCALL WvDriverBusDevCtl_(
@@ -695,8 +702,7 @@ NTSTATUS STDCALL WvDriverBusDevCtl_(
           break;
 
         case IOCTL_FILE_DETACH:
-          status = WvDriverBusDevCtlDetach_(irp);
-          break;
+          return WvDriverBusDevCtlDetach_(irp);
 
         default:
           irp->IoStatus.Information = 0;
