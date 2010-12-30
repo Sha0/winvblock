@@ -633,6 +633,7 @@ winvblock__lib_func winvblock__bool STDCALL WvDriverBusAddDev(
     dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
     /* Add the new PDO device to the bus' list of children. */
     WvBusAddNode(&WvDriverBus_, Dev->BusNode);
+    Dev->DevNum = WvBusGetNodeNum(Dev->BusNode);
 
     DBG("Exit\n");
     return TRUE;

@@ -123,5 +123,8 @@ extern winvblock__lib_func NTSTATUS STDCALL WvBusPnp(
     IN PIRP,
     IN UCHAR
   );
+extern winvblock__lib_func winvblock__uint32 STDCALL WvBusGetNodeNum(
+    IN WV_SP_BUS_NODE
+  );
 
 #endif  /* WV_M_BUS_H_ */

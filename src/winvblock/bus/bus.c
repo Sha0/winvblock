@@ -545,3 +545,15 @@ winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueIrp(
     KeSetEvent(&Bus->ThreadSignal, 0, FALSE);
     return STATUS_PENDING;
   }
+
+/**
+ * Get the unit number for a child node on a bus.
+ *
+ * @v node              The node whose unit number we request.
+ * @ret UINT32          The unit number for the node.
+ */
+winvblock__lib_func winvblock__uint32 STDCALL WvBusGetNodeNum(
+    IN WV_SP_BUS_NODE Node
+  ) {
+    return Node->BusPrivate_.Num;
+  }
