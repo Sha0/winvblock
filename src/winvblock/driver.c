@@ -148,7 +148,6 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     KIRQL irql;
     NTSTATUS status;
     PLIST_ENTRY walker;
-    PUNICODE_STRING dev_name = NULL;
     PDEVICE_OBJECT fdo = NULL;
     static WV_S_DEV_IRP_MJ irp_mj = {
         WvDriverBusPower_,
