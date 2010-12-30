@@ -41,7 +41,7 @@
 
 /* TODO: Remove this pull from aoe/driver.c */
 extern WV_F_DEV_DISPATCH aoe__scan;
-extern WV_F_DEV_DISPATCH aoe__show;
+extern WV_F_DEV_DISPATCH AoeBusDevCtlShow;
 extern WV_F_DEV_DISPATCH aoe__mount;
 
 /* Forward declarations. */
@@ -74,7 +74,7 @@ static NTSTATUS STDCALL AoeBusDevCtlDispatch_(
           return aoe__scan(dev, irp);
 
         case IOCTL_AOE_SHOW:
-          return aoe__show(dev, irp);
+          return AoeBusDevCtlShow(dev, irp);
 
         case IOCTL_AOE_MOUNT:
           return aoe__mount(dev, irp);

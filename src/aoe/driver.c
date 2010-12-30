@@ -1656,27 +1656,34 @@ NTSTATUS STDCALL aoe__scan(
     return driver__complete_irp(irp, irp->IoStatus.Information, STATUS_SUCCESS);
   }
 
-NTSTATUS STDCALL aoe__show(
+NTSTATUS STDCALL AoeBusDevCtlShow(
     IN WV_SP_DEV_T dev,
     IN PIRP irp
   ) {
     winvblock__uint32 count;
-    WV_SP_DEV_T dev_walker;
-    WV_SP_BUS_T bus;
+    WV_SP_BUS_NODE walker;
     aoe__mount_disks_ptr disks;
+    wv_size_t size;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
+    if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
+        NTSTATUS status;
+
+        /* Enqueue the IRP. */
+        status = WvBusEnqueueIrp(&AoeBusMain, irp);
+        if (status != STATUS_PENDING)
+          /* Problem. */
+          return driver__complete_irp(irp, 0, status);
+        /* Ok. */
+        return status;
+      }
+    /* If we get here, we should be called by WvBusProcessWorkItems() */
     DBG("Got IOCTL_AOE_SHOW...\n");
 
-    bus = &AoeBusMain;
-    dev_walker = bus->first_child;
-    count = 0;
-    while (dev_walker != NULL) {
-        count++;
-        dev_walker = dev_walker->next_sibling_ptr;
-      }
+    count = WvBusGetNodeCount(&AoeBusMain);
+    size = sizeof *disks + (count * sizeof disks->Disk[0]);
 
-    disks = wv_malloc(sizeof *disks + (count * sizeof disks->Disk[0]));
+    disks = wv_malloc(size);
     if (disks == NULL) {
         DBG("wv_malloc disks\n");
         return driver__complete_irp(
@@ -1685,17 +1692,18 @@ NTSTATUS STDCALL aoe__show(
             STATUS_INSUFFICIENT_RESOURCES
           );
       }
-    irp->IoStatus.Information =
-      sizeof (aoe__mount_disks) + (count * sizeof (aoe__mount_disk));
+    irp->IoStatus.Information = size;
     disks->Count = count;
 
     count = 0;
-    dev_walker = bus->first_child;
-    while (dev_walker != NULL) {
-        WV_SP_DISK_T disk = disk__get_ptr(dev_walker);
-        AOE_SP_DISK_ aoe_disk = AoeDiskFromDev_(dev_walker);
+    walker = NULL;
+    /* For each node on the bus... */
+    while (walker = WvBusGetNextNode(&AoeBusMain, walker)) {
+        WV_SP_DEV_T dev = WvDevFromDevObj(WvBusGetNodePdo(walker));
+        WV_SP_DISK_T disk = disk__get_ptr(dev);
+        AOE_SP_DISK_ aoe_disk = AoeDiskFromDev_(dev);
 
-        disks->Disk[count].Disk = dev_walker->DevNum;
+        disks->Disk[count].Disk = dev->DevNum;
         RtlCopyMemory(
             &disks->Disk[count].ClientMac,
             &aoe_disk->ClientMac,
@@ -1710,7 +1718,6 @@ NTSTATUS STDCALL aoe__show(
         disks->Disk[count].Minor = aoe_disk->Minor;
         disks->Disk[count].LBASize = disk->LBADiskSize;
         count++;
-        dev_walker = dev_walker->next_sibling_ptr;
       }
     RtlCopyMemory(
         irp->AssociatedIrp.SystemBuffer,
