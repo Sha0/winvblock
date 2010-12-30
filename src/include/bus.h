@@ -133,5 +133,8 @@ extern winvblock__lib_func WV_SP_BUS_NODE STDCALL WvBusGetNextNode(
 extern winvblock__lib_func PDEVICE_OBJECT STDCALL WvBusGetNodePdo(
     IN WV_SP_BUS_NODE
   );
+extern winvblock__lib_func winvblock__uint32 STDCALL WvBusGetNodeCount(
+    WV_SP_BUS_T
+  );
 
 #endif  /* WV_M_BUS_H_ */
