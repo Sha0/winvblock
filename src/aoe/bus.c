@@ -104,10 +104,13 @@ winvblock__bool AoeBusCreate(void) {
     /* Initialize the AoE bus. */
     WvBusInit(&AoeBusMain);
     WvDevInit(&AoeBusMainDev_);
-    /* When the PDO is created, we need to handle PnP ID queries. */
-    AoeBusMainDev_.Ops.PnpId = AoeBusPnpId_;
-    /* Add it as a sub-bus to WinVBlock. */
-    if (!WvDriverBusAddDev(&AoeBusMainDev_)) {
+    /* Create the PDO for the sub-bus on the WinVBlock bus. */
+    status = WvDriverAddDummy(
+        AoeBusPnpId_,
+        FILE_DEVICE_CONTROLLER,
+        FILE_DEVICE_SECURE_OPEN
+      );
+    if (!NT_SUCCESS(status)) {
         DBG("Couldn't add AoE bus to WinVBlock bus!\n");
         goto err_add_child;
       }
