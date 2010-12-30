@@ -584,3 +584,15 @@ winvblock__lib_func WV_SP_BUS_NODE STDCALL WvBusGetNextNode(
       return NULL;
     return CONTAINING_RECORD(link, WV_S_BUS_NODE, BusPrivate_.Link);
   }
+
+/**
+ * Get a child node's PDO.
+ *
+ * @v Node              The node whose PDO will be returned.
+ * @ret PDEVICE_OBJECT  The PDO for the node.
+ */
+winvblock__lib_func PDEVICE_OBJECT STDCALL WvBusGetNodePdo(
+    IN WV_SP_BUS_NODE Node
+  ) {
+    return Node->BusPrivate_.Pdo;
+  }
