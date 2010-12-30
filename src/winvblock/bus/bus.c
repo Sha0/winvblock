@@ -39,6 +39,7 @@ typedef enum WV_BUS_WORK_ITEM_CMD_ {
     WvBusWorkItemCmdAddPdo_,
     WvBusWorkItemCmdRemovePdo_,
     WvBusWorkItemCmdProcessIrp_,
+    WvBusWorkItemCmdCustom_,
     WvBusWorkItemCmds_
   } WV_E_BUS_WORK_ITEM_CMD_, * WV_EP_BUS_WORK_ITEM_CMD_;
 
@@ -48,6 +49,7 @@ typedef struct WV_BUS_WORK_ITEM_ {
     union {
         WV_SP_BUS_NODE Node;
         PIRP Irp;
+        WV_SP_BUS_CUSTOM_WORK_ITEM Custom;
       } Context;
   } WV_S_BUS_WORK_ITEM_, * WV_SP_BUS_WORK_ITEM_;
 
@@ -280,6 +282,13 @@ winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T Bus) {
               driver_obj->MajorFunction[io_stack_loc->MajorFunction](
                   dev_obj,
                   irp
+                );
+              break;
+
+            case WvBusWorkItemCmdCustom_:
+              DBG("Custom work item.\n");
+              work_item->Context.Custom->Func(
+                  work_item->Context.Custom->Context
                 );
               break;
 
@@ -543,6 +552,39 @@ winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueIrp(
     /* Fire and forget. */
     KeSetEvent(&Bus->ThreadSignal, 0, FALSE);
     return STATUS_PENDING;
+  }
+
+/**
+ * Enqueue a custom work item for a bus' thread to process.
+ *
+ * @v Bus               The bus for the IRP.
+ * @v CustomWorkItem    The custom work item for the bus' thread to process.
+ * @ret NTSTATUS        The status of the operation.
+ */
+winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueCustomWorkItem(
+    WV_SP_BUS_T Bus,
+    WV_SP_BUS_CUSTOM_WORK_ITEM CustomWorkItem
+  ) {
+    WV_SP_BUS_WORK_ITEM_ work_item;
+
+    if (!Bus || !CustomWorkItem)
+      return STATUS_INVALID_PARAMETER;
+
+    if (Bus->Stop)
+      return STATUS_NO_SUCH_DEVICE;
+
+    if (!(work_item = wv_malloc(sizeof *work_item)))
+      return STATUS_INSUFFICIENT_RESOURCES;
+
+    work_item->Cmd = WvBusWorkItemCmdCustom_;
+    work_item->Context.Custom = CustomWorkItem;
+    if (!WvBusAddWorkItem_(Bus, work_item)) {
+        wv_free(work_item);
+        return STATUS_UNSUCCESSFUL;
+      }
+    /* Fire and forget. */
+    KeSetEvent(&Bus->ThreadSignal, 0, FALSE);
+    return STATUS_SUCCESS;
   }
 
 /**

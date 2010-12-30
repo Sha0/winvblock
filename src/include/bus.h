@@ -92,6 +92,23 @@ typedef struct WV_BUS_NODE {
       } BusPrivate_;
   } WV_S_BUS_NODE, * WV_SP_BUS_NODE;
 
+/**
+ * A custom work-item function.
+ *
+ * @v context           Function-specific data.
+ *
+ * If a driver needs to enqueue a work item which should execute in the
+ * context of the bus' controlling thread (this is the thread which calls
+ * WvBusProcessWorkItems()), then this is the function prototype to be
+ * used.
+ */
+typedef void STDCALL WV_F_BUS_WORK_ITEM(void *);
+typedef WV_F_BUS_WORK_ITEM * WV_FP_BUS_WORK_ITEM;
+typedef struct WV_BUS_CUSTOM_WORK_ITEM {
+    WV_FP_BUS_WORK_ITEM Func;
+    void * Context;
+  } WV_S_BUS_CUSTOM_WORK_ITEM, * WV_SP_BUS_CUSTOM_WORK_ITEM;
+
 /* Exports. */
 extern winvblock__lib_func void WvBusInit(WV_SP_BUS_T);
 extern winvblock__lib_func WV_SP_BUS_T WvBusCreate(void);
@@ -108,6 +125,10 @@ extern winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
   );
 extern winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(WV_SP_BUS_NODE);
 extern winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueIrp(WV_SP_BUS_T, PIRP);
+extern winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueCustomWorkItem(
+    WV_SP_BUS_T,
+    WV_SP_BUS_CUSTOM_WORK_ITEM
+  );
 extern winvblock__lib_func NTSTATUS STDCALL WvBusSysCtl(
     IN WV_SP_BUS_T,
     IN PIRP
