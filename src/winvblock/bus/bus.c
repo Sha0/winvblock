@@ -549,11 +549,38 @@ winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueIrp(
 /**
  * Get the unit number for a child node on a bus.
  *
- * @v node              The node whose unit number we request.
+ * @v Node              The node whose unit number we request.
  * @ret UINT32          The unit number for the node.
  */
 winvblock__lib_func winvblock__uint32 STDCALL WvBusGetNodeNum(
     IN WV_SP_BUS_NODE Node
   ) {
     return Node->BusPrivate_.Num;
+  }
+
+/**
+ * Get the next child node on a bus.
+ *
+ * @v Bus               The bus whose nodes are fetched.
+ * @v PrevNode          The previous node.  Pass NULL to begin.
+ * @ret WV_SP_BUS_NODE  Returns NULL when there are no more nodes.
+ *
+ * This function should only be called within the thread context of
+ * whichever thread calls WvBusProcessWorkItems() because it expects
+ * the list of child nodes to remain static between calls.
+ */
+winvblock__lib_func WV_SP_BUS_NODE STDCALL WvBusGetNextNode(
+    IN WV_SP_BUS_T Bus,
+    IN WV_SP_BUS_NODE PrevNode
+  ) {
+    PLIST_ENTRY link;
+
+    if (!PrevNode)
+      link = &Bus->BusPrivate_.Nodes;
+      else
+      link = &PrevNode->BusPrivate_.Link;
+    link = link->Flink;
+    if (link == &Bus->BusPrivate_.Nodes)
+      return NULL;
+    return CONTAINING_RECORD(link, WV_S_BUS_NODE, BusPrivate_.Link);
   }
