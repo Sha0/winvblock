@@ -47,7 +47,7 @@ extern NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP);
 
 /* Forward declarations. */
 static WV_F_DEV_PNP_ID AoeBusPnpId_;
-winvblock__bool AoeBusCreate(void);
+winvblock__bool AoeBusCreate(IN PDRIVER_OBJECT);
 void AoeBusFree(void);
 
 /* Globals. */
@@ -62,6 +62,7 @@ static UNICODE_STRING AoeBusDosname_ = {
     sizeof AOE_M_BUS_DOSNAME_,
     AOE_M_BUS_DOSNAME_
   };
+const WV_S_DRIVER_DUMMY_IDS * AoeBusDummyIds;
 
 static NTSTATUS STDCALL AoeBusDevCtlDetach_(IN PIRP irp) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
@@ -141,28 +142,6 @@ NTSTATUS STDCALL AoeBusDevCtl(
   X_(Y_, Hardware, winvblock__literal_w L"\\AoE\0") \
   X_(Y_, Compat,   winvblock__literal_w L"\\AoE\0")
 WV_M_DRIVER_DUMMY_ID_GEN(AoeBusDummyIds_, AOE_M_BUS_IDS);
-
-/**
- * Create the AoE bus.
- *
- * @ret         TRUE for success, else FALSE.
- */
-winvblock__bool AoeBusCreate(void) {
-    NTSTATUS status;
-
-    /* Create the PDO for the sub-bus on the WinVBlock bus. */
-    status = WvDriverAddDummy(
-        &AoeBusDummyIds_,
-        FILE_DEVICE_CONTROLLER,
-        FILE_DEVICE_SECURE_OPEN
-      );
-    if (!NT_SUCCESS(status)) {
-        DBG("Couldn't add AoE bus to WinVBlock bus!\n");
-        return FALSE;
-      }
-    /* All done. */
-    return TRUE;
-  }
 
 /* Destroy the AoE bus. */
 void AoeBusFree(void) {
@@ -271,14 +250,52 @@ NTSTATUS STDCALL AoeBusAttachFdo(
     KIRQL irql;
     NTSTATUS status;
     PLIST_ENTRY walker;
-    PDEVICE_OBJECT fdo = NULL;
 
     DBG("Entry\n");
     /* Do we already have our main bus? */
-    if (AoeBusMain.Fdo) {
+    if (AoeBusMain.Pdo) {
         DBG("Already have the main bus.  Refusing.\n");
         status = STATUS_NOT_SUPPORTED;
         goto err_already_established;
+      }
+
+    /* Set associations for the bus, FDO, PDO. */
+    AoeBusMain.Pdo = pdo;
+    /* Attach the FDO to the PDO. */
+    AoeBusMain.LowerDeviceObject = IoAttachDeviceToDeviceStack(
+        AoeBusMain.Fdo,
+        pdo
+      );
+    if (AoeBusMain.LowerDeviceObject == NULL) {
+        status = STATUS_NO_SUCH_DEVICE;
+        DBG("IoAttachDeviceToDeviceStack() failed!\n");
+        goto err_attach;
+      }
+
+    /* Ok! */
+    DBG("Exit\n");
+    return STATUS_SUCCESS;
+
+    err_attach:
+
+    err_already_established:
+
+    DBG("Exit with failure\n");
+    return status;
+  }
+
+/**
+ * Create the AoE bus.
+ *
+ * @ret         TRUE for success, else FALSE.
+ */
+winvblock__bool AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
+    NTSTATUS status;
+
+    /* Do we already have our main bus? */
+    if (AoeBusMain.Fdo) {
+        DBG("AoeBusCreate called twice.\n");
+        return FALSE;
       }
     /* Initialize the bus. */
     WvBusInit(&AoeBusMain);
@@ -290,7 +307,7 @@ NTSTATUS STDCALL AoeBusAttachFdo(
         FILE_DEVICE_CONTROLLER,
         FILE_DEVICE_SECURE_OPEN,
         FALSE,
-        &fdo
+        &AoeBusMain.Fdo
       );
     if (!NT_SUCCESS(status)) {
         DBG("IoCreateDevice() failed!\n");
@@ -305,37 +322,25 @@ NTSTATUS STDCALL AoeBusAttachFdo(
         DBG("IoCreateSymbolicLink() failed!\n");
         goto err_dos_symlink;
       }
-    /* Set associations for the bus, FDO, PDO. */
-    AoeBusMain.Fdo = fdo;
-    AoeBusMain.QueryDevText = AoeBusPnpQueryDevText_;
-    AoeBusMain.Pdo = pdo;
-    fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
-    fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
-    /* Attach the FDO to the PDO. */
-    AoeBusMain.LowerDeviceObject = IoAttachDeviceToDeviceStack(fdo, pdo);
-    if (AoeBusMain.LowerDeviceObject == NULL) {
-        status = STATUS_NO_SUCH_DEVICE;
-        DBG("IoAttachDeviceToDeviceStack() failed!\n");
-        goto err_attach;
-      }
     /* Ok! */
-    fdo->Flags &= ~DO_DEVICE_INITIALIZING;
+    AoeBusDummyIds = &AoeBusDummyIds_;
+    AoeBusMain.QueryDevText = AoeBusPnpQueryDevText_;
+    AoeBusMain.Fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
+    AoeBusMain.Fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
+    AoeBusMain.Fdo->Flags &= ~DO_DEVICE_INITIALIZING;
     #ifdef RIS
     AoeBusMain.State = WvBusStateStarted;
     #endif
+    /* All done. */
     DBG("Exit\n");
-    return STATUS_SUCCESS;
-
-    err_attach:
+    return TRUE;
 
     IoDeleteSymbolicLink(&AoeBusDosname_);
     err_dos_symlink:
 
-    IoDeleteDevice(fdo);
+    IoDeleteDevice(AoeBusMain.Fdo);
     err_fdo:
 
-    err_already_established:
-
     DBG("Exit with failure\n");
-    return status;
+    return FALSE;
   }
