@@ -249,12 +249,14 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     return status;
   }
 
-/* Create the root-enumerated, main bus device. */
-NTSTATUS STDCALL driver__create_bus_(void) {
+/* Establish the bus PDO. */
+static NTSTATUS STCALL WvDriverBusEstablish_(IN PUNICODE_STRING RegistryPath) {
     WV_SP_BUS_T bus;
     NTSTATUS status;
     PDEVICE_OBJECT bus_pdo = NULL;
 
+    /* TODO: Check the Registry to see if we've already got a PDO. */
+    
     /* Create the PDO. */
     IoReportDetectedDevice(
         WvDriverObj,
@@ -345,11 +347,8 @@ NTSTATUS STDCALL DriverEntry(
     filedisk__module_init();    /* TODO: Check for error. */
     ramdisk__module_init();     /* TODO: Check for error. */
 
-    /*
-     * Always create the root-enumerated, main bus device.
-     * This is required in order to boot from a WinVBlock disk.
-     */
-    status = driver__create_bus_();
+    /* Establish the bus PDO. */
+    status = WvDriverBusEstablish_(RegistryPath);
     if(!NT_SUCCESS(status))
       goto err_bus;
 
