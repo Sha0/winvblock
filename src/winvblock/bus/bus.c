@@ -296,10 +296,10 @@ winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T Bus) {
           }
         wv_free(work_item);
       }
-    if (nodes_changed && Bus->PhysicalDeviceObject) {
+    if (nodes_changed && Bus->Pdo) {
         nodes_changed = FALSE;
         IoInvalidateDeviceRelations(
-            Bus->PhysicalDeviceObject,
+            Bus->Pdo,
             BusRelations
           );
       }

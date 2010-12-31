@@ -308,7 +308,7 @@ NTSTATUS STDCALL AoeBusAttachFdo(
     /* Set associations for the bus, FDO, PDO. */
     AoeBusMain.Fdo = fdo;
     AoeBusMain.QueryDevText = AoeBusPnpQueryDevText_;
-    AoeBusMain.PhysicalDeviceObject = pdo;
+    AoeBusMain.Pdo = pdo;
     fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
     fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
     /* Attach the FDO to the PDO. */

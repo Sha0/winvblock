@@ -144,7 +144,7 @@ static LPWSTR STDCALL get_opt(IN LPWSTR opt_name) {
 
 static NTSTATUS STDCALL driver__attach_fdo_(
     IN PDRIVER_OBJECT DriverObject,
-    IN PDEVICE_OBJECT PhysicalDeviceObject
+    IN PDEVICE_OBJECT Pdo
   ) {
     KIRQL irql;
     NTSTATUS status;
@@ -197,13 +197,13 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     WvDriverBusDev_.IsBus = TRUE;
     WvDriverBusDev_.IrpMj = &irp_mj;
     WvDriverBus_.QueryDevText = WvDriverBusPnpQueryDevText_;
-    WvDriverBus_.PhysicalDeviceObject = PhysicalDeviceObject;
+    WvDriverBus_.Pdo = Pdo;
     fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
     fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
     /* Attach the FDO to the PDO. */
     WvDriverBus_.LowerDeviceObject = IoAttachDeviceToDeviceStack(
         fdo,
-        PhysicalDeviceObject
+        Pdo
       );
     if (WvDriverBus_.LowerDeviceObject == NULL) {
         status = STATUS_NO_SUCH_DEVICE;
