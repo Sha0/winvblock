@@ -563,6 +563,14 @@ static NTSTATUS driver__dispatch_pnp_(
 
 static void STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
     DBG("Unloading...\n");
+    WvDriverBus_.Stop = TRUE;
+    KeWaitForSingleObject(
+        &WvDriverBus_.ThreadStopped,
+        Executive,
+        KernelMode,
+        FALSE,
+        NULL
+      );
     if (WvDriverStateHandle_ != NULL)
       PoUnregisterSystemState(WvDriverStateHandle_);
     IoDeleteSymbolicLink(&WvDriverBusDosname_);
