@@ -2,6 +2,7 @@
 
 mkdir bin 2>nul
 call config.bat
+set lib=%ddkdir%\lib
 
 cd src
 
