@@ -250,7 +250,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
   }
 
 /* Establish the bus PDO. */
-static NTSTATUS STCALL WvDriverBusEstablish_(IN PUNICODE_STRING RegistryPath) {
+static NTSTATUS STDCALL WvDriverBusEstablish_(IN PUNICODE_STRING RegistryPath) {
     WV_SP_BUS_T bus;
     NTSTATUS status;
     PDEVICE_OBJECT bus_pdo = NULL;
@@ -310,9 +310,9 @@ NTSTATUS STDCALL DriverEntry(
     if (WvDriverStarted_)
       return STATUS_SUCCESS;
     Debug_Initialize();
-    status = registry__note_os_load_opts(&WvDriverOsLoadOpts_);
+    status = WvlRegNoteOsLoadOpts(&WvDriverOsLoadOpts_);
     if (!NT_SUCCESS(status))
-      return Error("registry__note_driver__os_load_opts", status);
+      return Error("WvlRegNoteOsLoadOpts", status);
 
     WvDriverStateHandle_ = NULL;
     KeInitializeSpinLock(&WvDriverBusFdoLock_);

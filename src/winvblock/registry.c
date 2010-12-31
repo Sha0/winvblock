@@ -37,341 +37,336 @@
 #include "registry.h"
 
 /**
- * Open registry key
+ * Open registry key.
  *
- * @v reg_key_name  Registry key name
- * @v reg_key       Registry key to fill in
- * @ret ntstatus    NT status
+ * @v RegKeyName        Registry key name.
+ * @v RegKey            Registry key handle to fill in.
+ * @ret NTSTATUS        The status of the operation.
  */
-winvblock__lib_func NTSTATUS
-registry__open_key (
-  LPCWSTR reg_key_name,
-  PHANDLE reg_key
- )
-{
-  UNICODE_STRING unicode_string;
-  OBJECT_ATTRIBUTES object_attrs;
-  NTSTATUS status;
+winvblock__lib_func NTSTATUS STDCALL WvlRegOpenKey(
+    LPCWSTR RegKeyName,
+    PHANDLE RegKey
+  ) {
+    UNICODE_STRING unicode_string;
+    OBJECT_ATTRIBUTES object_attrs;
+    NTSTATUS status;
 
-  RtlInitUnicodeString ( &unicode_string, reg_key_name );
-  InitializeObjectAttributes ( &object_attrs, &unicode_string,
-			       OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, NULL,
-			       NULL );
-  status = ZwOpenKey ( reg_key, KEY_ALL_ACCESS, &object_attrs );
-  if ( !NT_SUCCESS ( status ) )
-    {
-      DBG ( "Could not open %S: %x\n", reg_key_name, status );
-      return status;
-    }
+    RtlInitUnicodeString(&unicode_string, RegKeyName);
+    InitializeObjectAttributes(
+        &object_attrs,
+        &unicode_string,
+        OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE,
+        NULL,
+        NULL
+      );
+    status = ZwOpenKey(RegKey, KEY_ALL_ACCESS, &object_attrs);
+    if (!NT_SUCCESS(status)) {
+        DBG("Could not open %S: %x\n", RegKeyName, status);
+        return status;
+      }
 
-  return STATUS_SUCCESS;
-}
+    return STATUS_SUCCESS;
+  }
 
 /**
- * Close registry key
+ * Close a registry key handle.
  *
- * @v reg_key   Registry key
+ * @v RegKey            Registry key handle to close.
  */
-winvblock__lib_func void
-registry__close_key (
-  HANDLE reg_key
- )
-{
-  ZwClose ( reg_key );
-}
+winvblock__lib_func void STDCALL WvlRegCloseKey(HANDLE RegKey) {
+    ZwClose(RegKey);
+  }
 
 /**
- * Fetch registry key value information
+ * Fetch registry key value information.
  *
- * @v reg_key     Registry key
- * @v value_name  Registry value name
- * @v kvi         Key value information block to allocate and fill in
- * @ret ntstatus  NT status
+ * @v RegKey            Registry key to fetch KVI for.
+ * @v ValueName         Registry value name to fetch KVI for.
+ * @v Kvi               Key value information block to allocate and fill in.
+ * @ret NTSTATUS        The status of the operation.
  *
  * The caller must eventually free the allocated key value information
  * block.
  */
-winvblock__lib_func NTSTATUS
-registry__fetch_kvi (
-  HANDLE reg_key,
-  LPCWSTR value_name,
-  PKEY_VALUE_PARTIAL_INFORMATION * kvi
- )
-{
-  UNICODE_STRING u_value_name;
-  winvblock__uint32 kvi_len;
-  NTSTATUS status;
+winvblock__lib_func NTSTATUS STDCALL WvlRegFetchKvi(
+    HANDLE RegKey,
+    LPCWSTR ValueName,
+    PKEY_VALUE_PARTIAL_INFORMATION * Kvi
+  ) {
+    UNICODE_STRING u_value_name;
+    winvblock__uint32 kvi_len;
+    NTSTATUS status;
 
-  /*
-   * Get value length 
-   */
-  RtlInitUnicodeString ( &u_value_name, value_name );
-  status =
-    ZwQueryValueKey ( reg_key, &u_value_name, KeyValuePartialInformation, NULL,
-		      0, &kvi_len );
-  if ( !
-       ( ( status == STATUS_SUCCESS ) || ( status == STATUS_BUFFER_OVERFLOW )
-	 || ( status == STATUS_BUFFER_TOO_SMALL ) ) )
-    {
-      DBG ( "Could not get KVI length for \"%S\": %x\n", value_name, status );
-      goto err_zwqueryvaluekey_len;
-    }
+    /* Get value length. */
+    RtlInitUnicodeString(&u_value_name, ValueName);
+    status = ZwQueryValueKey(
+        RegKey,
+        &u_value_name,
+        KeyValuePartialInformation,
+        NULL,
+        0,
+        &kvi_len
+      );
+    if (!(
+        (status == STATUS_SUCCESS) ||
+        (status == STATUS_BUFFER_OVERFLOW) ||
+        (status == STATUS_BUFFER_TOO_SMALL)
+      )) {
+        DBG("Could not get KVI length for \"%S\": %x\n", ValueName, status);
+        goto err_zwqueryvaluekey_len;
+      }
 
-  /*
-   * Allocate value buffer 
-   */
-  *kvi = wv_malloc(kvi_len);
-  if ( !*kvi )
-    {
-      DBG ( "Could not allocate KVI for \"%S\": %x\n", value_name, status );
-      goto err_kvi;
-    }
+    /* Allocate value buffer. */
+    *Kvi = wv_malloc(kvi_len);
+    if (!*Kvi) {
+        DBG("Could not allocate KVI for \"%S\": %x\n", ValueName, status);
+        goto err_kvi;
+      }
 
-  /*
-   * Fetch value 
-   */
-  status =
-    ZwQueryValueKey ( reg_key, &u_value_name, KeyValuePartialInformation, *kvi,
-		      kvi_len, &kvi_len );
-  if ( !NT_SUCCESS ( status ) )
-    {
-      DBG ( "Could not get KVI for \"%S\": %x\n", value_name, status );
-      goto err_zwqueryvaluekey;
-    }
+    /* Fetch value. */
+    status = ZwQueryValueKey(
+        RegKey,
+        &u_value_name,
+        KeyValuePartialInformation,
+        *Kvi,
+        kvi_len,
+        &kvi_len
+      );
+    if (!NT_SUCCESS(status)) {
+        DBG("Could not get KVI for \"%S\": %x\n", ValueName, status);
+        goto err_zwqueryvaluekey;
+      }
 
-  return STATUS_SUCCESS;
+    return STATUS_SUCCESS;
 
-err_zwqueryvaluekey:
-  wv_free(kvi);
-err_kvi:
-err_zwqueryvaluekey_len:
-  return status;
-}
+    err_zwqueryvaluekey:
+
+    wv_free(*Kvi);
+    err_kvi:
+
+    err_zwqueryvaluekey_len:
+
+    return status;
+  }
 
 /**
- * Fetch registry string value
+ * Fetch registry string value.
  *
- * @v reg_key     Registry key
- * @v value_name  Registry value name
- * @v value       String value to allocate and fill in
- * @ret ntstatus  NT status
+ * @v RegKey            Handle for the registry key with the value.
+ * @v ValueName         Registry value name.
+ * @v Value             String value to allocate and fill in.
+ * @ret NTSTATUS        The status of the operation.
  *
  * The caller must eventually free the allocated value.
  */
-winvblock__lib_func NTSTATUS
-registry__fetch_sz (
-  HANDLE reg_key,
-  LPCWSTR value_name,
-  LPWSTR * value
- )
-{
-  PKEY_VALUE_PARTIAL_INFORMATION kvi;
-  winvblock__uint32 value_len;
-  NTSTATUS status;
+winvblock__lib_func NTSTATUS STDCALL WvlRegFetchSz(
+    HANDLE RegKey,
+    LPCWSTR ValueName,
+    LPWSTR * Value
+  ) {
+    PKEY_VALUE_PARTIAL_INFORMATION kvi;
+    winvblock__uint32 value_len;
+    NTSTATUS status;
 
-  /*
-   * Fetch key value information 
-   */
-  status = registry__fetch_kvi ( reg_key, value_name, &kvi );
-  if ( !NT_SUCCESS ( status ) )
-    goto err_fetchkvi;
+    /* Fetch key value information. */
+    status = WvlRegFetchKvi(RegKey, ValueName, &kvi);
+    if (!NT_SUCCESS(status))
+      goto err_fetchkvi;
 
-  /*
-   * Allocate and populate string 
-   */
-  value_len = ( kvi->DataLength + sizeof ( value[0] ) );
-  *value = wv_mallocz(value_len);
-  if ( !*value )
-    {
-      DBG ( "Could not allocate value for \"%S\"\n", value_name );
-      status = STATUS_UNSUCCESSFUL;
-      goto err_value;
-    }
-  RtlCopyMemory ( *value, kvi->Data, kvi->DataLength );
+    /* Allocate and populate string. */
+    value_len = (kvi->DataLength + sizeof **Value);
+    *Value = wv_mallocz(value_len);
+    if (!*Value) {
+        DBG("Could not allocate value for \"%S\"\n", ValueName);
+        status = STATUS_UNSUCCESSFUL;
+        goto err_value;
+      }
+    RtlCopyMemory(*Value, kvi->Data, kvi->DataLength);
 
-err_value:
-  wv_free(kvi);
-err_fetchkvi:
-  return status;
-}
+    err_value:
+
+    wv_free(kvi);
+    err_fetchkvi:
+
+    return status;
+  }
 
 /**
- * Fetch registry multiple-string value
+ * Fetch registry multiple-string value.
  *
- * @v reg_key     Registry key
- * @v value_name  Registry value name
- * @v values      Array of string values to allocate and fill in
- * @ret ntstatus  NT status
+ * @v RegKey            Handle for the registry key with the value.
+ * @v ValueName         Registry value name.
+ * @v Values            Array of string values to allocate and fill in.
+ * @ret NTSTATUS        The status of the operation.
  *
- * The caller must eventually free the allocated values.
+ * The caller must eventually free the allocated value array.
  */
-winvblock__lib_func NTSTATUS
-registry__fetch_multi_sz (
-  HANDLE reg_key,
-  LPCWSTR value_name,
-  LPWSTR ** values
- )
-{
-  PKEY_VALUE_PARTIAL_INFORMATION kvi;
-  LPWSTR string;
-  winvblock__uint32 num_strings;
-  winvblock__uint32 values_len;
-  winvblock__uint32 i;
-  NTSTATUS status;
+winvblock__lib_func NTSTATUS STDCALL WvlRegFetchMultiSz(
+    HANDLE RegKey,
+    LPCWSTR ValueName,
+    LPWSTR ** Values
+  ) {
+    PKEY_VALUE_PARTIAL_INFORMATION kvi;
+    LPWSTR string;
+    winvblock__uint32 num_strings;
+    winvblock__uint32 values_len;
+    winvblock__uint32 i;
+    NTSTATUS status;
 
-  /*
-   * Fetch key value information 
-   */
-  status = registry__fetch_kvi ( reg_key, value_name, &kvi );
-  if ( !NT_SUCCESS ( status ) )
-    goto err_fetchkvi;
+    /* Fetch key value information. */
+    status = WvlRegFetchKvi(RegKey, ValueName, &kvi);
+    if (!NT_SUCCESS(status))
+      goto err_fetchkvi;
 
-  /*
-   * Count number of strings in the array.  This is a
-   * potential(ly harmless) overestimate.
-   */
-  num_strings = 0;
-  for ( string = ( ( LPWSTR ) kvi->Data );
-	string < ( ( LPWSTR ) ( kvi->Data + kvi->DataLength ) ); string++ )
-    {
-      if ( !*string )
-	num_strings++;
-    }
+    /*
+     * Count number of strings in the array.  This is a
+     * potential(ly harmless) overestimate.
+     */
+    num_strings = 0;
+    for (
+        string = ((LPWSTR) kvi->Data);
+        string < ((LPWSTR) (kvi->Data + kvi->DataLength));
+        string++
+      ) {
+        if (!*string)
+          num_strings++;
+      }
 
-  /*
-   * Allocate and populate string array 
-   */
-  values_len =
-    ( ( ( num_strings + 1 ) * sizeof ( values[0] ) ) + kvi->DataLength +
-      sizeof ( values[0][0] ) );
-  *values = wv_mallocz(values_len);
-  if ( !*values )
-    {
-      DBG ( "Could not allocate value array for \"%S\"\n", value_name );
-      status = STATUS_UNSUCCESSFUL;
-      goto err_value;
-    }
-  string = ( ( LPWSTR ) ( *values + num_strings + 1 ) );
-  RtlCopyMemory ( string, kvi->Data, kvi->DataLength );
-  for ( i = 0; i < num_strings; i++ )
-    {
-      ( *values )[i] = string;
-      while ( *string )
-	string++;
-      while ( !*string )
-	string++;
-    }
+    /* Allocate and populate string array. */
+    values_len = (
+        /* The LPWSTR[] with a NULL terminator. */
+        ((num_strings + 1) * sizeof **Values) +
+        /* The data. */
+        kvi->DataLength +
+        /* A null terminator for the data. */
+        sizeof ***Values
+      );
+    *Values = wv_mallocz(values_len);
+    if (!*Values) {
+        DBG("Could not allocate value array for \"%S\"\n", ValueName);
+        status = STATUS_UNSUCCESSFUL;
+        goto err_value;
+      }
+    /* We know that LPWSTR alignment is a multiple of WCHAR alignment. */
+    string = ((LPWSTR) (*Values + num_strings + 1));
+    /* Copy the data. */
+    RtlCopyMemory(string, kvi->Data, kvi->DataLength);
+    /* Walk the data, filling the LPWSTR[] with values. */
+    for (i = 0; i < num_strings; i++) {
+        (*Values)[i] = string;
+        while (*string)
+          string++;
+        while (!*string)
+          string++;
+      }
 
-err_value:
-  wv_free(kvi);
-err_fetchkvi:
-  return status;
-}
+    err_value:
+
+    wv_free(kvi);
+    err_fetchkvi:
+
+    return status;
+  }
 
 /**
- * Store registry string value
+ * Store registry string value.
  *
- * @v reg_key     Registry key
- * @v value_name  Registry value name
- * @v value       String value to store
- * @ret ntstatus  NT status
+ * @v RegKey            Handle for the registry key to store the value in.
+ * @v ValueName         Registry value name.
+ * @v Value             String value to store.
+ * @ret NTSTATUS        The status of the operation.
  */
-winvblock__lib_func NTSTATUS
-registry__store_sz (
-  HANDLE reg_key,
-  LPCWSTR value_name,
-  LPWSTR value
- )
-{
-  UNICODE_STRING u_value_name;
-  SIZE_T value_len;
-  NTSTATUS status;
+winvblock__lib_func NTSTATUS STDCALL WvlRegStoreSz(
+    HANDLE RegKey,
+    LPCWSTR ValueName,
+    LPWSTR Value
+   ) {
+    UNICODE_STRING u_value_name;
+    SIZE_T value_len;
+    NTSTATUS status;
 
-  RtlInitUnicodeString ( &u_value_name, value_name );
-  value_len = ( ( wcslen ( value ) + 1 ) * sizeof ( value[0] ) );
-  status =
-    ZwSetValueKey ( reg_key, &u_value_name, 0, REG_SZ, value,
-		    ( ( winvblock__uint32 ) value_len ) );
-  if ( !NT_SUCCESS ( status ) )
-    {
-      DBG ( "Could not store value \"%S\": %x\n", value_name, status );
-      return status;
-    }
+    RtlInitUnicodeString(&u_value_name, ValueName);
+    value_len = ((wcslen(Value) + 1) * sizeof Value[0]);
+    status = ZwSetValueKey(
+        RegKey,
+        &u_value_name,
+        0,
+        REG_SZ,
+        Value,
+        (winvblock__uint32) value_len
+      );
+    if (!NT_SUCCESS(status)) {
+        DBG("Could not store value \"%S\": %x\n", ValueName, status);
+        return status;
+      }
 
-  return STATUS_SUCCESS;
-}
+    return STATUS_SUCCESS;
+  }
 
 /**
- * Store registry dword value
+ * Store registry DWORD value.
  *
- * @v reg_key     Registry key
- * @v value_name  Registry value name
- * @v value       String value to store, or NULL
- * @ret ntstatus  NT status
+ * @v RegKey            Handle for the registry key to store the value in.
+ * @v ValueName         Registry value name.
+ * @v Value             DWORD value to store, or NULL.
+ * @ret NTSTATUS        The status of the operation.
  */
-winvblock__lib_func NTSTATUS
-registry__store_dword (
-  HANDLE reg_key,
-  LPCWSTR value_name,
-  winvblock__uint32 value
- )
-{
-  UNICODE_STRING u_value_name;
-  NTSTATUS status;
+winvblock__lib_func NTSTATUS STDCALL WvlRegStoreDword(
+    HANDLE RegKey,
+    LPCWSTR ValueName,
+    winvblock__uint32 Value
+  ) {
+    UNICODE_STRING u_value_name;
+    NTSTATUS status;
 
-  RtlInitUnicodeString ( &u_value_name, value_name );
-  status =
-    ZwSetValueKey ( reg_key, &u_value_name, 0, REG_DWORD, &value,
-		    sizeof ( value ) );
-  if ( !NT_SUCCESS ( status ) )
-    {
-      DBG ( "Could not store value \"%S\": %x\n", value_name, status );
-      return status;
-    }
+    RtlInitUnicodeString(&u_value_name, ValueName);
+    status = ZwSetValueKey(
+        RegKey,
+        &u_value_name,
+        0,
+        REG_DWORD,
+        &Value,
+        sizeof Value
+      );
+    if (!NT_SUCCESS(status)) {
+        DBG("Could not store value \"%S\": %x\n", ValueName, status);
+        return status;
+      }
 
-  return STATUS_SUCCESS;
-}
+    return STATUS_SUCCESS;
+  }
 
 /**
- * Note BOOT.INI-style OsLoadOptions from registry
+ * Note BOOT.INI-/TXTSETUP.SIF-style OsLoadOptions from registry.
  *
- * @v w_str_ptr         Pointer to pointer to wide-char string to hold options
- * @ret ntstatus	NT status
+ * @v WStr              Pointer to pointer to wide-char string to hold options.
+ * @ret NTSTATUS        The status of the operation.
  *
  * The caller must eventually free the wide-char string.
  */
-NTSTATUS
-registry__note_os_load_opts (
-  LPWSTR * w_str_ptr
- )
-{
-  NTSTATUS status;
-  HANDLE control_key;
+winvblock__lib_func NTSTATUS STDCALL WvlRegNoteOsLoadOpts(LPWSTR * WStr) {
+    NTSTATUS status;
+    HANDLE control_key;
 
-  /*
-   * Open the Control key 
-   */
-  status =
-    registry__open_key
-    ( L"\\Registry\\Machine\\SYSTEM\\CurrentControlSet\\Control\\",
-      &control_key );
-  if ( !NT_SUCCESS ( status ) )
-    goto err_keyopen;
+    /* Open the Control key. */
+    status = WvlRegOpenKey(
+        L"\\Registry\\Machine\\SYSTEM\\CurrentControlSet\\Control\\",
+        &control_key
+      );
+    if (!NT_SUCCESS(status))
+      goto err_keyopen;
 
-  /*
-   * Put the SystemStartOptions value into a global 
-   */
-  status =
-    registry__fetch_sz ( control_key, L"SystemStartOptions", w_str_ptr );
-  if ( !NT_SUCCESS ( status ) )
-    goto err_fetchsz;
+    /* Put the SystemStartOptions value into w_str. */
+    status = WvlRegFetchSz(control_key, L"SystemStartOptions", WStr);
+    if (!NT_SUCCESS(status))
+      goto err_fetchsz;
 
-  DBG ( "OsLoadOptions: %S\n", *w_str_ptr );
+    DBG("OsLoadOptions: %S\n", *WStr);
 
-err_fetchsz:
+    err_fetchsz:
 
-  registry__close_key ( control_key );
-err_keyopen:
+    WvlRegCloseKey(control_key);
+    err_keyopen:
 
-  return status;
-}
+    return status;
+  }

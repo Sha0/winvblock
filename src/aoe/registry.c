@@ -65,7 +65,7 @@ winvblock__bool STDCALL AoeRegSetup(OUT PNTSTATUS status_out) {
     RtlInitUnicodeString(&Service, L"Service");
 
     /* Open the network adapter class key. */
-    status = registry__open_key(
+    status = WvlRegOpenKey(
         (L"\\Registry\\Machine\\SYSTEM\\CurrentControlSet\\Control\\Class\\"
           L"{4D36E972-E325-11CE-BFC1-08002BE10318}\\"),
         &NetworkClassKeyHandle
@@ -96,7 +96,7 @@ winvblock__bool STDCALL AoeRegSetup(OUT PNTSTATUS status_out) {
           {
             DBG("wv_malloc KeyData failed\n");
             goto e0_1;
-            registry__close_key(NetworkClassKeyHandle);
+            WvlRegCloseKey(NetworkClassKeyHandle);
           }
         if (!(NT_SUCCESS(
             ZwEnumerateKey(
@@ -479,7 +479,7 @@ winvblock__bool STDCALL AoeRegSetup(OUT PNTSTATUS status_out) {
         wv_free(KeyInformation);
         SubkeyIndex++;
       } /* while */
-    registry__close_key ( NetworkClassKeyHandle );
+    WvlRegCloseKey(NetworkClassKeyHandle);
     *status_out = STATUS_SUCCESS;
     return Updated;
 
@@ -518,7 +518,7 @@ winvblock__bool STDCALL AoeRegSetup(OUT PNTSTATUS status_out) {
     wv_free(KeyInformation);
     e0_1:
 
-    registry__close_key(NetworkClassKeyHandle);
+    WvlRegCloseKey(NetworkClassKeyHandle);
     err_keyopennetworkclass:
 
     *status_out = STATUS_UNSUCCESSFUL;
