@@ -70,14 +70,16 @@ typedef struct WV_DRIVER_DUMMY_IDS {
     winvblock__uint32 HardwareLen;
     winvblock__uint32 CompatOffset;
     winvblock__uint32 CompatLen;
+    winvblock__uint32 Len;
     const WCHAR * Ids;
+    WCHAR Text[1];
   } WV_S_DRIVER_DUMMY_IDS, * WV_SP_DRIVER_DUMMY_IDS;
 
 /* Macro support for dummy ID generation. */
-#define WV_M_DRIVER_DUMMY_IDS_X_ENUM(prefix_, name_, literal_)  \
-  prefix_ ## name_ ## Offset_,                                  \
-  prefix_ ## name_ ## Len_ = sizeof (literal_),                 \
-  prefix_ ## name_ ## End_ =                                    \
+#define WV_M_DRIVER_DUMMY_IDS_X_ENUM(prefix_, name_, literal_)    \
+  prefix_ ## name_ ## Offset_,                                    \
+  prefix_ ## name_ ## Len_ = sizeof (literal_) / sizeof (WCHAR),  \
+  prefix_ ## name_ ## End_ =                                      \
     prefix_ ## name_ ## Offset_ + prefix_ ## name_ ## Len_ - 1,
 
 #define WV_M_DRIVER_DUMMY_IDS_X_LITERALS(prefix_, name_, literal_) \
@@ -125,6 +127,7 @@ static const WCHAR DummyIds ## String_[] =            \
                                                       \
 static const WV_S_DRIVER_DUMMY_IDS DummyIds = {       \
     XMacro(WV_M_DRIVER_DUMMY_IDS_X_FILL, DummyIds)    \
+    DummyIds ## Len_,                                 \
     DummyIds ## String_                               \
   }
 
@@ -141,7 +144,7 @@ extern NTSTATUS STDCALL WvDriverGetDevCapabilities(
     IN PDEVICE_CAPABILITIES
   );
 extern winvblock__lib_func NTSTATUS STDCALL WvDriverAddDummy(
-    IN WV_FP_DEV_PNP_ID,
+    IN const WV_S_DRIVER_DUMMY_IDS *,
     IN DEVICE_TYPE,
     IN ULONG
   );

@@ -134,6 +134,14 @@ NTSTATUS STDCALL AoeBusDevCtl(
       }
   }
 
+/* Generate dummy IDs for the AoE bus PDO. */
+#define AOE_M_BUS_IDS(X_, Y_)                       \
+  X_(Y_, Dev,      winvblock__literal_w L"\\AoE"  ) \
+  X_(Y_, Instance, L"0"                           ) \
+  X_(Y_, Hardware, winvblock__literal_w L"\\AoE\0") \
+  X_(Y_, Compat,   winvblock__literal_w L"\\AoE\0")
+WV_M_DRIVER_DUMMY_ID_GEN(AoeBusDummyIds_, AOE_M_BUS_IDS);
+
 /**
  * Create the AoE bus.
  *
@@ -144,7 +152,7 @@ winvblock__bool AoeBusCreate(void) {
 
     /* Create the PDO for the sub-bus on the WinVBlock bus. */
     status = WvDriverAddDummy(
-        AoeBusPnpId_,
+        &AoeBusDummyIds_,
         FILE_DEVICE_CONTROLLER,
         FILE_DEVICE_SECURE_OPEN
       );
@@ -163,14 +171,6 @@ void AoeBusFree(void) {
       IoDeleteDevice(AoeBusMain.Fdo);
     return;
   }
-
-/* Generate dummy IDs for the AoE bus PDO. */
-#define AOE_M_BUS_IDS(X_, Y_)                       \
-  X_(Y_, Dev,      winvblock__literal_w L"\\AoE"  ) \
-  X_(Y_, Instance, L"0"                           ) \
-  X_(Y_, Hardware, winvblock__literal_w L"\\AoE\0") \
-  X_(Y_, Compat,   winvblock__literal_w L"\\AoE\0")
-WV_M_DRIVER_DUMMY_ID_GEN(AoeBusDummyIds_, AOE_M_BUS_IDS);
 
 static winvblock__uint32 STDCALL AoeBusPnpId_(
     IN WV_SP_DEV_T dev,

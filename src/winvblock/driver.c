@@ -845,11 +845,12 @@ static NTSTATUS STDCALL WvDriverDummyPnp_(
     if (code != IRP_MN_QUERY_ID)
       return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
 
-    return WvDevPnpQueryId(dev, irp);
+    /* The WV_S_DEV_T extension points to the dummy IDs. */
+    return WvDriverDummyIds(irp, dev->ext);
   }
 
 typedef struct WV_DRIVER_ADD_DUMMY_ {
-    WV_FP_DEV_PNP_ID PnpIdFunc;
+    const WV_S_DRIVER_DUMMY_IDS * DummyIds;
     DEVICE_TYPE DevType;
     ULONG DevCharacteristics;
     PKEVENT Event;
@@ -868,6 +869,8 @@ static void STDCALL WvDriverAddDummy_(void * context) {
     NTSTATUS status;
     PDEVICE_OBJECT pdo = NULL;
     WV_SP_DEV_T dev;
+    wv_size_t dummy_ids_size;
+    WV_SP_DRIVER_DUMMY_IDS dummy_ids;
     static WV_S_DEV_IRP_MJ irp_mj = {
         (WV_FP_DEV_DISPATCH) 0,
         (WV_FP_DEV_DISPATCH) 0,
@@ -888,20 +891,41 @@ static void STDCALL WvDriverAddDummy_(void * context) {
     if (!NT_SUCCESS(status) || !pdo) {
         DBG("Couldn't create dummy device.\n");
         dummy_context->Status = STATUS_INSUFFICIENT_RESOURCES;
-        goto out;
+        goto err_create_pdo;
       }
 
     dev = wv_malloc(sizeof *dev);
     if (!dev) {
         DBG("Couldn't allocate dummy device.\n");
         dummy_context->Status = STATUS_INSUFFICIENT_RESOURCES;
-        IoDeleteDevice(pdo);
-        goto out;
+        goto err_dev;
       }
 
+    dummy_ids_size =
+      sizeof *dummy_ids +
+      dummy_context->DummyIds->Len * sizeof dummy_ids->Text[0] -
+      sizeof dummy_ids->Text[0];        /* The struct hack uses a WCHAR[1]. */
+    dummy_ids = wv_malloc(dummy_ids_size);
+    if (!dummy_ids) {
+        DBG("Couldn't allocate dummy IDs.\n");
+        dummy_context->Status = STATUS_INSUFFICIENT_RESOURCES;
+        goto err_dummy_ids;
+      }
+    /* Copy the IDs offsets and lengths. */
+    RtlCopyMemory(dummy_ids, dummy_context->DummyIds, sizeof *dummy_ids);
+    /* Copy the text of the IDs. */
+    RtlCopyMemory(
+        &dummy_ids->Text,
+        dummy_context->DummyIds->Ids,
+        dummy_context->DummyIds->Len * sizeof dummy_ids->Text[0]
+      );
+    /* Point to the copy of the text. */
+    dummy_ids->Ids = dummy_ids->Text;
+
+    /* Ok! */
     WvDevInit(dev);
     dev->IrpMj = &irp_mj;
-    dev->Ops.PnpId = dummy_context->PnpIdFunc;
+    dev->ext = dummy_ids;       /* TODO: Implement a dummy free.  Leaking. */
     dev->Self = pdo;
     WvDevForDevObj(pdo, dev);
     WvBusInitNode(&dev->BusNode, pdo);
@@ -911,9 +935,20 @@ static void STDCALL WvDriverAddDummy_(void * context) {
     WvBusAddNode(&WvDriverBus_, &dev->BusNode);
     dev->DevNum = WvBusGetNodeNum(&dev->BusNode);
     pdo->Flags &= ~DO_DEVICE_INITIALIZING;
-    dummy_context->Status = STATUS_SUCCESS;
 
-    out:
+    dummy_context->Status = STATUS_SUCCESS;
+    KeSetEvent(dummy_context->Event, 0, FALSE);
+    return;
+
+    wv_free(dummy_ids);
+    err_dummy_ids:
+
+    wv_free(dev);
+    err_dev:
+
+    IoDeleteDevice(pdo);
+    err_create_pdo:
+
     KeSetEvent(dummy_context->Event, 0, FALSE);
     return;
   }
@@ -921,19 +956,19 @@ static void STDCALL WvDriverAddDummy_(void * context) {
 /**
  * Produce a dummy PDO node on the main bus.
  *
- * @v PnpIdFunc                 The PnP ID query handler for the dummy.
+ * @v DummyIds                  The PnP IDs for the dummy.
  * @v DevType                   The type for the dummy device.
  * @v DevCharacteristics        The dummy device characteristics.
  * @ret NTSTATUS                The status of the operation.
  */
 winvblock__lib_func NTSTATUS STDCALL WvDriverAddDummy(
-    IN WV_FP_DEV_PNP_ID PnpIdFunc,
+    IN const WV_S_DRIVER_DUMMY_IDS * DummyIds,
     IN DEVICE_TYPE DevType,
     IN ULONG DevCharacteristics
   ) {
     KEVENT event;
     WV_S_DRIVER_ADD_DUMMY_ context = {
-        PnpIdFunc,
+        DummyIds,
         DevType,
         DevCharacteristics,
         &event,
@@ -945,7 +980,7 @@ winvblock__lib_func NTSTATUS STDCALL WvDriverAddDummy(
       };
     NTSTATUS status;
 
-    if (!PnpIdFunc)
+    if (!DummyIds)
       return STATUS_INVALID_PARAMETER;
 
     KeInitializeEvent(&event, SynchronizationEvent, FALSE);
