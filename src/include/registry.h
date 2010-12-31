@@ -45,6 +45,11 @@ extern winvblock__lib_func NTSTATUS STDCALL WvlRegFetchMultiSz(
     LPCWSTR,
     LPWSTR **
   );
+extern winvblock__lib_func NTSTATUS STDCALL WvlRegFetchDword(
+    IN HANDLE,
+    IN LPCWSTR,
+    OUT winvblock__uint32 *
+  );
 extern winvblock__lib_func NTSTATUS STDCALL WvlRegStoreSz(
     HANDLE,
     LPCWSTR,

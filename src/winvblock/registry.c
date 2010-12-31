@@ -269,6 +269,52 @@ winvblock__lib_func NTSTATUS STDCALL WvlRegFetchMultiSz(
   }
 
 /**
+ * Fetch registry DWORD value.
+ *
+ * @v RegKey            Handle for the registry key with the value.
+ * @v ValueName         Registry value name.
+ * @v Value             DWORD value to fill in.
+ * @ret NTSTATUS        The status of the operation.
+ */
+winvblock__lib_func NTSTATUS STDCALL WvlRegFetchDword(
+    IN HANDLE RegKey,
+    IN LPCWSTR ValueName,
+    OUT winvblock__uint32 * Value
+  ) {
+    PKEY_VALUE_PARTIAL_INFORMATION kvi;
+    NTSTATUS status;
+
+    if (!Value) {
+        DBG("No DWORD provided.\n");
+        status = STATUS_INVALID_PARAMETER;
+        goto err_value;
+      }
+
+    /* Fetch key value information. */
+    status = WvlRegFetchKvi(RegKey, ValueName, &kvi);
+    if (!NT_SUCCESS(status))
+      goto err_fetchkvi;
+
+    /* Copy the value. */
+    if (kvi->DataLength != sizeof *Value) {
+        DBG("Registry value is not a DWORD.");
+        status = STATUS_INVALID_PARAMETER;
+        goto err_datalen;
+      }
+
+    RtlCopyMemory(Value, kvi->Data, kvi->DataLength);
+
+    err_datalen:
+
+    wv_free(kvi);
+    err_fetchkvi:
+
+    err_value:
+
+    return status;
+  }
+
+/**
  * Store registry string value.
  *
  * @v RegKey            Handle for the registry key to store the value in.
