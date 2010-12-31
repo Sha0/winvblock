@@ -27,6 +27,7 @@
 
 #include <stdio.h>
 #include <ntddk.h>
+#include <scsi.h>
 
 #include "winvblock.h"
 #include "wv_stdlib.h"
@@ -54,6 +55,11 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject(
 extern WV_S_BUS_T AoeBusMain;
 extern winvblock__bool AoeBusCreate(void);
 extern void AoeBusFree(void);
+extern NTSTATUS STDCALL AoeBusDevCtl(IN PIRP, IN ULONG POINTER_ALIGNMENT);
+extern NTSTATUS STDCALL AoeBusAttachFdo(
+    IN PDRIVER_OBJECT,
+    IN PDEVICE_OBJECT
+  );
 /* From aoe/registry.c */
 extern winvblock__bool STDCALL AoeRegSetup(OUT PNTSTATUS);
 
@@ -68,6 +74,14 @@ static WV_F_DISK_IO AoeDiskIo_;
 static WV_F_DISK_MAX_XFER_LEN AoeDiskMaxXferLen_;
 static WV_F_DISK_INIT AoeDiskInit_;
 static WV_F_DISK_CLOSE AoeDiskClose_;
+static driver__dispatch_func AoeDriverIrpNotSupported_;
+static driver__dispatch_func AoeDriverIrpPower_;
+static driver__dispatch_func AoeDriverIrpCreateClose_;
+static driver__dispatch_func AoeDriverIrpSysCtl_;
+static driver__dispatch_func AoeDriverIrpDevCtl_;
+static driver__dispatch_func AoeDriverIrpScsi_;
+static driver__dispatch_func AoeDriverIrpPnp_;
+static void STDCALL AoeDriverUnload_(IN PDRIVER_OBJECT);
 
 /** Tag types. */
 typedef enum AOE_TAG_TYPE_ {
@@ -222,6 +236,7 @@ NTSTATUS STDCALL DriverEntry(
     OBJECT_ATTRIBUTES ObjectAttributes;
     void * ThreadObject;
     WV_SP_BUS_T bus_ptr;
+    int i;
 
     DBG("Entry\n");
 
@@ -310,7 +325,19 @@ NTSTATUS STDCALL DriverEntry(
         KeSetEvent(&AoeSignal_, 0, FALSE);
       }
 
+    for (i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++)
+      DriverObject->MajorFunction[i] = AoeDriverIrpNotSupported_;
+    DriverObject->MajorFunction[IRP_MJ_PNP] = AoeDriverIrpPnp_;
+    DriverObject->MajorFunction[IRP_MJ_POWER] = AoeDriverIrpPower_;
+    DriverObject->MajorFunction[IRP_MJ_CREATE] = AoeDriverIrpCreateClose_;
+    DriverObject->MajorFunction[IRP_MJ_CLOSE] = AoeDriverIrpCreateClose_;
+    DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = AoeDriverIrpSysCtl_;
+    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = AoeDriverIrpDevCtl_;
+    DriverObject->MajorFunction[IRP_MJ_SCSI] = AoeDriverIrpScsi_;
+    /* Set the driver Unload callback. */
     DriverObject->DriverUnload = AoeUnload_;
+    /* Set the driver AddDevice callback. */
+    DriverObject->DriverExtension->AddDevice = AoeBusAttachFdo;
     AoeStarted_ = TRUE;
     if (!AoeBusCreate()) {
         DBG("Unable to create AoE bus!\n");
@@ -1597,10 +1624,7 @@ static void AoeProcessAbft_(void) {
     return;
   }
 
-NTSTATUS STDCALL aoe__scan(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp
-  ) {
+NTSTATUS STDCALL AoeBusDevCtlScan(IN PIRP irp) {
     KIRQL irql;
     winvblock__uint32 count;
     AOE_SP_TARGET_LIST_ target_walker;
@@ -1656,10 +1680,7 @@ NTSTATUS STDCALL aoe__scan(
     return driver__complete_irp(irp, irp->IoStatus.Information, STATUS_SUCCESS);
   }
 
-NTSTATUS STDCALL AoeBusDevCtlShow(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp
-  ) {
+NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
     winvblock__uint32 count;
     WV_SP_BUS_NODE walker;
     aoe__mount_disks_ptr disks;
@@ -1732,10 +1753,7 @@ NTSTATUS STDCALL AoeBusDevCtlShow(
     return driver__complete_irp(irp, irp->IoStatus.Information, STATUS_SUCCESS);
   }
 
-NTSTATUS STDCALL aoe__mount(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp
-  ) {
+NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
     winvblock__uint8_ptr buffer = irp->AssociatedIrp.SystemBuffer;
     AOE_SP_DISK_ aoe_disk;
 
@@ -1845,4 +1863,184 @@ static void STDCALL AoeDiskFree_(IN WV_SP_DEV_T dev) {
       );
 
     wv_free(aoe_disk);
+  }
+
+static NTSTATUS STDCALL AoeDriverIrpNotSupported_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+  }
+
+/* Handle a power IRP. */
+static NTSTATUS AoeDriverIrpPower_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    WV_SP_DEV_T dev;
+
+    #ifdef DEBUGIRPS
+    Debug_IrpStart(dev_obj, irp);
+    #endif
+    /* Check for a bus IRP. */
+    if (dev_obj == AoeBusMain.Fdo)
+      return WvBusPower(&AoeBusMain, irp);
+    /* WvDevFromDevObj() checks for a NULL dev_obj */
+    dev = WvDevFromDevObj(dev_obj);
+    /* Check that the device exists. */
+    if (!dev || dev->State == WvDevStateDeleted) {
+        /* Even if it doesn't, a power IRP is important! */
+        PoStartNextPowerIrp(irp);
+        return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
+      }
+    /* Call the particular device's power handler. */
+    if (dev->IrpMj && dev->IrpMj->Power)
+      return dev->IrpMj->Power(dev, irp);
+    /* Otherwise, we don't support the IRP. */
+    return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+  }
+
+/* Handle an IRP_MJ_CREATE or IRP_MJ_CLOSE IRP. */
+static NTSTATUS AoeDriverIrpCreateClose_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    WV_SP_DEV_T dev;
+
+    #ifdef DEBUGIRPS
+    Debug_IrpStart(dev_obj, irp);
+    #endif
+    /* Check for a bus IRP. */
+    if (dev_obj == AoeBusMain.Fdo)
+      return driver__complete_irp(irp, 0, STATUS_SUCCESS);
+    /* WvDevFromDevObj() checks for a NULL dev_obj */
+    dev = WvDevFromDevObj(dev_obj);
+    /* Check that the device exists. */
+    if (!dev || dev->State == WvDevStateDeleted)
+      return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
+    /* Always succeed with nothing to do. */
+    return driver__complete_irp(irp, 0, STATUS_SUCCESS);
+  }
+
+/* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
+static NTSTATUS AoeDriverIrpSysCtl_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    WV_SP_DEV_T dev;
+
+    #ifdef DEBUGIRPS
+    Debug_IrpStart(dev_obj, irp);
+    #endif
+    /* Check for a bus IRP. */
+    if (dev_obj == AoeBusMain.Fdo)
+      return WvBusSysCtl(&AoeBusMain, irp);
+    /* WvDevFromDevObj() checks for a NULL dev_obj */
+    dev = WvDevFromDevObj(dev_obj);
+    /* Check that the device exists. */
+    if (!dev || dev->State == WvDevStateDeleted)
+      return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
+    /* Call the particular device's power handler. */
+    if (dev->IrpMj && dev->IrpMj->SysCtl)
+      return dev->IrpMj->SysCtl(dev, irp);
+    /* Otherwise, we don't support the IRP. */
+    return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+  }
+
+/* Handle an IRP_MJ_DEVICE_CONTROL IRP. */
+static NTSTATUS AoeDriverIrpDevCtl_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    WV_SP_DEV_T dev;
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+
+    #ifdef DEBUGIRPS
+    Debug_IrpStart(dev_obj, irp);
+    #endif
+    /* Check for a bus IRP. */
+    if (dev_obj == AoeBusMain.Fdo) {
+        return AoeBusDevCtl(
+            irp,
+            io_stack_loc->Parameters.DeviceIoControl.IoControlCode
+          );
+      }
+    /* WvDevFromDevObj() checks for a NULL dev_obj */
+    dev = WvDevFromDevObj(dev_obj);
+    /* Check that the device exists. */
+    if (!dev || dev->State == WvDevStateDeleted)
+      return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
+    /* Call the particular device's power handler. */
+    if (dev->IrpMj && dev->IrpMj->DevCtl) {
+        return dev->IrpMj->DevCtl(
+            dev,
+            irp,
+            io_stack_loc->Parameters.DeviceIoControl.IoControlCode
+          );
+      }
+    /* Otherwise, we don't support the IRP. */
+    return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+  }
+
+/* Handle an IRP_MJ_SCSI IRP. */
+static NTSTATUS AoeDriverIrpScsi_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    WV_SP_DEV_T dev;
+    PIO_STACK_LOCATION io_stack_loc;
+
+    #ifdef DEBUGIRPS
+    Debug_IrpStart(dev_obj, irp);
+    #endif
+    /* Check for a bus IRP. */
+    if (dev_obj == AoeBusMain.Fdo)
+      return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+    /* WvDevFromDevObj() checks for a NULL dev_obj */
+    dev = WvDevFromDevObj(dev_obj);
+    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    /* Check that the device exists. */
+    if (!dev || dev->State == WvDevStateDeleted)
+      return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
+    /* Call the particular device's power handler. */
+    if (dev->IrpMj && dev->IrpMj->Scsi) {
+        return dev->IrpMj->Scsi(
+            dev,
+            irp,
+            io_stack_loc->Parameters.Scsi.Srb->Function
+          );
+      }
+    /* Otherwise, we don't support the IRP. */
+    return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+  }
+
+/* Handle an IRP_MJ_PNP IRP. */
+static NTSTATUS AoeDriverIrpPnp_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    WV_SP_DEV_T dev;
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+
+    #ifdef DEBUGIRPS
+    Debug_IrpStart(dev_obj, irp);
+    #endif
+    /* Check for a bus IRP. */
+    if (dev_obj == AoeBusMain.Fdo)
+      return WvBusPnp(&AoeBusMain, irp, io_stack_loc->MinorFunction);
+    /* WvDevFromDevObj() checks for a NULL dev_obj */
+    dev = WvDevFromDevObj(dev_obj);
+    /* Check that the device exists. */
+    if (!dev || dev->State == WvDevStateDeleted)
+      return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
+    /* Call the particular device's power handler. */
+    if (dev->IrpMj && dev->IrpMj->Pnp) {
+        return dev->IrpMj->Pnp(
+            dev,
+            irp,
+            io_stack_loc->MinorFunction
+          );
+      }
+    /* Otherwise, we don't support the IRP. */
+    return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
   }
