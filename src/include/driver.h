@@ -60,6 +60,73 @@ typedef NTSTATUS STDCALL driver__dispatch_func(
     IN PDEVICE_OBJECT,
     IN PIRP
   );
+/* PnP IDs for a dummy device. */
+typedef struct WV_DRIVER_DUMMY_IDS {
+    winvblock__uint32 DevOffset;
+    winvblock__uint32 DevLen;
+    winvblock__uint32 InstanceOffset;
+    winvblock__uint32 InstanceLen;
+    winvblock__uint32 HardwareOffset;
+    winvblock__uint32 HardwareLen;
+    winvblock__uint32 CompatOffset;
+    winvblock__uint32 CompatLen;
+    const WCHAR * Ids;
+  } WV_S_DRIVER_DUMMY_IDS, * WV_SP_DRIVER_DUMMY_IDS;
+
+/* Macro support for dummy ID generation. */
+#define WV_M_DRIVER_DUMMY_IDS_X_ENUM(prefix_, name_, literal_)  \
+  prefix_ ## name_ ## Offset_,                                  \
+  prefix_ ## name_ ## Len_ = sizeof (literal_),                 \
+  prefix_ ## name_ ## End_ =                                    \
+    prefix_ ## name_ ## Offset_ + prefix_ ## name_ ## Len_ - 1,
+
+#define WV_M_DRIVER_DUMMY_IDS_X_LITERALS(prefix_, name_, literal_) \
+  literal_ L"\0"
+
+#define WV_M_DRIVER_DUMMY_IDS_X_FILL(prefix_, name_, literal_)  \
+  prefix_ ## name_ ## Offset_,                                  \
+  prefix_ ## name_ ## Len_,
+
+/**
+ * Generate a static const WV_S_DRIVER_DUMMY_IDS object.
+ *
+ * @v DummyIds          The name of the desired object.  Also used as prefix.
+ * @v XMacro            The x-macro with the ID text.
+ *
+ * This macro will produce the following:
+ *   enum values:
+ *     [DummyIds]DevOffset_
+ *     [DummyIds]DevLen_
+ *     [DummyIds]DevEnd_
+ *     [DummyIds]InstanceOffset_
+ *     [DummyIds]InstanceLen_
+ *     [DummyIds]InstanceEnd_
+ *     [DummyIds]HardwareOffset_
+ *     [DummyIds]HardwareLen_
+ *     [DummyIds]HardwareEnd_
+ *     [DummyIds]CompatOffset_
+ *     [DummyIds]CompatLen_
+ *     [DummyIds]CompatEnd_
+ *     [DummyIds]Len_
+ *   WCHAR[]:
+ *     [DummyIds]String_
+ *   static const WV_S_DRIVER_DUMMY_IDS:
+ *     [DummyIds]
+ */
+#define WV_M_DRIVER_DUMMY_ID_GEN(DummyIds, XMacro)    \
+                                                      \
+enum {                                                \
+    XMacro(WV_M_DRIVER_DUMMY_IDS_X_ENUM, DummyIds)    \
+    DummyIds ## Len_                                  \
+  };                                                  \
+                                                      \
+static const WCHAR DummyIds ## String_[] =            \
+  XMacro(WV_M_DRIVER_DUMMY_IDS_X_LITERALS, DummyIds); \
+                                                      \
+static const WV_S_DRIVER_DUMMY_IDS DummyIds = {       \
+    XMacro(WV_M_DRIVER_DUMMY_IDS_X_FILL, DummyIds)    \
+    DummyIds ## String_                               \
+  }
 
 extern winvblock__lib_func NTSTATUS STDCALL driver__complete_irp(
     IN PIRP,
@@ -77,6 +144,10 @@ extern winvblock__lib_func NTSTATUS STDCALL WvDriverAddDummy(
     IN WV_FP_DEV_PNP_ID,
     IN DEVICE_TYPE,
     IN ULONG
+  );
+extern winvblock__lib_func NTSTATUS STDCALL WvDriverDummyIds(
+    IN PIRP,
+    IN WV_SP_DRIVER_DUMMY_IDS
   );
 
 #endif	/* WV_M_DRIVER_H_ */

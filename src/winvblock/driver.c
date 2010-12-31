@@ -965,3 +965,66 @@ winvblock__lib_func NTSTATUS STDCALL WvDriverAddDummy(
 
     return context.Status;
   }
+
+/**
+ * Handle a PnP ID query with a WV_S_DRIVER_DUMMY_IDS object.
+ *
+ * @v Irp               The PnP ID query IRP to handle.
+ * @v DummyIds          The object containing the IDs to respond with.
+ * @ret NTSTATUS        The status of the operation.
+ */
+winvblock__lib_func NTSTATUS STDCALL WvDriverDummyIds(
+    IN PIRP Irp,
+    IN WV_SP_DRIVER_DUMMY_IDS DummyIds
+  ) {
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(Irp);
+    BUS_QUERY_ID_TYPE query_type = io_stack_loc->Parameters.QueryId.IdType;
+    const WCHAR * ids;
+    winvblock__uint32 len;
+    NTSTATUS status;
+
+    switch (query_type) {
+        case BusQueryDeviceID:
+          ids = DummyIds->Ids + DummyIds->DevOffset;
+          len = DummyIds->DevLen;
+          break;
+
+        case BusQueryInstanceID:
+          ids = DummyIds->Ids + DummyIds->InstanceOffset;
+          len = DummyIds->InstanceLen;
+          break;
+
+        case BusQueryHardwareIDs:
+          ids = DummyIds->Ids + DummyIds->HardwareOffset;
+          len = DummyIds->HardwareLen;
+          break;
+
+        case BusQueryCompatibleIDs:
+          ids = DummyIds->Ids + DummyIds->CompatOffset;
+          len = DummyIds->CompatLen;
+          break;
+
+        default:
+          return driver__complete_irp(Irp, 0, STATUS_NOT_SUPPORTED);
+      }
+
+    /* Allocate the return buffer. */
+    Irp->IoStatus.Information = (ULONG_PTR) wv_palloc(len * sizeof *ids);
+    if (Irp->IoStatus.Information == 0) {
+        DBG("wv_palloc failed.\n");
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto alloc_info;
+      }
+    /* Copy the working buffer to the return buffer. */
+    RtlCopyMemory(
+        (void *) Irp->IoStatus.Information,
+        ids,
+        len * sizeof *ids
+      );
+    status = STATUS_SUCCESS;
+
+    /* irp->IoStatus.Information not freed. */
+    alloc_info:
+
+    return driver__complete_irp(Irp, Irp->IoStatus.Information, status);
+  }
