@@ -69,7 +69,6 @@ typedef struct WV_BUS_T {
     WV_FP_BUS_THREAD Thread;
     KEVENT ThreadSignal;
     winvblock__bool Stop;
-    KEVENT ThreadStopped;
     WV_E_BUS_STATE OldState;
     WV_E_BUS_STATE State;
     WV_FP_BUS_PNP QueryDevText;
@@ -114,7 +113,10 @@ extern winvblock__lib_func void WvBusInit(WV_SP_BUS_T);
 extern winvblock__lib_func WV_SP_BUS_T WvBusCreate(void);
 extern winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T);
 extern winvblock__lib_func void WvBusCancelWorkItems(WV_SP_BUS_T);
-extern winvblock__lib_func NTSTATUS WvBusStartThread(WV_SP_BUS_T);
+extern winvblock__lib_func NTSTATUS WvBusStartThread(
+    IN WV_SP_BUS_T,
+    OUT PETHREAD *
+  );
 extern winvblock__lib_func winvblock__bool STDCALL WvBusInitNode(
     OUT WV_SP_BUS_NODE,
     IN PDEVICE_OBJECT

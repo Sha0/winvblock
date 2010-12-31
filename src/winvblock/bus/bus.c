@@ -104,7 +104,6 @@ winvblock__lib_func void WvBusInit(WV_SP_BUS_T Bus) {
     KeInitializeSpinLock(&Bus->BusPrivate_.WorkItemsLock);
     InitializeListHead(&Bus->BusPrivate_.WorkItems);
     KeInitializeEvent(&Bus->ThreadSignal, SynchronizationEvent, FALSE);
-    KeInitializeEvent(&Bus->ThreadStopped, SynchronizationEvent, FALSE);
   }
 
 /**
@@ -341,7 +340,8 @@ static void STDCALL WvBusThread_(IN void * context) {
       }
 
     bus->Thread(bus);
-    KeSetEvent(&bus->ThreadStopped, 0, FALSE);
+    DBG("Exiting.\n");
+    PsTerminateSystemThread(STATUS_SUCCESS);
     return;
   }
 
@@ -389,17 +389,21 @@ static void STDCALL WvBusDefaultThread_(IN WV_SP_BUS_T bus) {
  * Start a bus thread.
  *
  * @v Bus               The bus to start a thread for.
+ * @v Thread            A PETHREAD to be filled to reference the thread.
  * @ret NTSTATUS        The status of the thread creation operation.
  *
  * Also see WV_F_BUS_THREAD in the header for details about the prototype
  * for implementing your own bus thread routine.  You set WV_S_BUS_T::Thread
  * to specify your own thread routine, then call this function to start it.
+ * When stopping the thread, you can wait on the thread handle.
  */
 winvblock__lib_func NTSTATUS WvBusStartThread(
-    WV_SP_BUS_T Bus
+    IN WV_SP_BUS_T Bus,
+    OUT PETHREAD * Thread
   ) {
     OBJECT_ATTRIBUTES obj_attrs;
     HANDLE thread_handle;
+    NTSTATUS status;
 
     if (!Bus) {
         DBG("No bus specified!\n");
@@ -413,7 +417,7 @@ winvblock__lib_func NTSTATUS WvBusStartThread(
         NULL,
         NULL
       );
-    return PsCreateSystemThread(
+    status = PsCreateSystemThread(
         &thread_handle,
         THREAD_ALL_ACCESS,
         &obj_attrs,
@@ -421,6 +425,16 @@ winvblock__lib_func NTSTATUS WvBusStartThread(
         NULL,
         WvBusThread_,
         Bus
+      );
+    if (!NT_SUCCESS(status))
+      return status;
+    return ObReferenceObjectByHandle(
+        thread_handle,
+        THREAD_ALL_ACCESS,
+        *PsThreadType,
+        KernelMode,
+        Thread,
+        NULL
       );
   }
 

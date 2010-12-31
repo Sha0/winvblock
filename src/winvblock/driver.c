@@ -68,6 +68,7 @@ static UNICODE_STRING WvDriverBusDosname_ = {
 /* The main bus. */
 static WV_S_BUS_T WvDriverBus_ = {0};
 static WV_S_DEV_T WvDriverBusDev_ = {0};
+static PETHREAD WvDriverBusThread_ = NULL;
 /* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters. */
 static LPWSTR WvDriverOsLoadOpts_ = NULL;
 
@@ -209,7 +210,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
         DBG("IoAttachDeviceToDeviceStack() failed!\n");
         goto err_attach;
       }
-    status = WvBusStartThread(&WvDriverBus_);
+    status = WvBusStartThread(&WvDriverBus_, &WvDriverBusThread_);
     if (!NT_SUCCESS(status)) {
         DBG("Couldn't start bus thread!\n");
         goto err_thread;
@@ -564,13 +565,17 @@ static NTSTATUS driver__dispatch_pnp_(
 static void STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
     DBG("Unloading...\n");
     WvDriverBus_.Stop = TRUE;
-    KeWaitForSingleObject(
-        &WvDriverBus_.ThreadStopped,
-        Executive,
-        KernelMode,
-        FALSE,
-        NULL
-      );
+    KeSetEvent(&WvDriverBus_.ThreadSignal, 0, FALSE);
+    if (WvDriverBusThread_) {
+        KeWaitForSingleObject(
+            WvDriverBusThread_,
+            Executive,
+            KernelMode,
+            FALSE,
+            NULL
+          );
+        ObDereferenceObject(WvDriverBusThread_);
+      }
     if (WvDriverStateHandle_ != NULL)
       PoUnregisterSystemState(WvDriverStateHandle_);
     IoDeleteSymbolicLink(&WvDriverBusDosname_);
