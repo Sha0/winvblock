@@ -251,13 +251,24 @@ static NTSTATUS STDCALL driver__attach_fdo_(
 
 /* Establish the bus PDO. */
 static NTSTATUS STDCALL WvDriverBusEstablish_(IN PUNICODE_STRING RegistryPath) {
-    WV_SP_BUS_T bus;
     NTSTATUS status;
+    HANDLE reg_key;
+    winvblock__uint32 pdo_done = 0;
     PDEVICE_OBJECT bus_pdo = NULL;
 
-    /* TODO: Check the Registry to see if we've already got a PDO. */
-    
-    /* Create the PDO. */
+    /* Open our Registry path. */
+    status = WvlRegOpenKey(RegistryPath->Buffer, &reg_key);
+    if (!NT_SUCCESS(status))
+      return status;
+
+    /* Check the Registry to see if we've already got a PDO. */
+    status = WvlRegFetchDword(reg_key, L"PdoDone", &pdo_done);
+    if (NT_SUCCESS(status) && pdo_done) {
+        WvlRegCloseKey(reg_key);
+        return status;
+      }
+
+    /* Create a root-enumerated PDO for our bus. */
     IoReportDetectedDevice(
         WvDriverObj,
         InterfaceTypeUndefined,
@@ -272,6 +283,12 @@ static NTSTATUS STDCALL WvDriverBusEstablish_(IN PUNICODE_STRING RegistryPath) {
         DBG("IoReportDetectedDevice() went wrong!  Exiting.\n");
         status = STATUS_UNSUCCESSFUL;
         goto err_driver_bus;
+      }
+
+    /* Remember that we have a PDO for next time. */
+    status = WvlRegStoreDword(reg_key, L"PdoDone", 1);
+    if (!NT_SUCCESS(status)) {
+        DBG("Couldn't save PdoDone to Registry.  Oh well.\n");
       }
     /* Attach FDO to PDO. */
     status = driver__attach_fdo_(WvDriverObj, bus_pdo);
