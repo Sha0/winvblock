@@ -263,27 +263,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit43]
-FileName=src\util\mount.c
-Folder=Util
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-CompileCpp=1
-
 [Unit44]
-FileName=src\aoe\aoe.rc
-CompileCpp=1
-Folder=AoE
-Compile=1
-Link=0
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit45]
 FileName=src\include\device.h
 CompileCpp=1
 Folder=Include
@@ -293,7 +273,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit46]
+[Unit45]
 FileName=src\winvblock\device.c
 CompileCpp=1
 Folder=WinVBlock
@@ -303,8 +283,18 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit47]
+[Unit46]
 FileName=src\winvblock\filedisk\filedisk.c
+CompileCpp=1
+Folder=WinVBlock/FileDisk
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit47]
+FileName=src\winvblock\filedisk\grub4dos.c
 Folder=WinVBlock/FileDisk
 Compile=1
 Link=1
@@ -314,16 +304,6 @@ BuildCmd=
 CompileCpp=1
 
 [Unit48]
-FileName=src\winvblock\filedisk\grub4dos.c
-CompileCpp=1
-Folder=WinVBlock/FileDisk
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit49]
 FileName=src\include\byte.h
 CompileCpp=1
 Folder=Include
@@ -333,7 +313,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit50]
+[Unit49]
 FileName=src\include\msvhd.h
 CompileCpp=1
 Folder=Include
@@ -343,20 +323,30 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit51]
+[Unit50]
 FileName=src\util\winvblock.rc
+CompileCpp=1
 Folder=Util
 Compile=1
 Link=0
 Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
+
+[Unit51]
+FileName=src\include\wv_stdlib.h
+Folder=Include
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
 CompileCpp=1
 
 [Unit52]
-FileName=src\include\wv_stdlib.h
+FileName=src\winvblock\wv_stdlib.c
 CompileCpp=1
-Folder=Include
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -532,8 +522,8 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit53]
-FileName=src\winvblock\wv_stdlib.c
-Folder=WinVBlock
+FileName=src\include\wv_stddef.h
+Folder=Include
 Compile=1
 Link=1
 Priority=1000
@@ -542,16 +532,6 @@ BuildCmd=
 CompileCpp=1
 
 [Unit54]
-FileName=src\include\wv_stddef.h
-CompileCpp=1
-Folder=Include
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit55]
 FileName=src\aoe\wv_stdlib.c
 CompileCpp=1
 Folder=AoE
@@ -561,7 +541,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit56]
+[Unit55]
 FileName=src\include\wv_string.h
 CompileCpp=1
 Folder=Include
@@ -571,7 +551,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit57]
+[Unit56]
 FileName=src\winvblock\wv_string.c
 CompileCpp=1
 Folder=WinVBlock
@@ -581,7 +561,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit58]
+[Unit57]
 FileName=src\include\wv_stdbool.h
 CompileCpp=1
 Folder=Include
@@ -591,8 +571,18 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit59]
+[Unit58]
 FileName=src\aoe\wv_string.c
+CompileCpp=1
+Folder=AoE
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit59]
+FileName=src\aoe\bus.c
 Folder=AoE
 Compile=1
 Link=1
@@ -602,9 +592,9 @@ BuildCmd=
 CompileCpp=1
 
 [Unit61]
-FileName=src\aoe\registry.c
+FileName=src\util\winvblk.c
 CompileCpp=1
-Folder=AoE
+Folder=Util
 Compile=1
 Link=1
 Priority=1000
@@ -612,7 +602,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit60]
-FileName=src\aoe\bus.c
+FileName=src\aoe\registry.c
 CompileCpp=1
 Folder=AoE
 Compile=1
@@ -767,6 +757,15 @@ CompileCpp=1
 Folder=WinVBlock/Bus
 Compile=1
 Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit43]
+FileName=src\aoe\aoe.rc
+Folder=AoE
+Compile=1
+Link=0
 Priority=1000
 OverrideBuildCmd=0
 BuildCmd=

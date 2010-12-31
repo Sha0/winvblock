@@ -49,15 +49,15 @@ bin/loader32.exe: src/loader/obj/loader32.o Makefile
 	gcc $(INCLUDES) -Wall src/loader/obj/loader32.o -o bin/loader32.exe -lsetupapi
 	strip bin/loader32.exe
 
-src/util/obj/mount.o: src/util/mount.c src/portable.h src/mount.h Makefile
+src/util/obj/winvblk.o: src/util/winvblk.c src/portable.h src/mount.h Makefile
 	@mkdir -p src/obj
-	@rm -rf src/util/obj/mount.o bin/aoe.exe
-	gcc -Wall -c src/util/mount.c -o src/util/obj/mount.o
+	@rm -rf src/util/obj/winvblk.o bin/aoe.exe
+	gcc -Wall -c src/util/winvblk.c -o src/util/obj/winvblk.o
 
-bin/aoe.exe: src/util/obj/mount.o Makefile
+bin/aoe.exe: src/util/obj/winvblk.o Makefile
 	@mkdir -p bin
 	@rm -rf bin/aoe.exe
-	gcc -Wall src/util/obj/mount.o -o bin/aoe.exe
+	gcc -Wall src/util/obj/winvblk.o -o bin/aoe.exe
 	strip bin/aoe.exe
 
 src/obj/driver.o: src/driver.c src/portable.h src/driver.h Makefile
