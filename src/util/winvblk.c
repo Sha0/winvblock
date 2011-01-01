@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -35,25 +35,18 @@
 #include "mount.h"
 #include "aoe.h"
 
-/**
- * Command routine.
- *
- * @v boot_bus          A handle to the boot bus device.
- */
-#define command_decl( x )       \
-                                \
-int STDCALL                     \
-x (                             \
-  HANDLE boot_bus               \
- )
-/* Function pointer for a command routine. */
-typedef command_decl(( *command_routine ));
+/* Command function. */
+typedef int STDCALL (WVU_F_CMD_)(void);
+typedef WVU_F_CMD_ * WVU_FP_CMD_;
 
 winvblock__def_struct(option) {
     char *name;
     char *value;
     int has_arg;
   };
+
+/* Handle to the device. */
+static HANDLE boot_bus = NULL;
 
 static option opt_h1 = {
     "HELP", NULL, 0
@@ -181,7 +174,7 @@ static void cmdline_options(int argc, char **argv) {
       }
   }
 
-static command_decl(cmd_help) {
+static int STDCALL cmd_help(void) {
     char help_text[] = "\n\
 WinVBlock user-land utility for disk control. (C) 2006-2008 V.,\n\
                                               (C) 2009-2010 Shao Miller\n\
@@ -209,7 +202,7 @@ Parameters:\n\
     return 1;
   }
 
-static command_decl(cmd_scan) {
+static int STDCALL cmd_scan(void) {
     aoe__mount_targets_ptr targets;
     DWORD bytes_returned;
     winvblock__uint32 i;
@@ -284,7 +277,7 @@ static command_decl(cmd_scan) {
     return status;
   }
 
-static command_decl(cmd_show) {
+static int STDCALL cmd_show(void) {
     aoe__mount_disks_ptr mounted_disks;
     DWORD bytes_returned;
     winvblock__uint32 i;
@@ -359,7 +352,7 @@ static command_decl(cmd_show) {
     return status;
   }
 
-static command_decl(cmd_mount) {
+static int STDCALL cmd_mount(void) {
     winvblock__uint8 mac_addr[6];
     winvblock__uint32 ver_major, ver_minor;
     winvblock__uint8 in_buf[sizeof (mount__filedisk) + 1024];
@@ -415,7 +408,7 @@ static command_decl(cmd_mount) {
     return 0;
   }
 
-static command_decl(cmd_umount) {
+static int STDCALL cmd_umount(void) {
     winvblock__uint32 disk_num;
     winvblock__uint8 in_buf[sizeof (mount__filedisk) + 1024];
     DWORD bytes_returned;
@@ -443,7 +436,7 @@ static command_decl(cmd_umount) {
     return 0;
   }
 
-static command_decl(cmd_attach) {
+static int STDCALL cmd_attach(void) {
     mount__filedisk filedisk;
     char obj_path_prefix[] = "\\??\\";
     winvblock__uint8 in_buf[sizeof (mount__filedisk) + 1024];
@@ -487,7 +480,7 @@ static command_decl(cmd_attach) {
     return 0;
   }
 
-static command_decl(cmd_detach) {
+static int STDCALL cmd_detach(void) {
     winvblock__uint32 disk_num;
     winvblock__uint8 in_buf[sizeof (mount__filedisk) + 1024];
     DWORD bytes_returned;
@@ -516,8 +509,7 @@ static command_decl(cmd_detach) {
   }
 
 int main(int argc, char **argv, char **envp) {
-    command_routine cmd = cmd_help;
-    HANDLE boot_bus = NULL;
+    WVU_FP_CMD_ cmd = cmd_help;
     int status = 1;
 
     cmdline_options(argc, argv);
@@ -564,7 +556,7 @@ int main(int argc, char **argv, char **envp) {
       }
 
     do_cmd:
-    status = cmd(boot_bus);
+    status = cmd();
 
     if (boot_bus != NULL)
       CloseHandle(boot_bus);
