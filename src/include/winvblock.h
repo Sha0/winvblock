@@ -17,8 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef WV_M_WINVBLOCK_H_
-#  define WV_M_WINVBLOCK_H_
+#ifndef WVL_M_WINVBLOCK_H_
+#  define WVL_M_WINVBLOCK_H_
 
 /**
  * @file
@@ -62,4 +62,4 @@ typedef void *winvblock__any_ptr;
 #    define winvblock__lib_func __declspec(dllimport)
 #  endif
 
-#endif  /* WV_M_WINVBLOCK_H_ */
+#endif  /* WVL_M_WINVBLOCK_H_ */
