@@ -30,11 +30,6 @@
 #define WVL_M_LIT "WinVBlock"
 #define WVL_M_WLIT L"WinVBlock"
 
-/* Set up type definitions for an enumated type. */
-#  define winvblock__def_enum( x ) \
-\
-typedef enum _##x x, *x##_ptr
-
 /* To export functions while serving as a library. */
 #  ifdef PROJECT_BUS
 #    define WVL_M_LIB __declspec(dllexport)
