@@ -1354,8 +1354,10 @@ static void STDCALL AoeThread_(IN void *StartContext)
         if ( AoeStop_ )
     {
       DBG ( "Stopping...\n" );
+      WvBusCancelWorkItems(&AoeBusMain);
       PsTerminateSystemThread ( STATUS_SUCCESS );
     }
+        WvBusProcessWorkItems(&AoeBusMain);
 
         KeQuerySystemTime ( &CurrentTime );
         /*
