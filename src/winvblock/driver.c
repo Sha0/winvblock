@@ -608,7 +608,7 @@ static NTSTATUS STDCALL WvDriverBusSysCtl_(IN WV_SP_DEV_T dev, IN PIRP irp) {
 
 /* Pass a power IRP to the bus. */
 static NTSTATUS STDCALL WvDriverBusPower_(IN WV_SP_DEV_T dev, IN PIRP irp) {
-    return WvBusPower(&WvDriverBus_, irp);
+    return WvlBusPower(&WvDriverBus_, irp);
   }
 
 /* Pass an IRP_MJ_PNP to the bus. */

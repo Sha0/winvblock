@@ -1900,7 +1900,7 @@ static NTSTATUS AoeDriverIrpPower_(
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)
-      return WvBusPower(&AoeBusMain, irp);
+      return WvlBusPower(&AoeBusMain, irp);
     /* WvDevFromDevObj() checks for a NULL dev_obj */
     dev = WvDevFromDevObj(dev_obj);
     /* Check that the device exists. */

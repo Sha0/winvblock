@@ -77,7 +77,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusSysCtl(
   }
 
 /* Handle a power IRP. */
-WVL_M_LIB NTSTATUS STDCALL WvBusPower(
+WVL_M_LIB NTSTATUS STDCALL WvlBusPower(
     IN WVL_SP_BUS_T Bus,
     IN PIRP Irp
   ) {
