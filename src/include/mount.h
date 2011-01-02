@@ -1,6 +1,6 @@
 /**
  * Copyright 2006-2008, V.
- * Portions copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Portions copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * For WinAoE contact information, see http://winaoe.org/
  *
  * This file is part of WinVBlock, derived from WinAoE.
@@ -24,8 +24,7 @@
 /**
  * @file
  *
- * Mount command and device control code header
- *
+ * Mount command and device control code header.
  */
 
 #  define IOCTL_FILE_ATTACH             \
@@ -43,12 +42,11 @@
     FILE_READ_DATA | FILE_WRITE_DATA    \
     )
 
-winvblock__def_struct ( mount__filedisk )
-{
-  char type;
-  int cylinders;
-  int heads;
-  int sectors;
-};
+typedef struct WV_MOUNT_DISK {
+    char type;
+    int cylinders;
+    int heads;
+    int sectors;
+  } WV_S_MOUNT_DISK, * WV_SP_MOUNT_DISK;
 
 #endif  /* WV_M_MOUNT_H_ */

@@ -141,7 +141,7 @@ static winvblock__uint32 STDCALL query_id(
 NTSTATUS STDCALL filedisk__attach(IN WV_SP_DEV_T dev, IN PIRP irp) {
   ANSI_STRING file_path1;
   winvblock__uint8_ptr buf = irp->AssociatedIrp.SystemBuffer;
-  mount__filedisk_ptr params = ( mount__filedisk_ptr ) buf;
+  WV_SP_MOUNT_DISK params = (WV_SP_MOUNT_DISK) buf;
   UNICODE_STRING file_path2;
   OBJECT_ATTRIBUTES obj_attrs;
   NTSTATUS status;
@@ -158,7 +158,7 @@ NTSTATUS STDCALL filedisk__attach(IN WV_SP_DEV_T dev, IN PIRP irp) {
     }
 
   RtlInitAnsiString ( &file_path1,
-		      ( char * )&buf[sizeof ( mount__filedisk )] );
+		      ( char * )&buf[sizeof ( WV_S_MOUNT_DISK )] );
   status = RtlAnsiStringToUnicodeString ( &file_path2, &file_path1, TRUE );
   if ( !NT_SUCCESS ( status ) )
     goto err_ansi_to_unicode;

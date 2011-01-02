@@ -375,7 +375,7 @@ static int STDCALL cmd_show(void) {
 static int STDCALL cmd_mount(void) {
     winvblock__uint8 mac_addr[6];
     winvblock__uint32 ver_major, ver_minor;
-    winvblock__uint8 in_buf[sizeof (mount__filedisk) + 1024];
+    winvblock__uint8 in_buf[sizeof (WV_S_MOUNT_DISK) + 1024];
     DWORD bytes_returned;
 
     if (opt_mac.value == NULL || opt_uri.value == NULL) {
@@ -430,7 +430,7 @@ static int STDCALL cmd_mount(void) {
 
 static int STDCALL cmd_umount(void) {
     winvblock__uint32 disk_num;
-    winvblock__uint8 in_buf[sizeof (mount__filedisk) + 1024];
+    winvblock__uint8 in_buf[sizeof (WV_S_MOUNT_DISK) + 1024];
     DWORD bytes_returned;
 
     if (opt_disknum.value == NULL) {
@@ -457,9 +457,9 @@ static int STDCALL cmd_umount(void) {
   }
 
 static int STDCALL cmd_attach(void) {
-    mount__filedisk filedisk;
+    WV_S_MOUNT_DISK filedisk;
     char obj_path_prefix[] = "\\??\\";
-    winvblock__uint8 in_buf[sizeof (mount__filedisk) + 1024];
+    winvblock__uint8 in_buf[sizeof (WV_S_MOUNT_DISK) + 1024];
     DWORD bytes_returned;
 
     if (opt_uri.value == NULL || opt_media.value == NULL) {
@@ -473,14 +473,14 @@ static int STDCALL cmd_attach(void) {
       sscanf(opt_heads.value, "%d", (int *) &filedisk.heads);
     if (opt_spt.value != NULL)
       sscanf(opt_spt.value, "%d", (int *) &filedisk.sectors);
-    memcpy(in_buf, &filedisk, sizeof (mount__filedisk));
+    memcpy(in_buf, &filedisk, sizeof (WV_S_MOUNT_DISK));
     memcpy(
-        in_buf + sizeof (mount__filedisk),
+        in_buf + sizeof (WV_S_MOUNT_DISK),
         obj_path_prefix,
         sizeof (obj_path_prefix)
       );
     memcpy(
-        in_buf + sizeof (mount__filedisk) + sizeof (obj_path_prefix) - 1,
+        in_buf + sizeof (WV_S_MOUNT_DISK) + sizeof (obj_path_prefix) - 1,
         opt_uri.value,
         strlen(opt_uri.value) + 1
       );
@@ -502,7 +502,7 @@ static int STDCALL cmd_attach(void) {
 
 static int STDCALL cmd_detach(void) {
     winvblock__uint32 disk_num;
-    winvblock__uint8 in_buf[sizeof (mount__filedisk) + 1024];
+    winvblock__uint8 in_buf[sizeof (WV_S_MOUNT_DISK) + 1024];
     DWORD bytes_returned;
 
     if (opt_disknum.value == NULL) {
