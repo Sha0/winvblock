@@ -170,9 +170,9 @@ static PDEVICE_OBJECT STDCALL create_pdo(IN WV_SP_DEV_T dev_ptr) {
   }
 
 /*
- * WV_S_DISK_FAT_EXTRA and fat_super taken from syslinux/memdisk/setup.c by
- * H. Peter Anvin.  Licensed under the terms of the GNU General Public
- * License version 2 or later.
+ * WV_S_DISK_FAT_EXTRA and WV_S_DISK_FAT_SUPER taken from
+ * syslinux/memdisk/setup.c by H. Peter Anvin.  Licensed under the terms
+ * of the GNU General Public License version 2 or later.
  */
 #ifdef _MSC_VER
 #  pragma pack(1)
@@ -187,7 +187,7 @@ struct WV_DISK_FAT_EXTRA {
   } __attribute__((packed));
 typedef struct WV_DISK_FAT_EXTRA WV_S_DISK_FAT_EXTRA, * WV_SP_DISK_FAT_EXTRA;
 
-winvblock__def_struct(fat_super) {
+struct WV_DISK_FAT_SUPER {
     winvblock__uint8 bs_jmpboot[3];
     char bs_oemname[8];
     winvblock__uint16 bpb_bytspersec;
@@ -217,6 +217,7 @@ winvblock__def_struct(fat_super) {
           } fat32 __attribute__((packed));
       } x;
   } __attribute__((__packed__));
+typedef struct WV_DISK_FAT_SUPER WV_S_DISK_FAT_SUPER, * WV_SP_DISK_FAT_SUPER;
 #ifdef _MSC_VER
 #  pragma pack()
 #endif
@@ -249,7 +250,7 @@ WVL_M_LIB void disk__guess_geometry(
          * megafloppy images and unpartitioned hard disks. 
          */
         WV_SP_DISK_FAT_EXTRA extra = NULL;
-        fat_super_ptr fs = (fat_super_ptr) boot_sect_ptr;
+        WV_SP_DISK_FAT_SUPER fs = (WV_SP_DISK_FAT_SUPER) boot_sect_ptr;
   
         if (
             (fs->bpb_media == 0xf0 || fs->bpb_media >= 0xf8) &&
