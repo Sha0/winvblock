@@ -81,7 +81,7 @@ typedef struct WVL_BUS_T {
   } WVL_S_BUS_T, * WVL_SP_BUS_T;
 
 /* A child PDO node on a bus.  Treat this as an opaque type. */
-typedef struct WV_BUS_NODE {
+typedef struct WVL_BUS_NODE {
     struct {
         LIST_ENTRY Link;
         PDEVICE_OBJECT Pdo;
