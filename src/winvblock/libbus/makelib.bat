@@ -1,6 +1,6 @@
 @echo off
 
-set libname=bus
+set libname=libbus
 
 set c=bus.c pnp.c
 
