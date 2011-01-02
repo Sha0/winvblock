@@ -54,7 +54,7 @@ typedef struct WV_BUS_WORK_ITEM_ {
   } WV_S_BUS_WORK_ITEM_, * WV_SP_BUS_WORK_ITEM_;
 
 /* Forward declarations. */
-static WV_F_BUS_THREAD WvBusDefaultThread_;
+static WVL_F_BUS_THREAD WvBusDefaultThread_;
 static winvblock__bool WvBusAddWorkItem_(
     WV_SP_BUS_T,
     WV_SP_BUS_WORK_ITEM_
@@ -392,7 +392,7 @@ static void STDCALL WvBusDefaultThread_(IN WV_SP_BUS_T bus) {
  * @v Thread            A PETHREAD to be filled to reference the thread.
  * @ret NTSTATUS        The status of the thread creation operation.
  *
- * Also see WV_F_BUS_THREAD in the header for details about the prototype
+ * Also see WVL_F_BUS_THREAD in the header for details about the prototype
  * for implementing your own bus thread routine.  You set WV_S_BUS_T::Thread
  * to specify your own thread routine, then call this function to start it.
  * When stopping the thread, you can wait on the thread handle.

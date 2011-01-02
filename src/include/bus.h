@@ -35,8 +35,8 @@
  * If you implement your own bus thread routine, you should call
  * WvBusProcessWorkItems() within its loop.
  */
-typedef void STDCALL WV_F_BUS_THREAD(IN WV_SP_BUS_T);
-typedef WV_F_BUS_THREAD * WV_FP_BUS_THREAD;
+typedef void STDCALL WVL_F_BUS_THREAD(IN WV_SP_BUS_T);
+typedef WVL_F_BUS_THREAD * WVL_FP_BUS_THREAD;
 
 /**
  * A bus PnP routine.
@@ -66,7 +66,7 @@ typedef struct WV_BUS_T {
     PDEVICE_OBJECT Pdo;
     PDEVICE_OBJECT Fdo;
     winvblock__uint32 Children;
-    WV_FP_BUS_THREAD Thread;
+    WVL_FP_BUS_THREAD Thread;
     KEVENT ThreadSignal;
     winvblock__bool Stop;
     WV_E_BUS_STATE OldState;
