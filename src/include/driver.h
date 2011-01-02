@@ -37,9 +37,6 @@
 
 #define POOLSIZE 2048
 
-/* An unfortunate forward declaration.  Definition resolved in device.h */
-struct WV_DEV_T;
-
 extern PDRIVER_OBJECT WvDriverObj;
 extern WVL_M_LIB VOID STDCALL WvDriverCompletePendingIrp(IN PIRP);
 /* Note the exception to the function naming convention. */
