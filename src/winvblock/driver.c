@@ -66,7 +66,7 @@ static UNICODE_STRING WvDriverBusDosname_ = {
     WV_M_BUS_DOSNAME_
   };
 /* The main bus. */
-static WV_S_BUS_T WvDriverBus_ = {0};
+static WVL_S_BUS_T WvDriverBus_ = {0};
 static WV_S_DEV_T WvDriverBusDev_ = {0};
 static PETHREAD WvDriverBusThread_ = NULL;
 /* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters. */
@@ -790,7 +790,7 @@ NTSTATUS STDCALL WvDriverGetDevCapabilities(
   }
 
 static NTSTATUS STDCALL WvDriverBusPnpQueryDevText_(
-    IN WV_SP_BUS_T bus,
+    IN WVL_SP_BUS_T bus,
     IN PIRP irp
   ) {
     WCHAR (*str)[512];

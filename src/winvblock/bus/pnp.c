@@ -46,7 +46,7 @@ static NTSTATUS STDCALL WvBusPnpIoCompletion_(
     return STATUS_MORE_PROCESSING_REQUIRED;
   }
 
-static NTSTATUS STDCALL WvBusPnpStartDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
+static NTSTATUS STDCALL WvBusPnpStartDev_(IN WVL_SP_BUS_T bus, IN PIRP irp) {
     NTSTATUS status;
     KEVENT event;
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
@@ -79,7 +79,7 @@ static NTSTATUS STDCALL WvBusPnpStartDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
       );
   }
 
-static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
+static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WVL_SP_BUS_T bus, IN PIRP irp) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
     PDEVICE_OBJECT lower;
@@ -131,7 +131,7 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
   }
 
 static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
-    IN WV_SP_BUS_T bus,
+    IN WVL_SP_BUS_T bus,
     IN PIRP irp
   ) {
     NTSTATUS status;
@@ -202,7 +202,7 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
   }
 
 static NTSTATUS STDCALL WvBusPnpQueryCapabilities_(
-    IN WV_SP_BUS_T bus,
+    IN WVL_SP_BUS_T bus,
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
@@ -237,7 +237,7 @@ DEFINE_GUID(
     0xb1
   );
 
-static NTSTATUS STDCALL WvBusPnpQueryBusInfo_(IN WV_SP_BUS_T bus, IN PIRP irp) {
+static NTSTATUS STDCALL WvBusPnpQueryBusInfo_(IN WVL_SP_BUS_T bus, IN PIRP irp) {
     PPNP_BUS_INFORMATION pnp_bus_info;
     NTSTATUS status;
 
@@ -262,7 +262,7 @@ static NTSTATUS STDCALL WvBusPnpQueryBusInfo_(IN WV_SP_BUS_T bus, IN PIRP irp) {
   }
 
 static NTSTATUS STDCALL WvBusPnpSimple_(
-    IN WV_SP_BUS_T bus,
+    IN WVL_SP_BUS_T bus,
     IN PIRP irp,
     IN UCHAR code
   ) {
@@ -337,7 +337,7 @@ static NTSTATUS STDCALL WvBusPnpSimple_(
 
 /* Bus PnP dispatch routine. */
 winvblock__lib_func NTSTATUS STDCALL WvBusPnp(
-    IN WV_SP_BUS_T bus,
+    IN WVL_SP_BUS_T bus,
     IN PIRP irp,
     IN UCHAR code
   ) {

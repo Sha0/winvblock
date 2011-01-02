@@ -35,7 +35,7 @@
  * If you implement your own bus thread routine, you should call
  * WvBusProcessWorkItems() within its loop.
  */
-typedef void STDCALL WVL_F_BUS_THREAD(IN WV_SP_BUS_T);
+typedef void STDCALL WVL_F_BUS_THREAD(IN WVL_SP_BUS_T);
 typedef WVL_F_BUS_THREAD * WVL_FP_BUS_THREAD;
 
 /**
@@ -45,7 +45,7 @@ typedef WVL_F_BUS_THREAD * WVL_FP_BUS_THREAD;
  * @v irp               The IRP to process.
  * @ret NTSTATUS        The status of the operation.
  */
-typedef NTSTATUS STDCALL WVL_F_BUS_PNP(IN WV_SP_BUS_T, IN PIRP);
+typedef NTSTATUS STDCALL WVL_F_BUS_PNP(IN WVL_SP_BUS_T, IN PIRP);
 typedef WVL_F_BUS_PNP * WVL_FP_BUS_PNP;
 
 /* Device state. */
@@ -61,7 +61,7 @@ typedef enum WVL_BUS_STATE {
   } WVL_E_BUS_STATE, * WVL_EP_BUS_STATE;
 
 /* The bus type. */
-typedef struct WV_BUS_T {
+typedef struct WVL_BUS_T {
     PDEVICE_OBJECT LowerDeviceObject;
     PDEVICE_OBJECT Pdo;
     PDEVICE_OBJECT Fdo;
@@ -78,14 +78,14 @@ typedef struct WV_BUS_T {
         LIST_ENTRY WorkItems;
         KSPIN_LOCK WorkItemsLock;
       } BusPrivate_;
-  } WV_S_BUS_T, * WV_SP_BUS_T;
+  } WVL_S_BUS_T, * WVL_SP_BUS_T;
 
 /* A child PDO node on a bus.  Treat this as an opaque type. */
 typedef struct WV_BUS_NODE {
     struct {
         LIST_ENTRY Link;
         PDEVICE_OBJECT Pdo;
-        WV_SP_BUS_T Bus;
+        WVL_SP_BUS_T Bus;
         /* The child's unit number relative to the parent bus. */
         winvblock__uint32 Num;
       } BusPrivate_;
@@ -109,12 +109,12 @@ typedef struct WV_BUS_CUSTOM_WORK_ITEM {
   } WV_S_BUS_CUSTOM_WORK_ITEM, * WV_SP_BUS_CUSTOM_WORK_ITEM;
 
 /* Exports. */
-extern winvblock__lib_func void WvBusInit(WV_SP_BUS_T);
-extern winvblock__lib_func WV_SP_BUS_T WvBusCreate(void);
-extern winvblock__lib_func void WvBusProcessWorkItems(WV_SP_BUS_T);
-extern winvblock__lib_func void WvBusCancelWorkItems(WV_SP_BUS_T);
+extern winvblock__lib_func void WvBusInit(WVL_SP_BUS_T);
+extern winvblock__lib_func WVL_SP_BUS_T WvBusCreate(void);
+extern winvblock__lib_func void WvBusProcessWorkItems(WVL_SP_BUS_T);
+extern winvblock__lib_func void WvBusCancelWorkItems(WVL_SP_BUS_T);
 extern winvblock__lib_func NTSTATUS WvBusStartThread(
-    IN WV_SP_BUS_T,
+    IN WVL_SP_BUS_T,
     OUT PETHREAD *
   );
 extern winvblock__lib_func winvblock__bool STDCALL WvBusInitNode(
@@ -122,26 +122,26 @@ extern winvblock__lib_func winvblock__bool STDCALL WvBusInitNode(
     IN PDEVICE_OBJECT
   );
 extern winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
-    WV_SP_BUS_T,
+    WVL_SP_BUS_T,
     WV_SP_BUS_NODE
   );
 extern winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(WV_SP_BUS_NODE);
-extern winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueIrp(WV_SP_BUS_T, PIRP);
+extern winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueIrp(WVL_SP_BUS_T, PIRP);
 extern winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueCustomWorkItem(
-    WV_SP_BUS_T,
+    WVL_SP_BUS_T,
     WV_SP_BUS_CUSTOM_WORK_ITEM
   );
 extern winvblock__lib_func NTSTATUS STDCALL WvBusSysCtl(
-    IN WV_SP_BUS_T,
+    IN WVL_SP_BUS_T,
     IN PIRP
   );
 extern winvblock__lib_func NTSTATUS STDCALL WvBusPower(
-    IN WV_SP_BUS_T,
+    IN WVL_SP_BUS_T,
     IN PIRP
   );
 /* IRP_MJ_PNP dispatcher in bus/pnp.c */
 extern winvblock__lib_func NTSTATUS STDCALL WvBusPnp(
-    IN WV_SP_BUS_T,
+    IN WVL_SP_BUS_T,
     IN PIRP,
     IN UCHAR
   );
@@ -149,14 +149,14 @@ extern winvblock__lib_func winvblock__uint32 STDCALL WvBusGetNodeNum(
     IN WV_SP_BUS_NODE
   );
 extern winvblock__lib_func WV_SP_BUS_NODE STDCALL WvBusGetNextNode(
-    IN WV_SP_BUS_T,
+    IN WVL_SP_BUS_T,
     IN WV_SP_BUS_NODE
   );
 extern winvblock__lib_func PDEVICE_OBJECT STDCALL WvBusGetNodePdo(
     IN WV_SP_BUS_NODE
   );
 extern winvblock__lib_func winvblock__uint32 STDCALL WvBusGetNodeCount(
-    WV_SP_BUS_T
+    WVL_SP_BUS_T
   );
 
 #endif  /* WVL_M_BUS_H_ */

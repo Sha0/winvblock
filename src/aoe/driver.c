@@ -52,7 +52,7 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject(
   );
 
 /* From aoe/bus.c */
-extern WV_S_BUS_T AoeBusMain;
+extern WVL_S_BUS_T AoeBusMain;
 extern winvblock__bool AoeBusCreate(IN PDRIVER_OBJECT);
 extern void AoeBusFree(void);
 extern NTSTATUS STDCALL AoeBusDevCtl(IN PIRP, IN ULONG POINTER_ALIGNMENT);
@@ -237,7 +237,7 @@ NTSTATUS STDCALL DriverEntry(
     NTSTATUS Status;
     OBJECT_ATTRIBUTES ObjectAttributes;
     void * ThreadObject;
-    WV_SP_BUS_T bus_ptr;
+    WVL_SP_BUS_T bus_ptr;
     int i;
 
     DBG("Entry\n");

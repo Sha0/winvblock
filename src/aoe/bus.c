@@ -51,7 +51,7 @@ winvblock__bool AoeBusCreate(IN PDRIVER_OBJECT);
 void AoeBusFree(void);
 
 /* Globals. */
-WV_S_BUS_T AoeBusMain = {0};
+WVL_S_BUS_T AoeBusMain = {0};
 static UNICODE_STRING AoeBusName_ = {
     sizeof AOE_M_BUS_NAME_ - sizeof (WCHAR),
     sizeof AOE_M_BUS_NAME_ - sizeof (WCHAR),
@@ -175,7 +175,7 @@ static winvblock__uint32 STDCALL AoeBusPnpId_(
   }
 
 static NTSTATUS STDCALL AoeBusPnpQueryDevText_(
-    IN WV_SP_BUS_T bus,
+    IN WVL_SP_BUS_T bus,
     IN PIRP irp
   ) {
     WCHAR (*str)[512];
