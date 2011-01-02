@@ -531,6 +531,9 @@ static int STDCALL cmd_detach(void) {
 int main(int argc, char **argv, char **envp) {
     WVU_FP_CMD_ cmd = cmd_help;
     int status = 1;
+    char winvblock[] = "\\\\.\\" winvblock__literal;
+    char aoe[] = "\\\\.\\AoE";
+    char * bus_name;
 
     cmdline_options(argc, argv);
     /* Check for invalid option. */
@@ -545,24 +548,36 @@ int main(int argc, char **argv, char **envp) {
     if (opt_cmd.value == NULL)
       goto do_cmd;
     /* Check given command. */
-    if (strcmp(opt_cmd.value, "scan") == 0)
-      cmd = cmd_scan;
-    if (strcmp(opt_cmd.value, "show") == 0)
-      cmd = cmd_show;
-    if (strcmp(opt_cmd.value, "mount" ) == 0)
-      cmd = cmd_mount;
-    if (strcmp(opt_cmd.value, "umount") == 0)
-      cmd = cmd_umount;
-    if (strcmp(opt_cmd.value, "attach") == 0)
-      cmd = cmd_attach;
-    if (strcmp(opt_cmd.value, "detach") == 0)
-      cmd = cmd_detach;
+    if (strcmp(opt_cmd.value, "scan") == 0) {
+        cmd = cmd_scan;
+        bus_name = aoe;
+      }
+    if (strcmp(opt_cmd.value, "show") == 0) {
+        cmd = cmd_show;
+        bus_name = aoe;
+      }
+    if (strcmp(opt_cmd.value, "mount" ) == 0) {
+        cmd = cmd_mount;
+        bus_name = aoe;
+      }
+    if (strcmp(opt_cmd.value, "umount") == 0) {
+        cmd = cmd_umount;
+        bus_name = aoe;
+      }
+    if (strcmp(opt_cmd.value, "attach") == 0) {
+        cmd = cmd_attach;
+        bus_name = winvblock;
+      }
+    if (strcmp(opt_cmd.value, "detach") == 0) {
+        cmd = cmd_detach;
+        bus_name = winvblock;
+      }
     /* Check for invalid command. */
     if (cmd == cmd_help)
       goto do_cmd;
 
     boot_bus = CreateFile(
-        "\\\\.\\" winvblock__literal,
+        bus_name,
         GENERIC_READ | GENERIC_WRITE,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
         NULL,
