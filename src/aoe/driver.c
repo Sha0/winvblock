@@ -1707,7 +1707,7 @@ NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
         NTSTATUS status;
 
         /* Enqueue the IRP. */
-        status = WvBusEnqueueIrp(&AoeBusMain, irp);
+        status = WvlBusEnqueueIrp(&AoeBusMain, irp);
         if (status != STATUS_PENDING)
           /* Problem. */
           return driver__complete_irp(irp, 0, status);

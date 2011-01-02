@@ -87,7 +87,7 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WVL_SP_BUS_T bus, IN PIRP irp) {
 
     if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
         /* Enqueue the IRP. */
-        status = WvBusEnqueueIrp(bus, irp);
+        status = WvlBusEnqueueIrp(bus, irp);
         if (status != STATUS_PENDING)
           /* Problem. */
           return driver__complete_irp(irp, 0, status);
@@ -143,7 +143,7 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
 
     if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
         /* Enqueue the IRP. */
-        status = WvBusEnqueueIrp(bus, irp);
+        status = WvlBusEnqueueIrp(bus, irp);
         if (status != STATUS_PENDING)
           /* Problem. */
           return driver__complete_irp(irp, 0, status);

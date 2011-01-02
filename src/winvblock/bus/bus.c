@@ -512,7 +512,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusRemoveNode(
  * @ret NTSTATUS        The status of the operation.  Returns STATUS_PENDING
  *                      if the IRP is successfully added to the queue.
  */
-WVL_M_LIB NTSTATUS STDCALL WvBusEnqueueIrp(
+WVL_M_LIB NTSTATUS STDCALL WvlBusEnqueueIrp(
     WVL_SP_BUS_T Bus,
     PIRP Irp
   ) {

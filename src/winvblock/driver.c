@@ -671,7 +671,7 @@ static NTSTATUS STDCALL WvDriverBusDevCtlDetach_(
         NTSTATUS status;
 
         /* Enqueue the IRP. */
-        status = WvBusEnqueueIrp(&WvDriverBus_, irp);
+        status = WvlBusEnqueueIrp(&WvDriverBus_, irp);
         if (status != STATUS_PENDING)
           /* Problem. */
           return driver__complete_irp(irp, 0, status);
