@@ -104,10 +104,10 @@ typedef struct WV_BUS_NODE {
 typedef void STDCALL WVL_F_BUS_WORK_ITEM(void *);
 typedef WVL_F_BUS_WORK_ITEM * WVL_FP_BUS_WORK_ITEM;
 
-typedef struct WV_BUS_CUSTOM_WORK_ITEM {
+typedef struct WVL_BUS_CUSTOM_WORK_ITEM {
     WVL_FP_BUS_WORK_ITEM Func;
     void * Context;
-  } WV_S_BUS_CUSTOM_WORK_ITEM, * WV_SP_BUS_CUSTOM_WORK_ITEM;
+  } WVL_S_BUS_CUSTOM_WORK_ITEM, * WVL_SP_BUS_CUSTOM_WORK_ITEM;
 
 /* Exports. */
 extern winvblock__lib_func void WvBusInit(WVL_SP_BUS_T);
@@ -130,7 +130,7 @@ extern winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(WVL_SP_BUS_NODE);
 extern winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueIrp(WVL_SP_BUS_T, PIRP);
 extern winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueCustomWorkItem(
     WVL_SP_BUS_T,
-    WV_SP_BUS_CUSTOM_WORK_ITEM
+    WVL_SP_BUS_CUSTOM_WORK_ITEM
   );
 extern winvblock__lib_func NTSTATUS STDCALL WvBusSysCtl(
     IN WVL_SP_BUS_T,

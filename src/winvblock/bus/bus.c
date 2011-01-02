@@ -49,7 +49,7 @@ typedef struct WV_BUS_WORK_ITEM_ {
     union {
         WVL_SP_BUS_NODE Node;
         PIRP Irp;
-        WV_SP_BUS_CUSTOM_WORK_ITEM Custom;
+        WVL_SP_BUS_CUSTOM_WORK_ITEM Custom;
       } Context;
   } WV_S_BUS_WORK_ITEM_, * WV_SP_BUS_WORK_ITEM_;
 
@@ -577,7 +577,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueIrp(
  */
 winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueCustomWorkItem(
     WVL_SP_BUS_T Bus,
-    WV_SP_BUS_CUSTOM_WORK_ITEM CustomWorkItem
+    WVL_SP_BUS_CUSTOM_WORK_ITEM CustomWorkItem
   ) {
     WV_SP_BUS_WORK_ITEM_ work_item;
 

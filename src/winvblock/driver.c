@@ -1003,7 +1003,7 @@ winvblock__lib_func NTSTATUS STDCALL WvDriverAddDummy(
         &event,
         STATUS_UNSUCCESSFUL
       };
-    WV_S_BUS_CUSTOM_WORK_ITEM work_item = {
+    WVL_S_BUS_CUSTOM_WORK_ITEM work_item = {
         WvDriverAddDummy_,
         &context
       };
