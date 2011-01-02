@@ -66,7 +66,6 @@ PETHREAD WvBusThread = NULL;
 
 /* Forward declarations. */
 WV_F_DEV_CTL WvBusDevCtl;
-WV_F_DEV_PNP WvBusPnp;
 WVL_F_BUS_PNP WvBusPnpQueryDevText;
 
 /* Establish the bus PDO. */
@@ -127,15 +126,6 @@ NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING RegistryPath) {
     return status;
   }
 
-/* Pass an IRP_MJ_PNP to the bus. */
-NTSTATUS STDCALL WvBusPnp(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp,
-    IN UCHAR code
-  ) {
-    return WvlBusPnpIrp(&WvBus, irp, code);
-  }
-    
 /**
  * Add a child node to the bus.
  *
