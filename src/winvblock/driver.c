@@ -171,7 +171,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
     /* Create the bus FDO. */
     status = IoCreateDevice(
         DriverObject,
-        sizeof (driver__dev_ext),
+        sizeof (WV_S_DEV_EXT),
         &WvDriverBusName_,
         FILE_DEVICE_CONTROLLER,
         FILE_DEVICE_SECURE_OPEN,
@@ -910,7 +910,7 @@ static void STDCALL WvDriverAddDummy_(void * context) {
 
     status = IoCreateDevice(
         WvDriverObj,
-        sizeof (driver__dev_ext),
+        sizeof (WV_S_DEV_EXT),
         NULL,
         dummy_context->DevType,
         dummy_context->DevCharacteristics,

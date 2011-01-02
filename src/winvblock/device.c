@@ -206,7 +206,7 @@ static void STDCALL WvDevFreeDev_(IN WV_SP_DEV_T dev) {
  * @ret                 Returns a pointer to the device on success, else NULL.
  */
 WVL_M_LIB WV_SP_DEV_T WvDevFromDevObj(PDEVICE_OBJECT dev_obj) {
-    driver__dev_ext_ptr dev_ext;
+    WV_SP_DEV_EXT dev_ext;
 
     if (!dev_obj)
       return NULL;
@@ -221,7 +221,7 @@ WVL_M_LIB WV_SP_DEV_T WvDevFromDevObj(PDEVICE_OBJECT dev_obj) {
  * @v dev               Points to the device to associate with.
  */
 WVL_M_LIB void WvDevForDevObj(PDEVICE_OBJECT dev_obj, WV_SP_DEV_T dev) {
-    driver__dev_ext_ptr dev_ext = dev_obj->DeviceExtension;
+    WV_SP_DEV_EXT dev_ext = dev_obj->DeviceExtension;
     dev_ext->device = dev;
     return;
   }

@@ -51,9 +51,9 @@ extern NTSTATUS STDCALL DriverEntry(
   );
 
 /* The physical/function device object's (PDO's/FDO's) DeviceExtension */
-winvblock__def_struct(driver__dev_ext) {
+typedef struct WV_DEV_EXT {
     struct WV_DEV_T * device;
-  };
+  } WV_S_DEV_EXT, * WV_SP_DEV_EXT;
 
 /* The prototype for a device IRP dispatch. */
 typedef NTSTATUS STDCALL driver__dispatch_func(
