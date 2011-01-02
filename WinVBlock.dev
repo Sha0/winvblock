@@ -1,7 +1,7 @@
 [Project]
 FileName=WinVBlock.dev
 Name=WinVBlock
-UnitCount=61
+UnitCount=63
 PchHead=-1
 PchSource=-1
 Ver=3
@@ -612,9 +612,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit63]
-FileName=src\aoe\bus.c
+FileName=src\winvblock\irp.c
 CompileCpp=1
-Folder=AoE
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000
@@ -742,9 +742,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit62]
-FileName=src\aoe\registry.c
+FileName=src\include\irp.h
 CompileCpp=1
-Folder=AoE
+Folder=Include
 Compile=1
 Link=1
 Priority=1000
