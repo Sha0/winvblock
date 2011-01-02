@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -44,7 +44,7 @@ static WV_F_DEV_CREATE_PDO WvDevMakePdo_;
  *
  * @v Dev               Points to the device to initialize with defaults.
  */
-winvblock__lib_func void WvDevInit(WV_SP_DEV_T Dev) {
+WVL_M_LIB void WvDevInit(WV_SP_DEV_T Dev) {
     RtlZeroMemory(Dev, sizeof *Dev);
     /* Populate non-zero device defaults. */
     Dev->DriverObject = WvDriverObj;
@@ -61,7 +61,7 @@ winvblock__lib_func void WvDevInit(WV_SP_DEV_T Dev) {
  * actually implemented for each device type.  This routine will allocate a
  * WV_DEV_T and populate the device with default values.
  */
-winvblock__lib_func WV_SP_DEV_T WvDevCreate(void) {
+WVL_M_LIB WV_SP_DEV_T WvDevCreate(void) {
     WV_SP_DEV_T dev;
 
     /*
@@ -81,7 +81,7 @@ winvblock__lib_func WV_SP_DEV_T WvDevCreate(void) {
  *
  * @v Dev               Points to the device that needs a PDO.
  */
-winvblock__lib_func PDEVICE_OBJECT STDCALL WvDevCreatePdo(IN WV_SP_DEV_T Dev) {
+WVL_M_LIB PDEVICE_OBJECT STDCALL WvDevCreatePdo(IN WV_SP_DEV_T Dev) {
     return Dev->Ops.CreatePdo ? Dev->Ops.CreatePdo(Dev) : NULL;
   }
 
@@ -171,7 +171,7 @@ NTSTATUS STDCALL WvDevPnpQueryId(IN WV_SP_DEV_T dev, IN PIRP irp) {
  *
  * @v Dev               Points to the device to close.
  */
-winvblock__lib_func void STDCALL WvDevClose(IN WV_SP_DEV_T Dev) {
+WVL_M_LIB void STDCALL WvDevClose(IN WV_SP_DEV_T Dev) {
     /* Call the device's close routine. */
     if (Dev->Ops.Close)
       Dev->Ops.Close(Dev);
@@ -183,7 +183,7 @@ winvblock__lib_func void STDCALL WvDevClose(IN WV_SP_DEV_T Dev) {
  *
  * @v Dev               Points to the device to delete.
  */
-winvblock__lib_func void STDCALL WvDevFree(IN WV_SP_DEV_T Dev) {
+WVL_M_LIB void STDCALL WvDevFree(IN WV_SP_DEV_T Dev) {
     /* Call the device's free routine. */
     if (Dev->Ops.Free)
       Dev->Ops.Free(Dev);
@@ -205,7 +205,7 @@ static void STDCALL WvDevFreeDev_(IN WV_SP_DEV_T dev) {
  * @v dev_obj           Points to the DEVICE_OBJECT to get the device from.
  * @ret                 Returns a pointer to the device on success, else NULL.
  */
-winvblock__lib_func WV_SP_DEV_T WvDevFromDevObj(PDEVICE_OBJECT dev_obj) {
+WVL_M_LIB WV_SP_DEV_T WvDevFromDevObj(PDEVICE_OBJECT dev_obj) {
     driver__dev_ext_ptr dev_ext;
 
     if (!dev_obj)
@@ -220,7 +220,7 @@ winvblock__lib_func WV_SP_DEV_T WvDevFromDevObj(PDEVICE_OBJECT dev_obj) {
  * @v dev_obj           Points to the DEVICE_OBJECT to set the device for.
  * @v dev               Points to the device to associate with.
  */
-winvblock__lib_func void WvDevForDevObj(PDEVICE_OBJECT dev_obj, WV_SP_DEV_T dev) {
+WVL_M_LIB void WvDevForDevObj(PDEVICE_OBJECT dev_obj, WV_SP_DEV_T dev) {
     driver__dev_ext_ptr dev_ext = dev_obj->DeviceExtension;
     dev_ext->device = dev;
     return;

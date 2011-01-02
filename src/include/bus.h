@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -110,53 +110,53 @@ typedef struct WVL_BUS_CUSTOM_WORK_ITEM {
   } WVL_S_BUS_CUSTOM_WORK_ITEM, * WVL_SP_BUS_CUSTOM_WORK_ITEM;
 
 /* Exports. */
-extern winvblock__lib_func void WvBusInit(WVL_SP_BUS_T);
-extern winvblock__lib_func WVL_SP_BUS_T WvBusCreate(void);
-extern winvblock__lib_func void WvBusProcessWorkItems(WVL_SP_BUS_T);
-extern winvblock__lib_func void WvBusCancelWorkItems(WVL_SP_BUS_T);
-extern winvblock__lib_func NTSTATUS WvBusStartThread(
+extern WVL_M_LIB void WvBusInit(WVL_SP_BUS_T);
+extern WVL_M_LIB WVL_SP_BUS_T WvBusCreate(void);
+extern WVL_M_LIB void WvBusProcessWorkItems(WVL_SP_BUS_T);
+extern WVL_M_LIB void WvBusCancelWorkItems(WVL_SP_BUS_T);
+extern WVL_M_LIB NTSTATUS WvBusStartThread(
     IN WVL_SP_BUS_T,
     OUT PETHREAD *
   );
-extern winvblock__lib_func winvblock__bool STDCALL WvBusInitNode(
+extern WVL_M_LIB winvblock__bool STDCALL WvBusInitNode(
     OUT WVL_SP_BUS_NODE,
     IN PDEVICE_OBJECT
   );
-extern winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
+extern WVL_M_LIB NTSTATUS STDCALL WvBusAddNode(
     WVL_SP_BUS_T,
     WVL_SP_BUS_NODE
   );
-extern winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(WVL_SP_BUS_NODE);
-extern winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueIrp(WVL_SP_BUS_T, PIRP);
-extern winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueCustomWorkItem(
+extern WVL_M_LIB NTSTATUS STDCALL WvBusRemoveNode(WVL_SP_BUS_NODE);
+extern WVL_M_LIB NTSTATUS STDCALL WvBusEnqueueIrp(WVL_SP_BUS_T, PIRP);
+extern WVL_M_LIB NTSTATUS STDCALL WvBusEnqueueCustomWorkItem(
     WVL_SP_BUS_T,
     WVL_SP_BUS_CUSTOM_WORK_ITEM
   );
-extern winvblock__lib_func NTSTATUS STDCALL WvBusSysCtl(
+extern WVL_M_LIB NTSTATUS STDCALL WvBusSysCtl(
     IN WVL_SP_BUS_T,
     IN PIRP
   );
-extern winvblock__lib_func NTSTATUS STDCALL WvBusPower(
+extern WVL_M_LIB NTSTATUS STDCALL WvBusPower(
     IN WVL_SP_BUS_T,
     IN PIRP
   );
 /* IRP_MJ_PNP dispatcher in bus/pnp.c */
-extern winvblock__lib_func NTSTATUS STDCALL WvBusPnp(
+extern WVL_M_LIB NTSTATUS STDCALL WvBusPnp(
     IN WVL_SP_BUS_T,
     IN PIRP,
     IN UCHAR
   );
-extern winvblock__lib_func winvblock__uint32 STDCALL WvBusGetNodeNum(
+extern WVL_M_LIB winvblock__uint32 STDCALL WvBusGetNodeNum(
     IN WVL_SP_BUS_NODE
   );
-extern winvblock__lib_func WVL_SP_BUS_NODE STDCALL WvBusGetNextNode(
+extern WVL_M_LIB WVL_SP_BUS_NODE STDCALL WvBusGetNextNode(
     IN WVL_SP_BUS_T,
     IN WVL_SP_BUS_NODE
   );
-extern winvblock__lib_func PDEVICE_OBJECT STDCALL WvBusGetNodePdo(
+extern WVL_M_LIB PDEVICE_OBJECT STDCALL WvBusGetNodePdo(
     IN WVL_SP_BUS_NODE
   );
-extern winvblock__lib_func winvblock__uint32 STDCALL WvBusGetNodeCount(
+extern WVL_M_LIB winvblock__uint32 STDCALL WvBusGetNodeCount(
     WVL_SP_BUS_T
   );
 

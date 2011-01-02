@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -398,7 +398,7 @@ static NTSTATUS STDCALL driver__dispatch_not_supported_(
  * @v status            Status for the IRP to complete.
  * @ret NTSTATUS        Returns the status value, as passed.
  */
-winvblock__lib_func NTSTATUS STDCALL driver__complete_irp(
+WVL_M_LIB NTSTATUS STDCALL driver__complete_irp(
     IN PIRP irp,
     IN ULONG_PTR info,
     IN NTSTATUS status
@@ -585,7 +585,7 @@ static void STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
     DBG("Done\n");
   }
 
-winvblock__lib_func void STDCALL WvDriverCompletePendingIrp(IN PIRP Irp) {
+WVL_M_LIB void STDCALL WvDriverCompletePendingIrp(IN PIRP Irp) {
     #ifdef DEBUGIRPS
     Debug_IrpEnd(Irp, Irp->IoStatus.Status);
     #endif
@@ -593,7 +593,7 @@ winvblock__lib_func void STDCALL WvDriverCompletePendingIrp(IN PIRP Irp) {
   }
 
 /* Note the exception to the function naming convention. */
-winvblock__lib_func NTSTATUS STDCALL Error(
+WVL_M_LIB NTSTATUS STDCALL Error(
     IN PCHAR Message,
     IN NTSTATUS Status
   ) {
@@ -626,7 +626,7 @@ static NTSTATUS STDCALL WvDriverBusPnp_(
  * @v Dev               Points to the child device to add.
  * @ret                 TRUE for success, FALSE for failure.
  */
-winvblock__lib_func winvblock__bool STDCALL WvDriverBusAddDev(
+WVL_M_LIB winvblock__bool STDCALL WvDriverBusAddDev(
     IN OUT WV_SP_DEV_T Dev
   ) {
     /* The new node's device object. */
@@ -990,7 +990,7 @@ static void STDCALL WvDriverAddDummy_(void * context) {
  * @v DevCharacteristics        The dummy device characteristics.
  * @ret NTSTATUS                The status of the operation.
  */
-winvblock__lib_func NTSTATUS STDCALL WvDriverAddDummy(
+WVL_M_LIB NTSTATUS STDCALL WvDriverAddDummy(
     IN const WV_S_DRIVER_DUMMY_IDS * DummyIds,
     IN DEVICE_TYPE DevType,
     IN ULONG DevCharacteristics
@@ -1037,7 +1037,7 @@ winvblock__lib_func NTSTATUS STDCALL WvDriverAddDummy(
  * @v DummyIds          The object containing the IDs to respond with.
  * @ret NTSTATUS        The status of the operation.
  */
-winvblock__lib_func NTSTATUS STDCALL WvDriverDummyIds(
+WVL_M_LIB NTSTATUS STDCALL WvDriverDummyIds(
     IN PIRP Irp,
     IN WV_SP_DRIVER_DUMMY_IDS DummyIds
   ) {

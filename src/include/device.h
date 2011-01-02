@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -49,7 +49,7 @@ typedef struct WV_DEV_T WV_S_DEV_T, * WV_SP_DEV_T;
  */
 typedef PDEVICE_OBJECT STDCALL WV_F_DEV_CREATE_PDO(IN WV_SP_DEV_T);
 typedef WV_F_DEV_CREATE_PDO * WV_FP_DEV_CREATE_PDO;
-extern winvblock__lib_func WV_F_DEV_CREATE_PDO WvDevCreatePdo;
+extern WVL_M_LIB WV_F_DEV_CREATE_PDO WvDevCreatePdo;
 
 /**
  * Device initialization routine.
@@ -74,7 +74,7 @@ typedef winvblock__uint32 STDCALL WV_F_DEV_PNP_ID(
     IN OUT WCHAR (*)[512]
   );
 typedef WV_F_DEV_PNP_ID * WV_FP_DEV_PNP_ID;
-extern winvblock__lib_func WV_F_DEV_PNP_ID WvDevPnpId;
+extern WVL_M_LIB WV_F_DEV_PNP_ID WvDevPnpId;
 
 /**
  * Device close routine.
@@ -83,7 +83,7 @@ extern winvblock__lib_func WV_F_DEV_PNP_ID WvDevPnpId;
  */
 typedef void STDCALL WV_F_DEV_CLOSE(IN WV_SP_DEV_T);
 typedef WV_F_DEV_CLOSE * WV_FP_DEV_CLOSE;
-extern winvblock__lib_func WV_F_DEV_CLOSE WvDevClose;
+extern WVL_M_LIB WV_F_DEV_CLOSE WvDevClose;
 
 /**
  * Device deletion routine.
@@ -92,10 +92,10 @@ extern winvblock__lib_func WV_F_DEV_CLOSE WvDevClose;
  */
 typedef void STDCALL WV_F_DEV_FREE(IN WV_SP_DEV_T);
 typedef WV_F_DEV_FREE * WV_FP_DEV_FREE;
-extern winvblock__lib_func WV_F_DEV_FREE WvDevFree;
+extern WVL_M_LIB WV_F_DEV_FREE WvDevFree;
 
-extern winvblock__lib_func void WvDevInit(WV_SP_DEV_T);
-extern winvblock__lib_func WV_SP_DEV_T WvDevCreate(void);
+extern WVL_M_LIB void WvDevInit(WV_SP_DEV_T);
+extern WVL_M_LIB WV_SP_DEV_T WvDevCreate(void);
 
 typedef struct WV_DEV_OPS {
     WV_FP_DEV_CREATE_PDO CreatePdo;
@@ -189,8 +189,8 @@ struct WV_DEV_T {
     winvblock__bool Boot;
   };
 
-extern winvblock__lib_func WV_SP_DEV_T WvDevFromDevObj(PDEVICE_OBJECT);
-extern winvblock__lib_func void WvDevForDevObj(PDEVICE_OBJECT, WV_SP_DEV_T);
+extern WVL_M_LIB WV_SP_DEV_T WvDevFromDevObj(PDEVICE_OBJECT);
+extern WVL_M_LIB void WvDevForDevObj(PDEVICE_OBJECT, WV_SP_DEV_T);
 extern WV_F_DEV_DISPATCH WvDevPnpQueryId;
 
 #endif  /* WV_M_DEVICE_H_ */

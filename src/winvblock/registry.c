@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright (C) 2008, Michael Brown <mbrown@fensystems.co.uk>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
@@ -43,7 +43,7 @@
  * @v RegKey            Registry key handle to fill in.
  * @ret NTSTATUS        The status of the operation.
  */
-winvblock__lib_func NTSTATUS STDCALL WvlRegOpenKey(
+WVL_M_LIB NTSTATUS STDCALL WvlRegOpenKey(
     LPCWSTR RegKeyName,
     PHANDLE RegKey
   ) {
@@ -73,7 +73,7 @@ winvblock__lib_func NTSTATUS STDCALL WvlRegOpenKey(
  *
  * @v RegKey            Registry key handle to close.
  */
-winvblock__lib_func void STDCALL WvlRegCloseKey(HANDLE RegKey) {
+WVL_M_LIB void STDCALL WvlRegCloseKey(HANDLE RegKey) {
     ZwClose(RegKey);
   }
 
@@ -88,7 +88,7 @@ winvblock__lib_func void STDCALL WvlRegCloseKey(HANDLE RegKey) {
  * The caller must eventually free the allocated key value information
  * block.
  */
-winvblock__lib_func NTSTATUS STDCALL WvlRegFetchKvi(
+WVL_M_LIB NTSTATUS STDCALL WvlRegFetchKvi(
     HANDLE RegKey,
     LPCWSTR ValueName,
     PKEY_VALUE_PARTIAL_INFORMATION * Kvi
@@ -159,7 +159,7 @@ winvblock__lib_func NTSTATUS STDCALL WvlRegFetchKvi(
  *
  * The caller must eventually free the allocated value.
  */
-winvblock__lib_func NTSTATUS STDCALL WvlRegFetchSz(
+WVL_M_LIB NTSTATUS STDCALL WvlRegFetchSz(
     HANDLE RegKey,
     LPCWSTR ValueName,
     LPWSTR * Value
@@ -201,7 +201,7 @@ winvblock__lib_func NTSTATUS STDCALL WvlRegFetchSz(
  *
  * The caller must eventually free the allocated value array.
  */
-winvblock__lib_func NTSTATUS STDCALL WvlRegFetchMultiSz(
+WVL_M_LIB NTSTATUS STDCALL WvlRegFetchMultiSz(
     HANDLE RegKey,
     LPCWSTR ValueName,
     LPWSTR ** Values
@@ -276,7 +276,7 @@ winvblock__lib_func NTSTATUS STDCALL WvlRegFetchMultiSz(
  * @v Value             DWORD value to fill in.
  * @ret NTSTATUS        The status of the operation.
  */
-winvblock__lib_func NTSTATUS STDCALL WvlRegFetchDword(
+WVL_M_LIB NTSTATUS STDCALL WvlRegFetchDword(
     IN HANDLE RegKey,
     IN LPCWSTR ValueName,
     OUT winvblock__uint32 * Value
@@ -322,7 +322,7 @@ winvblock__lib_func NTSTATUS STDCALL WvlRegFetchDword(
  * @v Value             String value to store.
  * @ret NTSTATUS        The status of the operation.
  */
-winvblock__lib_func NTSTATUS STDCALL WvlRegStoreSz(
+WVL_M_LIB NTSTATUS STDCALL WvlRegStoreSz(
     HANDLE RegKey,
     LPCWSTR ValueName,
     LPWSTR Value
@@ -357,7 +357,7 @@ winvblock__lib_func NTSTATUS STDCALL WvlRegStoreSz(
  * @v Value             DWORD value to store, or NULL.
  * @ret NTSTATUS        The status of the operation.
  */
-winvblock__lib_func NTSTATUS STDCALL WvlRegStoreDword(
+WVL_M_LIB NTSTATUS STDCALL WvlRegStoreDword(
     HANDLE RegKey,
     LPCWSTR ValueName,
     winvblock__uint32 Value
@@ -390,7 +390,7 @@ winvblock__lib_func NTSTATUS STDCALL WvlRegStoreDword(
  *
  * The caller must eventually free the wide-char string.
  */
-winvblock__lib_func NTSTATUS STDCALL WvlRegNoteOsLoadOpts(LPWSTR * WStr) {
+WVL_M_LIB NTSTATUS STDCALL WvlRegNoteOsLoadOpts(LPWSTR * WStr) {
     NTSTATUS status;
     HANDLE control_key;
 

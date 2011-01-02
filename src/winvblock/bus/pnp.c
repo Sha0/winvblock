@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -336,7 +336,7 @@ static NTSTATUS STDCALL WvBusPnpSimple_(
   }
 
 /* Bus PnP dispatch routine. */
-winvblock__lib_func NTSTATUS STDCALL WvBusPnp(
+WVL_M_LIB NTSTATUS STDCALL WvBusPnp(
     IN WVL_SP_BUS_T bus,
     IN PIRP irp,
     IN UCHAR code

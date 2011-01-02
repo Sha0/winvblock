@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -226,7 +226,7 @@ winvblock__def_struct(fat_super) {
  * @v boot_sect_ptr     The MBR or VBR with possible geometry clues.
  * @v disk_ptr          The disk to set the geometry for.
  */
-winvblock__lib_func void disk__guess_geometry(
+WVL_M_LIB void disk__guess_geometry(
     IN WV_AP_DISK_BOOT_SECT boot_sect_ptr,
     IN OUT WV_SP_DISK_T disk_ptr
   ) {
@@ -331,7 +331,7 @@ winvblock__lib_func void disk__guess_geometry(
  *
  * See the header file for additional details.
  */
-winvblock__lib_func WV_SP_DISK_T disk__create(void) {
+WVL_M_LIB WV_SP_DISK_T disk__create(void) {
     WV_SP_DEV_T dev_ptr;
     WV_SP_DISK_T disk_ptr;
 

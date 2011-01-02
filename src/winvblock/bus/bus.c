@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -62,7 +62,7 @@ static winvblock__bool WvBusAddWorkItem_(
 static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(WVL_SP_BUS_T);
 
 /* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
-winvblock__lib_func NTSTATUS STDCALL WvBusSysCtl(
+WVL_M_LIB NTSTATUS STDCALL WvBusSysCtl(
     IN WVL_SP_BUS_T Bus,
     IN PIRP Irp
   ) {
@@ -77,7 +77,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusSysCtl(
   }
 
 /* Handle a power IRP. */
-winvblock__lib_func NTSTATUS STDCALL WvBusPower(
+WVL_M_LIB NTSTATUS STDCALL WvBusPower(
     IN WVL_SP_BUS_T Bus,
     IN PIRP Irp
   ) {
@@ -96,7 +96,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusPower(
  *
  * @v Bus               Points to the bus to initialize with defaults.
  */
-winvblock__lib_func void WvBusInit(WVL_SP_BUS_T Bus) {
+WVL_M_LIB void WvBusInit(WVL_SP_BUS_T Bus) {
     RtlZeroMemory(Bus, sizeof *Bus);
     /* Populate non-zero bus device defaults. */
     Bus->Thread = WvBusDefaultThread_;
@@ -115,7 +115,7 @@ winvblock__lib_func void WvBusInit(WVL_SP_BUS_T Bus) {
  * actually implemented for each device type.  This routine will allocate a
  * WVL_S_BUS_T as well as populate the bus with default values.
  */
-winvblock__lib_func WVL_SP_BUS_T WvBusCreate(void) {
+WVL_M_LIB WVL_SP_BUS_T WvBusCreate(void) {
     WVL_SP_BUS_T bus;
 
     /*
@@ -250,7 +250,7 @@ static void STDCALL WvBusRemoveNode_(
  *
  * @v Bus               The bus to process its work items.
  */
-winvblock__lib_func void WvBusProcessWorkItems(WVL_SP_BUS_T Bus) {
+WVL_M_LIB void WvBusProcessWorkItems(WVL_SP_BUS_T Bus) {
     WV_SP_BUS_WORK_ITEM_ work_item;
     WVL_SP_BUS_NODE node;
     PIRP irp;
@@ -311,7 +311,7 @@ winvblock__lib_func void WvBusProcessWorkItems(WVL_SP_BUS_T Bus) {
  *
  * @v Bus       The bus to cancel pending work items for.
  */
-winvblock__lib_func void WvBusCancelWorkItems(WVL_SP_BUS_T Bus) {
+WVL_M_LIB void WvBusCancelWorkItems(WVL_SP_BUS_T Bus) {
     WV_SP_BUS_WORK_ITEM_ work_item;
 
     DBG("Canceling work items.\n");
@@ -397,7 +397,7 @@ static void STDCALL WvBusDefaultThread_(IN WVL_SP_BUS_T bus) {
  * to specify your own thread routine, then call this function to start it.
  * When stopping the thread, you can wait on the thread handle.
  */
-winvblock__lib_func NTSTATUS WvBusStartThread(
+WVL_M_LIB NTSTATUS WvBusStartThread(
     IN WVL_SP_BUS_T Bus,
     OUT PETHREAD * Thread
   ) {
@@ -445,7 +445,7 @@ winvblock__lib_func NTSTATUS WvBusStartThread(
  * @v Pdo               The PDO to associate the node with.
  * @ret winvblock__bool FALSE for a NULL argument, otherwise TRUE
  */
-winvblock__lib_func winvblock__bool STDCALL WvBusInitNode(
+WVL_M_LIB winvblock__bool STDCALL WvBusInitNode(
     OUT WVL_SP_BUS_NODE Node,
     IN PDEVICE_OBJECT Pdo
   ) {
@@ -468,7 +468,7 @@ winvblock__lib_func winvblock__bool STDCALL WvBusInitNode(
  * When WvBusProcessWorkItems() is called for the bus, the
  * node will be added.  This is usually from the bus' thread.
  */
-winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
+WVL_M_LIB NTSTATUS STDCALL WvBusAddNode(
     WVL_SP_BUS_T Bus,
     WVL_SP_BUS_NODE Node
   ) {
@@ -507,7 +507,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
  * When WvBusProcessWorkItems() is called for the bus, it will
  * then remove the node.  This is usually from the bus' thread.
  */
-winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(
+WVL_M_LIB NTSTATUS STDCALL WvBusRemoveNode(
     WVL_SP_BUS_NODE Node
   ) {
     WVL_SP_BUS_T bus;
@@ -541,7 +541,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(
  * @ret NTSTATUS        The status of the operation.  Returns STATUS_PENDING
  *                      if the IRP is successfully added to the queue.
  */
-winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueIrp(
+WVL_M_LIB NTSTATUS STDCALL WvBusEnqueueIrp(
     WVL_SP_BUS_T Bus,
     PIRP Irp
   ) {
@@ -575,7 +575,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueIrp(
  * @v CustomWorkItem    The custom work item for the bus' thread to process.
  * @ret NTSTATUS        The status of the operation.
  */
-winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueCustomWorkItem(
+WVL_M_LIB NTSTATUS STDCALL WvBusEnqueueCustomWorkItem(
     WVL_SP_BUS_T Bus,
     WVL_SP_BUS_CUSTOM_WORK_ITEM CustomWorkItem
   ) {
@@ -607,7 +607,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueCustomWorkItem(
  * @v Node              The node whose unit number we request.
  * @ret UINT32          The unit number for the node.
  */
-winvblock__lib_func winvblock__uint32 STDCALL WvBusGetNodeNum(
+WVL_M_LIB winvblock__uint32 STDCALL WvBusGetNodeNum(
     IN WVL_SP_BUS_NODE Node
   ) {
     return Node->BusPrivate_.Num;
@@ -624,7 +624,7 @@ winvblock__lib_func winvblock__uint32 STDCALL WvBusGetNodeNum(
  * whichever thread calls WvBusProcessWorkItems() because it expects
  * the list of child nodes to remain static between calls.
  */
-winvblock__lib_func WVL_SP_BUS_NODE STDCALL WvBusGetNextNode(
+WVL_M_LIB WVL_SP_BUS_NODE STDCALL WvBusGetNextNode(
     IN WVL_SP_BUS_T Bus,
     IN WVL_SP_BUS_NODE PrevNode
   ) {
@@ -646,7 +646,7 @@ winvblock__lib_func WVL_SP_BUS_NODE STDCALL WvBusGetNextNode(
  * @v Node              The node whose PDO will be returned.
  * @ret PDEVICE_OBJECT  The PDO for the node.
  */
-winvblock__lib_func PDEVICE_OBJECT STDCALL WvBusGetNodePdo(
+WVL_M_LIB PDEVICE_OBJECT STDCALL WvBusGetNodePdo(
     IN WVL_SP_BUS_NODE Node
   ) {
     return Node->BusPrivate_.Pdo;
@@ -661,7 +661,7 @@ winvblock__lib_func PDEVICE_OBJECT STDCALL WvBusGetNodePdo(
  * In order for this function to yield a race-free, useful result, it
  * should be used by whatever thread calls WvBusProcessWorkItems()
  */
-winvblock__lib_func winvblock__uint32 STDCALL WvBusGetNodeCount(
+WVL_M_LIB winvblock__uint32 STDCALL WvBusGetNodeCount(
     WVL_SP_BUS_T Bus
   ) {
     return Bus->BusPrivate_.NodeCount;

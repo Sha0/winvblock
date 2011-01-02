@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -164,7 +164,7 @@ extern WV_F_DISK_MAX_XFER_LEN disk__max_xfer_len;
  * @v boot_sect_ptr     The MBR or VBR with possible geometry clues.
  * @v disk_ptr          The disk to set the geometry for.
  */
-extern winvblock__lib_func void disk__guess_geometry(
+extern WVL_M_LIB void disk__guess_geometry(
     IN WV_AP_DISK_BOOT_SECT,
     IN OUT WV_SP_DISK_T disk_ptr
   );
@@ -179,7 +179,7 @@ extern winvblock__lib_func void disk__guess_geometry(
  * WV_S_DISK_T, track it in a global list, as well as populate the disk
  * with default values.
  */
-extern winvblock__lib_func WV_SP_DISK_T disk__create(void);
+extern WVL_M_LIB WV_SP_DISK_T disk__create(void);
 
 extern NTSTATUS disk__module_init(void);
 

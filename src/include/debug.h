@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * For WinAoE contact information, see http://winaoe.org/
  *
  * This file is part of WinVBlock, derived from WinAoE.
@@ -48,7 +48,7 @@ xDbgPrint ( __FILE__, ( const PCHAR )__FUNCTION__, \
 /* Define to enable verbose IRP debugging output */
 #  undef DEBUGIRPS
 
-extern winvblock__lib_func NTSTATUS STDCALL xDbgPrint (
+extern WVL_M_LIB NTSTATUS STDCALL xDbgPrint (
   IN PCHAR File,
   IN PCHAR Function,
   IN winvblock__uint32 Line

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -104,7 +104,7 @@ static PCHAR STDCALL Debug_SCSIOPString (
   IN winvblock__uint8 OperationCode
  );
 
-winvblock__lib_func NTSTATUS STDCALL
+WVL_M_LIB NTSTATUS STDCALL
 xDbgPrint (
   IN PCHAR File,
   IN PCHAR Function,

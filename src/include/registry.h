@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -27,35 +27,35 @@
  * Registry specifics.
  */
 
-extern winvblock__lib_func NTSTATUS STDCALL WvlRegNoteOsLoadOpts(LPWSTR *);
-extern winvblock__lib_func NTSTATUS STDCALL WvlRegOpenKey(LPCWSTR, PHANDLE);
-extern winvblock__lib_func void STDCALL WvlRegCloseKey(HANDLE);
-extern winvblock__lib_func NTSTATUS STDCALL WvlRegFetchKvi(
+extern WVL_M_LIB NTSTATUS STDCALL WvlRegNoteOsLoadOpts(LPWSTR *);
+extern WVL_M_LIB NTSTATUS STDCALL WvlRegOpenKey(LPCWSTR, PHANDLE);
+extern WVL_M_LIB void STDCALL WvlRegCloseKey(HANDLE);
+extern WVL_M_LIB NTSTATUS STDCALL WvlRegFetchKvi(
     HANDLE,
     LPCWSTR,
     PKEY_VALUE_PARTIAL_INFORMATION *
   );
-extern winvblock__lib_func NTSTATUS STDCALL WvlRegFetchSz(
+extern WVL_M_LIB NTSTATUS STDCALL WvlRegFetchSz(
     HANDLE,
     LPCWSTR,
     LPWSTR *
   );
-extern winvblock__lib_func NTSTATUS STDCALL WvlRegFetchMultiSz(
+extern WVL_M_LIB NTSTATUS STDCALL WvlRegFetchMultiSz(
     HANDLE,
     LPCWSTR,
     LPWSTR **
   );
-extern winvblock__lib_func NTSTATUS STDCALL WvlRegFetchDword(
+extern WVL_M_LIB NTSTATUS STDCALL WvlRegFetchDword(
     IN HANDLE,
     IN LPCWSTR,
     OUT winvblock__uint32 *
   );
-extern winvblock__lib_func NTSTATUS STDCALL WvlRegStoreSz(
+extern WVL_M_LIB NTSTATUS STDCALL WvlRegStoreSz(
     HANDLE,
     LPCWSTR,
     LPWSTR
   );
-extern winvblock__lib_func NTSTATUS STDCALL WvlRegStoreDword(
+extern WVL_M_LIB NTSTATUS STDCALL WvlRegStoreDword(
     HANDLE,
     LPCWSTR,
     winvblock__uint32

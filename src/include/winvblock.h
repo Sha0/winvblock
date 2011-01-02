@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  * For WinAoE contact information, see http://winaoe.org/
@@ -23,26 +23,26 @@
 /**
  * @file
  *
- * WinVBlock project common material
+ * WinVBlock project common material.
  *
  */
 
 #  define winvblock__literal "WinVBlock"
 #  define winvblock__literal_w L"WinVBlock"
 
-/* A common way to define a structure */
+/* A common way to define a structure. */
 #  define winvblock__def_struct( x ) \
 \
 struct _##x;\
 typedef struct _##x x, *x##_ptr;\
 struct _##x
 
-/* A common way to define a type */
+/* A common way to define a type. */
 #  define winvblock__def_type( old, new ) \
 \
 typedef old new, *new##_ptr
 
-/* Set up type definitions for an enumated type */
+/* Set up type definitions for an enumated type. */
 #  define winvblock__def_enum( x ) \
 \
 typedef enum _##x x, *x##_ptr
@@ -55,11 +55,11 @@ winvblock__def_type ( UINT16, winvblock__uint16 );
 winvblock__def_type ( BOOLEAN, winvblock__bool );
 typedef void *winvblock__any_ptr;
 
-/* To export functions while serving as a library */
+/* To export functions while serving as a library. */
 #  ifdef PROJECT_BUS
-#    define winvblock__lib_func __declspec(dllexport)
+#    define WVL_M_LIB __declspec(dllexport)
 #  else
-#    define winvblock__lib_func __declspec(dllimport)
+#    define WVL_M_LIB __declspec(dllimport)
 #  endif
 
 #endif  /* WVL_M_WINVBLOCK_H_ */

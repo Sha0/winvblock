@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -41,9 +41,9 @@
 struct WV_DEV_T;
 
 extern PDRIVER_OBJECT WvDriverObj;
-extern winvblock__lib_func void STDCALL WvDriverCompletePendingIrp(IN PIRP);
+extern WVL_M_LIB void STDCALL WvDriverCompletePendingIrp(IN PIRP);
 /* Note the exception to the function naming convention. */
-extern winvblock__lib_func NTSTATUS STDCALL Error(IN PCHAR, IN NTSTATUS);
+extern WVL_M_LIB NTSTATUS STDCALL Error(IN PCHAR, IN NTSTATUS);
 /* Note the exception to the function naming convention. */
 extern NTSTATUS STDCALL DriverEntry(
     IN PDRIVER_OBJECT,
@@ -131,24 +131,24 @@ static const WV_S_DRIVER_DUMMY_IDS DummyIds = {       \
     DummyIds ## String_                               \
   }
 
-extern winvblock__lib_func NTSTATUS STDCALL driver__complete_irp(
+extern WVL_M_LIB NTSTATUS STDCALL driver__complete_irp(
     IN PIRP,
     IN ULONG_PTR,
     IN NTSTATUS
   );
-extern winvblock__lib_func winvblock__bool STDCALL WvDriverBusAddDev(
+extern WVL_M_LIB winvblock__bool STDCALL WvDriverBusAddDev(
     IN WV_SP_DEV_T
   );
 extern NTSTATUS STDCALL WvDriverGetDevCapabilities(
     IN PDEVICE_OBJECT,
     IN PDEVICE_CAPABILITIES
   );
-extern winvblock__lib_func NTSTATUS STDCALL WvDriverAddDummy(
+extern WVL_M_LIB NTSTATUS STDCALL WvDriverAddDummy(
     IN const WV_S_DRIVER_DUMMY_IDS *,
     IN DEVICE_TYPE,
     IN ULONG
   );
-extern winvblock__lib_func NTSTATUS STDCALL WvDriverDummyIds(
+extern WVL_M_LIB NTSTATUS STDCALL WvDriverDummyIds(
     IN PIRP,
     IN WV_SP_DRIVER_DUMMY_IDS
   );
