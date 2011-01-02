@@ -1760,9 +1760,9 @@ NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
         irp->AssociatedIrp.SystemBuffer,
         disks,
         (io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength <
-          (sizeof (AOE_S_MOUNT_DISKS) + (count * sizeof (aoe__mount_disk))) ?
+          (sizeof (AOE_S_MOUNT_DISKS) + (count * sizeof (AOE_S_MOUNT_DISK))) ?
           io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength :
-          (sizeof (AOE_S_MOUNT_DISKS) + (count * sizeof (aoe__mount_disk)))
+          (sizeof (AOE_S_MOUNT_DISKS) + (count * sizeof (AOE_S_MOUNT_DISK)))
         )
       );
     wv_free(disks);

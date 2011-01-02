@@ -306,7 +306,7 @@ static int STDCALL cmd_show(void) {
 
     mounted_disks = malloc(
         sizeof (AOE_S_MOUNT_DISKS) +
-        (32 * sizeof (aoe__mount_disk)) 
+        (32 * sizeof (AOE_S_MOUNT_DISK)) 
       );
     if (mounted_disks == NULL) {
         printf("Out of memory\n");
@@ -318,7 +318,7 @@ static int STDCALL cmd_show(void) {
       NULL,
       0,
       mounted_disks,
-      sizeof (AOE_S_MOUNT_DISKS) + (32 * sizeof (aoe__mount_disk)),
+      sizeof (AOE_S_MOUNT_DISKS) + (32 * sizeof (AOE_S_MOUNT_DISK)),
       &bytes_returned,
       (LPOVERLAPPED) NULL
     )) {

@@ -75,19 +75,18 @@ typedef struct AOE_MOUNT_TARGETS {
     AOE_S_MOUNT_TARGET Target[];
   } AOE_S_MOUNT_TARGETS, * AOE_SP_MOUNT_TARGETS;
 
-winvblock__def_struct(aoe__mount_disk)
-  {
+typedef struct AOE_MOUNT_DISK {
     winvblock__uint32 Disk;
     winvblock__uint8 ClientMac[6];
     winvblock__uint8 ServerMac[6];
     winvblock__uint32 Major;
     winvblock__uint32 Minor;
     LONGLONG LBASize;
-  };
+  } AOE_S_MOUNT_DISK, * AOE_SP_MOUNT_DISK;
 
 typedef struct AOE_MOUNT_DISKS {
     winvblock__uint32 Count;
-    aoe__mount_disk Disk[];
+    AOE_S_MOUNT_DISK Disk[];
   } AOE_S_MOUNT_DISKS, * AOE_S_MOUNT_DISKS;
 
 extern void aoe__reset_probe(void);
