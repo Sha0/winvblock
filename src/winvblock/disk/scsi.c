@@ -56,7 +56,7 @@ typedef NTSTATUS STDCALL disk_scsi__func(
     IN WV_SP_DISK_T,
     IN PSCSI_REQUEST_BLOCK,
     IN PCDB,
-    OUT winvblock__bool_ptr
+    OUT PBOOLEAN
   );
 
 /* Forward declarations. */
@@ -149,7 +149,7 @@ static NTSTATUS STDCALL disk_scsi__read_write_(
     IN WV_SP_DISK_T disk,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
-    OUT winvblock__bool_ptr completion
+    OUT PBOOLEAN completion
   ) {
     ULONGLONG start_sector;
     UINT32 sector_count;
@@ -252,7 +252,7 @@ static NTSTATUS STDCALL disk_scsi__verify_(
     IN WV_SP_DISK_T disk,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
-    OUT winvblock__bool_ptr completion
+    OUT PBOOLEAN completion
   ) {
     LONGLONG start_sector;
     UINT32 sector_count;
@@ -287,7 +287,7 @@ static NTSTATUS STDCALL disk_scsi__read_capacity_(
     IN WV_SP_DISK_T disk,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
-    OUT winvblock__bool_ptr completion
+    OUT PBOOLEAN completion
   ) {
     UINT32 temp = disk->SectorSize;
     PREAD_CAPACITY_DATA data = (PREAD_CAPACITY_DATA) srb->DataBuffer;
@@ -310,7 +310,7 @@ static NTSTATUS STDCALL disk_scsi__read_capacity_16_(
     IN WV_SP_DISK_T disk,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
-    OUT winvblock__bool_ptr completion
+    OUT PBOOLEAN completion
   ) {
     UINT32 temp;
     LONGLONG big_temp;
@@ -337,7 +337,7 @@ static NTSTATUS STDCALL disk_scsi__mode_sense_(
     IN WV_SP_DISK_T disk,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
-    OUT winvblock__bool_ptr completion
+    OUT PBOOLEAN completion
   ) {
     PMODE_PARAMETER_HEADER mode_param_header;
     static MEDIA_TYPE media_types[WvDiskMediaTypes] =
@@ -364,7 +364,7 @@ static NTSTATUS STDCALL disk_scsi__read_toc_(
     IN WV_SP_DISK_T disk,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
-    OUT winvblock__bool_ptr completion
+    OUT PBOOLEAN completion
   ) {
     /* With thanks to Olof Lagerkvist's ImDisk source. */
     PCDROM_TOC table_of_contents = (PCDROM_TOC) srb->DataBuffer;
@@ -394,7 +394,7 @@ NTSTATUS STDCALL disk_scsi__dispatch(
     PSCSI_REQUEST_BLOCK srb = io_stack_loc->Parameters.Scsi.Srb;
     NTSTATUS status = STATUS_SUCCESS;
     PCDB cdb;
-    winvblock__bool completion = FALSE;
+    BOOLEAN completion = FALSE;
 
     srb->SrbStatus = SRB_STATUS_INVALID_REQUEST;
     srb->ScsiStatus = SCSISTAT_GOOD;

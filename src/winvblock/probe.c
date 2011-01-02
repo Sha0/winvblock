@@ -69,7 +69,7 @@ WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
   }
 
 void WvProbeDisks(void) {
-    static winvblock__bool probed = FALSE;
+    static BOOLEAN probed = FALSE;
 
     if (probed)
       return;

@@ -56,7 +56,7 @@ extern WVL_M_LIB WV_F_DEV_CREATE_PDO WvDevCreatePdo;
  *
  * @v dev               The device being initialized.
  */
-typedef winvblock__bool STDCALL WV_F_DEV_INIT(IN WV_SP_DEV_T);
+typedef BOOLEAN STDCALL WV_F_DEV_INIT(IN WV_SP_DEV_T);
 typedef WV_F_DEV_INIT * WV_FP_DEV_INIT;
 
 /**
@@ -164,7 +164,7 @@ typedef struct WV_DEV_IRP_MJ {
 /* Details common to all devices this driver works with */
 struct WV_DEV_T {
     /* For debugging */
-    winvblock__bool IsBus;
+    BOOLEAN IsBus;
     /* Self is self-explanatory. */
     PDEVICE_OBJECT Self;
     /* Points to the parent bus' DEVICE_OBJECT */
@@ -186,7 +186,7 @@ struct WV_DEV_T {
     /* How to handle IRPs based on major function code. */
     WV_SP_DEV_IRP_MJ IrpMj;
     /* Was the device established at boot time? */
-    winvblock__bool Boot;
+    BOOLEAN Boot;
   };
 
 extern WVL_M_LIB WV_SP_DEV_T WvDevFromDevObj(PDEVICE_OBJECT);

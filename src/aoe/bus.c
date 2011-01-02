@@ -47,7 +47,7 @@ extern NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP);
 
 /* Forward declarations. */
 static WV_F_DEV_PNP_ID AoeBusPnpId_;
-winvblock__bool AoeBusCreate(IN PDRIVER_OBJECT);
+BOOLEAN AoeBusCreate(IN PDRIVER_OBJECT);
 void AoeBusFree(void);
 
 /* Globals. */
@@ -289,7 +289,7 @@ NTSTATUS STDCALL AoeBusAttachFdo(
  *
  * @ret         TRUE for success, else FALSE.
  */
-winvblock__bool AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
+BOOLEAN AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
     NTSTATUS status;
 
     /* Do we already have our main bus? */
@@ -351,7 +351,7 @@ winvblock__bool AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
  * @v Dev               Points to the child device to add.
  * @ret                 TRUE for success, FALSE for failure.
  */
-winvblock__bool STDCALL AoeBusAddDev(
+BOOLEAN STDCALL AoeBusAddDev(
     IN OUT WV_SP_DEV_T Dev
   ) {
     /* The new node's device object. */

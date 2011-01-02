@@ -50,7 +50,7 @@ ramdisk_grub4dos__find (
   WV_SP_PROBE_SAFE_MBR_HOOK SafeMbrHookPtr;
   WV_SP_GRUB4DOS_DRIVE_MAPPING Grub4DosDriveMapSlotPtr;
   UINT32 i = 8;
-  winvblock__bool FoundGrub4DosMapping = FALSE;
+  BOOLEAN FoundGrub4DosMapping = FALSE;
   WV_SP_RAMDISK_T ramdisk_ptr;
 
   /*

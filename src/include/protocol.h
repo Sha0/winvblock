@@ -28,13 +28,13 @@
  *
  */
 
-extern winvblock__bool STDCALL Protocol_SearchNIC (
+extern BOOLEAN STDCALL Protocol_SearchNIC (
   IN PUCHAR Mac
  );
 extern UINT32 STDCALL Protocol_GetMTU (
   IN PUCHAR Mac
  );
-extern winvblock__bool STDCALL Protocol_Send (
+extern BOOLEAN STDCALL Protocol_Send (
   IN PUCHAR SourceMac,
   IN PUCHAR DestinationMac,
   IN PUCHAR Data,

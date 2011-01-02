@@ -55,7 +55,7 @@ typedef struct WV_BUS_WORK_ITEM_ {
 
 /* Forward declarations. */
 static WVL_F_BUS_THREAD WvBusDefaultThread_;
-static winvblock__bool WvBusAddWorkItem_(
+static BOOLEAN WvBusAddWorkItem_(
     WVL_SP_BUS_T,
     WV_SP_BUS_WORK_ITEM_
   );
@@ -140,11 +140,11 @@ WVL_M_LIB WVL_SP_BUS_T WvBusCreate(void) {
  *
  * @v bus                       The bus to process the work item.
  * @v work_item                 The work item to add.
- * @ret winvblock__bool         TRUE if added, else FALSE
+ * @ret BOOLEAN         TRUE if added, else FALSE
  *
  * Note that this function will initialize the work item's completion signal.
  */
-static winvblock__bool WvBusAddWorkItem_(
+static BOOLEAN WvBusAddWorkItem_(
     WVL_SP_BUS_T bus,
     WV_SP_BUS_WORK_ITEM_ work_item
   ) {
@@ -257,7 +257,7 @@ WVL_M_LIB void WvBusProcessWorkItems(WVL_SP_BUS_T Bus) {
     PIO_STACK_LOCATION io_stack_loc;
     PDEVICE_OBJECT dev_obj;
     PDRIVER_OBJECT driver_obj;
-    winvblock__bool nodes_changed;
+    BOOLEAN nodes_changed;
 
     while (work_item = WvBusGetWorkItem_(Bus)) {
         switch (work_item->Cmd) {
@@ -443,9 +443,9 @@ WVL_M_LIB NTSTATUS WvBusStartThread(
  *
  * @v Node              The node to initialize.
  * @v Pdo               The PDO to associate the node with.
- * @ret winvblock__bool FALSE for a NULL argument, otherwise TRUE
+ * @ret BOOLEAN FALSE for a NULL argument, otherwise TRUE
  */
-WVL_M_LIB winvblock__bool STDCALL WvBusInitNode(
+WVL_M_LIB BOOLEAN STDCALL WvBusInitNode(
     OUT WVL_SP_BUS_NODE Node,
     IN PDEVICE_OBJECT Pdo
   ) {

@@ -139,7 +139,7 @@ typedef struct _PROTOCOL_HEADER
 
 typedef struct _PROTOCOL_BINDINGCONTEXT
 {
-  winvblock__bool Active;
+  BOOLEAN Active;
   UCHAR Mac[6];
   UINT32 MTU;
   NDIS_STATUS Status;
@@ -147,7 +147,7 @@ typedef struct _PROTOCOL_BINDINGCONTEXT
   NDIS_HANDLE BufferPoolHandle;
   NDIS_HANDLE BindingHandle;
   KEVENT Event;
-  winvblock__bool OutstandingRequest;
+  BOOLEAN OutstandingRequest;
   PWCHAR AdapterName;
   PWCHAR DeviceName;
   struct _PROTOCOL_BINDINGCONTEXT *Next;
@@ -158,7 +158,7 @@ static KEVENT Protocol_Globals_StopEvent;
 static KSPIN_LOCK Protocol_Globals_SpinLock;
 static PPROTOCOL_BINDINGCONTEXT Protocol_Globals_BindingContextList = NULL;
 static NDIS_HANDLE Protocol_Globals_Handle = NULL;
-static winvblock__bool Protocol_Globals_Started = FALSE;
+static BOOLEAN Protocol_Globals_Started = FALSE;
 
 NTSTATUS
 Protocol_Start (
@@ -230,7 +230,7 @@ Protocol_Stop (
   DBG ( "Exit\n" );
 }
 
-winvblock__bool STDCALL
+BOOLEAN STDCALL
 Protocol_SearchNIC (
   IN PUCHAR Mac
  )
@@ -264,7 +264,7 @@ Protocol_GetMTU (
   return Context->MTU;
 }
 
-winvblock__bool STDCALL
+BOOLEAN STDCALL
 Protocol_Send (
   IN PUCHAR SourceMac,
   IN PUCHAR DestinationMac,

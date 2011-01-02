@@ -47,13 +47,13 @@
 
 extern NTSTATUS STDCALL ZwWaitForSingleObject(
     IN HANDLE Handle,
-    IN winvblock__bool Alertable,
+    IN BOOLEAN Alertable,
     IN PLARGE_INTEGER Timeout OPTIONAL
   );
 
 /* From aoe/bus.c */
 extern WVL_S_BUS_T AoeBusMain;
-extern winvblock__bool AoeBusCreate(IN PDRIVER_OBJECT);
+extern BOOLEAN AoeBusCreate(IN PDRIVER_OBJECT);
 extern void AoeBusFree(void);
 extern NTSTATUS STDCALL AoeBusDevCtl(IN PIRP, IN ULONG POINTER_ALIGNMENT);
 extern NTSTATUS STDCALL AoeBusAttachFdo(
@@ -61,9 +61,9 @@ extern NTSTATUS STDCALL AoeBusAttachFdo(
     IN PDEVICE_OBJECT
   );
 extern const WV_S_DRIVER_DUMMY_IDS * AoeBusDummyIds;
-extern winvblock__bool STDCALL AoeBusAddDev(IN OUT WV_SP_DEV_T);
+extern BOOLEAN STDCALL AoeBusAddDev(IN OUT WV_SP_DEV_T);
 /* From aoe/registry.c */
-extern winvblock__bool STDCALL AoeRegSetup(OUT PNTSTATUS);
+extern BOOLEAN STDCALL AoeRegSetup(OUT PNTSTATUS);
 
 /* Forward declarations. */
 struct AOE_DISK_;
@@ -207,7 +207,7 @@ typedef struct AOE_TARGET_LIST_ {
 /** Private globals. */
 static AOE_SP_TARGET_LIST_ AoeTargetList_ = NULL;
 static KSPIN_LOCK AoeTargetListLock_;
-static winvblock__bool AoeStop_ = FALSE;
+static BOOLEAN AoeStop_ = FALSE;
 static KSPIN_LOCK AoeLock_;
 static KEVENT AoeSignal_;
 static AOE_SP_WORK_TAG_ AoeTagListFirst_ = NULL;
@@ -216,7 +216,7 @@ static AOE_SP_WORK_TAG_ AoeProbeTag_ = NULL;
 static AOE_SP_DISK_SEARCH_ AoeDiskSearchList_ = NULL;
 static LONG AoePendingTags_ = 0;
 static HANDLE AoeThreadHandle_;
-static winvblock__bool AoeStarted_ = FALSE;
+static BOOLEAN AoeStarted_ = FALSE;
 static LIST_ENTRY AoeDiskList_;
 static KSPIN_LOCK AoeDiskListLock_;
 
@@ -450,7 +450,7 @@ static void STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
  *
  * Returns TRUE if the disk could be matched, FALSE otherwise.
  */
-static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
+static BOOLEAN STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
     AOE_SP_DISK_SEARCH_
       disk_searcher, disk_search_walker, previous_disk_searcher;
     LARGE_INTEGER Timeout, CurrentTime;
@@ -1099,7 +1099,7 @@ NTSTATUS STDCALL aoe__reply(
     LONGLONG LBASize;
     AOE_SP_WORK_TAG_ tag;
     KIRQL Irql;
-    winvblock__bool Found = FALSE;
+    BOOLEAN Found = FALSE;
     LARGE_INTEGER CurrentTime;
     WV_SP_DISK_T disk_ptr;
     AOE_SP_DISK_ aoe_disk_ptr;
@@ -1549,7 +1549,7 @@ static void AoeProcessAbft_(void) {
     PHYSICAL_ADDRESS PhysicalAddress;
     PUCHAR PhysicalMemory;
     UINT32 Offset, Checksum, i;
-    winvblock__bool FoundAbft = FALSE;
+    BOOLEAN FoundAbft = FALSE;
     AOE_S_ABFT AoEBootRecord;
     AOE_SP_DISK_ aoe_disk;
 

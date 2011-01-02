@@ -136,7 +136,7 @@ extern WVL_M_LIB NTSTATUS STDCALL driver__complete_irp(
     IN ULONG_PTR,
     IN NTSTATUS
   );
-extern WVL_M_LIB winvblock__bool STDCALL WvDriverBusAddDev(
+extern WVL_M_LIB BOOLEAN STDCALL WvDriverBusAddDev(
     IN WV_SP_DEV_T
   );
 extern NTSTATUS STDCALL WvDriverGetDevCapabilities(

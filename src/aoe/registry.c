@@ -34,9 +34,9 @@
 #include "registry.h"
 #include "debug.h"
 
-winvblock__bool STDCALL AoeRegSetup(OUT PNTSTATUS status_out) {
+BOOLEAN STDCALL AoeRegSetup(OUT PNTSTATUS status_out) {
     NTSTATUS status;
-    winvblock__bool Updated = FALSE;
+    BOOLEAN Updated = FALSE;
     WCHAR InterfacesPath[] = L"\\Ndi\\Interfaces\\";
     WCHAR LinkagePath[] = L"\\Linkage\\";
     WCHAR NdiPath[] = L"\\Ndi\\";
@@ -56,7 +56,7 @@ winvblock__bool STDCALL AoeRegSetup(OUT PNTSTATUS status_out) {
       DriverServiceName;
     PKEY_BASIC_INFORMATION KeyInformation;
     PKEY_VALUE_PARTIAL_INFORMATION KeyValueInformation;
-    winvblock__bool Update, Found;
+    BOOLEAN Update, Found;
 
     DBG("Entry\n");
 

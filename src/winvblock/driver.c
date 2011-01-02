@@ -52,7 +52,7 @@ PDRIVER_OBJECT WvDriverObj = NULL;
 
 /* Globals. */
 static void * WvDriverStateHandle_;
-static winvblock__bool WvDriverStarted_ = FALSE;
+static BOOLEAN WvDriverStarted_ = FALSE;
 static PDEVICE_OBJECT WvDriverBusFdo_ = NULL;
 static KSPIN_LOCK WvDriverBusFdoLock_;
 static UNICODE_STRING WvDriverBusName_ = {
@@ -626,7 +626,7 @@ static NTSTATUS STDCALL WvDriverBusPnp_(
  * @v Dev               Points to the child device to add.
  * @ret                 TRUE for success, FALSE for failure.
  */
-WVL_M_LIB winvblock__bool STDCALL WvDriverBusAddDev(
+WVL_M_LIB BOOLEAN STDCALL WvDriverBusAddDev(
     IN OUT WV_SP_DEV_T Dev
   ) {
     /* The new node's device object. */

@@ -515,7 +515,7 @@ err_nofiledisk:
  * we return TRUE.  Otherwise, we return FALSE and the hot-swap thread
  * will keep trying.
  */
-static winvblock__bool STDCALL
+static BOOLEAN STDCALL
 hot_swap (
   WV_SP_FILEDISK_T filedisk_ptr
  )

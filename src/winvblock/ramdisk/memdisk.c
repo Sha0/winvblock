@@ -38,7 +38,7 @@
 #include "mdi.h"
 #include "probe.h"
 
-static winvblock__bool STDCALL WvMemdiskCheckMbft_(
+static BOOLEAN STDCALL WvMemdiskCheckMbft_(
     PUCHAR phys_mem,
     UINT32 offset
   ) {
@@ -114,7 +114,7 @@ void WvMemdiskFind(void) {
     WV_SP_PROBE_INT_VECTOR int_vector;
     WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook;
     UINT32 offset;
-    winvblock__bool found = FALSE;
+    BOOLEAN found = FALSE;
 
     /* Find a MEMDISK.  We check the "safe hook" chain, then scan for mBFTs. */
     phys_addr.QuadPart = 0LL;

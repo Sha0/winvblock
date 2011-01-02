@@ -37,7 +37,7 @@ typedef enum WV_DISK_MEDIA_TYPE {
 typedef char WV_A_DISK_BOOT_SECT[512];
 typedef WV_A_DISK_BOOT_SECT * WV_AP_DISK_BOOT_SECT;
 
-extern winvblock__bool WvDiskIsRemovable[WvDiskMediaTypes];
+extern BOOLEAN WvDiskIsRemovable[WvDiskMediaTypes];
 extern PWCHAR WvDiskCompatIds[WvDiskMediaTypes];
 
 typedef enum WV_DISK_IO_MODE {
@@ -84,7 +84,7 @@ typedef WV_F_DISK_MAX_XFER_LEN * WV_FP_DISK_MAX_XFER_LEN;
  * @v disk_ptr        The disk device being initialized.
  * @ret BOOLEAN       FALSE if initialization failed, otherwise TRUE
  */
-typedef winvblock__bool STDCALL WV_F_DISK_INIT(IN WV_SP_DISK_T);
+typedef BOOLEAN STDCALL WV_F_DISK_INIT(IN WV_SP_DISK_T);
 typedef WV_F_DISK_INIT * WV_FP_DISK_INIT;
 
 /**
@@ -106,7 +106,7 @@ struct WV_DISK_T {
     WV_S_DEV_T Dev[1];
     KEVENT SearchEvent;
     KSPIN_LOCK SpinLock;
-    winvblock__bool Unmount;
+    BOOLEAN Unmount;
     WV_E_DISK_MEDIA_TYPE Media;
     WV_S_DISK_OPS disk_ops;
     ULONGLONG LBADiskSize;

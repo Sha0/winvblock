@@ -64,7 +64,7 @@ static WV_F_DISK_CLOSE WvDiskDefaultClose_;
 /* Globals. */
 static LIST_ENTRY disk_list;
 static KSPIN_LOCK disk_list_lock;
-winvblock__bool WvDiskIsRemovable[WvDiskMediaTypes] = { TRUE, FALSE, TRUE };
+BOOLEAN WvDiskIsRemovable[WvDiskMediaTypes] = { TRUE, FALSE, TRUE };
 PWCHAR WvDiskCompatIds[WvDiskMediaTypes] = {
     L"GenSFloppy",
     L"GenDisk",
@@ -83,12 +83,12 @@ static UINT32 default_max_xfer_len(IN WV_SP_DISK_T disk_ptr) {
   }
 
 /* Initialize a disk. */
-static winvblock__bool STDCALL disk__init_(IN WV_SP_DEV_T dev) {
+static BOOLEAN STDCALL disk__init_(IN WV_SP_DEV_T dev) {
     WV_SP_DISK_T disk_ptr = disk__get_ptr(dev);
     return disk_ptr->disk_ops.Init(disk_ptr);
   }
 
-static winvblock__bool STDCALL WvDiskDefaultInit_(IN WV_SP_DISK_T disk_ptr) {
+static BOOLEAN STDCALL WvDiskDefaultInit_(IN WV_SP_DISK_T disk_ptr) {
     return TRUE;
   }
 

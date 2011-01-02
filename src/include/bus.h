@@ -68,7 +68,7 @@ typedef struct WVL_BUS_T {
     UINT32 Children;
     WVL_FP_BUS_THREAD Thread;
     KEVENT ThreadSignal;
-    winvblock__bool Stop;
+    BOOLEAN Stop;
     WVL_E_BUS_STATE OldState;
     WVL_E_BUS_STATE State;
     WVL_FP_BUS_PNP QueryDevText;
@@ -118,7 +118,7 @@ extern WVL_M_LIB NTSTATUS WvBusStartThread(
     IN WVL_SP_BUS_T,
     OUT PETHREAD *
   );
-extern WVL_M_LIB winvblock__bool STDCALL WvBusInitNode(
+extern WVL_M_LIB BOOLEAN STDCALL WvBusInitNode(
     OUT WVL_SP_BUS_NODE,
     IN PDEVICE_OBJECT
   );
