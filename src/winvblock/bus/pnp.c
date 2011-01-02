@@ -94,7 +94,7 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WVL_SP_BUS_T bus, IN PIRP irp) {
         /* Ok. */
         return status;
       }
-    /* If we get here, we should be called by WvBusProcessWorkItems() */
+    /* If we get here, we should be called by WvlBusProcessWorkItems() */
     status = STATUS_SUCCESS;
     lower = bus->LowerDeviceObject;
     bus->OldState = bus->State;
@@ -150,7 +150,7 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
         /* Ok. */
         return status;
       }
-    /* If we get here, we should be called by WvBusProcessWorkItems() */
+    /* If we get here, we should be called by WvlBusProcessWorkItems() */
     if (
         io_stack_loc->Parameters.QueryDeviceRelations.Type != BusRelations ||
         irp->IoStatus.Information

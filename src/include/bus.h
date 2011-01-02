@@ -33,7 +33,7 @@
  * @v bus       The bus to be used in the thread routine.
  *
  * If you implement your own bus thread routine, you should call
- * WvBusProcessWorkItems() within its loop.
+ * WvlBusProcessWorkItems() within its loop.
  */
 typedef VOID STDCALL WVL_F_BUS_THREAD(IN WVL_SP_BUS_T);
 typedef WVL_F_BUS_THREAD * WVL_FP_BUS_THREAD;
@@ -98,7 +98,7 @@ typedef struct WVL_BUS_NODE {
  *
  * If a driver needs to enqueue a work item which should execute in the
  * context of the bus' controlling thread (this is the thread which calls
- * WvBusProcessWorkItems()), then this is the function prototype to be
+ * WvlBusProcessWorkItems()), then this is the function prototype to be
  * used.
  */
 typedef VOID STDCALL WVL_F_BUS_WORK_ITEM(PVOID);
@@ -111,7 +111,7 @@ typedef struct WVL_BUS_CUSTOM_WORK_ITEM {
 
 /* Exports. */
 extern WVL_M_LIB VOID WvlBusInit(WVL_SP_BUS_T);
-extern WVL_M_LIB VOID WvBusProcessWorkItems(WVL_SP_BUS_T);
+extern WVL_M_LIB VOID WvlBusProcessWorkItems(WVL_SP_BUS_T);
 extern WVL_M_LIB VOID WvBusCancelWorkItems(WVL_SP_BUS_T);
 extern WVL_M_LIB NTSTATUS WvBusStartThread(
     IN WVL_SP_BUS_T,

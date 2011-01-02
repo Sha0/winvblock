@@ -221,7 +221,7 @@ static VOID STDCALL WvBusRemoveNode_(
  *
  * @v Bus               The bus to process its work items.
  */
-WVL_M_LIB VOID WvBusProcessWorkItems(WVL_SP_BUS_T Bus) {
+WVL_M_LIB VOID WvlBusProcessWorkItems(WVL_SP_BUS_T Bus) {
     WV_SP_BUS_WORK_ITEM_ work_item;
     WVL_SP_BUS_NODE node;
     PIRP irp;
@@ -323,7 +323,7 @@ static VOID STDCALL WvBusThread_(IN PVOID context) {
  *
  * Note that if you implement your own bus type using this library,
  * you can override the thread routine with your own.  If you do so,
- * your thread routine should call WvBusProcessWorkItems() within
+ * your thread routine should call WvlBusProcessWorkItems() within
  * its loop.  To start a bus thread, use WvBusStartThread()
  * If you implement your own thread routine, you are also responsible
  * for calling WvBusCancelWorkItems() and freeing the bus.
@@ -349,7 +349,7 @@ static VOID STDCALL WvBusDefaultThread_(IN WVL_SP_BUS_T bus) {
         /* Reset the work signal. */
         KeResetEvent(&bus->ThreadSignal);
 
-        WvBusProcessWorkItems(bus);
+        WvlBusProcessWorkItems(bus);
       } /* while !bus->Stop */
 
     WvBusCancelWorkItems(bus);
@@ -436,7 +436,7 @@ WVL_M_LIB BOOLEAN STDCALL WvlBusInitNode(
  * @ret NTSTATUS        The status of the operation.
  *
  * Do not attempt to add the same node to more than one bus.
- * When WvBusProcessWorkItems() is called for the bus, the
+ * When WvlBusProcessWorkItems() is called for the bus, the
  * node will be added.  This is usually from the bus' thread.
  */
 WVL_M_LIB NTSTATUS STDCALL WvBusAddNode(
@@ -475,7 +475,7 @@ WVL_M_LIB NTSTATUS STDCALL WvBusAddNode(
  * @v Node              The PDO node to remove from its parent bus.
  * @ret NTSTATUS        The status of the operation.
  *
- * When WvBusProcessWorkItems() is called for the bus, it will
+ * When WvlBusProcessWorkItems() is called for the bus, it will
  * then remove the node.  This is usually from the bus' thread.
  */
 WVL_M_LIB NTSTATUS STDCALL WvBusRemoveNode(
@@ -592,7 +592,7 @@ WVL_M_LIB UINT32 STDCALL WvBusGetNodeNum(
  * @ret WVL_SP_BUS_NODE  Returns NULL when there are no more nodes.
  *
  * This function should only be called within the thread context of
- * whichever thread calls WvBusProcessWorkItems() because it expects
+ * whichever thread calls WvlBusProcessWorkItems() because it expects
  * the list of child nodes to remain static between calls.
  */
 WVL_M_LIB WVL_SP_BUS_NODE STDCALL WvBusGetNextNode(
@@ -630,7 +630,7 @@ WVL_M_LIB PDEVICE_OBJECT STDCALL WvBusGetNodePdo(
  * @v UINT32            The count of nodes on the bus.
  *
  * In order for this function to yield a race-free, useful result, it
- * should be used by whatever thread calls WvBusProcessWorkItems()
+ * should be used by whatever thread calls WvlBusProcessWorkItems()
  */
 WVL_M_LIB UINT32 STDCALL WvBusGetNodeCount(
     WVL_SP_BUS_T Bus

@@ -1358,7 +1358,7 @@ static VOID STDCALL AoeThread_(IN PVOID StartContext)
       WvBusCancelWorkItems(&AoeBusMain);
       PsTerminateSystemThread ( STATUS_SUCCESS );
     }
-        WvBusProcessWorkItems(&AoeBusMain);
+        WvlBusProcessWorkItems(&AoeBusMain);
 
         KeQuerySystemTime ( &CurrentTime );
         /*
@@ -1714,7 +1714,7 @@ NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
         /* Ok. */
         return status;
       }
-    /* If we get here, we should be called by WvBusProcessWorkItems() */
+    /* If we get here, we should be called by WvlBusProcessWorkItems() */
     DBG("Got IOCTL_AOE_SHOW...\n");
 
     count = WvBusGetNodeCount(&AoeBusMain);

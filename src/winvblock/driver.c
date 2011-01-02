@@ -678,7 +678,7 @@ static NTSTATUS STDCALL WvDriverBusDevCtlDetach_(
         /* Ok. */
         return status;
       }
-    /* If we get here, we should be called by WvBusProcessWorkItems() */
+    /* If we get here, we should be called by WvlBusProcessWorkItems() */
     unit_num = *((PUINT32) irp->AssociatedIrp.SystemBuffer);
     DBG("Request to detach unit: %d\n", unit_num);
 
