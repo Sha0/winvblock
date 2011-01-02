@@ -298,7 +298,7 @@ BOOLEAN AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
         return FALSE;
       }
     /* Initialize the bus. */
-    WvBusInit(&AoeBusMain);
+    WvlBusInit(&AoeBusMain);
     /* Create the bus FDO. */
     status = IoCreateDevice(
         driver_obj,

@@ -166,7 +166,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
         goto err_already_established;
       }
     /* Initialize the bus. */
-    WvBusInit(&WvDriverBus_);
+    WvlBusInit(&WvDriverBus_);
     WvDevInit(&WvDriverBusDev_);
     /* Create the bus FDO. */
     status = IoCreateDevice(

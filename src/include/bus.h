@@ -110,7 +110,7 @@ typedef struct WVL_BUS_CUSTOM_WORK_ITEM {
   } WVL_S_BUS_CUSTOM_WORK_ITEM, * WVL_SP_BUS_CUSTOM_WORK_ITEM;
 
 /* Exports. */
-extern WVL_M_LIB VOID WvBusInit(WVL_SP_BUS_T);
+extern WVL_M_LIB VOID WvlBusInit(WVL_SP_BUS_T);
 extern WVL_M_LIB WVL_SP_BUS_T WvBusCreate(void);
 extern WVL_M_LIB VOID WvBusProcessWorkItems(WVL_SP_BUS_T);
 extern WVL_M_LIB VOID WvBusCancelWorkItems(WVL_SP_BUS_T);

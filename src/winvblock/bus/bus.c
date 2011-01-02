@@ -96,7 +96,7 @@ WVL_M_LIB NTSTATUS STDCALL WvBusPower(
  *
  * @v Bus               Points to the bus to initialize with defaults.
  */
-WVL_M_LIB VOID WvBusInit(WVL_SP_BUS_T Bus) {
+WVL_M_LIB VOID WvlBusInit(WVL_SP_BUS_T Bus) {
     RtlZeroMemory(Bus, sizeof *Bus);
     /* Populate non-zero bus device defaults. */
     Bus->Thread = WvBusDefaultThread_;
@@ -126,7 +126,7 @@ WVL_M_LIB WVL_SP_BUS_T WvBusCreate(void) {
     if (bus == NULL)
       goto err_no_bus;
 
-    WvBusInit(bus);
+    WvlBusInit(bus);
     return bus;
 
     wv_free(bus);
