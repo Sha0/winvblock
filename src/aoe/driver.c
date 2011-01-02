@@ -77,7 +77,7 @@ static WV_F_DISK_IO AoeDiskIo_;
 static WV_F_DISK_MAX_XFER_LEN AoeDiskMaxXferLen_;
 static WV_F_DISK_INIT AoeDiskInit_;
 static WV_F_DISK_CLOSE AoeDiskClose_;
-static driver__dispatch_func AoeDriverIrpNotSupported_;
+static DRIVER_DISPATCH AoeIrpNotSupported;
 static __drv_dispatchType(IRP_MJ_POWER) DRIVER_DISPATCH AoeIrpPower;
 static
   __drv_dispatchType(IRP_MJ_CREATE)
@@ -334,7 +334,7 @@ NTSTATUS STDCALL DriverEntry(
       }
 
     for (i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++)
-      DriverObject->MajorFunction[i] = AoeDriverIrpNotSupported_;
+      DriverObject->MajorFunction[i] = AoeIrpNotSupported;
     DriverObject->MajorFunction[IRP_MJ_PNP] = AoeIrpPnp;
     DriverObject->MajorFunction[IRP_MJ_POWER] = AoeIrpPower;
     DriverObject->MajorFunction[IRP_MJ_CREATE] = AoeIrpCreateClose;
@@ -1888,7 +1888,7 @@ static VOID STDCALL AoeDiskFree_(IN WV_SP_DEV_T dev) {
     wv_free(aoe_disk);
   }
 
-static NTSTATUS STDCALL AoeDriverIrpNotSupported_(
+static NTSTATUS STDCALL AoeIrpNotSupported(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
