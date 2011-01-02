@@ -1950,7 +1950,7 @@ static NTSTATUS AoeDriverIrpSysCtl_(
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)
-      return WvBusSysCtl(&AoeBusMain, irp);
+      return WvlBusSysCtl(&AoeBusMain, irp);
     /* WvDevFromDevObj() checks for a NULL dev_obj */
     dev = WvDevFromDevObj(dev_obj);
     /* Check that the device exists. */

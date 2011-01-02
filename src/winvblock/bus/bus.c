@@ -62,7 +62,7 @@ static BOOLEAN WvBusAddWorkItem_(
 static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(WVL_SP_BUS_T);
 
 /* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
-WVL_M_LIB NTSTATUS STDCALL WvBusSysCtl(
+WVL_M_LIB NTSTATUS STDCALL WvlBusSysCtl(
     IN WVL_SP_BUS_T Bus,
     IN PIRP Irp
   ) {

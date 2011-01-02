@@ -131,7 +131,7 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlBusEnqueueCustomWorkItem(
     WVL_SP_BUS_T,
     WVL_SP_BUS_CUSTOM_WORK_ITEM
   );
-extern WVL_M_LIB NTSTATUS STDCALL WvBusSysCtl(
+extern WVL_M_LIB NTSTATUS STDCALL WvlBusSysCtl(
     IN WVL_SP_BUS_T,
     IN PIRP
   );

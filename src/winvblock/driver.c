@@ -603,7 +603,7 @@ WVL_M_LIB NTSTATUS STDCALL Error(
 
 /* Pass an IRP_MJ_SYSTEM_CONTROL IRP to the bus. */
 static NTSTATUS STDCALL WvDriverBusSysCtl_(IN WV_SP_DEV_T dev, IN PIRP irp) {
-    return WvBusSysCtl(&WvDriverBus_, irp);
+    return WvlBusSysCtl(&WvDriverBus_, irp);
   }
 
 /* Pass a power IRP to the bus. */
