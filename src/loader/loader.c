@@ -1,6 +1,6 @@
 /**
  * Copyright 2006-2008, V.
- * Portions copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Portions copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * For WinAoE contact information, see http://winaoe.org/
  *
  * This file is part of WinVBlock, derived from WinAoE.
@@ -96,8 +96,8 @@ main (
     goto CreateDeviceInfoError;
   if ( !SetupDiSetDeviceRegistryProperty
        ( DeviceInfoSet, &DeviceInfoData, SPDRP_HARDWAREID,
-	 ( LPBYTE ) winvblock__literal "\0\0\0",
-	 ( lstrlen ( winvblock__literal "\0\0\0" ) + 1 +
+	 ( LPBYTE ) WVL_M_LIT "\0\0\0",
+	 ( lstrlen ( WVL_M_LIT "\0\0\0" ) + 1 +
 	   1 ) * sizeof ( TCHAR ) ) )
     goto SetDeviceRegistryPropertyError;
   if ( !SetupDiCallClassInstaller
@@ -105,7 +105,7 @@ main (
     goto CallClassInstallerREGISTERDEVICEError;
 
   if ( !UpdateDriverForPlugAndPlayDevices
-       ( 0, winvblock__literal "\0\0\0", FullFilePath, INSTALLFLAG_FORCE,
+       ( 0, WVL_M_LIT "\0\0\0", FullFilePath, INSTALLFLAG_FORCE,
 	 &RebootRequired ) )
     {
       DWORD err = GetLastError (  );

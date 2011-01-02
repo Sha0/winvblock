@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2010-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, originally derived from WinAoE.
  *
@@ -136,11 +136,11 @@ NTSTATUS STDCALL AoeBusDevCtl(
   }
 
 /* Generate dummy IDs for the AoE bus PDO. */
-#define AOE_M_BUS_IDS(X_, Y_)                       \
-  X_(Y_, Dev,      winvblock__literal_w L"\\AoE"  ) \
-  X_(Y_, Instance, L"0"                           ) \
-  X_(Y_, Hardware, winvblock__literal_w L"\\AoE\0") \
-  X_(Y_, Compat,   winvblock__literal_w L"\\AoE\0")
+#define AOE_M_BUS_IDS(X_, Y_)             \
+  X_(Y_, Dev,      WVL_M_WLIT L"\\AoE"  ) \
+  X_(Y_, Instance, L"0"                 ) \
+  X_(Y_, Hardware, WVL_M_WLIT L"\\AoE\0") \
+  X_(Y_, Compat,   WVL_M_WLIT L"\\AoE\0")
 WV_M_DRIVER_DUMMY_ID_GEN(AoeBusDummyIds_, AOE_M_BUS_IDS);
 
 /* Destroy the AoE bus. */
@@ -158,16 +158,16 @@ static winvblock__uint32 STDCALL AoeBusPnpId_(
   ) {
     switch (query_type) {
         case BusQueryDeviceID:
-          return swprintf(*buf, winvblock__literal_w L"\\AoE") + 1;
+          return swprintf(*buf, WVL_M_WLIT L"\\AoE") + 1;
 
         case BusQueryInstanceID:
           return swprintf(*buf, L"0") + 1;
 
         case BusQueryHardwareIDs:
-          return swprintf(*buf, winvblock__literal_w L"\\AoE") + 2;
+          return swprintf(*buf, WVL_M_WLIT L"\\AoE") + 2;
 
         case BusQueryCompatibleIDs:
-          return swprintf(*buf, winvblock__literal_w L"\\AoE") + 4;
+          return swprintf(*buf, WVL_M_WLIT L"\\AoE") + 4;
 
         default:
           return 0;

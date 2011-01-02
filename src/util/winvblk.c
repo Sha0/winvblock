@@ -531,7 +531,7 @@ static int STDCALL cmd_detach(void) {
 int main(int argc, char **argv, char **envp) {
     WVU_FP_CMD_ cmd = cmd_help;
     int status = 1;
-    char winvblock[] = "\\\\.\\" winvblock__literal;
+    char winvblock[] = "\\\\.\\" WVL_M_LIT;
     char aoe[] = "\\\\.\\AoE";
     char * bus_name;
 

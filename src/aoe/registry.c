@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -275,13 +275,13 @@ winvblock__bool STDCALL AoeRegSetup(OUT PNTSTATUS status_out) {
                 Found = FALSE;
                 for (i = 0;
                     i < (KeyValueInformation->DataLength -
-                      sizeof winvblock__literal_w / sizeof (WCHAR));
+                      sizeof WVL_M_WLIT / sizeof (WCHAR));
                     i++)
                   {
                     if (wv_memcmpeq(
-                        winvblock__literal_w,
+                        WVL_M_WLIT,
                         ((PWCHAR)KeyValueInformation->Data) + i,
-                        sizeof winvblock__literal_w
+                        sizeof WVL_M_WLIT
                       ))
                       {
                         Found = TRUE;
@@ -307,20 +307,16 @@ winvblock__bool STDCALL AoeRegSetup(OUT PNTSTATUS status_out) {
                   {
                     Updated = TRUE;
                     NewValueLength = KeyValueInformation->DataLength +
-                      sizeof winvblock__literal_w;
+                      sizeof WVL_M_WLIT;
                     if ((NewValue = wv_malloc(NewValueLength)) == NULL)
                       {
                         DBG("wv_malloc NewValue 2 failed\n");
                         goto e2_2;
                       }
-                    RtlCopyMemory(
-                        NewValue,
-                        winvblock__literal_w,
-                        sizeof winvblock__literal_w
-                      );
+                    RtlCopyMemory(NewValue, WVL_M_WLIT, sizeof WVL_M_WLIT);
                     RtlCopyMemory(
                         NewValue +
-                          (sizeof winvblock__literal_w / sizeof (WCHAR)),
+                          (sizeof WVL_M_WLIT / sizeof (WCHAR)),
                         KeyValueInformation->Data,
                         KeyValueInformation->DataLength
                       );
@@ -330,17 +326,13 @@ winvblock__bool STDCALL AoeRegSetup(OUT PNTSTATUS status_out) {
               else
               {
                 Updated = TRUE;
-                NewValueLength = sizeof winvblock__literal_w + sizeof (WCHAR);
+                NewValueLength = sizeof WVL_M_WLIT + sizeof (WCHAR);
                 if ((NewValue = wv_mallocz(NewValueLength)) == NULL)
                   {
                     DBG("wv_mallocz NewValue 3 failed\n");
                     goto e2_1;
                   }
-                RtlCopyMemory(
-                    NewValue,
-                    winvblock__literal_w,
-                    sizeof winvblock__literal_w
-                  );
+                RtlCopyMemory(NewValue, WVL_M_WLIT, sizeof WVL_M_WLIT);
               }
             if (!NT_SUCCESS(ZwSetValueKey(
                 SubKeyHandle,

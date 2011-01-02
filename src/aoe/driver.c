@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -1494,7 +1494,7 @@ static winvblock__uint32 STDCALL query_id(
 
     switch (query_type) {
         case BusQueryDeviceID:
-          return swprintf(*buf, winvblock__literal_w L"\\AoEHardDisk") + 1;
+          return swprintf(*buf, WVL_M_WLIT L"\\AoEHardDisk") + 1;
 
         case BusQueryInstanceID:
           return swprintf(
@@ -1507,10 +1507,7 @@ static winvblock__uint32 STDCALL query_id(
         case BusQueryHardwareIDs: {
             winvblock__uint32 tmp;
 
-            tmp = swprintf(
-                *buf,
-                winvblock__literal_w L"\\AoEHardDisk"
-              ) + 1;
+            tmp = swprintf(*buf, WVL_M_WLIT L"\\AoEHardDisk") + 1;
             tmp += swprintf(*buf + tmp, L"GenDisk") + 4;
             return tmp;
           }
@@ -1526,7 +1523,7 @@ static winvblock__uint32 STDCALL query_id(
 #ifdef _MSC_VER
 #  pragma pack(1)
 #endif
-winvblock__def_struct(abft) {
+struct AOE_ABFT {
     winvblock__uint32 Signature;  /* 0x54464261 (aBFT) */
     winvblock__uint32 Length;
     winvblock__uint8 Revision;
@@ -1539,6 +1536,7 @@ winvblock__def_struct(abft) {
     winvblock__uint8 Reserved2;
     winvblock__uint8 ClientMac[6];
   } __attribute__((__packed__));
+typedef struct AOE_ABFT AOE_S_ABFT, * AOE_SP_ABFT;
 #ifdef _MSC_VER
 #  pragma pack()
 #endif
@@ -1552,7 +1550,7 @@ static void AoeProcessAbft_(void) {
     winvblock__uint8_ptr PhysicalMemory;
     winvblock__uint32 Offset, Checksum, i;
     winvblock__bool FoundAbft = FALSE;
-    abft AoEBootRecord;
+    AOE_S_ABFT AoEBootRecord;
     AOE_SP_DISK_ aoe_disk;
 
     /* Find aBFT. */
@@ -1564,20 +1562,20 @@ static void AoeProcessAbft_(void) {
       }
     for (Offset = 0; Offset < 0xa0000; Offset += 0x10) {
         if (!(
-            ((abft_ptr) (PhysicalMemory + Offset))->Signature ==
+            ((AOE_SP_ABFT) (PhysicalMemory + Offset))->Signature ==
             0x54464261
           ))
           continue;
         Checksum = 0;
         for (
             i = 0;
-            i < ((abft_ptr) (PhysicalMemory + Offset))->Length;
+            i < ((AOE_SP_ABFT) (PhysicalMemory + Offset))->Length;
             i++
           )
           Checksum += PhysicalMemory[Offset + i];
         if (Checksum & 0xff)
           continue;
-        if (((abft_ptr) (PhysicalMemory + Offset))->Revision != 1) {
+        if (((AOE_SP_ABFT) (PhysicalMemory + Offset))->Revision != 1) {
             DBG(
                 "Found aBFT with mismatched revision v%d at "
                   "segment 0x%4x. want v1.\n",
@@ -1590,7 +1588,7 @@ static void AoeProcessAbft_(void) {
         RtlCopyMemory(
             &AoEBootRecord,
             PhysicalMemory + Offset,
-            sizeof (abft)
+            sizeof AoEBootRecord
           );
         FoundAbft = TRUE;
         break;

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -67,7 +67,7 @@ static NTSTATUS STDCALL disk_pnp__query_dev_text_(
     /* Determine the query type. */
     switch (io_stack_loc->Parameters.QueryDeviceText.DeviceTextType) {
         case DeviceTextDescription:
-          str_len = swprintf(*str, winvblock__literal_w L" Disk") + 1;
+          str_len = swprintf(*str, WVL_M_WLIT L" Disk") + 1;
           irp->IoStatus.Information =
             (ULONG_PTR) wv_palloc(str_len * sizeof *str);
           if (irp->IoStatus.Information == 0) {

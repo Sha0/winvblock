@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -110,9 +110,9 @@ static winvblock__uint32 STDCALL query_id(
     WV_SP_DISK_T disk = disk__get_ptr(dev);
     filedisk__type_ptr filedisk = filedisk__get_ptr(dev);
     static PWCHAR hw_ids[WvDiskMediaTypes] = {
-        winvblock__literal_w L"\\FileFloppyDisk",
-        winvblock__literal_w L"\\FileHardDisk",
-        winvblock__literal_w L"\\FileOpticalDisc"
+        WVL_M_WLIT L"\\FileFloppyDisk",
+        WVL_M_WLIT L"\\FileHardDisk",
+        WVL_M_WLIT L"\\FileOpticalDisc"
       };
 
     switch (query_type) {

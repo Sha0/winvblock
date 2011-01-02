@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -176,7 +176,7 @@ Protocol_Start (
 		      FALSE );
   KeInitializeSpinLock ( &Protocol_Globals_SpinLock );
 
-  RtlInitUnicodeString ( &ProtocolName, winvblock__literal_w );
+  RtlInitUnicodeString ( &ProtocolName, WVL_M_WLIT );
   NdisZeroMemory ( &ProtocolCharacteristics,
 		   sizeof ( NDIS_PROTOCOL_CHARACTERISTICS ) );
   ProtocolCharacteristics.MajorNdisVersion = 4;

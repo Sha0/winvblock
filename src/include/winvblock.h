@@ -27,8 +27,8 @@
  *
  */
 
-#  define winvblock__literal "WinVBlock"
-#  define winvblock__literal_w L"WinVBlock"
+#define WVL_M_LIT "WinVBlock"
+#define WVL_M_WLIT L"WinVBlock"
 
 /* A common way to define a structure. */
 #  define winvblock__def_struct( x ) \

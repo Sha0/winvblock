@@ -44,8 +44,8 @@
 #include "debug.h"
 
 /* Names for the main bus. */
-#define WV_M_BUS_NAME_ (L"\\Device\\" winvblock__literal_w)
-#define WV_M_BUS_DOSNAME_ (L"\\DosDevices\\" winvblock__literal_w)
+#define WV_M_BUS_NAME_ (L"\\Device\\" WVL_M_WLIT)
+#define WV_M_BUS_DOSNAME_ (L"\\DosDevices\\" WVL_M_WLIT)
 
 /* Exported. */
 PDRIVER_OBJECT WvDriverObj = NULL;
@@ -808,7 +808,7 @@ static NTSTATUS STDCALL WvDriverBusPnpQueryDevText_(
     /* Determine the query type. */
     switch (io_stack_loc->Parameters.QueryDeviceText.DeviceTextType) {
         case DeviceTextDescription:
-          str_len = swprintf(*str, winvblock__literal_w L" Bus") + 1;
+          str_len = swprintf(*str, WVL_M_WLIT L" Bus") + 1;
           irp->IoStatus.Information =
             (ULONG_PTR) wv_palloc(str_len * sizeof *str);
           if (irp->IoStatus.Information == 0) {
