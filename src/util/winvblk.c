@@ -104,6 +104,26 @@ static option *options[] = {
 static char present[] = "";
 static char *invalid_opt = NULL;
 
+static int WvuShowLastErr(void) {
+    DWORD err_code = GetLastError();
+    void * buf = NULL;
+
+    FormatMessage(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+        NULL,
+        err_code,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPTSTR) &buf,
+        0,
+        NULL
+      );
+    if (buf) {
+        printf("GetLastError():\n  %s", buf);
+        LocalFree(buf);
+      }
+    return err_code;
+  }
+
 static void cmdline_options(int argc, char **argv) {
     int cur = 1;
 
@@ -228,7 +248,7 @@ static int STDCALL cmd_scan(void) {
         &bytes_returned,
         (LPOVERLAPPED) NULL
       )) {
-        printf("DeviceIoControl (%d)\n", (int) GetLastError());
+        WvuShowLastErr();
         status = 2;
         goto err_ioctl;
       }
@@ -302,7 +322,7 @@ static int STDCALL cmd_show(void) {
       &bytes_returned,
       (LPOVERLAPPED) NULL
     )) {
-      printf("DeviceIoControl (%d)\n", (int) GetLastError());
+      WvuShowLastErr();
       goto err_ioctl;
     }
 
@@ -402,7 +422,7 @@ static int STDCALL cmd_mount(void) {
         &bytes_returned,
         (LPOVERLAPPED) NULL
       )) {
-        printf("DeviceIoControl (%d)\n", (int) GetLastError());
+        WvuShowLastErr();
         return 2;
       }
     return 0;
@@ -430,7 +450,7 @@ static int STDCALL cmd_umount(void) {
         &bytes_returned,
         (LPOVERLAPPED) NULL
       )) {
-        printf("DeviceIoControl (%d)\n", (int) GetLastError());
+        WvuShowLastErr();
         return 2;
       }
     return 0;
@@ -474,7 +494,7 @@ static int STDCALL cmd_attach(void) {
         &bytes_returned,
         (LPOVERLAPPED) NULL
       )) {
-        printf("DeviceIoControl (%d)\n", (int) GetLastError());
+        WvuShowLastErr();
         return 2;
       }
     return 0;
@@ -502,7 +522,7 @@ static int STDCALL cmd_detach(void) {
         &bytes_returned,
         (LPOVERLAPPED) NULL
       )) {
-        printf("DeviceIoControl (%d)\n", (int) GetLastError());
+        WvuShowLastErr();
         return 2;
       }
     return 0;
@@ -551,7 +571,7 @@ int main(int argc, char **argv, char **envp) {
         NULL
       );
     if (boot_bus == INVALID_HANDLE_VALUE) {
-        printf("CreateFile (%d)\n", (int) GetLastError());
+        WvuShowLastErr();
         goto err_handle;
       }
 
