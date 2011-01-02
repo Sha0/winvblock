@@ -30,9 +30,9 @@
 #include "winvblock.h"
 #include "wv_stdlib.h"
 #include "irp.h"
-#include "driver.h"
 #include "bus.h"
 #include "device.h"
+#include "dummy.h"
 #include "aoe.h"
 #include "mount.h"
 #include "debug.h"
@@ -63,7 +63,7 @@ static UNICODE_STRING AoeBusDosname_ = {
     sizeof AOE_M_BUS_DOSNAME_ - sizeof (WCHAR),
     AOE_M_BUS_DOSNAME_
   };
-const WV_S_DRIVER_DUMMY_IDS * AoeBusDummyIds;
+const WV_S_DUMMY_IDS * AoeBusDummyIds;
 
 static NTSTATUS STDCALL AoeBusDevCtlDetach_(IN PIRP irp) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
@@ -142,7 +142,7 @@ NTSTATUS STDCALL AoeBusDevCtl(
   X_(Y_, Instance, L"0"                 ) \
   X_(Y_, Hardware, WVL_M_WLIT L"\\AoE\0") \
   X_(Y_, Compat,   WVL_M_WLIT L"\\AoE\0")
-WV_M_DRIVER_DUMMY_ID_GEN(AoeBusDummyIds_, AOE_M_BUS_IDS);
+WV_M_DUMMY_ID_GEN(AoeBusDummyIds_, AOE_M_BUS_IDS);
 
 /* Destroy the AoE bus. */
 VOID AoeBusFree(void) {

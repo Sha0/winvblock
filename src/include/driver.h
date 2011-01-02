@@ -46,92 +46,12 @@ typedef struct WV_DEV_EXT {
     struct WV_DEV_T * device;
   } WV_S_DEV_EXT, * WV_SP_DEV_EXT;
 
-/* PnP IDs for a dummy device. */
-typedef struct WV_DRIVER_DUMMY_IDS {
-    UINT32 DevOffset;
-    UINT32 DevLen;
-    UINT32 InstanceOffset;
-    UINT32 InstanceLen;
-    UINT32 HardwareOffset;
-    UINT32 HardwareLen;
-    UINT32 CompatOffset;
-    UINT32 CompatLen;
-    UINT32 Len;
-    const WCHAR * Ids;
-    WCHAR Text[1];
-  } WV_S_DRIVER_DUMMY_IDS, * WV_SP_DRIVER_DUMMY_IDS;
-
-/* Macro support for dummy ID generation. */
-#define WV_M_DRIVER_DUMMY_IDS_X_ENUM(prefix_, name_, literal_)    \
-  prefix_ ## name_ ## Offset_,                                    \
-  prefix_ ## name_ ## Len_ = sizeof (literal_) / sizeof (WCHAR),  \
-  prefix_ ## name_ ## End_ =                                      \
-    prefix_ ## name_ ## Offset_ + prefix_ ## name_ ## Len_ - 1,
-
-#define WV_M_DRIVER_DUMMY_IDS_X_LITERALS(prefix_, name_, literal_) \
-  literal_ L"\0"
-
-#define WV_M_DRIVER_DUMMY_IDS_X_FILL(prefix_, name_, literal_)  \
-  prefix_ ## name_ ## Offset_,                                  \
-  prefix_ ## name_ ## Len_,
-
-/**
- * Generate a static const WV_S_DRIVER_DUMMY_IDS object.
- *
- * @v DummyIds          The name of the desired object.  Also used as prefix.
- * @v XMacro            The x-macro with the ID text.
- *
- * This macro will produce the following:
- *   enum values:
- *     [DummyIds]DevOffset_
- *     [DummyIds]DevLen_
- *     [DummyIds]DevEnd_
- *     [DummyIds]InstanceOffset_
- *     [DummyIds]InstanceLen_
- *     [DummyIds]InstanceEnd_
- *     [DummyIds]HardwareOffset_
- *     [DummyIds]HardwareLen_
- *     [DummyIds]HardwareEnd_
- *     [DummyIds]CompatOffset_
- *     [DummyIds]CompatLen_
- *     [DummyIds]CompatEnd_
- *     [DummyIds]Len_
- *   WCHAR[]:
- *     [DummyIds]String_
- *   static const WV_S_DRIVER_DUMMY_IDS:
- *     [DummyIds]
- */
-#define WV_M_DRIVER_DUMMY_ID_GEN(DummyIds, XMacro)    \
-                                                      \
-enum {                                                \
-    XMacro(WV_M_DRIVER_DUMMY_IDS_X_ENUM, DummyIds)    \
-    DummyIds ## Len_                                  \
-  };                                                  \
-                                                      \
-static const WCHAR DummyIds ## String_[] =            \
-  XMacro(WV_M_DRIVER_DUMMY_IDS_X_LITERALS, DummyIds); \
-                                                      \
-static const WV_S_DRIVER_DUMMY_IDS DummyIds = {       \
-    XMacro(WV_M_DRIVER_DUMMY_IDS_X_FILL, DummyIds)    \
-    DummyIds ## Len_,                                 \
-    DummyIds ## String_                               \
-  }
-
 extern WVL_M_LIB BOOLEAN STDCALL WvDriverBusAddDev(
     IN WV_SP_DEV_T
   );
 extern NTSTATUS STDCALL WvDriverGetDevCapabilities(
     IN PDEVICE_OBJECT,
     IN PDEVICE_CAPABILITIES
-  );
-extern WVL_M_LIB NTSTATUS STDCALL WvDriverAddDummy(
-    IN const WV_S_DRIVER_DUMMY_IDS *,
-    IN DEVICE_TYPE,
-    IN ULONG
-  );
-extern WVL_M_LIB NTSTATUS STDCALL WvDriverDummyIds(
-    IN PIRP,
-    IN WV_SP_DRIVER_DUMMY_IDS
   );
 
 #endif	/* WV_M_DRIVER_H_ */

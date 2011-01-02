@@ -34,9 +34,9 @@
 #include "wv_stdlib.h"
 #include "wv_string.h"
 #include "irp.h"
-#include "driver.h"
 #include "bus.h"
 #include "device.h"
+#include "dummy.h"
 #include "disk.h"
 #include "mount.h"
 #include "aoe.h"
@@ -61,7 +61,7 @@ extern NTSTATUS STDCALL AoeBusAttachFdo(
     IN PDRIVER_OBJECT,
     IN PDEVICE_OBJECT
   );
-extern const WV_S_DRIVER_DUMMY_IDS * AoeBusDummyIds;
+extern const WV_S_DUMMY_IDS * AoeBusDummyIds;
 extern BOOLEAN STDCALL AoeBusAddDev(IN OUT WV_SP_DEV_T);
 /* From aoe/registry.c */
 extern BOOLEAN STDCALL AoeRegSetup(OUT PNTSTATUS);
@@ -1332,7 +1332,7 @@ static VOID STDCALL AoeThread_(IN PVOID StartContext)
     DBG ( "Entry\n" );
 
     /* Create the PDO for the sub-bus on the WinVBlock bus. */
-    status = WvDriverAddDummy(
+    status = WvDummyAdd(
         AoeBusDummyIds,
         FILE_DEVICE_CONTROLLER,
         FILE_DEVICE_SECURE_OPEN
