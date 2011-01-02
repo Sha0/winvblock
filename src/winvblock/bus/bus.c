@@ -35,31 +35,31 @@
 #include "debug.h"
 
 /* Types. */
-typedef enum WV_BUS_WORK_ITEM_CMD_ {
-    WvBusWorkItemCmdAddPdo_,
-    WvBusWorkItemCmdRemovePdo_,
-    WvBusWorkItemCmdProcessIrp_,
-    WvBusWorkItemCmdCustom_,
-    WvBusWorkItemCmds_
-  } WV_E_BUS_WORK_ITEM_CMD_, * WV_EP_BUS_WORK_ITEM_CMD_;
+typedef enum WVL_BUS_WORK_ITEM_CMD {
+    WvlBusWorkItemCmdAddPdo_,
+    WvlBusWorkItemCmdRemovePdo_,
+    WvlBusWorkItemCmdProcessIrp_,
+    WvlBusWorkItemCmdCustom_,
+    WvlBusWorkItemCmds_
+  } WVL_E_BUS_WORK_ITEM_CMD, * WVL_EP_BUS_WORK_ITEM_CMD;
 
-typedef struct WV_BUS_WORK_ITEM_ {
+typedef struct WVL_BUS_WORK_ITEM {
     LIST_ENTRY Link;
-    WV_E_BUS_WORK_ITEM_CMD_ Cmd;
+    WVL_E_BUS_WORK_ITEM_CMD Cmd;
     union {
         WVL_SP_BUS_NODE Node;
         PIRP Irp;
         WVL_SP_BUS_CUSTOM_WORK_ITEM Custom;
       } Context;
-  } WV_S_BUS_WORK_ITEM_, * WV_SP_BUS_WORK_ITEM_;
+  } WVL_S_BUS_WORK_ITEM, * WVL_SP_BUS_WORK_ITEM;
 
 /* Forward declarations. */
-static WVL_F_BUS_THREAD WvBusDefaultThread_;
-static BOOLEAN WvBusAddWorkItem_(
+static WVL_F_BUS_THREAD WvlBusDefaultThread;
+static BOOLEAN WvlBusAddWorkItem(
     WVL_SP_BUS_T,
-    WV_SP_BUS_WORK_ITEM_
+    WVL_SP_BUS_WORK_ITEM
   );
-static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(WVL_SP_BUS_T);
+static WVL_SP_BUS_WORK_ITEM WvlBusGetWorkItem(WVL_SP_BUS_T);
 
 /* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
 WVL_M_LIB NTSTATUS STDCALL WvlBusSysCtl(
@@ -99,7 +99,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusPower(
 WVL_M_LIB VOID WvlBusInit(WVL_SP_BUS_T Bus) {
     RtlZeroMemory(Bus, sizeof *Bus);
     /* Populate non-zero bus device defaults. */
-    Bus->Thread = WvBusDefaultThread_;
+    Bus->Thread = WvlBusDefaultThread;
     InitializeListHead(&Bus->BusPrivate_.Nodes);
     KeInitializeSpinLock(&Bus->BusPrivate_.WorkItemsLock);
     InitializeListHead(&Bus->BusPrivate_.WorkItems);
@@ -115,9 +115,9 @@ WVL_M_LIB VOID WvlBusInit(WVL_SP_BUS_T Bus) {
  *
  * Note that this function will initialize the work item's completion signal.
  */
-static BOOLEAN WvBusAddWorkItem_(
+static BOOLEAN WvlBusAddWorkItem(
     WVL_SP_BUS_T bus,
-    WV_SP_BUS_WORK_ITEM_ work_item
+    WVL_SP_BUS_WORK_ITEM work_item
   ) {
     ExInterlockedInsertTailList(
         &bus->BusPrivate_.WorkItems,
@@ -132,9 +132,9 @@ static BOOLEAN WvBusAddWorkItem_(
  * Get (and dequeue) a work item from a bus' queue.
  *
  * @v bus                       The bus processing the work item.
- * @ret WV_SP_BUS_WORK_ITEM_    The work item, or NULL for an empty queue.
+ * @ret WVL_SP_BUS_WORK_ITEM    The work item, or NULL for an empty queue.
  */
-static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(
+static WVL_SP_BUS_WORK_ITEM WvlBusGetWorkItem(
     WVL_SP_BUS_T bus
   ) {
     PLIST_ENTRY list_entry;
@@ -146,7 +146,7 @@ static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(
     if (!list_entry)
       return NULL;
 
-    return CONTAINING_RECORD(list_entry, WV_S_BUS_WORK_ITEM_, Link);
+    return CONTAINING_RECORD(list_entry, WVL_S_BUS_WORK_ITEM, Link);
   }
 
 /**
@@ -222,7 +222,7 @@ static VOID STDCALL WvlBusRemoveNode_(
  * @v Bus               The bus to process its work items.
  */
 WVL_M_LIB VOID WvlBusProcessWorkItems(WVL_SP_BUS_T Bus) {
-    WV_SP_BUS_WORK_ITEM_ work_item;
+    WVL_SP_BUS_WORK_ITEM work_item;
     WVL_SP_BUS_NODE node;
     PIRP irp;
     PIO_STACK_LOCATION io_stack_loc;
@@ -230,21 +230,21 @@ WVL_M_LIB VOID WvlBusProcessWorkItems(WVL_SP_BUS_T Bus) {
     PDRIVER_OBJECT driver_obj;
     BOOLEAN nodes_changed;
 
-    while (work_item = WvBusGetWorkItem_(Bus)) {
+    while (work_item = WvlBusGetWorkItem(Bus)) {
         switch (work_item->Cmd) {
-            case WvBusWorkItemCmdAddPdo_:
+            case WvlBusWorkItemCmdAddPdo_:
               node = work_item->Context.Node;
               WvlBusAddNode_(Bus, node);
               nodes_changed = TRUE;
               break;
 
-            case WvBusWorkItemCmdRemovePdo_:
+            case WvlBusWorkItemCmdRemovePdo_:
               node = work_item->Context.Node;
               WvlBusRemoveNode_(Bus, node);
               nodes_changed = TRUE;
               break;
 
-            case WvBusWorkItemCmdProcessIrp_:
+            case WvlBusWorkItemCmdProcessIrp_:
               irp = work_item->Context.Irp;
               io_stack_loc = IoGetCurrentIrpStackLocation(irp);
               dev_obj = Bus->Fdo;
@@ -255,7 +255,7 @@ WVL_M_LIB VOID WvlBusProcessWorkItems(WVL_SP_BUS_T Bus) {
                 );
               break;
 
-            case WvBusWorkItemCmdCustom_:
+            case WvlBusWorkItemCmdCustom_:
               DBG("Custom work item.\n");
               work_item->Context.Custom->Func(
                   work_item->Context.Custom->Context
@@ -283,10 +283,10 @@ WVL_M_LIB VOID WvlBusProcessWorkItems(WVL_SP_BUS_T Bus) {
  * @v Bus       The bus to cancel pending work items for.
  */
 WVL_M_LIB VOID WvlBusCancelWorkItems(WVL_SP_BUS_T Bus) {
-    WV_SP_BUS_WORK_ITEM_ work_item;
+    WVL_SP_BUS_WORK_ITEM work_item;
 
     DBG("Canceling work items.\n");
-    while (work_item = WvBusGetWorkItem_(Bus))
+    while (work_item = WvlBusGetWorkItem(Bus))
       wv_free(work_item);
     return;
   }
@@ -302,7 +302,7 @@ WVL_M_LIB VOID WvlBusCancelWorkItems(WVL_SP_BUS_T Bus) {
  * signal which should mean that resources can be freed, from a completed
  * thread's perspective.
  */
-static VOID STDCALL WvBusThread_(IN PVOID context) {
+static VOID STDCALL WvlBusThread(IN PVOID context) {
     WVL_SP_BUS_T bus = context;
 
     if (!bus || !bus->Thread) {
@@ -328,7 +328,7 @@ static VOID STDCALL WvBusThread_(IN PVOID context) {
  * If you implement your own thread routine, you are also responsible
  * for calling WvlBusCancelWorkItems() and freeing the bus.
  */
-static VOID STDCALL WvBusDefaultThread_(IN WVL_SP_BUS_T bus) {
+static VOID STDCALL WvlBusDefaultThread(IN WVL_SP_BUS_T bus) {
     LARGE_INTEGER timeout;
 
     /* Wake up at least every 30 seconds. */
@@ -394,7 +394,7 @@ WVL_M_LIB NTSTATUS WvlBusStartThread(
         &obj_attrs,
         NULL,
         NULL,
-        WvBusThread_,
+        WvlBusThread,
         Bus
       );
     if (!NT_SUCCESS(status))
@@ -443,7 +443,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusAddNode(
     WVL_SP_BUS_T Bus,
     WVL_SP_BUS_NODE Node
   ) {
-    WV_SP_BUS_WORK_ITEM_ work_item;
+    WVL_SP_BUS_WORK_ITEM work_item;
 
     if (
         !Bus ||
@@ -458,9 +458,9 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusAddNode(
     if (!(work_item = wv_malloc(sizeof *work_item)))
       return STATUS_INSUFFICIENT_RESOURCES;
 
-    work_item->Cmd = WvBusWorkItemCmdAddPdo_;
+    work_item->Cmd = WvlBusWorkItemCmdAddPdo_;
     work_item->Context.Node = Node;
-    if (!WvBusAddWorkItem_(Bus, work_item)) {
+    if (!WvlBusAddWorkItem(Bus, work_item)) {
         wv_free(work_item);
         return STATUS_UNSUCCESSFUL;
       }
@@ -482,7 +482,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusRemoveNode(
     WVL_SP_BUS_NODE Node
   ) {
     WVL_SP_BUS_T bus;
-    WV_SP_BUS_WORK_ITEM_ work_item;
+    WVL_SP_BUS_WORK_ITEM work_item;
 
     if (!Node || !(bus = Node->BusPrivate_.Bus))
       return STATUS_INVALID_PARAMETER;
@@ -493,9 +493,9 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusRemoveNode(
     if (!(work_item = wv_malloc(sizeof *work_item)))
       return STATUS_INSUFFICIENT_RESOURCES;
 
-    work_item->Cmd = WvBusWorkItemCmdRemovePdo_;
+    work_item->Cmd = WvlBusWorkItemCmdRemovePdo_;
     work_item->Context.Node = Node;
-    if (!WvBusAddWorkItem_(bus, work_item)) {
+    if (!WvlBusAddWorkItem(bus, work_item)) {
         wv_free(work_item);
         return STATUS_UNSUCCESSFUL;
       }
@@ -516,7 +516,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusEnqueueIrp(
     WVL_SP_BUS_T Bus,
     PIRP Irp
   ) {
-    WV_SP_BUS_WORK_ITEM_ work_item;
+    WVL_SP_BUS_WORK_ITEM work_item;
 
     if (!Bus || !Irp)
       return STATUS_INVALID_PARAMETER;
@@ -527,10 +527,10 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusEnqueueIrp(
     if (!(work_item = wv_malloc(sizeof *work_item)))
       return STATUS_INSUFFICIENT_RESOURCES;
 
-    work_item->Cmd = WvBusWorkItemCmdProcessIrp_;
+    work_item->Cmd = WvlBusWorkItemCmdProcessIrp_;
     work_item->Context.Irp = Irp;
     IoMarkIrpPending(Irp);
-    if (!WvBusAddWorkItem_(Bus, work_item)) {
+    if (!WvlBusAddWorkItem(Bus, work_item)) {
         wv_free(work_item);
         return STATUS_UNSUCCESSFUL;
       }
@@ -550,7 +550,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusEnqueueCustomWorkItem(
     WVL_SP_BUS_T Bus,
     WVL_SP_BUS_CUSTOM_WORK_ITEM CustomWorkItem
   ) {
-    WV_SP_BUS_WORK_ITEM_ work_item;
+    WVL_SP_BUS_WORK_ITEM work_item;
 
     if (!Bus || !CustomWorkItem)
       return STATUS_INVALID_PARAMETER;
@@ -561,9 +561,9 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusEnqueueCustomWorkItem(
     if (!(work_item = wv_malloc(sizeof *work_item)))
       return STATUS_INSUFFICIENT_RESOURCES;
 
-    work_item->Cmd = WvBusWorkItemCmdCustom_;
+    work_item->Cmd = WvlBusWorkItemCmdCustom_;
     work_item->Context.Custom = CustomWorkItem;
-    if (!WvBusAddWorkItem_(Bus, work_item)) {
+    if (!WvlBusAddWorkItem(Bus, work_item)) {
         wv_free(work_item);
         return STATUS_UNSUCCESSFUL;
       }
