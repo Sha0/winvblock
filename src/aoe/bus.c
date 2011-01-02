@@ -53,13 +53,13 @@ void AoeBusFree(void);
 /* Globals. */
 WV_S_BUS_T AoeBusMain = {0};
 static UNICODE_STRING AoeBusName_ = {
-    sizeof AOE_M_BUS_NAME_,
-    sizeof AOE_M_BUS_NAME_,
+    sizeof AOE_M_BUS_NAME_ - sizeof (WCHAR),
+    sizeof AOE_M_BUS_NAME_ - sizeof (WCHAR),
     AOE_M_BUS_NAME_
   };
 static UNICODE_STRING AoeBusDosname_ = {
-    sizeof AOE_M_BUS_DOSNAME_,
-    sizeof AOE_M_BUS_DOSNAME_,
+    sizeof AOE_M_BUS_DOSNAME_ - sizeof (WCHAR),
+    sizeof AOE_M_BUS_DOSNAME_ - sizeof (WCHAR),
     AOE_M_BUS_DOSNAME_
   };
 const WV_S_DRIVER_DUMMY_IDS * AoeBusDummyIds;
