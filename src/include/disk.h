@@ -92,7 +92,7 @@ typedef WV_F_DISK_INIT * WV_FP_DISK_INIT;
  *
  * @v disk_ptr        The disk device being closed.
  */
-typedef void STDCALL WV_F_DISK_CLOSE(IN WV_SP_DISK_T);
+typedef VOID STDCALL WV_F_DISK_CLOSE(IN WV_SP_DISK_T);
 typedef WV_F_DISK_CLOSE * WV_FP_DISK_CLOSE;
 
 typedef struct WV_DISK_OPS {
@@ -163,7 +163,7 @@ extern WV_F_DISK_MAX_XFER_LEN disk__max_xfer_len;
  * @v boot_sect_ptr     The MBR or VBR with possible geometry clues.
  * @v disk_ptr          The disk to set the geometry for.
  */
-extern WVL_M_LIB void disk__guess_geometry(
+extern WVL_M_LIB VOID disk__guess_geometry(
     IN WV_AP_DISK_BOOT_SECT,
     IN OUT WV_SP_DISK_T disk_ptr
   );

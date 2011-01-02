@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, originally derived from WinAoE.
  *
@@ -22,6 +22,6 @@
 #  include "wv_stddef.h"
 
 /* Test two byte ranges in memory for equality. */
-bool wv_memcmpeq(const void *s1, const void *s2, wv_size_t n);
+bool wv_memcmpeq(const VOID * s1, const VOID * s2, wv_size_t n);
 
 #endif  /* WV_M_STRING_H_ */

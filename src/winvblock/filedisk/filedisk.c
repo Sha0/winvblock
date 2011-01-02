@@ -242,7 +242,7 @@ err_ansi_to_unicode:
   return status;
 }
 
-static void STDCALL close(IN WV_SP_DISK_T disk_ptr) {
+static VOID STDCALL close(IN WV_SP_DISK_T disk_ptr) {
     WV_SP_FILEDISK_T filedisk_ptr = filedisk__get_ptr(disk_ptr->Dev);
 
     ZwClose(filedisk_ptr->file);
@@ -256,11 +256,7 @@ static void STDCALL close(IN WV_SP_DISK_T disk_ptr) {
  *
  * See the header file for additional details
  */
-WV_SP_FILEDISK_T
-filedisk__create (
-  void
- )
-{
+WV_SP_FILEDISK_T filedisk__create(void) {
   WV_SP_DISK_T disk_ptr;
   WV_SP_FILEDISK_T filedisk_ptr;
 
@@ -321,7 +317,7 @@ NTSTATUS filedisk__module_init(void) {
  *
  * @v dev_ptr           Points to the file-backed disk device to delete.
  */
-static void STDCALL free_filedisk(IN WV_SP_DEV_T dev_ptr)
+static VOID STDCALL free_filedisk(IN WV_SP_DEV_T dev_ptr)
   {
     WV_SP_DISK_T disk_ptr = disk__get_ptr(dev_ptr);
     WV_SP_FILEDISK_T filedisk_ptr = filedisk__get_ptr(dev_ptr);
@@ -358,9 +354,9 @@ typedef struct WV_FILEDISK_THREAD_REQ {
  *
  * @v StartContext      Points to a file-backed disk
  */
-static void STDCALL
+static VOID STDCALL
 thread (
-  IN void *StartContext
+  IN PVOID StartContext
  )
 {
   WV_SP_FILEDISK_T filedisk_ptr = StartContext;
@@ -448,7 +444,7 @@ static NTSTATUS STDCALL threaded_io(
  *
  * @v dev_ptr           Points to the file-backed disk device to delete.
  */
-static void STDCALL free_threaded_filedisk(IN WV_SP_DEV_T dev_ptr)
+static VOID STDCALL free_threaded_filedisk(IN WV_SP_DEV_T dev_ptr)
   {
     /*
      * Queue the tear-down and return.  The thread will catch this on timeout.
@@ -463,11 +459,7 @@ static void STDCALL free_threaded_filedisk(IN WV_SP_DEV_T dev_ptr)
  *
  * See the header file for additional details
  */
-WV_SP_FILEDISK_T
-filedisk__create_threaded (
-  void
- )
-{
+WV_SP_FILEDISK_T filedisk__create_threaded(void) {
   WV_SP_FILEDISK_T filedisk_ptr;
   OBJECT_ATTRIBUTES obj_attrs;
   HANDLE thread_handle;
@@ -645,9 +637,9 @@ hot_swap (
   return NT_SUCCESS ( status ) ? TRUE : FALSE;
 }
 
-void STDCALL
+VOID STDCALL
 filedisk__hot_swap_thread (
-  IN void *StartContext
+  IN PVOID StartContext
  )
 {
   WV_SP_FILEDISK_T filedisk_ptr = StartContext;

@@ -39,13 +39,9 @@ extern BOOLEAN STDCALL Protocol_Send (
   IN PUCHAR DestinationMac,
   IN PUCHAR Data,
   IN UINT32 DataSize,
-  IN void *PacketContext
+  IN PVOID PacketContext
  );
-extern NTSTATUS Protocol_Start (
-  void
- );
-extern void Protocol_Stop (
-  void
- );
+extern NTSTATUS Protocol_Start(void);
+extern VOID Protocol_Stop(void);
 
 #endif  /* AOE_M_PROTOCOL_H_ */

@@ -81,7 +81,7 @@ extern WVL_M_LIB WV_F_DEV_PNP_ID WvDevPnpId;
  *
  * @v dev               The device being closed.
  */
-typedef void STDCALL WV_F_DEV_CLOSE(IN WV_SP_DEV_T);
+typedef VOID STDCALL WV_F_DEV_CLOSE(IN WV_SP_DEV_T);
 typedef WV_F_DEV_CLOSE * WV_FP_DEV_CLOSE;
 extern WVL_M_LIB WV_F_DEV_CLOSE WvDevClose;
 
@@ -90,11 +90,11 @@ extern WVL_M_LIB WV_F_DEV_CLOSE WvDevClose;
  *
  * @v dev_ptr           Points to the device to delete.
  */
-typedef void STDCALL WV_F_DEV_FREE(IN WV_SP_DEV_T);
+typedef VOID STDCALL WV_F_DEV_FREE(IN WV_SP_DEV_T);
 typedef WV_F_DEV_FREE * WV_FP_DEV_FREE;
 extern WVL_M_LIB WV_F_DEV_FREE WvDevFree;
 
-extern WVL_M_LIB void WvDevInit(WV_SP_DEV_T);
+extern WVL_M_LIB VOID WvDevInit(WV_SP_DEV_T);
 extern WVL_M_LIB WV_SP_DEV_T WvDevCreate(void);
 
 typedef struct WV_DEV_OPS {
@@ -190,7 +190,7 @@ struct WV_DEV_T {
   };
 
 extern WVL_M_LIB WV_SP_DEV_T WvDevFromDevObj(PDEVICE_OBJECT);
-extern WVL_M_LIB void WvDevForDevObj(PDEVICE_OBJECT, WV_SP_DEV_T);
+extern WVL_M_LIB VOID WvDevForDevObj(PDEVICE_OBJECT, WV_SP_DEV_T);
 extern WV_F_DEV_DISPATCH WvDevPnpQueryId;
 
 #endif  /* WV_M_DEVICE_H_ */

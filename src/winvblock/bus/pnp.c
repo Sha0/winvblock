@@ -58,7 +58,7 @@ static NTSTATUS STDCALL WvBusPnpStartDev_(IN WVL_SP_BUS_T bus, IN PIRP irp) {
     IoSetCompletionRoutine(
         irp,
         (PIO_COMPLETION_ROUTINE) WvBusPnpIoCompletion_,
-        (void *) &event,
+        (PVOID) &event,
         TRUE,
         TRUE,
         TRUE

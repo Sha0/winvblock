@@ -55,9 +55,7 @@ extern NTSTATUS filedisk__module_init(void);
  * WV_S_FILEDISK_T, track it in a global list, as well as populate the disk
  * with default values.
  */
-extern WV_SP_FILEDISK_T filedisk__create (
-  void
- );
+extern WV_SP_FILEDISK_T filedisk__create(void);
 /**
  * Create a new threaded, file-backed disk
  *
@@ -66,9 +64,7 @@ extern WV_SP_FILEDISK_T filedisk__create (
  * See filedisk__create() above.  This routine uses threaded routines
  * for disk reads/writes, and frees asynchronously, too.
  */
-extern WV_SP_FILEDISK_T filedisk__create_threaded (
-  void
- );
+extern WV_SP_FILEDISK_T filedisk__create_threaded(void);
 
 /*
  * Yield a pointer to the file-backed disk
@@ -76,8 +72,6 @@ extern WV_SP_FILEDISK_T filedisk__create_threaded (
 #  define filedisk__get_ptr( dev_ptr ) \
   ((WV_SP_FILEDISK_T) (disk__get_ptr(dev_ptr))->ext)
 
-extern void STDCALL filedisk__hot_swap_thread (
-  IN void *StartContext
- );
+extern VOID STDCALL filedisk__hot_swap_thread(IN PVOID StartContext);
 
 #endif  /* WV_M_FILEDISK_H_ */

@@ -92,13 +92,13 @@ static BOOLEAN STDCALL WvDiskDefaultInit_(IN WV_SP_DISK_T disk_ptr) {
     return TRUE;
   }
 
-static void STDCALL disk__close_(IN WV_SP_DEV_T dev_ptr) {
+static VOID STDCALL disk__close_(IN WV_SP_DEV_T dev_ptr) {
     WV_SP_DISK_T disk_ptr = disk__get_ptr(dev_ptr);
     disk_ptr->disk_ops.Close(disk_ptr);
     return;
   }
 
-static void STDCALL WvDiskDefaultClose_(IN WV_SP_DISK_T disk_ptr) {
+static VOID STDCALL WvDiskDefaultClose_(IN WV_SP_DISK_T disk_ptr) {
     return;
   }
 
@@ -228,7 +228,7 @@ typedef struct WV_DISK_FAT_SUPER WV_S_DISK_FAT_SUPER, * WV_SP_DISK_FAT_SUPER;
  * @v boot_sect_ptr     The MBR or VBR with possible geometry clues.
  * @v disk_ptr          The disk to set the geometry for.
  */
-WVL_M_LIB void disk__guess_geometry(
+WVL_M_LIB VOID disk__guess_geometry(
     IN WV_AP_DISK_BOOT_SECT boot_sect_ptr,
     IN OUT WV_SP_DISK_T disk_ptr
   ) {
@@ -391,7 +391,7 @@ NTSTATUS disk__module_init(void) {
  *
  * @v dev_ptr           Points to the disk device to delete.
  */
-static void STDCALL free_disk(IN WV_SP_DEV_T dev_ptr) {
+static VOID STDCALL free_disk(IN WV_SP_DEV_T dev_ptr) {
     WV_SP_DISK_T disk_ptr = disk__get_ptr(dev_ptr);
 
     /*

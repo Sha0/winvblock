@@ -219,7 +219,7 @@ typedef struct WV_FILEDISK_GRUB4DOS_DRIVE_FILE_SET {
   WV_S_FILEDISK_GRUB4DOS_DRIVE_FILE_SET,
   * WV_SP_FILEDISK_GRUB4DOS_DRIVE_FILE_SET;
 
-static void STDCALL
+static VOID STDCALL
 process_param_block (
   const char *param_block,
   WV_SP_FILEDISK_GRUB4DOS_DRIVE_FILE_SET sets
@@ -303,11 +303,7 @@ process_param_block (
     }
 }
 
-void
-filedisk_grub4dos__find (
-  void
- )
-{
+VOID filedisk_grub4dos__find(void) {
   PHYSICAL_ADDRESS PhysicalAddress;
   PUCHAR PhysicalMemory;
   WV_SP_PROBE_INT_VECTOR InterruptVector;

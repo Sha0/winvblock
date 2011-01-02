@@ -51,7 +51,7 @@
 PDRIVER_OBJECT WvDriverObj = NULL;
 
 /* Globals. */
-static void * WvDriverStateHandle_;
+static PVOID WvDriverStateHandle_;
 static BOOLEAN WvDriverStarted_ = FALSE;
 static PDEVICE_OBJECT WvDriverBusFdo_ = NULL;
 static KSPIN_LOCK WvDriverBusFdoLock_;
@@ -80,7 +80,7 @@ static driver__dispatch_func driver__dispatch_sys_ctl_;
 static driver__dispatch_func driver__dispatch_dev_ctl_;
 static driver__dispatch_func driver__dispatch_scsi_;
 static driver__dispatch_func driver__dispatch_pnp_;
-static void STDCALL driver__unload_(IN PDRIVER_OBJECT);
+static VOID STDCALL driver__unload_(IN PDRIVER_OBJECT);
 static WV_F_DEV_DISPATCH WvDriverBusSysCtl_;
 static WV_F_DEV_CTL WvDriverBusDevCtl_;
 static WV_F_DEV_DISPATCH WvDriverBusPower_;
@@ -562,7 +562,7 @@ static NTSTATUS driver__dispatch_pnp_(
     return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
-static void STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
+static VOID STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
     DBG("Unloading...\n");
     WvDriverBus_.Stop = TRUE;
     KeSetEvent(&WvDriverBus_.ThreadSignal, 0, FALSE);
@@ -585,7 +585,7 @@ static void STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
     DBG("Done\n");
   }
 
-WVL_M_LIB void STDCALL WvDriverCompletePendingIrp(IN PIRP Irp) {
+WVL_M_LIB VOID STDCALL WvDriverCompletePendingIrp(IN PIRP Irp) {
     #ifdef DEBUGIRPS
     Debug_IrpEnd(Irp, Irp->IoStatus.Status);
     #endif
@@ -893,7 +893,7 @@ static WVL_F_BUS_WORK_ITEM WvDriverAddDummy_;
  *
  * @v context           Points to the WV_S_DRIVER_ADD_DUMMY_ to process.
  */
-static void STDCALL WvDriverAddDummy_(void * context) {
+static VOID STDCALL WvDriverAddDummy_(PVOID context) {
     WV_SP_DRIVER_ADD_DUMMY_ dummy_context = context;
     NTSTATUS status;
     PDEVICE_OBJECT pdo = NULL;
@@ -1081,7 +1081,7 @@ WVL_M_LIB NTSTATUS STDCALL WvDriverDummyIds(
       }
     /* Copy the working buffer to the return buffer. */
     RtlCopyMemory(
-        (void *) Irp->IoStatus.Information,
+        (PVOID) Irp->IoStatus.Information,
         ids,
         len * sizeof *ids
       );

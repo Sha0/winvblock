@@ -54,7 +54,7 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject(
 /* From aoe/bus.c */
 extern WVL_S_BUS_T AoeBusMain;
 extern BOOLEAN AoeBusCreate(IN PDRIVER_OBJECT);
-extern void AoeBusFree(void);
+extern VOID AoeBusFree(void);
 extern NTSTATUS STDCALL AoeBusDevCtl(IN PIRP, IN ULONG POINTER_ALIGNMENT);
 extern NTSTATUS STDCALL AoeBusAttachFdo(
     IN PDRIVER_OBJECT,
@@ -67,9 +67,9 @@ extern BOOLEAN STDCALL AoeRegSetup(OUT PNTSTATUS);
 
 /* Forward declarations. */
 struct AOE_DISK_;
-static void STDCALL AoeThread_(IN void *);
-static void AoeProcessAbft_(void);
-static void STDCALL AoeUnload_(IN PDRIVER_OBJECT);
+static VOID STDCALL AoeThread_(IN PVOID);
+static VOID AoeProcessAbft_(void);
+static VOID STDCALL AoeUnload_(IN PDRIVER_OBJECT);
 static struct AOE_DISK_ * AoeDiskCreate_(void);
 static WV_F_DEV_FREE AoeDiskFree_;
 static WV_F_DISK_IO AoeDiskIo_;
@@ -83,7 +83,7 @@ static driver__dispatch_func AoeDriverIrpSysCtl_;
 static driver__dispatch_func AoeDriverIrpDevCtl_;
 static driver__dispatch_func AoeDriverIrpScsi_;
 static driver__dispatch_func AoeDriverIrpPnp_;
-static void STDCALL AoeDriverUnload_(IN PDRIVER_OBJECT);
+static VOID STDCALL AoeDriverUnload_(IN PDRIVER_OBJECT);
 
 /** Tag types. */
 typedef enum AOE_TAG_TYPE_ {
@@ -236,7 +236,7 @@ NTSTATUS STDCALL DriverEntry(
   ) {
     NTSTATUS Status;
     OBJECT_ATTRIBUTES ObjectAttributes;
-    void * ThreadObject;
+    PVOID ThreadObject;
     WVL_SP_BUS_T bus_ptr;
     int i;
 
@@ -354,7 +354,7 @@ NTSTATUS STDCALL DriverEntry(
 /**
  * Stop AoE operations.
  */
-static void STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
+static VOID STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
     NTSTATUS Status;
     AOE_SP_DISK_SEARCH_ disk_searcher, previous_disk_searcher;
     AOE_SP_WORK_TAG_ tag;
@@ -1023,7 +1023,7 @@ static NTSTATUS STDCALL AoeDiskIo_(
     return STATUS_PENDING;
   }
 
-static void STDCALL add_target(
+static VOID STDCALL add_target(
     IN PUCHAR ClientMac,
     IN PUCHAR ServerMac,
     UINT16 Major,
@@ -1303,12 +1303,12 @@ NTSTATUS STDCALL aoe__reply(
     return STATUS_SUCCESS;
   }
 
-void aoe__reset_probe(void)
+VOID aoe__reset_probe(void)
   {
     AoeProbeTag_->SendTime.QuadPart = 0LL;
   }
 
-static void STDCALL AoeThread_(IN void *StartContext)
+static VOID STDCALL AoeThread_(IN PVOID StartContext)
   {
     NTSTATUS status;
     LARGE_INTEGER Timeout, CurrentTime, ProbeTime, ReportTime;
@@ -1541,11 +1541,11 @@ typedef struct AOE_ABFT AOE_S_ABFT, * AOE_SP_ABFT;
 #  pragma pack()
 #endif
 
-static void STDCALL AoeDiskClose_(IN WV_SP_DISK_T disk_ptr) {
+static VOID STDCALL AoeDiskClose_(IN WV_SP_DISK_T disk_ptr) {
     return;
   }
 
-static void AoeProcessAbft_(void) {
+static VOID AoeProcessAbft_(void) {
     PHYSICAL_ADDRESS PhysicalAddress;
     PUCHAR PhysicalMemory;
     UINT32 Offset, Checksum, i;
@@ -1864,7 +1864,7 @@ static AOE_SP_DISK_ AoeDiskCreate_(void) {
  *
  * @v dev               Points to the AoE disk device to delete.
  */
-static void STDCALL AoeDiskFree_(IN WV_SP_DEV_T dev) {
+static VOID STDCALL AoeDiskFree_(IN WV_SP_DEV_T dev) {
     AOE_SP_DISK_ aoe_disk = AoeDiskFromDev_(dev);
     /* Free the "inherited class". */
     aoe_disk->prev_free(dev);

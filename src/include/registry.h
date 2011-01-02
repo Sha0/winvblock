@@ -29,7 +29,7 @@
 
 extern WVL_M_LIB NTSTATUS STDCALL WvlRegNoteOsLoadOpts(LPWSTR *);
 extern WVL_M_LIB NTSTATUS STDCALL WvlRegOpenKey(LPCWSTR, PHANDLE);
-extern WVL_M_LIB void STDCALL WvlRegCloseKey(HANDLE);
+extern WVL_M_LIB VOID STDCALL WvlRegCloseKey(HANDLE);
 extern WVL_M_LIB NTSTATUS STDCALL WvlRegFetchKvi(
     HANDLE,
     LPCWSTR,

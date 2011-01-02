@@ -44,7 +44,7 @@ static WV_F_DEV_CREATE_PDO WvDevMakePdo_;
  *
  * @v Dev               Points to the device to initialize with defaults.
  */
-WVL_M_LIB void WvDevInit(WV_SP_DEV_T Dev) {
+WVL_M_LIB VOID WvDevInit(WV_SP_DEV_T Dev) {
     RtlZeroMemory(Dev, sizeof *Dev);
     /* Populate non-zero device defaults. */
     Dev->DriverObject = WvDriverObj;
@@ -151,7 +151,7 @@ NTSTATUS STDCALL WvDevPnpQueryId(IN WV_SP_DEV_T dev, IN PIRP irp) {
       }
     /* Copy the working buffer to the return buffer. */
     RtlCopyMemory(
-        (void *) irp->IoStatus.Information,
+        (PVOID) irp->IoStatus.Information,
         str,
         str_len * sizeof **str
       );
@@ -171,7 +171,7 @@ NTSTATUS STDCALL WvDevPnpQueryId(IN WV_SP_DEV_T dev, IN PIRP irp) {
  *
  * @v Dev               Points to the device to close.
  */
-WVL_M_LIB void STDCALL WvDevClose(IN WV_SP_DEV_T Dev) {
+WVL_M_LIB VOID STDCALL WvDevClose(IN WV_SP_DEV_T Dev) {
     /* Call the device's close routine. */
     if (Dev->Ops.Close)
       Dev->Ops.Close(Dev);
@@ -183,7 +183,7 @@ WVL_M_LIB void STDCALL WvDevClose(IN WV_SP_DEV_T Dev) {
  *
  * @v Dev               Points to the device to delete.
  */
-WVL_M_LIB void STDCALL WvDevFree(IN WV_SP_DEV_T Dev) {
+WVL_M_LIB VOID STDCALL WvDevFree(IN WV_SP_DEV_T Dev) {
     /* Call the device's free routine. */
     if (Dev->Ops.Free)
       Dev->Ops.Free(Dev);
@@ -195,7 +195,7 @@ WVL_M_LIB void STDCALL WvDevFree(IN WV_SP_DEV_T Dev) {
  *
  * @v dev               Points to the device to delete.
  */
-static void STDCALL WvDevFreeDev_(IN WV_SP_DEV_T dev) {
+static VOID STDCALL WvDevFreeDev_(IN WV_SP_DEV_T dev) {
     wv_free(dev);
   }
 
@@ -220,7 +220,7 @@ WVL_M_LIB WV_SP_DEV_T WvDevFromDevObj(PDEVICE_OBJECT dev_obj) {
  * @v dev_obj           Points to the DEVICE_OBJECT to set the device for.
  * @v dev               Points to the device to associate with.
  */
-WVL_M_LIB void WvDevForDevObj(PDEVICE_OBJECT dev_obj, WV_SP_DEV_T dev) {
+WVL_M_LIB VOID WvDevForDevObj(PDEVICE_OBJECT dev_obj, WV_SP_DEV_T dev) {
     WV_SP_DEV_EXT dev_ext = dev_obj->DeviceExtension;
     dev_ext->device = dev;
     return;

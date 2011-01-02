@@ -61,7 +61,7 @@ typedef struct WV_MSVHD_FOOTER WV_S_MSVHD_FOOTER, * WV_SP_MSVHD_FOOTER;
 #endif
 
 /* Function body in header so user-land utility links without WinVBlock */
-static void STDCALL
+static VOID STDCALL
 msvhd__footer_swap_endian (
   WV_SP_MSVHD_FOOTER footer_ptr
  )

@@ -38,11 +38,7 @@
 #include "probe.h"
 #include "grub4dos.h"
 
-void
-ramdisk_grub4dos__find (
-  void
- )
-{
+VOID ramdisk_grub4dos__find(void) {
   PHYSICAL_ADDRESS PhysicalAddress;
   PUCHAR PhysicalMemory;
   WV_SP_PROBE_INT_VECTOR InterruptVector;

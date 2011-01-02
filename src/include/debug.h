@@ -42,7 +42,7 @@
 xDbgPrint ( __FILE__, ( const PCHAR )__FUNCTION__, \
             __LINE__ ) || 1 ? DbgPrint ( __VA_ARGS__ ) : 0
 #  else
-#    define DBG( ... ) (void)0
+#    define DBG( ... ) (VOID) 0
 #  endif
 
 /* Define to enable verbose IRP debugging output */
@@ -53,14 +53,12 @@ extern WVL_M_LIB NTSTATUS STDCALL xDbgPrint (
   IN PCHAR Function,
   IN UINT32 Line
  );
-extern void Debug_Initialize (
-  void
- );
-extern void STDCALL Debug_IrpStart (
+extern VOID Debug_Initialize(void);
+extern VOID STDCALL Debug_IrpStart (
   IN PDEVICE_OBJECT DeviceObject,
   IN PIRP Irp
  );
-extern void STDCALL Debug_IrpEnd (
+extern VOID STDCALL Debug_IrpEnd (
   IN PIRP Irp,
   IN NTSTATUS Status
  );

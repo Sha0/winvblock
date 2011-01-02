@@ -45,8 +45,6 @@ extern NTSTATUS ramdisk__module_init(void);
  * WV_S_RAMDISK_T, track it in a global list, as well as populate the disk
  * with default values.
  */
-extern WV_SP_RAMDISK_T ramdisk__create (
-  void
- );
+extern WV_SP_RAMDISK_T ramdisk__create(void);
 
 #endif  /* WV_M_RAMDISK_H_ */

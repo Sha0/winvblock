@@ -68,7 +68,7 @@ WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
     return safe_mbr_hook;
   }
 
-void WvProbeDisks(void) {
+VOID WvProbeDisks(void) {
     static BOOLEAN probed = FALSE;
 
     if (probed)

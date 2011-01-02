@@ -35,7 +35,7 @@
  * If you implement your own bus thread routine, you should call
  * WvBusProcessWorkItems() within its loop.
  */
-typedef void STDCALL WVL_F_BUS_THREAD(IN WVL_SP_BUS_T);
+typedef VOID STDCALL WVL_F_BUS_THREAD(IN WVL_SP_BUS_T);
 typedef WVL_F_BUS_THREAD * WVL_FP_BUS_THREAD;
 
 /**
@@ -101,19 +101,19 @@ typedef struct WVL_BUS_NODE {
  * WvBusProcessWorkItems()), then this is the function prototype to be
  * used.
  */
-typedef void STDCALL WVL_F_BUS_WORK_ITEM(void *);
+typedef VOID STDCALL WVL_F_BUS_WORK_ITEM(PVOID);
 typedef WVL_F_BUS_WORK_ITEM * WVL_FP_BUS_WORK_ITEM;
 
 typedef struct WVL_BUS_CUSTOM_WORK_ITEM {
     WVL_FP_BUS_WORK_ITEM Func;
-    void * Context;
+    PVOID Context;
   } WVL_S_BUS_CUSTOM_WORK_ITEM, * WVL_SP_BUS_CUSTOM_WORK_ITEM;
 
 /* Exports. */
-extern WVL_M_LIB void WvBusInit(WVL_SP_BUS_T);
+extern WVL_M_LIB VOID WvBusInit(WVL_SP_BUS_T);
 extern WVL_M_LIB WVL_SP_BUS_T WvBusCreate(void);
-extern WVL_M_LIB void WvBusProcessWorkItems(WVL_SP_BUS_T);
-extern WVL_M_LIB void WvBusCancelWorkItems(WVL_SP_BUS_T);
+extern WVL_M_LIB VOID WvBusProcessWorkItems(WVL_SP_BUS_T);
+extern WVL_M_LIB VOID WvBusCancelWorkItems(WVL_SP_BUS_T);
 extern WVL_M_LIB NTSTATUS WvBusStartThread(
     IN WVL_SP_BUS_T,
     OUT PETHREAD *

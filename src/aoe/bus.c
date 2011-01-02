@@ -48,7 +48,7 @@ extern NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP);
 /* Forward declarations. */
 static WV_F_DEV_PNP_ID AoeBusPnpId_;
 BOOLEAN AoeBusCreate(IN PDRIVER_OBJECT);
-void AoeBusFree(void);
+VOID AoeBusFree(void);
 
 /* Globals. */
 WVL_S_BUS_T AoeBusMain = {0};
@@ -144,7 +144,7 @@ NTSTATUS STDCALL AoeBusDevCtl(
 WV_M_DRIVER_DUMMY_ID_GEN(AoeBusDummyIds_, AOE_M_BUS_IDS);
 
 /* Destroy the AoE bus. */
-void AoeBusFree(void) {
+VOID AoeBusFree(void) {
     IoDeleteSymbolicLink(&AoeBusDosname_);
     if (AoeBusMain.Fdo)
       IoDeleteDevice(AoeBusMain.Fdo);

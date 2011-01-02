@@ -54,6 +54,6 @@ extern WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
     IN PUCHAR,
     IN WV_SP_PROBE_INT_VECTOR
   );
-extern void WvProbeDisks(void);
+extern VOID WvProbeDisks(void);
 
 #endif  /* WV_M_PROBE_H_ */

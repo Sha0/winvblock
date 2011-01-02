@@ -68,7 +68,7 @@ static UINT32 Debug_Globals_Number = 0;
 static PDEBUG_IRPLIST STDCALL Debug_IrpListRecord (
   IN PIRP Irp
  );
-static void STDCALL Debug_DecodeIrp (
+static VOID STDCALL Debug_DecodeIrp (
   IN PDEVICE_OBJECT DeviceObject,
   IN PIRP Irp,
   IN PCHAR DebugMessage
@@ -114,11 +114,7 @@ xDbgPrint (
   return DbgPrint ( "%s: %s() @ line %d: ", File, Function, Line );
 }
 
-void
-Debug_Initialize (
-  void
- )
-{
+VOID Debug_Initialize(void) {
   KeInitializeSpinLock ( &Debug_Globals_SpinLock );
 }
 
@@ -138,7 +134,7 @@ Debug_IrpListRecord (
   return Record;
 }
 
-void STDCALL
+VOID STDCALL
 Debug_IrpStart (
   IN PDEVICE_OBJECT DeviceObject,
   IN PIRP Irp
@@ -180,7 +176,7 @@ Debug_IrpStart (
   DBG ( "IRP %d: %s\n", Record->Number, Record->DebugMessage );
 }
 
-void STDCALL
+VOID STDCALL
 Debug_IrpEnd (
   IN PIRP Irp,
   IN NTSTATUS Status
@@ -221,7 +217,7 @@ Debug_IrpEnd (
   wv_free(Record);
 }
 
-static void STDCALL
+static VOID STDCALL
 Debug_DecodeIrp (
   IN PDEVICE_OBJECT DeviceObject,
   IN PIRP Irp,

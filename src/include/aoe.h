@@ -89,6 +89,6 @@ typedef struct AOE_MOUNT_DISKS {
     AOE_S_MOUNT_DISK Disk[];
   } AOE_S_MOUNT_DISKS, * AOE_SP_MOUNT_DISKS;
 
-extern void aoe__reset_probe(void);
+extern VOID aoe__reset_probe(void);
 
 #endif  /* AOE_M_AOE_H_ */

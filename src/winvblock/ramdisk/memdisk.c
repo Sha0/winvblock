@@ -108,7 +108,7 @@ static BOOLEAN STDCALL WvMemdiskCheckMbft_(
     return TRUE;
   }
 
-void WvMemdiskFind(void) {
+VOID WvMemdiskFind(void) {
     PHYSICAL_ADDRESS phys_addr;
     PUCHAR phys_mem;
     WV_SP_PROBE_INT_VECTOR int_vector;

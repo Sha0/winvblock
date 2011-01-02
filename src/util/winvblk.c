@@ -106,7 +106,7 @@ static char *invalid_opt = NULL;
 
 static int WvuShowLastErr(void) {
     DWORD err_code = GetLastError();
-    void * buf = NULL;
+    char * buf = NULL;
 
     FormatMessage(
         FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
@@ -124,7 +124,7 @@ static int WvuShowLastErr(void) {
     return err_code;
   }
 
-static void cmdline_options(int argc, char **argv) {
+static VOID cmdline_options(int argc, char **argv) {
     int cur = 1;
 
     while (cur < argc) {

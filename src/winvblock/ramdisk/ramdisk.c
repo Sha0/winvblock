@@ -51,10 +51,10 @@ static WV_F_DEV_FREE free_ramdisk;
 static WV_F_DISK_IO io;
 
 /* With thanks to karyonix, who makes FiraDisk */
-static __inline void STDCALL
+static __inline VOID STDCALL
 fast_copy (
-  void *dest,
-  const void *src,
+  PVOID dest,
+  const VOID * src,
   size_t count
  )
 {
@@ -163,11 +163,7 @@ static UINT32 STDCALL query_id(
  *
  * See the header file for additional details
  */
-WV_SP_RAMDISK_T
-ramdisk__create (
-  void
- )
-{
+WV_SP_RAMDISK_T ramdisk__create(void) {
   WV_SP_DISK_T disk_ptr;
   WV_SP_RAMDISK_T ramdisk_ptr;
 
@@ -227,7 +223,7 @@ NTSTATUS ramdisk__module_init(void) {
  *
  * @v dev_ptr           Points to the RAM disk device to delete.
  */
-static void STDCALL free_ramdisk(IN WV_SP_DEV_T dev_ptr) {
+static VOID STDCALL free_ramdisk(IN WV_SP_DEV_T dev_ptr) {
     WV_SP_DISK_T disk_ptr = disk__get_ptr(dev_ptr);
     WV_SP_RAMDISK_T ramdisk_ptr = ramdisk_get_ptr(dev_ptr);
     /* Free the "inherited class". */

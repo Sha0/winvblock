@@ -96,7 +96,7 @@ WVL_M_LIB NTSTATUS STDCALL WvBusPower(
  *
  * @v Bus               Points to the bus to initialize with defaults.
  */
-WVL_M_LIB void WvBusInit(WVL_SP_BUS_T Bus) {
+WVL_M_LIB VOID WvBusInit(WVL_SP_BUS_T Bus) {
     RtlZeroMemory(Bus, sizeof *Bus);
     /* Populate non-zero bus device defaults. */
     Bus->Thread = WvBusDefaultThread_;
@@ -187,7 +187,7 @@ static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(
  * Don't call this function yourself.  It expects to have exclusive
  * access to the bus' list of children.
  */
-static void STDCALL WvBusAddNode_(WVL_SP_BUS_T bus, WVL_SP_BUS_NODE new_node) {
+static VOID STDCALL WvBusAddNode_(WVL_SP_BUS_T bus, WVL_SP_BUS_NODE new_node) {
     PLIST_ENTRY walker;
 
     DBG("Adding PDO to bus...\n");
@@ -234,7 +234,7 @@ static void STDCALL WvBusAddNode_(WVL_SP_BUS_T bus, WVL_SP_BUS_NODE new_node) {
  * Don't call this function yourself.  It expects to have exclusive
  * access to the bus' list of children.
  */
-static void STDCALL WvBusRemoveNode_(
+static VOID STDCALL WvBusRemoveNode_(
     WVL_SP_BUS_T bus,
     WVL_SP_BUS_NODE node
   ) {
@@ -250,7 +250,7 @@ static void STDCALL WvBusRemoveNode_(
  *
  * @v Bus               The bus to process its work items.
  */
-WVL_M_LIB void WvBusProcessWorkItems(WVL_SP_BUS_T Bus) {
+WVL_M_LIB VOID WvBusProcessWorkItems(WVL_SP_BUS_T Bus) {
     WV_SP_BUS_WORK_ITEM_ work_item;
     WVL_SP_BUS_NODE node;
     PIRP irp;
@@ -311,7 +311,7 @@ WVL_M_LIB void WvBusProcessWorkItems(WVL_SP_BUS_T Bus) {
  *
  * @v Bus       The bus to cancel pending work items for.
  */
-WVL_M_LIB void WvBusCancelWorkItems(WVL_SP_BUS_T Bus) {
+WVL_M_LIB VOID WvBusCancelWorkItems(WVL_SP_BUS_T Bus) {
     WV_SP_BUS_WORK_ITEM_ work_item;
 
     DBG("Canceling work items.\n");
@@ -331,7 +331,7 @@ WVL_M_LIB void WvBusCancelWorkItems(WVL_SP_BUS_T Bus) {
  * signal which should mean that resources can be freed, from a completed
  * thread's perspective.
  */
-static void STDCALL WvBusThread_(IN void * context) {
+static VOID STDCALL WvBusThread_(IN PVOID context) {
     WVL_SP_BUS_T bus = context;
 
     if (!bus || !bus->Thread) {
@@ -357,7 +357,7 @@ static void STDCALL WvBusThread_(IN void * context) {
  * If you implement your own thread routine, you are also responsible
  * for calling WvBusCancelWorkItems() and freeing the bus.
  */
-static void STDCALL WvBusDefaultThread_(IN WVL_SP_BUS_T bus) {
+static VOID STDCALL WvBusDefaultThread_(IN WVL_SP_BUS_T bus) {
     LARGE_INTEGER timeout;
 
     /* Wake up at least every 30 seconds. */

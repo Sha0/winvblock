@@ -39,7 +39,7 @@
 /* typedef BOOL WINAPI (*PROC)(HWND, LPCTSTR, LPCTSTR, DWORD, PBOOL OPTIONAL);
  */
 
-static void
+static VOID
 DisplayError (
   char *String
  )

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, originally derived from WinAoE.
  *
@@ -20,6 +20,6 @@
 #include <ntddk.h>
 #include "wv_string.h"
 
-bool wv_memcmpeq(const void *s1, const void *s2, wv_size_t n) {
+bool wv_memcmpeq(const VOID * s1, const VOID * s2, wv_size_t n) {
     return (RtlCompareMemory(s1, s2, n) == n) ? true : false;
   }

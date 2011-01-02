@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2010-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, originally derived from WinAoE.
  *
@@ -22,18 +22,18 @@
 #include "wv_stddef.h"
 
 /* Allocate memory from non-paged memory pool. */
-void *wv_malloc(wv_size_t size);
+PVOID wv_malloc(wv_size_t size);
 
 /* Allocate memory from paged memory pool. */
-void *wv_palloc(wv_size_t size);
+PVOID wv_palloc(wv_size_t size);
 
 /* Allocate memory from non-paged memory pool and fill with zero bits. */
-void *wv_mallocz(wv_size_t size);
+PVOID wv_mallocz(wv_size_t size);
 
 /* Allocate memory from paged memory pool and fill with zero bits. */
-void *wv_pallocz(wv_size_t size);
+PVOID wv_pallocz(wv_size_t size);
 
 /* Free allocated memory. */
-void wv_free(void *ptr);
+VOID wv_free(PVOID ptr);
 
 #endif  /* WV_M_STDLIB_H_ */

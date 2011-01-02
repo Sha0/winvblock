@@ -73,7 +73,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlRegOpenKey(
  *
  * @v RegKey            Registry key handle to close.
  */
-WVL_M_LIB void STDCALL WvlRegCloseKey(HANDLE RegKey) {
+WVL_M_LIB VOID STDCALL WvlRegCloseKey(HANDLE RegKey) {
     ZwClose(RegKey);
   }
 

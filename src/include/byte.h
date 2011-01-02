@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2010-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -35,7 +35,7 @@
     name
 
 /* Function body in header so user-land utility links without WinVBlock */
-static void STDCALL
+static VOID STDCALL
 byte__order_swap (
   IN OUT char *bytes,
   int count

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2010-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, originally derived from WinAoE.
  *
@@ -20,25 +20,25 @@
 #include <ntddk.h>
 #include "wv_stdlib.h"
 
-void *wv_malloc(wv_size_t size) {
+PVOID wv_malloc(wv_size_t size) {
     return ExAllocatePoolWithTag(NonPagedPool, size, 'EoAW');
   }
 
-void *wv_palloc(wv_size_t size) {
+PVOID wv_palloc(wv_size_t size) {
     return ExAllocatePoolWithTag(PagedPool, size, 'EoAW');
   }
 
-void *wv_mallocz(wv_size_t size) {
-    void *ptr = ExAllocatePoolWithTag(NonPagedPool, size, 'EoAW');
+PVOID wv_mallocz(wv_size_t size) {
+    PVOID ptr = ExAllocatePoolWithTag(NonPagedPool, size, 'EoAW');
     return ptr ? RtlZeroMemory(ptr, size), ptr : ptr;
   }
 
-void *wv_pallocz(wv_size_t size) {
-    void *ptr = ExAllocatePoolWithTag(PagedPool, size, 'EoAW');
+PVOID wv_pallocz(wv_size_t size) {
+    PVOID ptr = ExAllocatePoolWithTag(PagedPool, size, 'EoAW');
     return ptr ? RtlZeroMemory(ptr, size), ptr : ptr;
   }
 
-void wv_free(void *ptr) {
+VOID wv_free(PVOID ptr) {
     ExFreePool(ptr);
     return;
   }
