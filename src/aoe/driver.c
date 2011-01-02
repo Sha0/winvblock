@@ -88,7 +88,7 @@ static __drv_dispatchType(IRP_MJ_SYSTEM_CONTROL)
 static __drv_dispatchType(IRP_MJ_DEVICE_CONTROL)
   DRIVER_DISPATCH AoeIrpDevCtl;
 static __drv_dispatchType(IRP_MJ_SCSI) DRIVER_DISPATCH AoeIrpScsi;
-static driver__dispatch_func AoeDriverIrpPnp_;
+static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH AoeIrpPnp;
 static VOID STDCALL AoeDriverUnload_(IN PDRIVER_OBJECT);
 
 /** Tag types. */
@@ -335,7 +335,7 @@ NTSTATUS STDCALL DriverEntry(
 
     for (i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++)
       DriverObject->MajorFunction[i] = AoeDriverIrpNotSupported_;
-    DriverObject->MajorFunction[IRP_MJ_PNP] = AoeDriverIrpPnp_;
+    DriverObject->MajorFunction[IRP_MJ_PNP] = AoeIrpPnp;
     DriverObject->MajorFunction[IRP_MJ_POWER] = AoeIrpPower;
     DriverObject->MajorFunction[IRP_MJ_CREATE] = AoeIrpCreateClose;
     DriverObject->MajorFunction[IRP_MJ_CLOSE] = AoeIrpCreateClose;
@@ -2038,7 +2038,7 @@ static NTSTATUS AoeIrpScsi(
   }
 
 /* Handle an IRP_MJ_PNP IRP. */
-static NTSTATUS AoeDriverIrpPnp_(
+static NTSTATUS AoeIrpPnp(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
