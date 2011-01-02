@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -25,24 +25,21 @@
  * File-backed disk specifics.
  */
 
-winvblock__def_struct ( filedisk__type )
-{
-  WV_SP_DISK_T disk;
-  HANDLE file;
-  winvblock__uint32 hash;
-  WV_FP_DEV_FREE prev_free;
-  LIST_ENTRY tracking;
-  LARGE_INTEGER offset;
-  /*
-   * For threaded instances 
-   */
-  LIST_ENTRY req_list;
-  KSPIN_LOCK req_list_lock;
-  KEVENT signal;
-  WV_FP_DISK_IO sync_io;
-  char *filepath;
-  UNICODE_STRING filepath_unicode;
-};
+typedef struct WV_FILEDISK_T {
+    WV_SP_DISK_T disk;
+    HANDLE file;
+    winvblock__uint32 hash;
+    WV_FP_DEV_FREE prev_free;
+    LIST_ENTRY tracking;
+    LARGE_INTEGER offset;
+    /* For threaded instances. */
+    LIST_ENTRY req_list;
+    KSPIN_LOCK req_list_lock;
+    KEVENT signal;
+    WV_FP_DISK_IO sync_io;
+    char *filepath;
+    UNICODE_STRING filepath_unicode;
+  } WV_S_FILEDISK_T, * WV_SP_FILEDISK_T;
 
 extern WV_F_DEV_DISPATCH filedisk__attach;
 
@@ -55,10 +52,10 @@ extern NTSTATUS filedisk__module_init(void);
  *
  * This function should not be confused with a PDO creation routine, which is
  * actually implemented for each device type.  This routine will allocate a
- * filedisk__type, track it in a global list, as well as populate the disk
+ * WV_S_FILEDISK_T, track it in a global list, as well as populate the disk
  * with default values.
  */
-extern filedisk__type_ptr filedisk__create (
+extern WV_SP_FILEDISK_T filedisk__create (
   void
  );
 /**
@@ -69,7 +66,7 @@ extern filedisk__type_ptr filedisk__create (
  * See filedisk__create() above.  This routine uses threaded routines
  * for disk reads/writes, and frees asynchronously, too.
  */
-extern filedisk__type_ptr filedisk__create_threaded (
+extern WV_SP_FILEDISK_T filedisk__create_threaded (
   void
  );
 
@@ -77,7 +74,7 @@ extern filedisk__type_ptr filedisk__create_threaded (
  * Yield a pointer to the file-backed disk
  */
 #  define filedisk__get_ptr( dev_ptr ) \
-  ( ( filedisk__type_ptr ) ( disk__get_ptr ( dev_ptr ) )->ext )
+  ((WV_SP_FILEDISK_T) (disk__get_ptr(dev_ptr))->ext)
 
 extern void STDCALL filedisk__hot_swap_thread (
   IN void *StartContext

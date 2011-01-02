@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -58,7 +58,7 @@ static WV_F_DISK_IO io;
 static NTSTATUS STDCALL
 check_disk_match (
   IN HANDLE file,
-  IN filedisk__type_ptr filedisk_ptr
+  IN WV_SP_FILEDISK_T filedisk_ptr
  )
 {
   msvhd__footer_ptr buf;
@@ -133,7 +133,7 @@ static NTSTATUS STDCALL io(
     IN winvblock__uint8_ptr buffer,
     IN PIRP irp
   ) {
-  filedisk__type_ptr filedisk_ptr;
+  WV_SP_FILEDISK_T filedisk_ptr;
   NTSTATUS status;
   GUID disk_guid = GUID_DEVINTERFACE_DISK;
   PWSTR sym_links;
@@ -315,7 +315,7 @@ filedisk_grub4dos__find (
   grub4dos__drive_mapping_ptr Grub4DosDriveMapSlotPtr;
   winvblock__uint32 i;
   winvblock__bool FoundGrub4DosMapping = FALSE;
-  filedisk__type_ptr filedisk_ptr;
+  WV_SP_FILEDISK_T filedisk_ptr;
   const char sig[] = "GRUB4DOS";
   drive_file_set sets[8];	/* Matches disks to files */
 

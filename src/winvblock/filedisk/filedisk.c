@@ -58,7 +58,7 @@ static NTSTATUS STDCALL io(
     IN PIRP irp
   ) {
   WV_SP_DISK_T disk_ptr;
-  filedisk__type_ptr filedisk_ptr;
+  WV_SP_FILEDISK_T filedisk_ptr;
   LARGE_INTEGER offset;
   NTSTATUS status;
   IO_STATUS_BLOCK io_status;
@@ -108,7 +108,7 @@ static winvblock__uint32 STDCALL query_id(
     IN OUT WCHAR (*buf)[512]
   ) {
     WV_SP_DISK_T disk = disk__get_ptr(dev);
-    filedisk__type_ptr filedisk = filedisk__get_ptr(dev);
+    WV_SP_FILEDISK_T filedisk = filedisk__get_ptr(dev);
     static PWCHAR hw_ids[WvDiskMediaTypes] = {
         WVL_M_WLIT L"\\FileFloppyDisk",
         WVL_M_WLIT L"\\FileHardDisk",
@@ -148,7 +148,7 @@ NTSTATUS STDCALL filedisk__attach(IN WV_SP_DEV_T dev, IN PIRP irp) {
   HANDLE file = NULL;
   IO_STATUS_BLOCK io_status;
   FILE_STANDARD_INFORMATION info;
-  filedisk__type_ptr filedisk_ptr;
+  WV_SP_FILEDISK_T filedisk_ptr;
 
   filedisk_ptr = filedisk__create (  );
   if ( filedisk_ptr == NULL )
@@ -243,7 +243,7 @@ err_ansi_to_unicode:
 }
 
 static void STDCALL close(IN WV_SP_DISK_T disk_ptr) {
-    filedisk__type_ptr filedisk_ptr = filedisk__get_ptr(disk_ptr->Dev);
+    WV_SP_FILEDISK_T filedisk_ptr = filedisk__get_ptr(disk_ptr->Dev);
 
     ZwClose(filedisk_ptr->file);
     return;
@@ -256,13 +256,13 @@ static void STDCALL close(IN WV_SP_DISK_T disk_ptr) {
  *
  * See the header file for additional details
  */
-filedisk__type_ptr
+WV_SP_FILEDISK_T
 filedisk__create (
   void
  )
 {
   WV_SP_DISK_T disk_ptr;
-  filedisk__type_ptr filedisk_ptr;
+  WV_SP_FILEDISK_T filedisk_ptr;
 
   /*
    * Try to create a disk
@@ -324,7 +324,7 @@ NTSTATUS filedisk__module_init(void) {
 static void STDCALL free_filedisk(IN WV_SP_DEV_T dev_ptr)
   {
     WV_SP_DISK_T disk_ptr = disk__get_ptr(dev_ptr);
-    filedisk__type_ptr filedisk_ptr = filedisk__get_ptr(dev_ptr);
+    WV_SP_FILEDISK_T filedisk_ptr = filedisk__get_ptr(dev_ptr);
     /*
      * Free the "inherited class".
      */
@@ -364,7 +364,7 @@ thread (
   IN void *StartContext
  )
 {
-  filedisk__type_ptr filedisk_ptr = StartContext;
+  WV_SP_FILEDISK_T filedisk_ptr = StartContext;
   LARGE_INTEGER timeout;
   PLIST_ENTRY walker;
 
@@ -411,7 +411,7 @@ static NTSTATUS STDCALL threaded_io(
     IN winvblock__uint8_ptr buffer,
     IN PIRP irp
   ) {
-  filedisk__type_ptr filedisk_ptr;
+  WV_SP_FILEDISK_T filedisk_ptr;
   thread_req_ptr req;
 
   filedisk_ptr = filedisk__get_ptr ( dev_ptr );
@@ -464,12 +464,12 @@ static void STDCALL free_threaded_filedisk(IN WV_SP_DEV_T dev_ptr)
  *
  * See the header file for additional details
  */
-filedisk__type_ptr
+WV_SP_FILEDISK_T
 filedisk__create_threaded (
   void
  )
 {
-  filedisk__type_ptr filedisk_ptr;
+  WV_SP_FILEDISK_T filedisk_ptr;
   OBJECT_ATTRIBUTES obj_attrs;
   HANDLE thread_handle;
 
@@ -518,7 +518,7 @@ err_nofiledisk:
  */
 static winvblock__bool STDCALL
 hot_swap (
-  filedisk__type_ptr filedisk_ptr
+  WV_SP_FILEDISK_T filedisk_ptr
  )
 {
   NTSTATUS status;
@@ -651,7 +651,7 @@ filedisk__hot_swap_thread (
   IN void *StartContext
  )
 {
-  filedisk__type_ptr filedisk_ptr = StartContext;
+  WV_SP_FILEDISK_T filedisk_ptr = StartContext;
   KEVENT signal;
   LARGE_INTEGER timeout;
 
