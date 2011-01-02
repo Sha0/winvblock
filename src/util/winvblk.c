@@ -223,14 +223,14 @@ Parameters:\n\
   }
 
 static int STDCALL cmd_scan(void) {
-    aoe__mount_targets_ptr targets;
+    AOE_S_MOUNT_TARGETS_ptr targets;
     DWORD bytes_returned;
     winvblock__uint32 i;
     winvblock__uint8 string[256];
     int status = 2;
 
     targets = malloc(
-        sizeof (aoe__mount_targets) +
+        sizeof (AOE_S_MOUNT_TARGETS) +
         (32 * sizeof (aoe__mount_target))
       );
     if (targets == NULL) {
@@ -244,7 +244,7 @@ static int STDCALL cmd_scan(void) {
         NULL,
         0,
         targets,
-        sizeof (aoe__mount_targets) + (32 * sizeof (aoe__mount_target)),
+        sizeof (AOE_S_MOUNT_TARGETS) + (32 * sizeof (aoe__mount_target)),
         &bytes_returned,
         (LPOVERLAPPED) NULL
       )) {

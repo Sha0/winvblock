@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -71,11 +71,10 @@ winvblock__def_struct(aoe__mount_target)
     LARGE_INTEGER ProbeTime;
   };
 
-winvblock__def_struct(aoe__mount_targets)
-  {
+typedef struct AOE_MOUNT_TARGETS {
     winvblock__uint32 Count;
     aoe__mount_target Target[];
-  };
+  } AOE_S_MOUNT_TARGETS, * AOE_SP_MOUNT_TARGETS;
 
 winvblock__def_struct(aoe__mount_disk)
   {
