@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -25,14 +25,13 @@
  * RAM disk specifics.
  */
 
-winvblock__def_struct ( ramdisk__type )
-{
-  WV_SP_DISK_T disk;
-  winvblock__uint32 DiskBuf;
-  winvblock__uint32 DiskSize;
-  WV_FP_DEV_FREE prev_free;
-  LIST_ENTRY tracking;
-};
+typedef struct WV_RAMDISK_T {
+    WV_SP_DISK_T disk;
+    winvblock__uint32 DiskBuf;
+    winvblock__uint32 DiskSize;
+    WV_FP_DEV_FREE prev_free;
+    LIST_ENTRY tracking;
+  } WV_S_RAMDISK_T, * WV_SP_RAMDISK_T;
 
 extern NTSTATUS ramdisk__module_init(void);
 
@@ -43,10 +42,10 @@ extern NTSTATUS ramdisk__module_init(void);
  *
  * This function should not be confused with a PDO creation routine, which is
  * actually implemented for each device type.  This routine will allocate a
- * ramdisk__type, track it in a global list, as well as populate the disk
+ * WV_S_RAMDISK_T, track it in a global list, as well as populate the disk
  * with default values.
  */
-extern ramdisk__type_ptr ramdisk__create (
+extern WV_SP_RAMDISK_T ramdisk__create (
   void
  );
 

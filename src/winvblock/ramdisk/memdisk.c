@@ -46,7 +46,7 @@ static winvblock__bool STDCALL WvMemdiskCheckMbft_(
     winvblock__uint32 i;
     winvblock__uint8 chksum = 0;
     WV_SP_PROBE_SAFE_MBR_HOOK assoc_hook;
-    ramdisk__type_ptr ramdisk;
+    WV_SP_RAMDISK_T ramdisk;
 
     if (offset >= 0x100000) {
         DBG("mBFT physical pointer too high!\n");

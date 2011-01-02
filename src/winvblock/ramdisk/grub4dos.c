@@ -51,7 +51,7 @@ ramdisk_grub4dos__find (
   WV_SP_GRUB4DOS_DRIVE_MAPPING Grub4DosDriveMapSlotPtr;
   winvblock__uint32 i = 8;
   winvblock__bool FoundGrub4DosMapping = FALSE;
-  ramdisk__type_ptr ramdisk_ptr;
+  WV_SP_RAMDISK_T ramdisk_ptr;
 
   /*
    * Find a GRUB4DOS memory-mapped disk.  Start by looking at the

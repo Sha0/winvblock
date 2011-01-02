@@ -40,7 +40,7 @@
  * Yield a pointer to the RAM disk
  */
 #define ramdisk_get_ptr( dev_ptr ) \
-  ( ( ramdisk__type_ptr ) ( disk__get_ptr ( dev_ptr ) )->ext )
+  ( ( WV_SP_RAMDISK_T ) ( disk__get_ptr ( dev_ptr ) )->ext )
 
 /* Globals. */
 static LIST_ENTRY ramdisk_list;
@@ -72,7 +72,7 @@ static NTSTATUS STDCALL io(
   PHYSICAL_ADDRESS PhysicalAddress;
   winvblock__uint8_ptr PhysicalMemory;
   WV_SP_DISK_T disk_ptr;
-  ramdisk__type_ptr ramdisk_ptr;
+  WV_SP_RAMDISK_T ramdisk_ptr;
 
   /*
    * Establish pointers to the disk and RAM disk
@@ -125,7 +125,7 @@ static winvblock__uint32 STDCALL query_id(
     IN OUT WCHAR (*buf)[512]
   ) {
     WV_SP_DISK_T disk = disk__get_ptr(dev);
-    ramdisk__type_ptr ramdisk = ramdisk_get_ptr(dev);
+    WV_SP_RAMDISK_T ramdisk = ramdisk_get_ptr(dev);
     static PWCHAR hw_ids[WvDiskMediaTypes] = {
         WVL_M_WLIT L"\\RAMFloppyDisk",
         WVL_M_WLIT L"\\RAMHardDisk",
@@ -163,13 +163,13 @@ static winvblock__uint32 STDCALL query_id(
  *
  * See the header file for additional details
  */
-ramdisk__type_ptr
+WV_SP_RAMDISK_T
 ramdisk__create (
   void
  )
 {
   WV_SP_DISK_T disk_ptr;
-  ramdisk__type_ptr ramdisk_ptr;
+  WV_SP_RAMDISK_T ramdisk_ptr;
 
   /*
    * Try to create a disk
@@ -229,7 +229,7 @@ NTSTATUS ramdisk__module_init(void) {
  */
 static void STDCALL free_ramdisk(IN WV_SP_DEV_T dev_ptr) {
     WV_SP_DISK_T disk_ptr = disk__get_ptr(dev_ptr);
-    ramdisk__type_ptr ramdisk_ptr = ramdisk_get_ptr(dev_ptr);
+    WV_SP_RAMDISK_T ramdisk_ptr = ramdisk_get_ptr(dev_ptr);
     /* Free the "inherited class". */
     ramdisk_ptr->prev_free(dev_ptr);
     /*
