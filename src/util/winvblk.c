@@ -39,56 +39,56 @@
 typedef int STDCALL (WVU_F_CMD_)(void);
 typedef WVU_F_CMD_ * WVU_FP_CMD_;
 
-winvblock__def_struct(option) {
+typedef struct WVU_OPTION {
     char *name;
     char *value;
     int has_arg;
-  };
+  } WVU_S_OPTION, * WVU_SP_OPTION;
 
 /* Handle to the device. */
 static HANDLE boot_bus = NULL;
 
-static option opt_h1 = {
+static WVU_S_OPTION opt_h1 = {
     "HELP", NULL, 0
   };
 
-static option opt_h2 = {
+static WVU_S_OPTION opt_h2 = {
     "?", NULL, 0
   };
 
-static option opt_cmd = {
+static WVU_S_OPTION opt_cmd = {
     "CMD", NULL, 1
   };
 
-static option opt_cyls = {
+static WVU_S_OPTION opt_cyls = {
     "C", NULL, 1
   };
 
-static option opt_heads = {
+static WVU_S_OPTION opt_heads = {
     "H", NULL, 1
   };
 
-static option opt_spt = {
+static WVU_S_OPTION opt_spt = {
     "S", NULL, 1
   };
 
-static option opt_disknum = {
+static WVU_S_OPTION opt_disknum = {
     "D", NULL, 1
   };
 
-static option opt_media = {
+static WVU_S_OPTION opt_media = {
     "M", NULL, 1
   };
 
-static option opt_uri = {
+static WVU_S_OPTION opt_uri = {
     "U", NULL, 1
   };
 
-static option opt_mac = {
+static WVU_S_OPTION opt_mac = {
     "MAC", NULL, 1
   };
 
-static option *options[] = {
+static WVU_SP_OPTION options[] = {
     &opt_h1,
     &opt_h2,
     &opt_cmd,
@@ -157,7 +157,7 @@ static void cmdline_options(int argc, char **argv) {
           }
         /* Check if the argument is a _valid_ option. */
         opt = 0;
-        while (opt < sizeof (options) / sizeof (option *)) {
+        while (opt < sizeof options / sizeof *options) {
             if (strcmp(cur_arg, options[opt]->name) == 0) {
                 /*
                  * We have a match.
@@ -186,7 +186,7 @@ static void cmdline_options(int argc, char **argv) {
             opt++;
           }
         /* Did we find no valid option match? */
-        if (opt == sizeof (options) / sizeof (option *)) {
+        if (opt == sizeof options / sizeof *options) {
             invalid_opt = cur_arg;
             return;
           }
