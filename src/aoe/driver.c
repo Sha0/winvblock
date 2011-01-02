@@ -200,7 +200,7 @@ typedef struct AOE_DISK_ {
   } AOE_S_DISK_, * AOE_SP_DISK_;
 
 typedef struct AOE_TARGET_LIST_ {
-    aoe__mount_target Target;
+    AOE_S_MOUNT_TARGET Target;
     struct AOE_TARGET_LIST_ * next;
   } AOE_S_TARGET_LIST_, * AOE_SP_TARGET_LIST_;
 
@@ -1667,7 +1667,7 @@ NTSTATUS STDCALL AoeBusDevCtlScan(IN PIRP irp) {
           );
       }
     irp->IoStatus.Information =
-      sizeof (AOE_S_MOUNT_TARGETS) + (count * sizeof (aoe__mount_target));
+      sizeof (AOE_S_MOUNT_TARGETS) + (count * sizeof (AOE_S_MOUNT_TARGET));
     targets->Count = count;
 
     count = 0;
@@ -1676,7 +1676,7 @@ NTSTATUS STDCALL AoeBusDevCtlScan(IN PIRP irp) {
         RtlCopyMemory(
             &targets->Target[count],
             &target_walker->Target,
-            sizeof (aoe__mount_target)
+            sizeof (AOE_S_MOUNT_TARGET)
           );
         count++;
         target_walker = target_walker->next;
@@ -1685,9 +1685,9 @@ NTSTATUS STDCALL AoeBusDevCtlScan(IN PIRP irp) {
         irp->AssociatedIrp.SystemBuffer,
         targets,
         (io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength <
-          (sizeof (AOE_S_MOUNT_TARGETS) + (count * sizeof (aoe__mount_target))) ?
+          (sizeof (AOE_S_MOUNT_TARGETS) + (count * sizeof (AOE_S_MOUNT_TARGET))) ?
           io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength :
-          (sizeof (AOE_S_MOUNT_TARGETS) + (count * sizeof (aoe__mount_target)))
+          (sizeof (AOE_S_MOUNT_TARGETS) + (count * sizeof (AOE_S_MOUNT_TARGET)))
         )
       );
     wv_free(targets);

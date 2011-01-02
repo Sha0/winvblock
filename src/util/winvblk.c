@@ -231,7 +231,7 @@ static int STDCALL cmd_scan(void) {
 
     targets = malloc(
         sizeof (AOE_S_MOUNT_TARGETS) +
-        (32 * sizeof (aoe__mount_target))
+        (32 * sizeof (AOE_S_MOUNT_TARGET))
       );
     if (targets == NULL) {
         printf("Out of memory\n");
@@ -244,7 +244,7 @@ static int STDCALL cmd_scan(void) {
         NULL,
         0,
         targets,
-        sizeof (AOE_S_MOUNT_TARGETS) + (32 * sizeof (aoe__mount_target)),
+        sizeof (AOE_S_MOUNT_TARGETS) + (32 * sizeof (AOE_S_MOUNT_TARGET)),
         &bytes_returned,
         (LPOVERLAPPED) NULL
       )) {

@@ -61,19 +61,18 @@ CTL_CODE(                               \
     FILE_READ_DATA | FILE_WRITE_DATA    \
   )
 
-winvblock__def_struct(aoe__mount_target)
-  {
+typedef struct AOE_MOUNT_TARGET {
     winvblock__uint8 ClientMac[6];
     winvblock__uint8 ServerMac[6];
     winvblock__uint32 Major;
     winvblock__uint32 Minor;
     LONGLONG LBASize;
     LARGE_INTEGER ProbeTime;
-  };
+  } AOE_S_MOUNT_TARGET, * AOE_SP_MOUNT_TARGET;
 
 typedef struct AOE_MOUNT_TARGETS {
     winvblock__uint32 Count;
-    aoe__mount_target Target[];
+    AOE_S_MOUNT_TARGET Target[];
   } AOE_S_MOUNT_TARGETS, * AOE_SP_MOUNT_TARGETS;
 
 winvblock__def_struct(aoe__mount_disk)
