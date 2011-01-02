@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -182,7 +182,7 @@ static NTSTATUS STDCALL disk_dev_ctl__scsi_get_address_(
     scsi_address.Length = sizeof (SCSI_ADDRESS);
     scsi_address.PortNumber = 0;
     scsi_address.PathId = 0;
-    scsi_address.TargetId = (winvblock__uint8) dev->DevNum;
+    scsi_address.TargetId = (UCHAR) dev->DevNum;
     scsi_address.Lun = 0;
     RtlCopyMemory(
         irp->AssociatedIrp.SystemBuffer,

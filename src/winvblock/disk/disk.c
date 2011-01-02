@@ -178,9 +178,9 @@ static PDEVICE_OBJECT STDCALL create_pdo(IN WV_SP_DEV_T dev_ptr) {
 #  pragma pack(1)
 #endif
 struct WV_DISK_FAT_EXTRA {
-    winvblock__uint8 bs_drvnum;
-    winvblock__uint8 bs_resv1;
-    winvblock__uint8 bs_bootsig;
+    UCHAR bs_drvnum;
+    UCHAR bs_resv1;
+    UCHAR bs_bootsig;
     winvblock__uint32 bs_volid;
     char bs_vollab[11];
     char bs_filsystype[8];
@@ -188,15 +188,15 @@ struct WV_DISK_FAT_EXTRA {
 typedef struct WV_DISK_FAT_EXTRA WV_S_DISK_FAT_EXTRA, * WV_SP_DISK_FAT_EXTRA;
 
 struct WV_DISK_FAT_SUPER {
-    winvblock__uint8 bs_jmpboot[3];
+    UCHAR bs_jmpboot[3];
     char bs_oemname[8];
     winvblock__uint16 bpb_bytspersec;
-    winvblock__uint8 bpb_secperclus;
+    UCHAR bpb_secperclus;
     winvblock__uint16 bpb_rsvdseccnt;
-    winvblock__uint8 bpb_numfats;
+    UCHAR bpb_numfats;
     winvblock__uint16 bpb_rootentcnt;
     winvblock__uint16 bpb_totsec16;
-    winvblock__uint8 bpb_media;
+    UCHAR bpb_media;
     winvblock__uint16 bpb_fatsz16;
     winvblock__uint16 bpb_secpertrk;
     winvblock__uint16 bpb_numheads;
@@ -292,7 +292,7 @@ WVL_M_LIB void disk__guess_geometry(
                 !(as_mbr->partition[i].status & 0x7f) &&
                 as_mbr->partition[i].type
               ) {
-                winvblock__uint8 h, s;
+                UCHAR h, s;
 
                 h = chs_head(as_mbr->partition[i].chs_start) + 1;
                 s = chs_sector(as_mbr->partition[i].chs_start);
@@ -410,7 +410,7 @@ NTSTATUS STDCALL disk__io(
     IN WV_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN winvblock__uint32 sector_count,
-    IN winvblock__uint8_ptr buffer,
+    IN PUCHAR buffer,
     IN PIRP irp
   ) {
     WV_SP_DISK_T disk_ptr;

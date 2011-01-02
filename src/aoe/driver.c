@@ -97,42 +97,42 @@ typedef enum AOE_TAG_TYPE_ {
 #endif
 /** AoE packet. */
 struct AOE_PACKET_ {
-    winvblock__uint8 ReservedFlag:2;
-    winvblock__uint8 ErrorFlag:1;
-    winvblock__uint8 ResponseFlag:1;
-    winvblock__uint8 Ver:4;
-    winvblock__uint8 Error;
+    UCHAR ReservedFlag:2;
+    UCHAR ErrorFlag:1;
+    UCHAR ResponseFlag:1;
+    UCHAR Ver:4;
+    UCHAR Error;
     winvblock__uint16 Major;
-    winvblock__uint8 Minor;
-    winvblock__uint8 Command;
+    UCHAR Minor;
+    UCHAR Command;
     winvblock__uint32 Tag;
 
-    winvblock__uint8 WriteAFlag:1;
-    winvblock__uint8 AsyncAFlag:1;
-    winvblock__uint8 Reserved1AFlag:2;
-    winvblock__uint8 DeviceHeadAFlag:1;
-    winvblock__uint8 Reserved2AFlag:1;
-    winvblock__uint8 ExtendedAFlag:1;
-    winvblock__uint8 Reserved3AFlag:1;
+    UCHAR WriteAFlag:1;
+    UCHAR AsyncAFlag:1;
+    UCHAR Reserved1AFlag:2;
+    UCHAR DeviceHeadAFlag:1;
+    UCHAR Reserved2AFlag:1;
+    UCHAR ExtendedAFlag:1;
+    UCHAR Reserved3AFlag:1;
     union {
-        winvblock__uint8 Err;
-        winvblock__uint8 Feature;
+        UCHAR Err;
+        UCHAR Feature;
       };
-    winvblock__uint8 Count;
+    UCHAR Count;
     union {
-        winvblock__uint8 Cmd;
-        winvblock__uint8 Status;
+        UCHAR Cmd;
+        UCHAR Status;
       };
 
-    winvblock__uint8 Lba0;
-    winvblock__uint8 Lba1;
-    winvblock__uint8 Lba2;
-    winvblock__uint8 Lba3;
-    winvblock__uint8 Lba4;
-    winvblock__uint8 Lba5;
+    UCHAR Lba0;
+    UCHAR Lba1;
+    UCHAR Lba2;
+    UCHAR Lba3;
+    UCHAR Lba4;
+    UCHAR Lba5;
     winvblock__uint16 Reserved;
 
-    winvblock__uint8 Data[];
+    UCHAR Data[];
   } __attribute__((__packed__));
 typedef struct AOE_PACKET_ AOE_S_PACKET_, * AOE_SP_PACKET_;
 #ifdef _MSC_VER
@@ -143,7 +143,7 @@ typedef struct AOE_PACKET_ AOE_S_PACKET_, * AOE_SP_PACKET_;
 typedef struct AOE_IO_REQ_ {
     WV_E_DISK_IO_MODE Mode;
     winvblock__uint32 SectorCount;
-    winvblock__uint8_ptr Buffer;
+    PUCHAR Buffer;
     PIRP Irp;
     winvblock__uint32 TagCount;
     winvblock__uint32 TotalTags;
@@ -188,8 +188,8 @@ typedef enum AOE_SEARCH_STATE_ {
 typedef struct AOE_DISK_ {
     WV_SP_DISK_T disk;
     winvblock__uint32 MTU;
-    winvblock__uint8 ClientMac[6];
-    winvblock__uint8 ServerMac[6];
+    UCHAR ClientMac[6];
+    UCHAR ServerMac[6];
     winvblock__uint32 Major;
     winvblock__uint32 Minor;
     winvblock__uint32 MaxSectorsPerPacket;
@@ -281,7 +281,7 @@ NTSTATUS STDCALL DriverEntry(
     AoeProbeTag_->packet_data->Ver = AOEPROTOCOLVER;
     AoeProbeTag_->packet_data->Major =
       htons((winvblock__uint16) -1);
-    AoeProbeTag_->packet_data->Minor = (winvblock__uint8) -1;
+    AoeProbeTag_->packet_data->Minor = (UCHAR) -1;
     AoeProbeTag_->packet_data->Cmd = 0xec;           /* IDENTIFY DEVICE */
     AoeProbeTag_->packet_data->Count = 1;
 
@@ -730,7 +730,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
         tag->packet_data->Ver = AOEPROTOCOLVER;
         tag->packet_data->Major =
     htons ( ( winvblock__uint16 ) aoe_disk_ptr->Major );
-        tag->packet_data->Minor = ( winvblock__uint8 ) aoe_disk_ptr->Minor;
+        tag->packet_data->Minor = ( UCHAR ) aoe_disk_ptr->Minor;
         tag->packet_data->ExtendedAFlag = TRUE;
 
         /*
@@ -760,7 +760,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
          */
         tag->packet_data->Cmd = 0x24;  /* READ SECTOR */
         tag->packet_data->Count =
-          ( winvblock__uint8 ) ( ++aoe_disk_ptr->MaxSectorsPerPacket );
+          ( UCHAR ) ( ++aoe_disk_ptr->MaxSectorsPerPacket );
         KeQuerySystemTime ( &MaxSectorsPerPacketSendTime );
         aoe_disk_ptr->search_state =
           AoeSearchStateGettingMaxSectsPerPacket_;
@@ -807,7 +807,7 @@ static NTSTATUS STDCALL AoeDiskIo_(
     IN WV_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN winvblock__uint32 sector_count,
-    IN winvblock__uint8_ptr buffer,
+    IN PUCHAR buffer,
     IN PIRP irp
   ) {
     AOE_SP_IO_REQ_ request_ptr;
@@ -815,7 +815,7 @@ static NTSTATUS STDCALL AoeDiskIo_(
     KIRQL Irql;
     winvblock__uint32 i;
     PHYSICAL_ADDRESS PhysicalAddress;
-    winvblock__uint8_ptr PhysicalMemory;
+    PUCHAR PhysicalMemory;
     WV_SP_DISK_T disk_ptr;
     AOE_SP_DISK_ aoe_disk_ptr;
 
@@ -940,7 +940,7 @@ static NTSTATUS STDCALL AoeDiskIo_(
         tag->packet_data->Ver = AOEPROTOCOLVER;
         tag->packet_data->Major =
     htons ( ( winvblock__uint16 ) aoe_disk_ptr->Major );
-        tag->packet_data->Minor = ( winvblock__uint8 ) aoe_disk_ptr->Minor;
+        tag->packet_data->Minor = ( UCHAR ) aoe_disk_ptr->Minor;
         tag->packet_data->Tag = 0;
         tag->packet_data->Command = 0;
         tag->packet_data->ExtendedAFlag = TRUE;
@@ -953,19 +953,19 @@ static NTSTATUS STDCALL AoeDiskIo_(
       tag->packet_data->Cmd = 0x34;  /* WRITE SECTOR */
       tag->packet_data->WriteAFlag = 1;
     }
-        tag->packet_data->Count = ( winvblock__uint8 ) tag->SectorCount;
+        tag->packet_data->Count = ( UCHAR ) tag->SectorCount;
         tag->packet_data->Lba0 =
-    ( winvblock__uint8 ) ( ( ( start_sector + i ) >> 0 ) & 255 );
+    ( UCHAR ) ( ( ( start_sector + i ) >> 0 ) & 255 );
         tag->packet_data->Lba1 =
-    ( winvblock__uint8 ) ( ( ( start_sector + i ) >> 8 ) & 255 );
+    ( UCHAR ) ( ( ( start_sector + i ) >> 8 ) & 255 );
         tag->packet_data->Lba2 =
-    ( winvblock__uint8 ) ( ( ( start_sector + i ) >> 16 ) & 255 );
+    ( UCHAR ) ( ( ( start_sector + i ) >> 16 ) & 255 );
         tag->packet_data->Lba3 =
-    ( winvblock__uint8 ) ( ( ( start_sector + i ) >> 24 ) & 255 );
+    ( UCHAR ) ( ( ( start_sector + i ) >> 24 ) & 255 );
         tag->packet_data->Lba4 =
-    ( winvblock__uint8 ) ( ( ( start_sector + i ) >> 32 ) & 255 );
+    ( UCHAR ) ( ( ( start_sector + i ) >> 32 ) & 255 );
         tag->packet_data->Lba5 =
-    ( winvblock__uint8 ) ( ( ( start_sector + i ) >> 40 ) & 255 );
+    ( UCHAR ) ( ( ( start_sector + i ) >> 40 ) & 255 );
 
         /* For a write request, copy from the buffer into the AoE packet. */
         if (mode == WvDiskIoModeWrite)
@@ -1024,10 +1024,10 @@ static NTSTATUS STDCALL AoeDiskIo_(
   }
 
 static void STDCALL add_target(
-    IN winvblock__uint8_ptr ClientMac,
-    IN winvblock__uint8_ptr ServerMac,
+    IN PUCHAR ClientMac,
+    IN PUCHAR ServerMac,
     winvblock__uint16 Major,
-    winvblock__uint8 Minor,
+    UCHAR Minor,
     LONGLONG LBASize
   )
   {
@@ -1089,9 +1089,9 @@ static void STDCALL add_target(
  * @v DataSize          The AoE packet's size.
  */
 NTSTATUS STDCALL aoe__reply(
-    IN winvblock__uint8_ptr SourceMac,
-    IN winvblock__uint8_ptr DestinationMac,
-    IN winvblock__uint8_ptr Data,
+    IN PUCHAR SourceMac,
+    IN PUCHAR DestinationMac,
+    IN PUCHAR Data,
     IN winvblock__uint32 DataSize
   )
   {
@@ -1389,7 +1389,7 @@ static void STDCALL AoeThread_(IN void *StartContext)
       AoeProbeTag_->packet_data->Tag = AoeProbeTag_->Id;
       Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
           "\xff\xff\xff\xff\xff\xff",
-          ( winvblock__uint8_ptr ) AoeProbeTag_->
+          ( PUCHAR ) AoeProbeTag_->
           packet_data, AoeProbeTag_->PacketSize,
           NULL );
       KeQuerySystemTime ( &AoeProbeTag_->SendTime );
@@ -1426,7 +1426,7 @@ static void STDCALL AoeThread_(IN void *StartContext)
         tag->packet_data->Tag = tag->Id;
         if ( Protocol_Send
              ( aoe_disk_ptr->ClientMac, aoe_disk_ptr->ServerMac,
-         ( winvblock__uint8_ptr ) tag->packet_data,
+         ( PUCHAR ) tag->packet_data,
          tag->PacketSize, tag ) )
           {
             KeQuerySystemTime ( &tag->FirstSendTime );
@@ -1451,7 +1451,7 @@ static void STDCALL AoeThread_(IN void *StartContext)
       {
         if ( Protocol_Send
              ( aoe_disk_ptr->ClientMac, aoe_disk_ptr->ServerMac,
-         ( winvblock__uint8_ptr ) tag->packet_data,
+         ( PUCHAR ) tag->packet_data,
          tag->PacketSize, tag ) )
           {
             KeQuerySystemTime ( &tag->SendTime );
@@ -1526,15 +1526,15 @@ static winvblock__uint32 STDCALL query_id(
 struct AOE_ABFT {
     winvblock__uint32 Signature;  /* 0x54464261 (aBFT) */
     winvblock__uint32 Length;
-    winvblock__uint8 Revision;
-    winvblock__uint8 Checksum;
-    winvblock__uint8 OEMID[6];
-    winvblock__uint8 OEMTableID[8];
-    winvblock__uint8 Reserved1[12];
+    UCHAR Revision;
+    UCHAR Checksum;
+    UCHAR OEMID[6];
+    UCHAR OEMTableID[8];
+    UCHAR Reserved1[12];
     winvblock__uint16 Major;
-    winvblock__uint8 Minor;
-    winvblock__uint8 Reserved2;
-    winvblock__uint8 ClientMac[6];
+    UCHAR Minor;
+    UCHAR Reserved2;
+    UCHAR ClientMac[6];
   } __attribute__((__packed__));
 typedef struct AOE_ABFT AOE_S_ABFT, * AOE_SP_ABFT;
 #ifdef _MSC_VER
@@ -1547,7 +1547,7 @@ static void STDCALL AoeDiskClose_(IN WV_SP_DISK_T disk_ptr) {
 
 static void AoeProcessAbft_(void) {
     PHYSICAL_ADDRESS PhysicalAddress;
-    winvblock__uint8_ptr PhysicalMemory;
+    PUCHAR PhysicalMemory;
     winvblock__uint32 Offset, Checksum, i;
     winvblock__bool FoundAbft = FALSE;
     AOE_S_ABFT AoEBootRecord;
@@ -1770,7 +1770,7 @@ NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
   }
 
 NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
-    winvblock__uint8_ptr buffer = irp->AssociatedIrp.SystemBuffer;
+    PUCHAR buffer = irp->AssociatedIrp.SystemBuffer;
     AOE_SP_DISK_ aoe_disk;
 
     DBG(
@@ -1783,7 +1783,7 @@ NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
         buffer[4],
         buffer[5],
         *(winvblock__uint16_ptr) (buffer + 6),
-        (winvblock__uint8) buffer[8]
+        (UCHAR) buffer[8]
       );
     aoe_disk = AoeDiskCreate_();
     if (aoe_disk == NULL) {
@@ -1797,7 +1797,7 @@ NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
     RtlCopyMemory(aoe_disk->ClientMac, buffer, 6);
     RtlFillMemory(aoe_disk->ServerMac, 6, 0xff);
     aoe_disk->Major = *(winvblock__uint16_ptr) (buffer + 6);
-    aoe_disk->Minor = (winvblock__uint8) buffer[8];
+    aoe_disk->Minor = (UCHAR) buffer[8];
     aoe_disk->MaxSectorsPerPacket = 1;
     aoe_disk->Timeout = 200000;             /* 20 ms. */
     aoe_disk->disk->Dev->Boot = FALSE;

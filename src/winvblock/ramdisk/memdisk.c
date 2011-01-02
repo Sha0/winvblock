@@ -39,12 +39,12 @@
 #include "probe.h"
 
 static winvblock__bool STDCALL WvMemdiskCheckMbft_(
-    winvblock__uint8_ptr phys_mem,
+    PUCHAR phys_mem,
     winvblock__uint32 offset
   ) {
     WV_SP_MDI_MBFT mbft = (WV_SP_MDI_MBFT) (phys_mem + offset);
     winvblock__uint32 i;
-    winvblock__uint8 chksum = 0;
+    UCHAR chksum = 0;
     WV_SP_PROBE_SAFE_MBR_HOOK assoc_hook;
     WV_SP_RAMDISK_T ramdisk;
 
@@ -58,7 +58,7 @@ static winvblock__bool STDCALL WvMemdiskCheckMbft_(
         return FALSE;
       }
     for (i = 0; i < mbft->Length; i++)
-      chksum += ((winvblock__uint8 *) mbft)[i];
+      chksum += ((UCHAR *) mbft)[i];
     if (chksum) {
         DBG("Invalid mBFT checksum\n");
         return FALSE;
@@ -110,7 +110,7 @@ static winvblock__bool STDCALL WvMemdiskCheckMbft_(
 
 void WvMemdiskFind(void) {
     PHYSICAL_ADDRESS phys_addr;
-    winvblock__uint8_ptr phys_mem;
+    PUCHAR phys_mem;
     WV_SP_PROBE_INT_VECTOR int_vector;
     WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook;
     winvblock__uint32 offset;

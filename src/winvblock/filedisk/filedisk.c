@@ -54,7 +54,7 @@ static NTSTATUS STDCALL io(
     IN WV_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN winvblock__uint32 sector_count,
-    IN winvblock__uint8_ptr buffer,
+    IN PUCHAR buffer,
     IN PIRP irp
   ) {
   WV_SP_DISK_T disk_ptr;
@@ -140,7 +140,7 @@ static winvblock__uint32 STDCALL query_id(
 
 NTSTATUS STDCALL filedisk__attach(IN WV_SP_DEV_T dev, IN PIRP irp) {
   ANSI_STRING file_path1;
-  winvblock__uint8_ptr buf = irp->AssociatedIrp.SystemBuffer;
+  PUCHAR buf = irp->AssociatedIrp.SystemBuffer;
   WV_SP_MOUNT_DISK params = (WV_SP_MOUNT_DISK) buf;
   UNICODE_STRING file_path2;
   OBJECT_ATTRIBUTES obj_attrs;
@@ -349,7 +349,7 @@ typedef struct WV_FILEDISK_THREAD_REQ {
     WV_E_DISK_IO_MODE mode;
     LONGLONG start_sector;
     winvblock__uint32 sector_count;
-    winvblock__uint8_ptr buffer;
+    PUCHAR buffer;
     PIRP irp;
   } WV_S_FILEDISK_THREAD_REQ, * WV_SP_FILEDISK_THREAD_REQ;
 
@@ -407,7 +407,7 @@ static NTSTATUS STDCALL threaded_io(
     IN WV_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN winvblock__uint32 sector_count,
-    IN winvblock__uint8_ptr buffer,
+    IN PUCHAR buffer,
     IN PIRP irp
   ) {
   WV_SP_FILEDISK_T filedisk_ptr;

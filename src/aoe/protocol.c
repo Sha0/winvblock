@@ -46,9 +46,9 @@
 
 /** From AoE module */
 extern NTSTATUS STDCALL aoe__reply (
-  IN winvblock__uint8_ptr SourceMac,
-  IN winvblock__uint8_ptr DestinationMac,
-  IN winvblock__uint8_ptr Data,
+  IN PUCHAR SourceMac,
+  IN PUCHAR DestinationMac,
+  IN PUCHAR Data,
   IN winvblock__uint32 DataSize
  );
 
@@ -128,10 +128,10 @@ static PCHAR STDCALL Protocol_NetEventString (
 #endif
 typedef struct _PROTOCOL_HEADER
 {
-  winvblock__uint8 DestinationMac[6];
-  winvblock__uint8 SourceMac[6];
+  UCHAR DestinationMac[6];
+  UCHAR SourceMac[6];
   winvblock__uint16 Protocol;
-  winvblock__uint8 Data[];
+  UCHAR Data[];
 } __attribute__ ( ( __packed__ ) ) PROTOCOL_HEADER, *PPROTOCOL_HEADER;
 #ifdef _MSC_VER
 #  pragma pack()
@@ -140,7 +140,7 @@ typedef struct _PROTOCOL_HEADER
 typedef struct _PROTOCOL_BINDINGCONTEXT
 {
   winvblock__bool Active;
-  winvblock__uint8 Mac[6];
+  UCHAR Mac[6];
   winvblock__uint32 MTU;
   NDIS_STATUS Status;
   NDIS_HANDLE PacketPoolHandle;
@@ -232,7 +232,7 @@ Protocol_Stop (
 
 winvblock__bool STDCALL
 Protocol_SearchNIC (
-  IN winvblock__uint8_ptr Mac
+  IN PUCHAR Mac
  )
 {
   PPROTOCOL_BINDINGCONTEXT Context = Protocol_Globals_BindingContextList;
@@ -249,7 +249,7 @@ Protocol_SearchNIC (
 
 winvblock__uint32 STDCALL
 Protocol_GetMTU (
-  IN winvblock__uint8_ptr Mac
+  IN PUCHAR Mac
  )
 {
   PPROTOCOL_BINDINGCONTEXT Context = Protocol_Globals_BindingContextList;
@@ -266,9 +266,9 @@ Protocol_GetMTU (
 
 winvblock__bool STDCALL
 Protocol_Send (
-  IN winvblock__uint8_ptr SourceMac,
-  IN winvblock__uint8_ptr DestinationMac,
-  IN winvblock__uint8_ptr Data,
+  IN PUCHAR SourceMac,
+  IN PUCHAR DestinationMac,
+  IN PUCHAR Data,
   IN winvblock__uint32 DataSize,
   IN void *PacketContext
  )
@@ -383,7 +383,7 @@ Protocol_SendComplete (
  )
 {
   PNDIS_BUFFER Buffer;
-  winvblock__uint8_ptr DataBuffer;
+  PUCHAR DataBuffer;
 #ifndef DEBUGALLPROTOCOLCALLS
   if ( !NT_SUCCESS ( Status ) && Status != NDIS_STATUS_NO_CABLE )
 #endif
@@ -413,7 +413,7 @@ Protocol_TransferDataComplete (
 {
   PNDIS_BUFFER Buffer;
   PPROTOCOL_HEADER Header = NULL;
-  winvblock__uint8_ptr Data = NULL;
+  PUCHAR Data = NULL;
   winvblock__uint32 HeaderSize,
    DataSize;
 #ifndef DEBUGALLPROTOCOLCALLS
@@ -497,7 +497,7 @@ Protocol_Receive (
   PNDIS_PACKET Packet;
   PNDIS_BUFFER Buffer;
   PPROTOCOL_HEADER Header;
-  winvblock__uint8_ptr HeaderCopy,
+  PUCHAR HeaderCopy,
    Data;
   winvblock__uint32 BytesTransferred;
 #ifdef DEBUGALLPROTOCOLCALLS
@@ -635,7 +635,7 @@ Protocol_BindAdapter (
   NDIS_STRING AdapterInstanceName;
   NDIS_REQUEST Request;
   winvblock__uint32 InformationBuffer = NDIS_PACKET_TYPE_DIRECTED;
-  winvblock__uint8 Mac[6];
+  UCHAR Mac[6];
   KIRQL Irql;
 #if defined(DEBUGMOSTPROTOCOLCALLS) || defined(DEBUGALLPROTOCOLCALLS)
   DBG ( "Entry\n" );

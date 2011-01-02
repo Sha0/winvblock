@@ -66,11 +66,11 @@ static NTSTATUS STDCALL io(
     IN WV_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN winvblock__uint32 sector_count,
-    IN winvblock__uint8_ptr buffer,
+    IN PUCHAR buffer,
     IN PIRP irp
   ) {
   PHYSICAL_ADDRESS PhysicalAddress;
-  winvblock__uint8_ptr PhysicalMemory;
+  PUCHAR PhysicalMemory;
   WV_SP_DISK_T disk_ptr;
   WV_SP_RAMDISK_T ramdisk_ptr;
 

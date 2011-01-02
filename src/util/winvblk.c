@@ -226,7 +226,7 @@ static int STDCALL cmd_scan(void) {
     AOE_SP_MOUNT_TARGETS targets;
     DWORD bytes_returned;
     winvblock__uint32 i;
-    winvblock__uint8 string[256];
+    UCHAR string[256];
     int status = 2;
 
     targets = malloc(
@@ -301,7 +301,7 @@ static int STDCALL cmd_show(void) {
     AOE_SP_MOUNT_DISKS mounted_disks;
     DWORD bytes_returned;
     winvblock__uint32 i;
-    winvblock__uint8 string[256];
+    UCHAR string[256];
     int status = 2;
 
     mounted_disks = malloc(
@@ -373,9 +373,9 @@ static int STDCALL cmd_show(void) {
   }
 
 static int STDCALL cmd_mount(void) {
-    winvblock__uint8 mac_addr[6];
+    UCHAR mac_addr[6];
     winvblock__uint32 ver_major, ver_minor;
-    winvblock__uint8 in_buf[sizeof (WV_S_MOUNT_DISK) + 1024];
+    UCHAR in_buf[sizeof (WV_S_MOUNT_DISK) + 1024];
     DWORD bytes_returned;
 
     if (opt_mac.value == NULL || opt_uri.value == NULL) {
@@ -411,7 +411,7 @@ static int STDCALL cmd_mount(void) {
       );
     memcpy(in_buf, mac_addr, 6);
     *((winvblock__uint16_ptr) (in_buf + 6)) = (winvblock__uint16) ver_major;
-    *((winvblock__uint8_ptr) (in_buf + 8)) = (winvblock__uint8) ver_minor;
+    *((PUCHAR) (in_buf + 8)) = (UCHAR) ver_minor;
     if (!DeviceIoControl(
         boot_bus,
         IOCTL_AOE_MOUNT,
@@ -430,7 +430,7 @@ static int STDCALL cmd_mount(void) {
 
 static int STDCALL cmd_umount(void) {
     winvblock__uint32 disk_num;
-    winvblock__uint8 in_buf[sizeof (WV_S_MOUNT_DISK) + 1024];
+    UCHAR in_buf[sizeof (WV_S_MOUNT_DISK) + 1024];
     DWORD bytes_returned;
 
     if (opt_disknum.value == NULL) {
@@ -459,7 +459,7 @@ static int STDCALL cmd_umount(void) {
 static int STDCALL cmd_attach(void) {
     WV_S_MOUNT_DISK filedisk;
     char obj_path_prefix[] = "\\??\\";
-    winvblock__uint8 in_buf[sizeof (WV_S_MOUNT_DISK) + 1024];
+    UCHAR in_buf[sizeof (WV_S_MOUNT_DISK) + 1024];
     DWORD bytes_returned;
 
     if (opt_uri.value == NULL || opt_media.value == NULL) {
@@ -502,7 +502,7 @@ static int STDCALL cmd_attach(void) {
 
 static int STDCALL cmd_detach(void) {
     winvblock__uint32 disk_num;
-    winvblock__uint8 in_buf[sizeof (WV_S_MOUNT_DISK) + 1024];
+    UCHAR in_buf[sizeof (WV_S_MOUNT_DISK) + 1024];
     DWORD bytes_returned;
 
     if (opt_disknum.value == NULL) {

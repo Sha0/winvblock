@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -36,9 +36,9 @@ typedef struct WV_PROBE_INT_VECTOR {
 #  pragma pack(1)
 #endif
 struct WV_PROBE_SAFE_MBR_HOOK {
-    winvblock__uint8 Jump[3];
-    winvblock__uint8 Signature[8];
-    winvblock__uint8 VendorId[8];
+    UCHAR Jump[3];
+    UCHAR Signature[8];
+    UCHAR VendorId[8];
     WV_S_PROBE_INT_VECTOR PrevHook;
     winvblock__uint32 Flags;
     winvblock__uint32 Mbft;     /* MEMDISK only. */
@@ -51,7 +51,7 @@ typedef struct WV_PROBE_SAFE_MBR_HOOK
 
 /* Probe functions. */
 extern WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
-    IN winvblock__uint8_ptr,
+    IN PUCHAR,
     IN WV_SP_PROBE_INT_VECTOR
   );
 extern void WvProbeDisks(void);

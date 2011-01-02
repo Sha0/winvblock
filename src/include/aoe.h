@@ -62,8 +62,8 @@ CTL_CODE(                               \
   )
 
 typedef struct AOE_MOUNT_TARGET {
-    winvblock__uint8 ClientMac[6];
-    winvblock__uint8 ServerMac[6];
+    UCHAR ClientMac[6];
+    UCHAR ServerMac[6];
     winvblock__uint32 Major;
     winvblock__uint32 Minor;
     LONGLONG LBASize;
@@ -77,8 +77,8 @@ typedef struct AOE_MOUNT_TARGETS {
 
 typedef struct AOE_MOUNT_DISK {
     winvblock__uint32 Disk;
-    winvblock__uint8 ClientMac[6];
-    winvblock__uint8 ServerMac[6];
+    UCHAR ClientMac[6];
+    UCHAR ServerMac[6];
     winvblock__uint32 Major;
     winvblock__uint32 Minor;
     LONGLONG LBASize;

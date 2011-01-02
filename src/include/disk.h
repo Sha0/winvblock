@@ -64,7 +64,7 @@ typedef NTSTATUS STDCALL WV_F_DISK_IO(
     IN WV_E_DISK_IO_MODE,
     IN LONGLONG,
     IN winvblock__uint32,
-    IN winvblock__uint8_ptr,
+    IN PUCHAR,
     IN PIRP
   );
 typedef WV_F_DISK_IO * WV_FP_DISK_IO;
@@ -123,7 +123,7 @@ struct WV_DISK_T {
 #define disk__get_ptr(dev_ptr) ((WV_SP_DISK_T) dev_ptr->ext)
 
 /* An MBR C/H/S address and ways to access its components. */
-typedef winvblock__uint8 chs[3];
+typedef UCHAR chs[3];
 
 #define     chs_head(chs) chs[0]
 #define   chs_sector(chs) (chs[1] & 0x3F)
@@ -136,13 +136,13 @@ typedef winvblock__uint8 chs[3];
 #  pragma pack(1)
 #endif
 struct WVL_DISK_MBR {
-    winvblock__uint8 code[440];
+    UCHAR code[440];
     winvblock__uint32 disk_sig;
     winvblock__uint16 pad;
     struct {
-        winvblock__uint8 status;
+        UCHAR status;
         chs chs_start;
-        winvblock__uint8 type;
+        UCHAR type;
         chs chs_end;
         winvblock__uint32 lba_start;
         winvblock__uint32 lba_count;

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -29,15 +29,15 @@
  */
 
 extern winvblock__bool STDCALL Protocol_SearchNIC (
-  IN winvblock__uint8_ptr Mac
+  IN PUCHAR Mac
  );
 extern winvblock__uint32 STDCALL Protocol_GetMTU (
-  IN winvblock__uint8_ptr Mac
+  IN PUCHAR Mac
  );
 extern winvblock__bool STDCALL Protocol_Send (
-  IN winvblock__uint8_ptr SourceMac,
-  IN winvblock__uint8_ptr DestinationMac,
-  IN winvblock__uint8_ptr Data,
+  IN PUCHAR SourceMac,
+  IN PUCHAR DestinationMac,
+  IN PUCHAR Data,
   IN winvblock__uint32 DataSize,
   IN void *PacketContext
  );

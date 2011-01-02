@@ -74,16 +74,16 @@ static void STDCALL Debug_DecodeIrp (
   IN PCHAR DebugMessage
  );
 static PCHAR STDCALL Debug_MajorFunctionString (
-  IN winvblock__uint8 MajorFunction
+  IN UCHAR MajorFunction
  );
 static PCHAR STDCALL Debug_PnPMinorFunctionString (
-  IN winvblock__uint8 MinorFunction
+  IN UCHAR MinorFunction
  );
 static PCHAR STDCALL Debug_SystemControlMinorFunctionString (
-  IN winvblock__uint8 MinorFunction
+  IN UCHAR MinorFunction
  );
 static PCHAR STDCALL Debug_PowerMinorFunctionString (
-  IN winvblock__uint8 MinorFunction
+  IN UCHAR MinorFunction
  );
 static PCHAR STDCALL Debug_QueryDeviceRelationsString (
   IN DEVICE_RELATION_TYPE Type
@@ -92,7 +92,7 @@ static PCHAR STDCALL Debug_QueryIdString (
   IN BUS_QUERY_ID_TYPE IdType
  );
 static PCHAR STDCALL Debug_SrbFunctionString (
-  IN winvblock__uint8 Function
+  IN UCHAR Function
  );
 static PCHAR STDCALL Debug_DeviceIoControlString (
   IN winvblock__uint32 IoControlCode
@@ -101,7 +101,7 @@ static PCHAR STDCALL Debug_DeviceTextTypeString (
   IN DEVICE_TEXT_TYPE DeviceTextType
  );
 static PCHAR STDCALL Debug_SCSIOPString (
-  IN winvblock__uint8 OperationCode
+  IN UCHAR OperationCode
  );
 
 WVL_M_LIB NTSTATUS STDCALL
@@ -347,7 +347,7 @@ Debug_DecodeIrp (
 
 static PCHAR STDCALL
 Debug_MajorFunctionString (
-  IN winvblock__uint8 MajorFunction
+  IN UCHAR MajorFunction
  )
 {
   switch ( MajorFunction )
@@ -420,7 +420,7 @@ Debug_MajorFunctionString (
 
 static PCHAR STDCALL
 Debug_PnPMinorFunctionString (
-  IN winvblock__uint8 MinorFunction
+  IN UCHAR MinorFunction
  )
 {
   switch ( MinorFunction )
@@ -482,7 +482,7 @@ Debug_PnPMinorFunctionString (
 
 static PCHAR STDCALL
 Debug_SystemControlMinorFunctionString (
-  IN winvblock__uint8 MinorFunction
+  IN UCHAR MinorFunction
  )
 {
   switch ( MinorFunction )
@@ -516,7 +516,7 @@ Debug_SystemControlMinorFunctionString (
 
 static PCHAR STDCALL
 Debug_PowerMinorFunctionString (
-  IN winvblock__uint8 MinorFunction
+  IN UCHAR MinorFunction
  )
 {
   switch ( MinorFunction )
@@ -578,7 +578,7 @@ Debug_QueryIdString (
 
 static PCHAR STDCALL
 Debug_SrbFunctionString (
-  IN winvblock__uint8 Function
+  IN UCHAR Function
  )
 {
   switch ( Function )
@@ -793,7 +793,7 @@ Debug_DeviceTextTypeString (
 
 static PCHAR STDCALL
 Debug_SCSIOPString (
-  IN winvblock__uint8 OperationCode
+  IN UCHAR OperationCode
  )
 {
   switch ( OperationCode )

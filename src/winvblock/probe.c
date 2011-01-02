@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -44,13 +44,13 @@
 #include "probe.h"
 
 WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
-    IN winvblock__uint8_ptr PhysicalMemory,
+    IN PUCHAR PhysicalMemory,
     IN WV_SP_PROBE_INT_VECTOR InterruptVector
   ) {
     winvblock__uint32 int13_hook;
     WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook;
-    winvblock__uint8 sig[9] = {0};
-    winvblock__uint8 ven_id[9] = {0};
+    UCHAR sig[9] = {0};
+    UCHAR ven_id[9] = {0};
 
     int13_hook = (((winvblock__uint32) InterruptVector->Segment) << 4) +
       ((winvblock__uint32) InterruptVector->Offset);

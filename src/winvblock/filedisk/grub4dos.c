@@ -130,7 +130,7 @@ static NTSTATUS STDCALL io(
     IN WV_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN winvblock__uint32 sector_count,
-    IN winvblock__uint8_ptr buffer,
+    IN PUCHAR buffer,
     IN PIRP irp
   ) {
   WV_SP_FILEDISK_T filedisk_ptr;
@@ -213,7 +213,7 @@ dud:
 }
 
 typedef struct WV_FILEDISK_GRUB4DOS_DRIVE_FILE_SET {
-    winvblock__uint8 int13_drive_num;
+    UCHAR int13_drive_num;
     char *filepath;
   }
   WV_S_FILEDISK_GRUB4DOS_DRIVE_FILE_SET,
@@ -309,7 +309,7 @@ filedisk_grub4dos__find (
  )
 {
   PHYSICAL_ADDRESS PhysicalAddress;
-  winvblock__uint8_ptr PhysicalMemory;
+  PUCHAR PhysicalMemory;
   WV_SP_PROBE_INT_VECTOR InterruptVector;
   winvblock__uint32 Int13Hook;
   WV_SP_PROBE_SAFE_MBR_HOOK SafeMbrHookPtr;
@@ -493,7 +493,7 @@ filedisk_grub4dos__find (
 	   * cause a "hash" collision!  Too bad for now.
 	   */
 	  filedisk_ptr->hash = 'G4DX';
-	  ( ( winvblock__uint8 * ) & filedisk_ptr->hash )[0] =
+	  ( ( UCHAR * ) & filedisk_ptr->hash )[0] =
 	    Grub4DosDriveMapSlotPtr[i].SourceDrive;
 	  filedisk_ptr->disk->Dev->Boot = TRUE;
 	  FoundGrub4DosMapping = TRUE;

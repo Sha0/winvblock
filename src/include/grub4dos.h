@@ -27,19 +27,19 @@
 
 /* From GRUB4DOS 0.4.4's stage2/shared.h */
 typedef struct WV_GRUB4DOS_DRIVE_MAPPING {
-    winvblock__uint8 SourceDrive;
-    winvblock__uint8 DestDrive;
-    winvblock__uint8 MaxHead;
-    winvblock__uint8 MaxSector:6;
-    winvblock__uint8 RestrictionX:1;
+    UCHAR SourceDrive;
+    UCHAR DestDrive;
+    UCHAR MaxHead;
+    UCHAR MaxSector:6;
+    UCHAR RestrictionX:1;
     winvblock__uint16 DestMaxCylinder:13;
     winvblock__uint16 SourceODD:1;
     winvblock__uint16 DestODD:1;
     winvblock__uint16 DestLBASupport:1;
-    winvblock__uint8 DestMaxHead;
-    winvblock__uint8 DestMaxSector:6;
-    winvblock__uint8 RestrictionY:1;
-    winvblock__uint8 InSituOption:1;
+    UCHAR DestMaxHead;
+    UCHAR DestMaxSector:6;
+    UCHAR RestrictionY:1;
+    UCHAR InSituOption:1;
     winvblock__uint64 SectorStart;
     winvblock__uint64 SectorCount;
   } WV_S_GRUB4DOS_DRIVE_MAPPING, * WV_SP_GRUB4DOS_DRIVE_MAPPING;

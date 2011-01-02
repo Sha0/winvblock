@@ -44,7 +44,7 @@ ramdisk_grub4dos__find (
  )
 {
   PHYSICAL_ADDRESS PhysicalAddress;
-  winvblock__uint8_ptr PhysicalMemory;
+  PUCHAR PhysicalMemory;
   WV_SP_PROBE_INT_VECTOR InterruptVector;
   winvblock__uint32 Int13Hook;
   WV_SP_PROBE_SAFE_MBR_HOOK SafeMbrHookPtr;

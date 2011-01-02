@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -77,14 +77,14 @@ typedef union _EIGHT_BYTE
 {
   struct
   {
-    winvblock__uint8 Byte0;
-    winvblock__uint8 Byte1;
-    winvblock__uint8 Byte2;
-    winvblock__uint8 Byte3;
-    winvblock__uint8 Byte4;
-    winvblock__uint8 Byte5;
-    winvblock__uint8 Byte6;
-    winvblock__uint8 Byte7;
+    UCHAR Byte0;
+    UCHAR Byte1;
+    UCHAR Byte2;
+    UCHAR Byte3;
+    UCHAR Byte4;
+    UCHAR Byte5;
+    UCHAR Byte6;
+    UCHAR Byte7;
   };
   ULONGLONG AsULongLong;
 } __attribute__ ( ( __packed__ ) ) EIGHT_BYTE, *PEIGHT_BYTE;
@@ -115,15 +115,15 @@ typedef struct _READ_CAPACITY_DATA_EX
 #  endif
 typedef struct _DISK_CDB16
 {
-  winvblock__uint8 OperationCode;
-  winvblock__uint8 Reserved1:3;
-  winvblock__uint8 ForceUnitAccess:1;
-  winvblock__uint8 DisablePageOut:1;
-  winvblock__uint8 Protection:3;
-  winvblock__uint8 LogicalBlock[8];
-  winvblock__uint8 TransferLength[4];
-  winvblock__uint8 Reserved2;
-  winvblock__uint8 Control;
+  UCHAR OperationCode;
+  UCHAR Reserved1:3;
+  UCHAR ForceUnitAccess:1;
+  UCHAR DisablePageOut:1;
+  UCHAR Protection:3;
+  UCHAR LogicalBlock[8];
+  UCHAR TransferLength[4];
+  UCHAR Reserved2;
+  UCHAR Control;
 } __attribute__ ( ( __packed__ ) ) DISK_CDB16, *PDISK_CDB16;
 #  ifdef _MSC_VER
 #    pragma pack()
@@ -201,9 +201,9 @@ static NTSTATUS STDCALL disk_scsi__read_write_(
 
     if ((
         (
-            (winvblock__uint8_ptr) srb->DataBuffer -
-            (winvblock__uint8_ptr) MmGetMdlVirtualAddress(irp->MdlAddress)
-          ) + (winvblock__uint8_ptr) MmGetSystemAddressForMdlSafe(
+            (PUCHAR) srb->DataBuffer -
+            (PUCHAR) MmGetMdlVirtualAddress(irp->MdlAddress)
+          ) + (PUCHAR) MmGetSystemAddressForMdlSafe(
               irp->MdlAddress,
               HighPagePriority
       )) == NULL) {
@@ -218,9 +218,9 @@ static NTSTATUS STDCALL disk_scsi__read_write_(
             WvDiskIoModeRead,
             start_sector,
             sector_count,
-            ((winvblock__uint8_ptr) srb->DataBuffer -
-              (winvblock__uint8_ptr) MmGetMdlVirtualAddress(irp->MdlAddress)) +
-              (winvblock__uint8_ptr) MmGetSystemAddressForMdlSafe(
+            ((PUCHAR) srb->DataBuffer -
+              (PUCHAR) MmGetMdlVirtualAddress(irp->MdlAddress)) +
+              (PUCHAR) MmGetSystemAddressForMdlSafe(
                   irp->MdlAddress,
                   HighPagePriority
               ),
@@ -232,9 +232,9 @@ static NTSTATUS STDCALL disk_scsi__read_write_(
             WvDiskIoModeWrite,
             start_sector,
             sector_count,
-            ((winvblock__uint8_ptr) srb->DataBuffer -
-              (winvblock__uint8_ptr) MmGetMdlVirtualAddress(irp->MdlAddress)) +
-              (winvblock__uint8_ptr) MmGetSystemAddressForMdlSafe(
+            ((PUCHAR) srb->DataBuffer -
+              (PUCHAR) MmGetMdlVirtualAddress(irp->MdlAddress)) +
+              (PUCHAR) MmGetSystemAddressForMdlSafe(
                   irp->MdlAddress,
                   HighPagePriority
               ),
