@@ -86,7 +86,7 @@ static __drv_dispatchType(IRP_MJ_DEVICE_CONTROL)
   DRIVER_DISPATCH WvIrpDevCtl;
 static __drv_dispatchType(IRP_MJ_SCSI) DRIVER_DISPATCH WvIrpScsi;
 static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH WvIrpPnp;
-static VOID STDCALL driver__unload_(IN PDRIVER_OBJECT);
+static DRIVER_UNLOAD WvUnload;
 static WV_F_DEV_DISPATCH WvDriverBusSysCtl_;
 static WV_F_DEV_CTL WvDriverBusDevCtl_;
 static WV_F_DEV_DISPATCH WvDriverBusPower_;
@@ -363,7 +363,7 @@ NTSTATUS STDCALL DriverEntry(
       WvIrpDevCtl;
     DriverObject->MajorFunction[IRP_MJ_SCSI] = WvIrpScsi;
     /* Set the driver Unload callback. */
-    DriverObject->DriverUnload = driver__unload_;
+    DriverObject->DriverUnload = WvUnload;
     /* Set the driver AddDevice callback. */
     DriverObject->DriverExtension->AddDevice = driver__attach_fdo_;
     /* Initialize various modules. */
@@ -382,7 +382,7 @@ NTSTATUS STDCALL DriverEntry(
 
     err_bus:
 
-    driver__unload_(DriverObject);
+    WvUnload(DriverObject);
     DBG("Exit due to failure\n");
     return status;
   }
@@ -546,7 +546,7 @@ static NTSTATUS WvIrpPnp(
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
-static VOID STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
+static VOID STDCALL WvUnload(IN PDRIVER_OBJECT DriverObject) {
     DBG("Unloading...\n");
     WvDriverBus_.Stop = TRUE;
     KeSetEvent(&WvDriverBus_.ThreadSignal, 0, FALSE);
