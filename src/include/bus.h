@@ -113,7 +113,7 @@ typedef struct WVL_BUS_CUSTOM_WORK_ITEM {
 extern WVL_M_LIB VOID WvlBusInit(WVL_SP_BUS_T);
 extern WVL_M_LIB VOID WvlBusProcessWorkItems(WVL_SP_BUS_T);
 extern WVL_M_LIB VOID WvlBusCancelWorkItems(WVL_SP_BUS_T);
-extern WVL_M_LIB NTSTATUS WvBusStartThread(
+extern WVL_M_LIB NTSTATUS WvlBusStartThread(
     IN WVL_SP_BUS_T,
     OUT PETHREAD *
   );

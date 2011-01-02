@@ -324,7 +324,7 @@ static VOID STDCALL WvBusThread_(IN PVOID context) {
  * Note that if you implement your own bus type using this library,
  * you can override the thread routine with your own.  If you do so,
  * your thread routine should call WvlBusProcessWorkItems() within
- * its loop.  To start a bus thread, use WvBusStartThread()
+ * its loop.  To start a bus thread, use WvlBusStartThread()
  * If you implement your own thread routine, you are also responsible
  * for calling WvlBusCancelWorkItems() and freeing the bus.
  */
@@ -368,7 +368,7 @@ static VOID STDCALL WvBusDefaultThread_(IN WVL_SP_BUS_T bus) {
  * to specify your own thread routine, then call this function to start it.
  * When stopping the thread, you can wait on the thread handle.
  */
-WVL_M_LIB NTSTATUS WvBusStartThread(
+WVL_M_LIB NTSTATUS WvlBusStartThread(
     IN WVL_SP_BUS_T Bus,
     OUT PETHREAD * Thread
   ) {
