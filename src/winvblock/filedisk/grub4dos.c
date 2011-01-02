@@ -61,7 +61,7 @@ check_disk_match (
   IN WV_SP_FILEDISK_T filedisk_ptr
  )
 {
-  msvhd__footer_ptr buf;
+  WV_SP_MSVHD_FOOTER buf;
   NTSTATUS status;
   IO_STATUS_BLOCK io_status;
   LARGE_INTEGER end_part;
