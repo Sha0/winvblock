@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -22,29 +22,27 @@
 /**
  * @file
  *
- * GRUB4DOS disk specifics
- *
+ * GRUB4DOS disk specifics.
  */
 
 /* From GRUB4DOS 0.4.4's stage2/shared.h */
-winvblock__def_struct ( grub4dos__drive_mapping )
-{
-  winvblock__uint8 SourceDrive;
-  winvblock__uint8 DestDrive;
-  winvblock__uint8 MaxHead;
-  winvblock__uint8 MaxSector:6;
-  winvblock__uint8 RestrictionX:1;
-  winvblock__uint16 DestMaxCylinder:13;
-  winvblock__uint16 SourceODD:1;
-  winvblock__uint16 DestODD:1;
-  winvblock__uint16 DestLBASupport:1;
-  winvblock__uint8 DestMaxHead;
-  winvblock__uint8 DestMaxSector:6;
-  winvblock__uint8 RestrictionY:1;
-  winvblock__uint8 InSituOption:1;
-  winvblock__uint64 SectorStart;
-  winvblock__uint64 SectorCount;
-};
+typedef struct WV_GRUB4DOS_DRIVE_MAPPING {
+    winvblock__uint8 SourceDrive;
+    winvblock__uint8 DestDrive;
+    winvblock__uint8 MaxHead;
+    winvblock__uint8 MaxSector:6;
+    winvblock__uint8 RestrictionX:1;
+    winvblock__uint16 DestMaxCylinder:13;
+    winvblock__uint16 SourceODD:1;
+    winvblock__uint16 DestODD:1;
+    winvblock__uint16 DestLBASupport:1;
+    winvblock__uint8 DestMaxHead;
+    winvblock__uint8 DestMaxSector:6;
+    winvblock__uint8 RestrictionY:1;
+    winvblock__uint8 InSituOption:1;
+    winvblock__uint64 SectorStart;
+    winvblock__uint64 SectorCount;
+  } WV_S_GRUB4DOS_DRIVE_MAPPING, * WV_SP_GRUB4DOS_DRIVE_MAPPING;
 
 extern void ramdisk_grub4dos__find (
   void

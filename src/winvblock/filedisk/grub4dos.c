@@ -312,7 +312,7 @@ filedisk_grub4dos__find (
   WV_SP_PROBE_INT_VECTOR InterruptVector;
   winvblock__uint32 Int13Hook;
   WV_SP_PROBE_SAFE_MBR_HOOK SafeMbrHookPtr;
-  grub4dos__drive_mapping_ptr Grub4DosDriveMapSlotPtr;
+  WV_SP_GRUB4DOS_DRIVE_MAPPING Grub4DosDriveMapSlotPtr;
   winvblock__uint32 i;
   winvblock__bool FoundGrub4DosMapping = FALSE;
   WV_SP_FILEDISK_T filedisk_ptr;
@@ -342,11 +342,11 @@ filedisk_grub4dos__find (
 	  InterruptVector = &SafeMbrHookPtr->PrevHook;
 	  continue;
 	}
-      Grub4DosDriveMapSlotPtr =
-	( grub4dos__drive_mapping_ptr ) ( PhysicalMemory +
-					  ( ( ( winvblock__uint32 )
-					      InterruptVector->
-					      Segment ) << 4 ) + 0x20 );
+      Grub4DosDriveMapSlotPtr = (WV_SP_GRUB4DOS_DRIVE_MAPPING) (
+          PhysicalMemory +
+          (((winvblock__uint32) InterruptVector->Segment) << 4)
+          + 0x20
+        );
       /*
        * Search for parameter blocks, which are disguised as
        * GRUB4DOS RAM disk mappings for 2048-byte memory regions

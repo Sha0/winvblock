@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -48,7 +48,7 @@ ramdisk_grub4dos__find (
   WV_SP_PROBE_INT_VECTOR InterruptVector;
   winvblock__uint32 Int13Hook;
   WV_SP_PROBE_SAFE_MBR_HOOK SafeMbrHookPtr;
-  grub4dos__drive_mapping_ptr Grub4DosDriveMapSlotPtr;
+  WV_SP_GRUB4DOS_DRIVE_MAPPING Grub4DosDriveMapSlotPtr;
   winvblock__uint32 i = 8;
   winvblock__bool FoundGrub4DosMapping = FALSE;
   ramdisk__type_ptr ramdisk_ptr;
@@ -77,11 +77,11 @@ ramdisk_grub4dos__find (
 	  InterruptVector = &SafeMbrHookPtr->PrevHook;
 	  continue;
 	}
-      Grub4DosDriveMapSlotPtr =
-	( grub4dos__drive_mapping_ptr ) ( PhysicalMemory +
-					  ( ( ( winvblock__uint32 )
-					      InterruptVector->
-					      Segment ) << 4 ) + 0x20 );
+      Grub4DosDriveMapSlotPtr = (WV_SP_GRUB4DOS_DRIVE_MAPPING) (
+          PhysicalMemory +
+          (((winvblock__uint32) InterruptVector->Segment) << 4) +
+          0x20
+        );
       while ( i-- )
 	{
 	  DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
