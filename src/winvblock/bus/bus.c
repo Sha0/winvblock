@@ -107,35 +107,6 @@ WVL_M_LIB VOID WvlBusInit(WVL_SP_BUS_T Bus) {
   }
 
 /**
- * Create a new bus.
- *
- * @ret WVL_SP_BUS_T     The address of a new bus, or NULL for failure.
- *
- * This function should not be confused with a PDO creation routine, which is
- * actually implemented for each device type.  This routine will allocate a
- * WVL_S_BUS_T as well as populate the bus with default values.
- */
-WVL_M_LIB WVL_SP_BUS_T WvBusCreate(void) {
-    WVL_SP_BUS_T bus;
-
-    /*
-     * Bus devices might be used for booting and should
-     * not be allocated from a paged memory pool.
-     */
-    bus = wv_malloc(sizeof *bus);
-    if (bus == NULL)
-      goto err_no_bus;
-
-    WvlBusInit(bus);
-    return bus;
-
-    wv_free(bus);
-    err_no_bus:
-
-    return NULL;
-  }
-
-/**
  * Add a work item for a bus to process.
  *
  * @v bus                       The bus to process the work item.
