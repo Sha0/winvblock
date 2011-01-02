@@ -30,18 +30,10 @@
 #define WVL_M_LIT "WinVBlock"
 #define WVL_M_WLIT L"WinVBlock"
 
-/* A common way to define a type. */
-#  define winvblock__def_type( old, new ) \
-\
-typedef old new, *new##_ptr
-
 /* Set up type definitions for an enumated type. */
 #  define winvblock__def_enum( x ) \
 \
 typedef enum _##x x, *x##_ptr
-
-/* Common type definitions */
-typedef void *winvblock__any_ptr;
 
 /* To export functions while serving as a library. */
 #  ifdef PROJECT_BUS

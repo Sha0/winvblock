@@ -182,7 +182,7 @@ struct WV_DEV_T {
     /* The device operations. */
     WV_S_DEV_OPS Ops;
     /* Points to further extensions. */
-    winvblock__any_ptr ext;
+    PVOID ext;
     /* How to handle IRPs based on major function code. */
     WV_SP_DEV_IRP_MJ IrpMj;
     /* Was the device established at boot time? */

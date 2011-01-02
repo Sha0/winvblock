@@ -116,7 +116,7 @@ struct WV_DISK_T {
     UINT32 SectorSize;
     UINT32 SpecialFileCount;
     LIST_ENTRY tracking;
-    winvblock__any_ptr ext;
+    PVOID ext;
   };
 
 /* Yield a pointer to the disk. */
