@@ -1717,7 +1717,7 @@ NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
     /* If we get here, we should be called by WvlBusProcessWorkItems() */
     DBG("Got IOCTL_AOE_SHOW...\n");
 
-    count = WvBusGetNodeCount(&AoeBusMain);
+    count = WvlBusGetNodeCount(&AoeBusMain);
     size = sizeof *disks + (count * sizeof disks->Disk[0]);
 
     disks = wv_malloc(size);

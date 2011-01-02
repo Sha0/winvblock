@@ -632,7 +632,7 @@ WVL_M_LIB PDEVICE_OBJECT STDCALL WvlBusGetNodePdo(
  * In order for this function to yield a race-free, useful result, it
  * should be used by whatever thread calls WvlBusProcessWorkItems()
  */
-WVL_M_LIB UINT32 STDCALL WvBusGetNodeCount(
+WVL_M_LIB UINT32 STDCALL WvlBusGetNodeCount(
     WVL_SP_BUS_T Bus
   ) {
     return Bus->BusPrivate_.NodeCount;

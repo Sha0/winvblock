@@ -155,7 +155,7 @@ extern WVL_M_LIB WVL_SP_BUS_NODE STDCALL WvlBusGetNextNode(
 extern WVL_M_LIB PDEVICE_OBJECT STDCALL WvlBusGetNodePdo(
     IN WVL_SP_BUS_NODE
   );
-extern WVL_M_LIB UINT32 STDCALL WvBusGetNodeCount(
+extern WVL_M_LIB UINT32 STDCALL WvlBusGetNodeCount(
     WVL_SP_BUS_T
   );
 
