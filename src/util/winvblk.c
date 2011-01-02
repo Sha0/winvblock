@@ -30,8 +30,9 @@
 #include <stdio.h>
 #include <malloc.h>
 
-#include "winvblock.h"
 #include "portable.h"
+typedef int NTSTATUS;   /* Argh. */
+#include "winvblock.h"
 #include "mount.h"
 #include "aoe.h"
 

@@ -31,8 +31,9 @@
 #include <Setupapi.h>
 #include <newdev.h>
 
-#include "winvblock.h"
 #include "portable.h"
+typedef int NTSTATUS;   /* Argh. */
+#include "winvblock.h"
 
 #define MAX_CLASS_NAME_LEN 64
 

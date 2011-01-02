@@ -29,10 +29,10 @@
 #include <ntddk.h>
 #include <scsi.h>
 
+#include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
 #include "wv_string.h"
-#include "portable.h"
 #include "driver.h"
 #include "bus.h"
 #include "device.h"
@@ -311,7 +311,7 @@ NTSTATUS STDCALL DriverEntry(
         AoeThread_,
         NULL
       )))
-      return Error("PsCreateSystemThread", Status);
+      return WvlError("PsCreateSystemThread", Status);
 
     if (!NT_SUCCESS(Status = ObReferenceObjectByHandle(
         AoeThreadHandle_,
@@ -322,7 +322,7 @@ NTSTATUS STDCALL DriverEntry(
         NULL
       ))) {
         ZwClose(AoeThreadHandle_);
-        Error("ObReferenceObjectByHandle", Status);
+        WvlError("ObReferenceObjectByHandle", Status);
         AoeStop_ = TRUE;
         KeSetEvent(&AoeSignal_, 0, FALSE);
       }
@@ -379,7 +379,7 @@ static VOID STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
             FALSE,
             NULL
           )))
-          Error("AoE_Stop ZwWaitForSingleObject", Status);
+          WvlError("AoE_Stop ZwWaitForSingleObject", Status);
         ZwClose(AoeThreadHandle_);
       }
 

@@ -27,9 +27,9 @@
 
 #include <ntddk.h>
 
+#include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
-#include "portable.h"
 #include "driver.h"
 #include "bus.h"
 #include "device.h"
@@ -154,7 +154,7 @@ static PDEVICE_OBJECT STDCALL create_pdo(IN WV_SP_DEV_T dev_ptr) {
         &dev_obj_ptr
       );
     if (!NT_SUCCESS(status)) {
-        Error("IoCreateDevice", status);
+        WvlError("IoCreateDevice", status);
         return NULL;
       }
     /* Set associations for the PDO, device, disk. */

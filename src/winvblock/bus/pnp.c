@@ -29,9 +29,9 @@
 #include <ntddk.h>
 #include <initguid.h>
 
+#include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
-#include "portable.h"
 #include "driver.h"
 #include "bus.h"
 #include "debug.h"

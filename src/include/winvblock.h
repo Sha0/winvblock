@@ -24,7 +24,6 @@
  * @file
  *
  * WinVBlock project common material.
- *
  */
 
 #define WVL_M_LIT "WinVBlock"
@@ -36,5 +35,7 @@
 #else
 #  define WVL_M_LIB __declspec(dllimport)
 #endif
+
+extern WVL_M_LIB NTSTATUS STDCALL WvlError(IN PCHAR, IN NTSTATUS);
 
 #endif  /* WVL_M_WINVBLOCK_H_ */

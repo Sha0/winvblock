@@ -29,10 +29,10 @@
 #include <ndis.h>
 #include <ntddndis.h>
 
+#include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
 #include "wv_string.h"
-#include "portable.h"
 #include "driver.h"
 #include "bus.h"
 #include "device.h"
@@ -214,7 +214,7 @@ VOID Protocol_Stop(void) {
   KeResetEvent ( &Protocol_Globals_StopEvent );
   NdisDeregisterProtocol ( &Status, Protocol_Globals_Handle );
   if ( !NT_SUCCESS ( Status ) )
-    Error ( "NdisDeregisterProtocol", Status );
+    WvlError("NdisDeregisterProtocol", Status);
   if ( Protocol_Globals_BindingContextList != NULL )
     KeWaitForSingleObject ( &Protocol_Globals_StopEvent, Executive, KernelMode,
 			    FALSE, NULL );
@@ -316,7 +316,7 @@ Protocol_Send (
   NdisAllocatePacket ( &Status, &Packet, Context->PacketPoolHandle );
   if ( !NT_SUCCESS ( Status ) )
     {
-      Error ( "Protocol_Send NdisAllocatePacket", Status );
+      WvlError("Protocol_Send NdisAllocatePacket", Status);
       wv_free(DataBuffer);
       return FALSE;
     }
@@ -325,7 +325,7 @@ Protocol_Send (
 		       ( sizeof ( PROTOCOL_HEADER ) + DataSize ) );
   if ( !NT_SUCCESS ( Status ) )
     {
-      Error ( "Protocol_Send NdisAllocateBuffer", Status );
+      WvlError("Protocol_Send NdisAllocateBuffer", Status);
       NdisFreePacket ( Packet );
       wv_free(DataBuffer);
       return FALSE;
@@ -364,7 +364,7 @@ Protocol_CloseAdapterComplete (
 #if !defined(DEBUGMOSTPROTOCOLCALLS) && !defined(DEBUGALLPROTOCOLCALLS)
   if ( !NT_SUCCESS ( Status ) )
 #endif
-    Error ( "Protocol_CloseAdapterComplete", Status );
+    WvlError("Protocol_CloseAdapterComplete", Status);
 }
 
 static VOID STDCALL
@@ -379,7 +379,7 @@ Protocol_SendComplete (
 #ifndef DEBUGALLPROTOCOLCALLS
   if ( !NT_SUCCESS ( Status ) && Status != NDIS_STATUS_NO_CABLE )
 #endif
-    Error ( "Protocol_SendComplete", Status );
+    WvlError("Protocol_SendComplete", Status);
 
   NdisUnchainBufferAtFront ( Packet, &Buffer );
   if ( Buffer != NULL )
@@ -411,7 +411,7 @@ Protocol_TransferDataComplete (
 #ifndef DEBUGALLPROTOCOLCALLS
   if ( !NT_SUCCESS ( Status ) )
 #endif
-    Error ( "Protocol_TransferDataComplete", Status );
+    WvlError("Protocol_TransferDataComplete", Status);
 
   NdisUnchainBufferAtFront ( Packet, &Buffer );
   if ( Buffer != NULL )
@@ -451,7 +451,7 @@ Protocol_ResetComplete (
 #if !defined(DEBUGMOSTPROTOCOLCALLS) && !defined(DEBUGALLPROTOCOLCALLS)
   if ( !NT_SUCCESS ( Status ) )
 #endif
-    Error ( "Protocol_ResetComplete", Status );
+    WvlError("Protocol_ResetComplete", Status);
 }
 
 static VOID STDCALL
@@ -466,7 +466,7 @@ Protocol_RequestComplete (
 #if !defined(DEBUGMOSTPROTOCOLCALLS) && !defined(DEBUGALLPROTOCOLCALLS)
   if ( !NT_SUCCESS ( Status ) )
 #endif
-    Error ( "Protocol_RequestComplete", Status );
+    WvlError("Protocol_RequestComplete", Status);
 
   Context->Status = Status;
   KeSetEvent ( &Context->Event, 0, FALSE );
@@ -525,7 +525,7 @@ Protocol_Receive (
   NdisAllocatePacket ( &Status, &Packet, Context->PacketPoolHandle );
   if ( !NT_SUCCESS ( Status ) )
     {
-      Error ( "Protocol_Receive NdisAllocatePacket", Status );
+      WvlError("Protocol_Receive NdisAllocatePacket", Status);
       wv_free(Data);
       wv_free(HeaderCopy);
       return NDIS_STATUS_NOT_ACCEPTED;
@@ -535,7 +535,7 @@ Protocol_Receive (
 		       PacketSize );
   if ( !NT_SUCCESS ( Status ) )
     {
-      Error ( "Protocol_Receive NdisAllocateBuffer (Data)", Status );
+      WvlError("Protocol_Receive NdisAllocateBuffer (Data)", Status);
       NdisFreePacket ( Packet );
       wv_free(Data);
       wv_free(HeaderCopy);
@@ -547,7 +547,7 @@ Protocol_Receive (
 		       PacketSize );
   if ( !NT_SUCCESS ( Status ) )
     {
-      Error ( "Protocol_Receive NdisAllocateBuffer (HeaderCopy)", Status );
+      WvlError("Protocol_Receive NdisAllocateBuffer (HeaderCopy)", Status);
       NdisUnchainBufferAtFront ( Packet, &Buffer );
       NdisFreeBuffer ( Buffer );
       NdisFreePacket ( Packet );
@@ -592,7 +592,7 @@ Protocol_Status (
 #if !defined(DEBUGMOSTPROTOCOLCALLS) && !defined(DEBUGALLPROTOCOLCALLS)
   if ( !NT_SUCCESS ( GeneralStatus ) )
 #endif
-    Error ( "Protocol_Status", GeneralStatus );
+    WvlError("Protocol_Status", GeneralStatus);
 }
 
 static VOID STDCALL
@@ -649,7 +649,7 @@ Protocol_BindAdapter (
     );
   if ( !NT_SUCCESS ( Status ) )
     {
-      Error ( "Protocol_BindAdapter NdisAllocatePacketPool", Status );
+      WvlError("Protocol_BindAdapter NdisAllocatePacketPool", Status);
       wv_free(Context);
       *StatusOut = NDIS_STATUS_RESOURCES;
       return;
@@ -658,7 +658,7 @@ Protocol_BindAdapter (
   NdisAllocateBufferPool ( &Status, &Context->BufferPoolHandle, POOLSIZE );
   if ( !NT_SUCCESS ( Status ) )
     {
-      Error ( "Protocol_BindAdapter NdisAllocateBufferPool", Status );
+      WvlError("Protocol_BindAdapter NdisAllocateBufferPool", Status);
       NdisFreePacketPool ( Context->PacketPoolHandle );
       wv_free(Context);
       *StatusOut = NDIS_STATUS_RESOURCES;
@@ -705,7 +705,7 @@ Protocol_BindAdapter (
     }
   else
     {
-      Error ( "Protocol_BindAdapter NdisQueryAdapterInstanceName", Status );
+      WvlError("Protocol_BindAdapter NdisQueryAdapterInstanceName", Status);
     }
 
   Context->DeviceName = NULL;
@@ -744,7 +744,7 @@ Protocol_BindAdapter (
     }
   if ( !NT_SUCCESS ( Status ) )
     {
-      Error ( "Protocol_BindAdapter NdisRequest (Mac)", Status );
+      WvlError("Protocol_BindAdapter NdisRequest (Mac)", Status);
     }
   else
     {
@@ -768,7 +768,7 @@ Protocol_BindAdapter (
     }
   if ( !NT_SUCCESS ( Status ) )
     {
-      Error ( "Protocol_BindAdapter NdisRequest (MTU)", Status );
+      WvlError("Protocol_BindAdapter NdisRequest (MTU)", Status);
     }
   else
     {
@@ -791,7 +791,7 @@ Protocol_BindAdapter (
       Status = Context->Status;
     }
   if ( !NT_SUCCESS ( Status ) )
-    Error ( "ProtocolBindAdapter NdisRequest (filter)", Status );
+    WvlError("ProtocolBindAdapter NdisRequest (filter)", Status);
 
   KeAcquireSpinLock ( &Protocol_Globals_SpinLock, &Irql );
   if ( Protocol_Globals_BindingContextList == NULL )
@@ -853,7 +853,7 @@ Protocol_UnbindAdapter (
 
   NdisCloseAdapter ( &Status, Context->BindingHandle );
   if ( !NT_SUCCESS ( Status ) )
-    Error ( "ProtocolUnbindAdapter NdisCloseAdapter", Status );
+    WvlError("ProtocolUnbindAdapter NdisCloseAdapter", Status);
   NdisFreePacketPool ( Context->PacketPoolHandle );
   NdisFreeBufferPool ( Context->BufferPoolHandle );
   wv_free(Context);

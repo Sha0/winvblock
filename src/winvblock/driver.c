@@ -29,10 +29,10 @@
 #include <ntddk.h>
 #include <scsi.h>
 
+#include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
 #include "wv_string.h"
-#include "portable.h"
 #include "driver.h"
 #include "bus.h"
 #include "device.h"
@@ -330,7 +330,7 @@ NTSTATUS STDCALL DriverEntry(
     Debug_Initialize();
     status = WvlRegNoteOsLoadOpts(&WvDriverOsLoadOpts_);
     if (!NT_SUCCESS(status))
-      return Error("WvlRegNoteOsLoadOpts", status);
+      return WvlError("WvlRegNoteOsLoadOpts", status);
 
     WvDriverStateHandle_ = NULL;
     KeInitializeSpinLock(&WvDriverBusFdoLock_);
@@ -590,15 +590,6 @@ WVL_M_LIB VOID STDCALL WvDriverCompletePendingIrp(IN PIRP Irp) {
     Debug_IrpEnd(Irp, Irp->IoStatus.Status);
     #endif
     IoCompleteRequest(Irp, IO_NO_INCREMENT);
-  }
-
-/* Note the exception to the function naming convention. */
-WVL_M_LIB NTSTATUS STDCALL Error(
-    IN PCHAR Message,
-    IN NTSTATUS Status
-  ) {
-    DBG("%s: 0x%08x\n", Message, Status);
-    return Status;
   }
 
 /* Pass an IRP_MJ_SYSTEM_CONTROL IRP to the bus. */
@@ -1091,4 +1082,14 @@ WVL_M_LIB NTSTATUS STDCALL WvDriverDummyIds(
     alloc_info:
 
     return driver__complete_irp(Irp, Irp->IoStatus.Information, status);
+  }
+
+/** Library functions that don't depend on the WinVBlock bus. */
+
+WVL_M_LIB NTSTATUS STDCALL WvlError(
+    IN PCHAR Message,
+    IN NTSTATUS Status
+  ) {
+    DBG("%s: 0x%08x\n", Message, Status);
+    return Status;
   }

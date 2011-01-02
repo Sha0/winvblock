@@ -43,8 +43,6 @@ struct WV_DEV_T;
 extern PDRIVER_OBJECT WvDriverObj;
 extern WVL_M_LIB VOID STDCALL WvDriverCompletePendingIrp(IN PIRP);
 /* Note the exception to the function naming convention. */
-extern WVL_M_LIB NTSTATUS STDCALL Error(IN PCHAR, IN NTSTATUS);
-/* Note the exception to the function naming convention. */
 extern NTSTATUS STDCALL DriverEntry(
     IN PDRIVER_OBJECT,
     IN PUNICODE_STRING

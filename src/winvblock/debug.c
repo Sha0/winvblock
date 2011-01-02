@@ -33,9 +33,9 @@
 #include <ntdddisk.h>
 #include <ndis.h>
 
+#include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
-#include "portable.h"
 #include "driver.h"
 #include "bus.h"
 #include "device.h"

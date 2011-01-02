@@ -27,10 +27,10 @@
 
 #include <ntddk.h>
 
+#include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
 #include "wv_string.h"
-#include "portable.h"
 #include "registry.h"
 #include "debug.h"
 

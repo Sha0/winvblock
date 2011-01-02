@@ -28,9 +28,9 @@
 #include <initguid.h>
 #include <ntddstor.h>
 
+#include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
-#include "portable.h"
 #include "driver.h"
 #include "bus.h"
 #include "device.h"

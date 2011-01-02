@@ -30,8 +30,8 @@
 #include <ntdddisk.h>
 #include <ntddcdrm.h>
 
-#include "winvblock.h"
 #include "portable.h"
+#include "winvblock.h"
 #include "driver.h"
 #include "bus.h"
 #include "device.h"
