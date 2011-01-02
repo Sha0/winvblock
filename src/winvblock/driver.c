@@ -75,12 +75,17 @@ static LPWSTR WvDriverOsLoadOpts_ = NULL;
 
 /* Forward declarations. */
 static DRIVER_DISPATCH WvIrpNotSupported;
-static driver__dispatch_func driver__dispatch_power_;
-static driver__dispatch_func driver__dispatch_create_close_;
-static driver__dispatch_func driver__dispatch_sys_ctl_;
-static driver__dispatch_func driver__dispatch_dev_ctl_;
-static driver__dispatch_func driver__dispatch_scsi_;
-static driver__dispatch_func driver__dispatch_pnp_;
+static __drv_dispatchType(IRP_MJ_POWER) DRIVER_DISPATCH WvIrpPower;
+static
+  __drv_dispatchType(IRP_MJ_CREATE)
+  __drv_dispatchType(IRP_MJ_CLOSE)
+  DRIVER_DISPATCH WvIrpCreateClose;
+static __drv_dispatchType(IRP_MJ_SYSTEM_CONTROL)
+  DRIVER_DISPATCH WvIrpSysCtl;
+static __drv_dispatchType(IRP_MJ_DEVICE_CONTROL)
+  DRIVER_DISPATCH WvIrpDevCtl;
+static __drv_dispatchType(IRP_MJ_SCSI) DRIVER_DISPATCH WvIrpScsi;
+static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH WvIrpPnp;
 static VOID STDCALL driver__unload_(IN PDRIVER_OBJECT);
 static WV_F_DEV_DISPATCH WvDriverBusSysCtl_;
 static WV_F_DEV_CTL WvDriverBusDevCtl_;
@@ -348,15 +353,15 @@ NTSTATUS STDCALL DriverEntry(
      */
     for (i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++)
       DriverObject->MajorFunction[i] = WvIrpNotSupported;
-    DriverObject->MajorFunction[IRP_MJ_PNP] = driver__dispatch_pnp_;
-    DriverObject->MajorFunction[IRP_MJ_POWER] = driver__dispatch_power_;
-    DriverObject->MajorFunction[IRP_MJ_CREATE] = driver__dispatch_create_close_;
-    DriverObject->MajorFunction[IRP_MJ_CLOSE] = driver__dispatch_create_close_;
+    DriverObject->MajorFunction[IRP_MJ_PNP] = WvIrpPnp;
+    DriverObject->MajorFunction[IRP_MJ_POWER] = WvIrpPower;
+    DriverObject->MajorFunction[IRP_MJ_CREATE] = WvIrpCreateClose;
+    DriverObject->MajorFunction[IRP_MJ_CLOSE] = WvIrpCreateClose;
     DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] =
-      driver__dispatch_sys_ctl_;
+      WvIrpSysCtl;
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] =
-      driver__dispatch_dev_ctl_;
-    DriverObject->MajorFunction[IRP_MJ_SCSI] = driver__dispatch_scsi_;
+      WvIrpDevCtl;
+    DriverObject->MajorFunction[IRP_MJ_SCSI] = WvIrpScsi;
     /* Set the driver Unload callback. */
     DriverObject->DriverUnload = driver__unload_;
     /* Set the driver AddDevice callback. */
@@ -392,7 +397,7 @@ static NTSTATUS STDCALL WvIrpNotSupported(
   }
 
 /* Handle a power IRP. */
-static NTSTATUS driver__dispatch_power_(
+static NTSTATUS WvIrpPower(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
@@ -416,7 +421,7 @@ static NTSTATUS driver__dispatch_power_(
   }
 
 /* Handle an IRP_MJ_CREATE or IRP_MJ_CLOSE IRP. */
-static NTSTATUS driver__dispatch_create_close_(
+static NTSTATUS WvIrpCreateClose(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
@@ -434,7 +439,7 @@ static NTSTATUS driver__dispatch_create_close_(
   }
 
 /* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
-static NTSTATUS driver__dispatch_sys_ctl_(
+static NTSTATUS WvIrpSysCtl(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
@@ -455,7 +460,7 @@ static NTSTATUS driver__dispatch_sys_ctl_(
   }
 
 /* Handle an IRP_MJ_DEVICE_CONTROL IRP. */
-static NTSTATUS driver__dispatch_dev_ctl_(
+static NTSTATUS WvIrpDevCtl(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
@@ -482,7 +487,7 @@ static NTSTATUS driver__dispatch_dev_ctl_(
   }
 
 /* Handle an IRP_MJ_SCSI IRP. */
-static NTSTATUS driver__dispatch_scsi_(
+static NTSTATUS WvIrpScsi(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
@@ -509,7 +514,7 @@ static NTSTATUS driver__dispatch_scsi_(
   }
 
 /* Handle an IRP_MJ_PNP IRP. */
-static NTSTATUS driver__dispatch_pnp_(
+static NTSTATUS WvIrpPnp(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
