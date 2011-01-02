@@ -74,7 +74,7 @@ static PETHREAD WvDriverBusThread_ = NULL;
 static LPWSTR WvDriverOsLoadOpts_ = NULL;
 
 /* Forward declarations. */
-static driver__dispatch_func driver__dispatch_not_supported_;
+static DRIVER_DISPATCH WvIrpNotSupported;
 static driver__dispatch_func driver__dispatch_power_;
 static driver__dispatch_func driver__dispatch_create_close_;
 static driver__dispatch_func driver__dispatch_sys_ctl_;
@@ -347,7 +347,7 @@ NTSTATUS STDCALL DriverEntry(
      * this driver handles.
      */
     for (i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++)
-      DriverObject->MajorFunction[i] = driver__dispatch_not_supported_;
+      DriverObject->MajorFunction[i] = WvIrpNotSupported;
     DriverObject->MajorFunction[IRP_MJ_PNP] = driver__dispatch_pnp_;
     DriverObject->MajorFunction[IRP_MJ_POWER] = driver__dispatch_power_;
     DriverObject->MajorFunction[IRP_MJ_CREATE] = driver__dispatch_create_close_;
@@ -382,7 +382,7 @@ NTSTATUS STDCALL DriverEntry(
     return status;
   }
 
-static NTSTATUS STDCALL driver__dispatch_not_supported_(
+static NTSTATUS STDCALL WvIrpNotSupported(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
