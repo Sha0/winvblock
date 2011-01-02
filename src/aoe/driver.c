@@ -1699,7 +1699,7 @@ NTSTATUS STDCALL AoeBusDevCtlScan(IN PIRP irp) {
 NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
     winvblock__uint32 count;
     WVL_SP_BUS_NODE walker;
-    aoe__mount_disks_ptr disks;
+    AOE_S_MOUNT_DISKS_ptr disks;
     wv_size_t size;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
@@ -1760,9 +1760,9 @@ NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
         irp->AssociatedIrp.SystemBuffer,
         disks,
         (io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength <
-          (sizeof (aoe__mount_disks) + (count * sizeof (aoe__mount_disk))) ?
+          (sizeof (AOE_S_MOUNT_DISKS) + (count * sizeof (aoe__mount_disk))) ?
           io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength :
-          (sizeof (aoe__mount_disks) + (count * sizeof (aoe__mount_disk)))
+          (sizeof (AOE_S_MOUNT_DISKS) + (count * sizeof (aoe__mount_disk)))
         )
       );
     wv_free(disks);

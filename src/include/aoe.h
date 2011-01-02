@@ -85,11 +85,10 @@ winvblock__def_struct(aoe__mount_disk)
     LONGLONG LBASize;
   };
 
-winvblock__def_struct(aoe__mount_disks)
-  {
+typedef struct AOE_MOUNT_DISKS {
     winvblock__uint32 Count;
     aoe__mount_disk Disk[];
-  };
+  } AOE_S_MOUNT_DISKS, * AOE_S_MOUNT_DISKS;
 
 extern void aoe__reset_probe(void);
 

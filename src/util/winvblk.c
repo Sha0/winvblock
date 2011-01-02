@@ -298,14 +298,14 @@ static int STDCALL cmd_scan(void) {
   }
 
 static int STDCALL cmd_show(void) {
-    aoe__mount_disks_ptr mounted_disks;
+    AOE_S_MOUNT_DISKS_ptr mounted_disks;
     DWORD bytes_returned;
     winvblock__uint32 i;
     winvblock__uint8 string[256];
     int status = 2;
 
     mounted_disks = malloc(
-        sizeof (aoe__mount_disks) +
+        sizeof (AOE_S_MOUNT_DISKS) +
         (32 * sizeof (aoe__mount_disk)) 
       );
     if (mounted_disks == NULL) {
@@ -318,7 +318,7 @@ static int STDCALL cmd_show(void) {
       NULL,
       0,
       mounted_disks,
-      sizeof (aoe__mount_disks) + (32 * sizeof (aoe__mount_disk)),
+      sizeof (AOE_S_MOUNT_DISKS) + (32 * sizeof (aoe__mount_disk)),
       &bytes_returned,
       (LPOVERLAPPED) NULL
     )) {
