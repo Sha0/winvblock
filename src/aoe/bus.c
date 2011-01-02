@@ -368,7 +368,7 @@ BOOLEAN STDCALL AoeBusAddDev(
         DBG("PDO creation failed!\n");
         return FALSE;
       }
-    WvBusInitNode(&Dev->BusNode, dev_obj);
+    WvlBusInitNode(&Dev->BusNode, dev_obj);
     /* Associate the parent bus. */
     Dev->Parent = AoeBusMain.Fdo;
     /*

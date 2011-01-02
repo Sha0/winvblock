@@ -643,7 +643,7 @@ WVL_M_LIB BOOLEAN STDCALL WvDriverBusAddDev(
         DBG("PDO creation failed!\n");
         return FALSE;
       }
-    WvBusInitNode(&Dev->BusNode, dev_obj);
+    WvlBusInitNode(&Dev->BusNode, dev_obj);
     /* Associate the parent bus. */
     Dev->Parent = WvDriverBus_.Fdo;
     /*
@@ -957,7 +957,7 @@ static VOID STDCALL WvDriverAddDummy_(PVOID context) {
     dev->ext = dummy_ids;       /* TODO: Implement a dummy free.  Leaking. */
     dev->Self = pdo;
     WvDevForDevObj(pdo, dev);
-    WvBusInitNode(&dev->BusNode, pdo);
+    WvlBusInitNode(&dev->BusNode, pdo);
     /* Associate the parent bus. */
     dev->Parent = WvDriverBus_.Fdo;
     /* Add the new PDO device to the bus' list of children. */

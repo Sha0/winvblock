@@ -118,7 +118,7 @@ extern WVL_M_LIB NTSTATUS WvBusStartThread(
     IN WVL_SP_BUS_T,
     OUT PETHREAD *
   );
-extern WVL_M_LIB BOOLEAN STDCALL WvBusInitNode(
+extern WVL_M_LIB BOOLEAN STDCALL WvlBusInitNode(
     OUT WVL_SP_BUS_NODE,
     IN PDEVICE_OBJECT
   );

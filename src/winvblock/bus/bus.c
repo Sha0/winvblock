@@ -445,7 +445,7 @@ WVL_M_LIB NTSTATUS WvBusStartThread(
  * @v Pdo               The PDO to associate the node with.
  * @ret BOOLEAN FALSE for a NULL argument, otherwise TRUE
  */
-WVL_M_LIB BOOLEAN STDCALL WvBusInitNode(
+WVL_M_LIB BOOLEAN STDCALL WvlBusInitNode(
     OUT WVL_SP_BUS_NODE Node,
     IN PDEVICE_OBJECT Pdo
   ) {
