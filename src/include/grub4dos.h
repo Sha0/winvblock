@@ -40,8 +40,8 @@ typedef struct WV_GRUB4DOS_DRIVE_MAPPING {
     UCHAR DestMaxSector:6;
     UCHAR RestrictionY:1;
     UCHAR InSituOption:1;
-    winvblock__uint64 SectorStart;
-    winvblock__uint64 SectorCount;
+    UINT64 SectorStart;
+    UINT64 SectorCount;
   } WV_S_GRUB4DOS_DRIVE_MAPPING, * WV_SP_GRUB4DOS_DRIVE_MAPPING;
 
 extern void ramdisk_grub4dos__find (
