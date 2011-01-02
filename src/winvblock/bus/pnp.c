@@ -32,7 +32,7 @@
 #include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
-#include "driver.h"
+#include "irp.h"
 #include "bus.h"
 #include "debug.h"
 #include "probe.h"
@@ -52,7 +52,7 @@ static NTSTATUS STDCALL WvlBusPnpStartDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
 
     if (!lower)
-      return driver__complete_irp(irp, 0, STATUS_SUCCESS);
+      return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
     KeInitializeEvent(&event, NotificationEvent, FALSE);
     IoCopyCurrentIrpStackLocationToNext(irp);
     IoSetCompletionRoutine(
@@ -72,7 +72,7 @@ static NTSTATUS STDCALL WvlBusPnpStartDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
         bus->OldState = bus->State;
         bus->State = WvlBusStateStarted;
       }
-    return driver__complete_irp(
+    return WvlIrpComplete(
         irp,
         irp->IoStatus.Information,
         STATUS_SUCCESS
@@ -90,7 +90,7 @@ static NTSTATUS STDCALL WvlBusPnpRemoveDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
         status = WvlBusEnqueueIrp(bus, irp);
         if (status != STATUS_PENDING)
           /* Problem. */
-          return driver__complete_irp(irp, 0, status);
+          return WvlIrpComplete(irp, 0, status);
         /* Ok. */
         return status;
       }
@@ -146,7 +146,7 @@ static NTSTATUS STDCALL WvlBusPnpQueryDevRelations(
         status = WvlBusEnqueueIrp(bus, irp);
         if (status != STATUS_PENDING)
           /* Problem. */
-          return driver__complete_irp(irp, 0, status);
+          return WvlIrpComplete(irp, 0, status);
         /* Ok. */
         return status;
       }
@@ -159,7 +159,7 @@ static NTSTATUS STDCALL WvlBusPnpQueryDevRelations(
             IoSkipCurrentIrpStackLocation(irp);
             return IoCallDriver(lower, irp);
           }
-        return driver__complete_irp(
+        return WvlIrpComplete(
             irp,
             irp->IoStatus.Information,
             irp->IoStatus.Status
@@ -176,7 +176,7 @@ static NTSTATUS STDCALL WvlBusPnpQueryDevRelations(
             IoSkipCurrentIrpStackLocation(irp);
             return IoCallDriver(lower, irp);
           }
-        return driver__complete_irp(irp, 0, STATUS_SUCCESS);
+        return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
       }
     dev_relations->Count = bus->BusPrivate_.NodeCount;
 
@@ -198,7 +198,7 @@ static NTSTATUS STDCALL WvlBusPnpQueryDevRelations(
         IoSkipCurrentIrpStackLocation(irp);
         return IoCallDriver(lower, irp);
       }
-    return driver__complete_irp(irp, irp->IoStatus.Information, status);
+    return WvlIrpComplete(irp, irp->IoStatus.Information, status);
   }
 
 static NTSTATUS STDCALL WvlBusPnpQueryCapabilities(
@@ -215,7 +215,7 @@ static NTSTATUS STDCALL WvlBusPnpQueryCapabilities(
     if (DeviceCapabilities->Version != 1 ||
         DeviceCapabilities->Size < sizeof (DEVICE_CAPABILITIES)
       )
-      return driver__complete_irp(irp, 0, STATUS_UNSUCCESSFUL);
+      return WvlIrpComplete(irp, 0, STATUS_UNSUCCESSFUL);
     /* Let the lower DEVICE_OBJECT handle the IRP. */
     lower = bus->LowerDeviceObject;
     IoSkipCurrentIrpStackLocation(irp);
@@ -336,7 +336,7 @@ static NTSTATUS STDCALL WvlBusPnpSimple(
         IoSkipCurrentIrpStackLocation(irp);
         return IoCallDriver(lower, irp);
       }
-    return driver__complete_irp(irp, irp->IoStatus.Information, status);
+    return WvlIrpComplete(irp, irp->IoStatus.Information, status);
   }
 
 /* Bus PnP dispatch routine. */

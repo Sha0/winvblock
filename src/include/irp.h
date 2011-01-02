@@ -25,6 +25,10 @@
  * IRP specifics.
  */
 
-
+extern WVL_M_LIB NTSTATUS STDCALL WvlIrpComplete(
+    IN PIRP,
+    IN ULONG_PTR,
+    IN NTSTATUS
+  );
 
 #endif	/* WV_M_IRP_H_ */

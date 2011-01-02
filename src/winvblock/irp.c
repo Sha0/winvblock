@@ -29,3 +29,24 @@
 #include "winvblock.h"
 #include "debug.h"
 
+/**
+ * Common IRP completion routine.
+ *
+ * @v Irp               Points to the IRP to complete.
+ * @v Info              Number of bytes returned for the IRP, or 0.
+ * @v Status            Status for the IRP to complete.
+ * @ret NTSTATUS        Returns the status value, as passed.
+ */
+WVL_M_LIB NTSTATUS STDCALL WvlIrpComplete(
+    IN PIRP Irp,
+    IN ULONG_PTR Info,
+    IN NTSTATUS Status
+  ) {
+    Irp->IoStatus.Information = Info;
+    Irp->IoStatus.Status = Status;
+    IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    #ifdef DEBUGIRPS
+    Debug_IrpEnd(Irp, Status);
+    #endif
+    return Status;
+  }

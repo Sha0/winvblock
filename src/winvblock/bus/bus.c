@@ -30,7 +30,7 @@
 #include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
-#include "driver.h"
+#include "irp.h"
 #include "bus.h"
 #include "debug.h"
 
@@ -73,7 +73,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusSysCtl(
         IoSkipCurrentIrpStackLocation(Irp);
         return IoCallDriver(lower, Irp);
       }
-    return driver__complete_irp(Irp, 0, STATUS_SUCCESS);
+    return WvlIrpComplete(Irp, 0, STATUS_SUCCESS);
   }
 
 /* Handle a power IRP. */
@@ -88,7 +88,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusPower(
         IoSkipCurrentIrpStackLocation(Irp);
         return PoCallDriver(lower, Irp);
       }
-    return driver__complete_irp(Irp, 0, STATUS_SUCCESS);
+    return WvlIrpComplete(Irp, 0, STATUS_SUCCESS);
   }
 
 /**

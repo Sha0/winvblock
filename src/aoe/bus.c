@@ -29,6 +29,7 @@
 #include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
+#include "irp.h"
 #include "driver.h"
 #include "bus.h"
 #include "device.h"
@@ -76,7 +77,7 @@ static NTSTATUS STDCALL AoeBusDevCtlDetach_(IN PIRP irp) {
         status = WvlBusEnqueueIrp(&AoeBusMain, irp);
         if (status != STATUS_PENDING)
           /* Problem. */
-          return driver__complete_irp(irp, 0, status);
+          return WvlIrpComplete(irp, 0, status);
         /* Ok. */
         return status;
       }
@@ -108,8 +109,8 @@ static NTSTATUS STDCALL AoeBusDevCtlDetach_(IN PIRP irp) {
           }
       }
     if (!walker)
-      return driver__complete_irp(irp, 0, STATUS_INVALID_PARAMETER);
-    return driver__complete_irp(irp, 0, STATUS_SUCCESS);
+      return WvlIrpComplete(irp, 0, STATUS_INVALID_PARAMETER);
+    return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
   }
 
 NTSTATUS STDCALL AoeBusDevCtl(
@@ -131,7 +132,7 @@ NTSTATUS STDCALL AoeBusDevCtl(
 
         default:
           DBG("Unsupported IOCTL\n");
-          return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+          return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
       }
   }
 
@@ -240,7 +241,7 @@ static NTSTATUS STDCALL AoeBusPnpQueryDevText_(
     wv_free(str);
     alloc_str:
 
-    return driver__complete_irp(irp, irp->IoStatus.Information, status);
+    return WvlIrpComplete(irp, irp->IoStatus.Information, status);
   }
 
 NTSTATUS STDCALL AoeBusAttachFdo(

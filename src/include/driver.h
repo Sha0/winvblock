@@ -38,7 +38,6 @@
 #define POOLSIZE 2048
 
 extern PDRIVER_OBJECT WvDriverObj;
-extern WVL_M_LIB VOID STDCALL WvDriverCompletePendingIrp(IN PIRP);
 /* Note the exception to the function naming convention. */
 extern NTSTATUS STDCALL DriverEntry(
     IN PDRIVER_OBJECT,
@@ -126,11 +125,6 @@ static const WV_S_DRIVER_DUMMY_IDS DummyIds = {       \
     DummyIds ## String_                               \
   }
 
-extern WVL_M_LIB NTSTATUS STDCALL driver__complete_irp(
-    IN PIRP,
-    IN ULONG_PTR,
-    IN NTSTATUS
-  );
 extern WVL_M_LIB BOOLEAN STDCALL WvDriverBusAddDev(
     IN WV_SP_DEV_T
   );

@@ -30,6 +30,7 @@
 #include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
+#include "irp.h"
 #include "driver.h"
 #include "bus.h"
 #include "device.h"
@@ -163,7 +164,7 @@ NTSTATUS STDCALL WvDevPnpQueryId(IN WV_SP_DEV_T dev, IN PIRP irp) {
     wv_free(str);
     alloc_str:
 
-    return driver__complete_irp(irp, irp->IoStatus.Information, status);
+    return WvlIrpComplete(irp, irp->IoStatus.Information, status);
   }
 
 /**

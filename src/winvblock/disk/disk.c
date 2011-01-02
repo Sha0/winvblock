@@ -30,6 +30,7 @@
 #include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
+#include "irp.h"
 #include "driver.h"
 #include "bus.h"
 #include "device.h"
@@ -104,11 +105,11 @@ static VOID STDCALL WvDiskDefaultClose_(IN WV_SP_DISK_T disk_ptr) {
 
 static NTSTATUS STDCALL disk__power_(IN WV_SP_DEV_T dev, IN PIRP irp) {
     PoStartNextPowerIrp(irp);
-    return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
 static NTSTATUS STDCALL disk__sys_ctl_(IN WV_SP_DEV_T dev, IN PIRP irp) {
-    return driver__complete_irp(irp, 0, irp->IoStatus.Status);
+    return WvlIrpComplete(irp, 0, irp->IoStatus.Status);
   }
 
 /**

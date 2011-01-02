@@ -33,6 +33,7 @@
 #include "winvblock.h"
 #include "wv_stdlib.h"
 #include "wv_string.h"
+#include "irp.h"
 #include "driver.h"
 #include "bus.h"
 #include "device.h"
@@ -390,28 +391,6 @@ static NTSTATUS STDCALL driver__dispatch_not_supported_(
     return irp->IoStatus.Status;
   }
 
-/**
- * Common IRP completion routine.
- *
- * @v irp               Points to the IRP to complete.
- * @v info              Number of bytes returned for the IRP, or 0.
- * @v status            Status for the IRP to complete.
- * @ret NTSTATUS        Returns the status value, as passed.
- */
-WVL_M_LIB NTSTATUS STDCALL driver__complete_irp(
-    IN PIRP irp,
-    IN ULONG_PTR info,
-    IN NTSTATUS status
-  ) {
-    irp->IoStatus.Information = info;
-    irp->IoStatus.Status = status;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
-    #ifdef DEBUGIRPS
-    Debug_IrpEnd(irp, status);
-    #endif
-    return status;
-  }
-
 /* Handle a power IRP. */
 static NTSTATUS driver__dispatch_power_(
     IN PDEVICE_OBJECT dev_obj,
@@ -427,13 +406,13 @@ static NTSTATUS driver__dispatch_power_(
     if (!dev || dev->State == WvDevStateDeleted) {
         /* Even if it doesn't, a power IRP is important! */
         PoStartNextPowerIrp(irp);
-        return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
+        return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
       }
     /* Call the particular device's power handler. */
     if (dev->IrpMj && dev->IrpMj->Power)
       return dev->IrpMj->Power(dev, irp);
     /* Otherwise, we don't support the IRP. */
-    return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
 /* Handle an IRP_MJ_CREATE or IRP_MJ_CLOSE IRP. */
@@ -449,9 +428,9 @@ static NTSTATUS driver__dispatch_create_close_(
     #endif
     /* Check that the device exists. */
     if (!dev || dev->State == WvDevStateDeleted)
-      return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
+      return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Always succeed with nothing to do. */
-    return driver__complete_irp(irp, 0, STATUS_SUCCESS);
+    return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
   }
 
 /* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
@@ -467,12 +446,12 @@ static NTSTATUS driver__dispatch_sys_ctl_(
     #endif
     /* Check that the device exists. */
     if (!dev || dev->State == WvDevStateDeleted)
-      return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
+      return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Call the particular device's power handler. */
     if (dev->IrpMj && dev->IrpMj->SysCtl)
       return dev->IrpMj->SysCtl(dev, irp);
     /* Otherwise, we don't support the IRP. */
-    return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
 /* Handle an IRP_MJ_DEVICE_CONTROL IRP. */
@@ -489,7 +468,7 @@ static NTSTATUS driver__dispatch_dev_ctl_(
     #endif
     /* Check that the device exists. */
     if (!dev || dev->State == WvDevStateDeleted)
-      return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
+      return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Call the particular device's power handler. */
     if (dev->IrpMj && dev->IrpMj->DevCtl) {
         return dev->IrpMj->DevCtl(
@@ -499,7 +478,7 @@ static NTSTATUS driver__dispatch_dev_ctl_(
           );
       }
     /* Otherwise, we don't support the IRP. */
-    return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
 /* Handle an IRP_MJ_SCSI IRP. */
@@ -516,7 +495,7 @@ static NTSTATUS driver__dispatch_scsi_(
     #endif
     /* Check that the device exists. */
     if (!dev || dev->State == WvDevStateDeleted)
-      return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
+      return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Call the particular device's power handler. */
     if (dev->IrpMj && dev->IrpMj->Scsi) {
         return dev->IrpMj->Scsi(
@@ -526,7 +505,7 @@ static NTSTATUS driver__dispatch_scsi_(
           );
       }
     /* Otherwise, we don't support the IRP. */
-    return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
 /* Handle an IRP_MJ_PNP IRP. */
@@ -544,7 +523,7 @@ static NTSTATUS driver__dispatch_pnp_(
     #endif
     /* Check that the device exists. */
     if (!dev || dev->State == WvDevStateDeleted)
-      return driver__complete_irp(irp, 0, STATUS_NO_SUCH_DEVICE);
+      return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Call the particular device's power handler. */
     if (dev->IrpMj && dev->IrpMj->Pnp) {
         status = dev->IrpMj->Pnp(
@@ -559,7 +538,7 @@ static NTSTATUS driver__dispatch_pnp_(
         return status;
       }
     /* Otherwise, we don't support the IRP. */
-    return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
 static VOID STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
@@ -583,13 +562,6 @@ static VOID STDCALL driver__unload_(IN PDRIVER_OBJECT DriverObject) {
     wv_free(WvDriverOsLoadOpts_);
     WvDriverStarted_ = FALSE;
     DBG("Done\n");
-  }
-
-WVL_M_LIB VOID STDCALL WvDriverCompletePendingIrp(IN PIRP Irp) {
-    #ifdef DEBUGIRPS
-    Debug_IrpEnd(Irp, Irp->IoStatus.Status);
-    #endif
-    IoCompleteRequest(Irp, IO_NO_INCREMENT);
   }
 
 /* Pass an IRP_MJ_SYSTEM_CONTROL IRP to the bus. */
@@ -665,7 +637,7 @@ static NTSTATUS STDCALL WvDriverBusDevCtlDetach_(
         status = WvlBusEnqueueIrp(&WvDriverBus_, irp);
         if (status != STATUS_PENDING)
           /* Problem. */
-          return driver__complete_irp(irp, 0, status);
+          return WvlIrpComplete(irp, 0, status);
         /* Ok. */
         return status;
       }
@@ -697,8 +669,8 @@ static NTSTATUS STDCALL WvDriverBusDevCtlDetach_(
           }
       }
     if (!walker)
-      return driver__complete_irp(irp, 0, STATUS_INVALID_PARAMETER);
-    return driver__complete_irp(irp, 0, STATUS_SUCCESS);
+      return WvlIrpComplete(irp, 0, STATUS_INVALID_PARAMETER);
+    return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
   }
 
 NTSTATUS STDCALL WvDriverBusDevCtl_(
@@ -846,7 +818,7 @@ static NTSTATUS STDCALL WvDriverBusPnpQueryDevText_(
     wv_free(str);
     alloc_str:
 
-    return driver__complete_irp(irp, irp->IoStatus.Information, status);
+    return WvlIrpComplete(irp, irp->IoStatus.Information, status);
   }
 
 /**
@@ -863,7 +835,7 @@ static NTSTATUS STDCALL WvDriverDummyPnp_(
     IN UCHAR code
   ) {
     if (code != IRP_MN_QUERY_ID)
-      return driver__complete_irp(irp, 0, STATUS_NOT_SUPPORTED);
+      return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
 
     /* The WV_S_DEV_T extension points to the dummy IDs. */
     return WvDriverDummyIds(irp, dev->ext);
@@ -1060,7 +1032,7 @@ WVL_M_LIB NTSTATUS STDCALL WvDriverDummyIds(
           break;
 
         default:
-          return driver__complete_irp(Irp, 0, STATUS_NOT_SUPPORTED);
+          return WvlIrpComplete(Irp, 0, STATUS_NOT_SUPPORTED);
       }
 
     /* Allocate the return buffer. */
@@ -1081,7 +1053,7 @@ WVL_M_LIB NTSTATUS STDCALL WvDriverDummyIds(
     /* irp->IoStatus.Information not freed. */
     alloc_info:
 
-    return driver__complete_irp(Irp, Irp->IoStatus.Information, status);
+    return WvlIrpComplete(Irp, Irp->IoStatus.Information, status);
   }
 
 /** Library functions that don't depend on the WinVBlock bus. */
