@@ -87,7 +87,7 @@ typedef struct AOE_MOUNT_DISK {
 typedef struct AOE_MOUNT_DISKS {
     winvblock__uint32 Count;
     AOE_S_MOUNT_DISK Disk[];
-  } AOE_S_MOUNT_DISKS, * AOE_S_MOUNT_DISKS;
+  } AOE_S_MOUNT_DISKS, * AOE_SP_MOUNT_DISKS;
 
 extern void aoe__reset_probe(void);
 

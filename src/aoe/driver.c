@@ -1644,7 +1644,7 @@ NTSTATUS STDCALL AoeBusDevCtlScan(IN PIRP irp) {
     KIRQL irql;
     winvblock__uint32 count;
     AOE_SP_TARGET_LIST_ target_walker;
-    AOE_S_MOUNT_TARGETS_ptr targets;
+    AOE_SP_MOUNT_TARGETS targets;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     DBG("Got IOCTL_AOE_SCAN...\n");
@@ -1699,7 +1699,7 @@ NTSTATUS STDCALL AoeBusDevCtlScan(IN PIRP irp) {
 NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
     winvblock__uint32 count;
     WVL_SP_BUS_NODE walker;
-    AOE_S_MOUNT_DISKS_ptr disks;
+    AOE_SP_MOUNT_DISKS disks;
     wv_size_t size;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
