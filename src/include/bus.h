@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef WV_M_BUS_H_
-#  define WV_M_BUS_H_
+#ifndef WVL_M_BUS_H_
+#  define WVL_M_BUS_H_
 
 /**
  * @file
@@ -159,4 +159,4 @@ extern winvblock__lib_func winvblock__uint32 STDCALL WvBusGetNodeCount(
     WV_SP_BUS_T
   );
 
-#endif  /* WV_M_BUS_H_ */
+#endif  /* WVL_M_BUS_H_ */
