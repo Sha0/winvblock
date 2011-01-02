@@ -31,10 +31,10 @@
 #define WVL_M_WLIT L"WinVBlock"
 
 /* To export functions while serving as a library. */
-#  ifdef PROJECT_BUS
-#    define WVL_M_LIB __declspec(dllexport)
-#  else
-#    define WVL_M_LIB __declspec(dllimport)
-#  endif
+#ifdef PROJECT_WV
+#  define WVL_M_LIB __declspec(dllexport)
+#else
+#  define WVL_M_LIB __declspec(dllimport)
+#endif
 
 #endif  /* WVL_M_WINVBLOCK_H_ */

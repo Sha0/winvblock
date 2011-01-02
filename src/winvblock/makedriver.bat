@@ -23,7 +23,7 @@ echo TARGETPATH=obj			>> sources
 echo LINKLIBS=%links%			>> sources
 echo TARGETLIBS=%links%			>> sources
 echo SOURCES=%c%			>> sources
-echo C_DEFINES=-DPROJECT_BUS=1		>> sources
+echo C_DEFINES=-DPROJECT_WV=1		>> sources
 
 echo NAME %name%.sys			> %name%.def
 
