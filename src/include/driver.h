@@ -39,10 +39,7 @@
 
 extern PDRIVER_OBJECT WvDriverObj;
 /* Note the exception to the function naming convention. */
-extern NTSTATUS STDCALL DriverEntry(
-    IN PDRIVER_OBJECT,
-    IN PUNICODE_STRING
-  );
+extern DRIVER_INITIALIZE DriverEntry;
 
 /* The physical/function device object's (PDO's/FDO's) DeviceExtension */
 typedef struct WV_DEV_EXT {
