@@ -30,13 +30,6 @@
 #define WVL_M_LIT "WinVBlock"
 #define WVL_M_WLIT L"WinVBlock"
 
-/* A common way to define a structure. */
-#  define winvblock__def_struct( x ) \
-\
-struct _##x;\
-typedef struct _##x x, *x##_ptr;\
-struct _##x
-
 /* A common way to define a type. */
 #  define winvblock__def_type( old, new ) \
 \
