@@ -100,7 +100,7 @@ static NTSTATUS STDCALL AoeBusDevCtlDetach_(IN PIRP irp) {
               }
             /* Detach the node and free it. */
             DBG("Removing unit %d\n", unit_num);
-            WvBusRemoveNode(walker);
+            WvlBusRemoveNode(walker);
             WvDevClose(dev);
             IoDeleteDevice(dev->Self);
             WvDevFree(dev);

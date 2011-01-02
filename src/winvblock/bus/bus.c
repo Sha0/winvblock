@@ -205,7 +205,7 @@ static VOID STDCALL WvlBusAddNode_(WVL_SP_BUS_T bus, WVL_SP_BUS_NODE new_node) {
  * Don't call this function yourself.  It expects to have exclusive
  * access to the bus' list of children.
  */
-static VOID STDCALL WvBusRemoveNode_(
+static VOID STDCALL WvlBusRemoveNode_(
     WVL_SP_BUS_T bus,
     WVL_SP_BUS_NODE node
   ) {
@@ -240,7 +240,7 @@ WVL_M_LIB VOID WvlBusProcessWorkItems(WVL_SP_BUS_T Bus) {
 
             case WvBusWorkItemCmdRemovePdo_:
               node = work_item->Context.Node;
-              WvBusRemoveNode_(Bus, node);
+              WvlBusRemoveNode_(Bus, node);
               nodes_changed = TRUE;
               break;
 
@@ -478,7 +478,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusAddNode(
  * When WvlBusProcessWorkItems() is called for the bus, it will
  * then remove the node.  This is usually from the bus' thread.
  */
-WVL_M_LIB NTSTATUS STDCALL WvBusRemoveNode(
+WVL_M_LIB NTSTATUS STDCALL WvlBusRemoveNode(
     WVL_SP_BUS_NODE Node
   ) {
     WVL_SP_BUS_T bus;
