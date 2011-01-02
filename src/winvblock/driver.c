@@ -254,7 +254,7 @@ static NTSTATUS STDCALL driver__attach_fdo_(
 static NTSTATUS STDCALL WvDriverBusEstablish_(IN PUNICODE_STRING RegistryPath) {
     NTSTATUS status;
     HANDLE reg_key;
-    winvblock__uint32 pdo_done = 0;
+    UINT32 pdo_done = 0;
     PDEVICE_OBJECT bus_pdo = NULL;
 
     /* Open our Registry path. */
@@ -664,7 +664,7 @@ static NTSTATUS STDCALL WvDriverBusDevCtlDetach_(
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-    winvblock__uint32 unit_num;
+    UINT32 unit_num;
     WVL_SP_BUS_NODE walker;
 
     if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
@@ -679,7 +679,7 @@ static NTSTATUS STDCALL WvDriverBusDevCtlDetach_(
         return status;
       }
     /* If we get here, we should be called by WvBusProcessWorkItems() */
-    unit_num = *((winvblock__uint32_ptr) irp->AssociatedIrp.SystemBuffer);
+    unit_num = *((PUINT32) irp->AssociatedIrp.SystemBuffer);
     DBG("Request to detach unit: %d\n", unit_num);
 
     walker = NULL;
@@ -796,7 +796,7 @@ static NTSTATUS STDCALL WvDriverBusPnpQueryDevText_(
     WCHAR (*str)[512];
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
-    winvblock__uint32 str_len;
+    UINT32 str_len;
 
     /* Allocate a string buffer. */
     str = wv_mallocz(sizeof *str);
@@ -1044,7 +1044,7 @@ WVL_M_LIB NTSTATUS STDCALL WvDriverDummyIds(
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(Irp);
     BUS_QUERY_ID_TYPE query_type = io_stack_loc->Parameters.QueryId.IdType;
     const WCHAR * ids;
-    winvblock__uint32 len;
+    UINT32 len;
     NTSTATUS status;
 
     switch (query_type) {

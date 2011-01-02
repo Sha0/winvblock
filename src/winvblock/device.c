@@ -106,10 +106,10 @@ static PDEVICE_OBJECT STDCALL WvDevMakePdo_(IN WV_SP_DEV_T dev) {
  * @v query_type                The query type.
  * @v buf                       Wide character, 512-element buffer for the
  *                              ID response.
- * @ret winvblock__uint32       The number of wide characters in the response,
+ * @ret UINT32       The number of wide characters in the response,
  *                              or 0 upon a failure.
  */
-winvblock__uint32 STDCALL WvDevPnpId(
+UINT32 STDCALL WvDevPnpId(
     IN WV_SP_DEV_T dev,
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
@@ -121,7 +121,7 @@ winvblock__uint32 STDCALL WvDevPnpId(
 NTSTATUS STDCALL WvDevPnpQueryId(IN WV_SP_DEV_T dev, IN PIRP irp) {
     NTSTATUS status;
     WCHAR (*str)[512];
-    winvblock__uint32 str_len;
+    UINT32 str_len;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     /* Allocate the working buffer. */

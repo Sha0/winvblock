@@ -55,7 +55,7 @@ static NTSTATUS STDCALL disk_dev_ctl__storage_query_prop_(
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status = STATUS_INVALID_PARAMETER;
     PSTORAGE_PROPERTY_QUERY storage_prop_query = irp->AssociatedIrp.SystemBuffer;
-    winvblock__uint32 copy_size;
+    UINT32 copy_size;
     STORAGE_ADAPTER_DESCRIPTOR storage_adapter_desc;
     STORAGE_DEVICE_DESCRIPTOR storage_dev_desc;
 
@@ -77,7 +77,7 @@ static NTSTATUS STDCALL disk_dev_ctl__storage_query_prop_(
         #if 0
         storage_adapter_desc.MaximumTransferLength = SECTORSIZE * POOLSIZE;
         #endif
-        storage_adapter_desc.MaximumPhysicalPages = (winvblock__uint32) -1;
+        storage_adapter_desc.MaximumPhysicalPages = (UINT32) -1;
         storage_adapter_desc.AlignmentMask = 0;
         storage_adapter_desc.AdapterUsesPio = TRUE;
         storage_adapter_desc.AdapterScansDown = FALSE;
@@ -140,7 +140,7 @@ static NTSTATUS STDCALL disk_dev_ctl__get_geom_(
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-    winvblock__uint32 copy_size;
+    UINT32 copy_size;
     DISK_GEOMETRY disk_geom;
     WV_SP_DISK_T disk;
 
@@ -170,7 +170,7 @@ static NTSTATUS STDCALL disk_dev_ctl__scsi_get_address_(
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc= IoGetCurrentIrpStackLocation(irp);
-    winvblock__uint32 copy_size;
+    UINT32 copy_size;
     SCSI_ADDRESS scsi_address;
 
     copy_size = (

@@ -47,13 +47,13 @@ WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
     IN PUCHAR PhysicalMemory,
     IN WV_SP_PROBE_INT_VECTOR InterruptVector
   ) {
-    winvblock__uint32 int13_hook;
+    UINT32 int13_hook;
     WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook;
     UCHAR sig[9] = {0};
     UCHAR ven_id[9] = {0};
 
-    int13_hook = (((winvblock__uint32) InterruptVector->Segment) << 4) +
-      ((winvblock__uint32) InterruptVector->Offset);
+    int13_hook = (((UINT32) InterruptVector->Segment) << 4) +
+      ((UINT32) InterruptVector->Offset);
     safe_mbr_hook = (WV_SP_PROBE_SAFE_MBR_HOOK) (PhysicalMemory + int13_hook);
     RtlCopyMemory(sig, safe_mbr_hook->Signature, 8);
     RtlCopyMemory(ven_id, safe_mbr_hook->VendorId, 8);

@@ -54,7 +54,7 @@ static NTSTATUS STDCALL disk_pnp__query_dev_text_(
     WCHAR (*str)[512];
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
-    winvblock__uint32 str_len;
+    UINT32 str_len;
 
     disk = disk__get_ptr(dev);
     /* Allocate a string buffer. */

@@ -66,9 +66,9 @@ typedef WV_F_DEV_INIT * WV_FP_DEV_INIT;
  * @v query_type                The query type.
  * @v buf                       Wide character, 512-element buffer for the
  *                              ID response.
- * @ret winvblock__uint32       The number of wide characters in the response.
+ * @ret UINT32       The number of wide characters in the response.
  */
-typedef winvblock__uint32 STDCALL WV_F_DEV_PNP_ID(
+typedef UINT32 STDCALL WV_F_DEV_PNP_ID(
     IN WV_SP_DEV_T,
     IN BUS_QUERY_ID_TYPE,
     IN OUT WCHAR (*)[512]
@@ -170,7 +170,7 @@ struct WV_DEV_T {
     /* Points to the parent bus' DEVICE_OBJECT */
     PDEVICE_OBJECT Parent;
     /* The device's child ID relative to the parent bus. */
-    winvblock__uint32 DevNum;
+    UINT32 DevNum;
     /* Points to the driver. */
     PDRIVER_OBJECT DriverObject;
     /* Current state of the device. */

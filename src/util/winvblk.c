@@ -225,7 +225,7 @@ Parameters:\n\
 static int STDCALL cmd_scan(void) {
     AOE_SP_MOUNT_TARGETS targets;
     DWORD bytes_returned;
-    winvblock__uint32 i;
+    UINT32 i;
     UCHAR string[256];
     int status = 2;
 
@@ -300,7 +300,7 @@ static int STDCALL cmd_scan(void) {
 static int STDCALL cmd_show(void) {
     AOE_SP_MOUNT_DISKS mounted_disks;
     DWORD bytes_returned;
-    winvblock__uint32 i;
+    UINT32 i;
     UCHAR string[256];
     int status = 2;
 
@@ -374,7 +374,7 @@ static int STDCALL cmd_show(void) {
 
 static int STDCALL cmd_mount(void) {
     UCHAR mac_addr[6];
-    winvblock__uint32 ver_major, ver_minor;
+    UINT32 ver_major, ver_minor;
     UCHAR in_buf[sizeof (WV_S_MOUNT_DISK) + 1024];
     DWORD bytes_returned;
 
@@ -429,7 +429,7 @@ static int STDCALL cmd_mount(void) {
   }
 
 static int STDCALL cmd_umount(void) {
-    winvblock__uint32 disk_num;
+    UINT32 disk_num;
     UCHAR in_buf[sizeof (WV_S_MOUNT_DISK) + 1024];
     DWORD bytes_returned;
 
@@ -501,7 +501,7 @@ static int STDCALL cmd_attach(void) {
   }
 
 static int STDCALL cmd_detach(void) {
-    winvblock__uint32 disk_num;
+    UINT32 disk_num;
     UCHAR in_buf[sizeof (WV_S_MOUNT_DISK) + 1024];
     DWORD bytes_returned;
 

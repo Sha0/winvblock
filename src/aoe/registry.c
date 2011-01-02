@@ -45,7 +45,7 @@ winvblock__bool STDCALL AoeRegSetup(OUT PNTSTATUS status_out) {
     OBJECT_ATTRIBUTES SubKeyObject;
     HANDLE
       ControlKeyHandle, NetworkClassKeyHandle, SubKeyHandle;
-    winvblock__uint32
+    UINT32
       i, SubkeyIndex, ResultLength, InterfacesKeyStringLength,
       LinkageKeyStringLength, NdiKeyStringLength, NewValueLength;
     PWCHAR

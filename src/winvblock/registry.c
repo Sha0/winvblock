@@ -94,7 +94,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlRegFetchKvi(
     PKEY_VALUE_PARTIAL_INFORMATION * Kvi
   ) {
     UNICODE_STRING u_value_name;
-    winvblock__uint32 kvi_len;
+    UINT32 kvi_len;
     NTSTATUS status;
 
     /* Get value length. */
@@ -165,7 +165,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlRegFetchSz(
     LPWSTR * Value
   ) {
     PKEY_VALUE_PARTIAL_INFORMATION kvi;
-    winvblock__uint32 value_len;
+    UINT32 value_len;
     NTSTATUS status;
 
     /* Fetch key value information. */
@@ -208,9 +208,9 @@ WVL_M_LIB NTSTATUS STDCALL WvlRegFetchMultiSz(
   ) {
     PKEY_VALUE_PARTIAL_INFORMATION kvi;
     LPWSTR string;
-    winvblock__uint32 num_strings;
-    winvblock__uint32 values_len;
-    winvblock__uint32 i;
+    UINT32 num_strings;
+    UINT32 values_len;
+    UINT32 i;
     NTSTATUS status;
 
     /* Fetch key value information. */
@@ -279,7 +279,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlRegFetchMultiSz(
 WVL_M_LIB NTSTATUS STDCALL WvlRegFetchDword(
     IN HANDLE RegKey,
     IN LPCWSTR ValueName,
-    OUT winvblock__uint32 * Value
+    OUT UINT32 * Value
   ) {
     PKEY_VALUE_PARTIAL_INFORMATION kvi;
     NTSTATUS status;
@@ -339,7 +339,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlRegStoreSz(
         0,
         REG_SZ,
         Value,
-        (winvblock__uint32) value_len
+        (UINT32) value_len
       );
     if (!NT_SUCCESS(status)) {
         DBG("Could not store value \"%S\": %x\n", ValueName, status);
@@ -360,7 +360,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlRegStoreSz(
 WVL_M_LIB NTSTATUS STDCALL WvlRegStoreDword(
     HANDLE RegKey,
     LPCWSTR ValueName,
-    winvblock__uint32 Value
+    UINT32 Value
   ) {
     UNICODE_STRING u_value_name;
     NTSTATUS status;

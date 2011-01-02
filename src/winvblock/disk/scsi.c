@@ -152,7 +152,7 @@ static NTSTATUS STDCALL disk_scsi__read_write_(
     OUT winvblock__bool_ptr completion
   ) {
     ULONGLONG start_sector;
-    winvblock__uint32 sector_count;
+    UINT32 sector_count;
     NTSTATUS status = STATUS_SUCCESS;
 
     if (cdb->AsByte[0] == SCSIOP_READ16 || cdb->AsByte[0] == SCSIOP_WRITE16) {
@@ -181,7 +181,7 @@ static NTSTATUS STDCALL disk_scsi__read_write_(
         sector_count != 0
       ) {
         DBG("Fixed sector_count (start_sector + sector_count off disk)!!\n");
-        sector_count = (winvblock__uint32) (disk->LBADiskSize - start_sector);
+        sector_count = (UINT32) (disk->LBADiskSize - start_sector);
       }
     if (sector_count * disk->SectorSize > srb->DataTransferLength) {
         DBG("Fixed sector_count (DataTransferLength " "too small)!!\n");
@@ -255,7 +255,7 @@ static NTSTATUS STDCALL disk_scsi__verify_(
     OUT winvblock__bool_ptr completion
   ) {
     LONGLONG start_sector;
-    winvblock__uint32 sector_count;
+    UINT32 sector_count;
 
     if (cdb->AsByte[0] == SCSIOP_VERIFY16) {
         REVERSE_BYTES_QUAD(
@@ -289,14 +289,14 @@ static NTSTATUS STDCALL disk_scsi__read_capacity_(
     IN PCDB cdb,
     OUT winvblock__bool_ptr completion
   ) {
-    winvblock__uint32 temp = disk->SectorSize;
+    UINT32 temp = disk->SectorSize;
     PREAD_CAPACITY_DATA data = (PREAD_CAPACITY_DATA) srb->DataBuffer;
 
     REVERSE_BYTES(&data->BytesPerBlock, &temp);
     if ((disk->LBADiskSize - 1) > 0xffffffff) {
         data->LogicalBlockAddress = -1;
       } else {
-        temp = (winvblock__uint32) (disk->LBADiskSize - 1);
+        temp = (UINT32) (disk->LBADiskSize - 1);
         REVERSE_BYTES(&data->LogicalBlockAddress, &temp);
       }
     irp->IoStatus.Information = sizeof (READ_CAPACITY_DATA);
@@ -312,7 +312,7 @@ static NTSTATUS STDCALL disk_scsi__read_capacity_16_(
     IN PCDB cdb,
     OUT winvblock__bool_ptr completion
   ) {
-    winvblock__uint32 temp;
+    UINT32 temp;
     LONGLONG big_temp;
 
     temp = disk->SectorSize;

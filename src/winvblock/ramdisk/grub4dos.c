@@ -46,10 +46,10 @@ ramdisk_grub4dos__find (
   PHYSICAL_ADDRESS PhysicalAddress;
   PUCHAR PhysicalMemory;
   WV_SP_PROBE_INT_VECTOR InterruptVector;
-  winvblock__uint32 Int13Hook;
+  UINT32 Int13Hook;
   WV_SP_PROBE_SAFE_MBR_HOOK SafeMbrHookPtr;
   WV_SP_GRUB4DOS_DRIVE_MAPPING Grub4DosDriveMapSlotPtr;
-  winvblock__uint32 i = 8;
+  UINT32 i = 8;
   winvblock__bool FoundGrub4DosMapping = FALSE;
   WV_SP_RAMDISK_T ramdisk_ptr;
 
@@ -79,7 +79,7 @@ ramdisk_grub4dos__find (
 	}
       Grub4DosDriveMapSlotPtr = (WV_SP_GRUB4DOS_DRIVE_MAPPING) (
           PhysicalMemory +
-          (((winvblock__uint32) InterruptVector->Segment) << 4) +
+          (((UINT32) InterruptVector->Segment) << 4) +
           0x20
         );
       while ( i-- )
@@ -129,10 +129,10 @@ ramdisk_grub4dos__find (
 	    }
 	  DBG ( "RAM Drive is type: %d\n", ramdisk_ptr->disk->Media );
 	  ramdisk_ptr->DiskBuf =
-	    ( winvblock__uint32 ) ( Grub4DosDriveMapSlotPtr[i].SectorStart *
+	    ( UINT32 ) ( Grub4DosDriveMapSlotPtr[i].SectorStart *
 				    512 );
 	  ramdisk_ptr->disk->LBADiskSize = ramdisk_ptr->DiskSize =
-	    ( winvblock__uint32 ) Grub4DosDriveMapSlotPtr[i].SectorCount;
+	    ( UINT32 ) Grub4DosDriveMapSlotPtr[i].SectorCount;
 	  ramdisk_ptr->disk->Heads = Grub4DosDriveMapSlotPtr[i].MaxHead + 1;
 	  ramdisk_ptr->disk->Sectors =
 	    Grub4DosDriveMapSlotPtr[i].DestMaxSector;

@@ -129,7 +129,7 @@ static NTSTATUS STDCALL io(
     IN WV_SP_DEV_T dev_ptr,
     IN WV_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
-    IN winvblock__uint32 sector_count,
+    IN UINT32 sector_count,
     IN PUCHAR buffer,
     IN PIRP irp
   ) {
@@ -311,10 +311,10 @@ filedisk_grub4dos__find (
   PHYSICAL_ADDRESS PhysicalAddress;
   PUCHAR PhysicalMemory;
   WV_SP_PROBE_INT_VECTOR InterruptVector;
-  winvblock__uint32 Int13Hook;
+  UINT32 Int13Hook;
   WV_SP_PROBE_SAFE_MBR_HOOK SafeMbrHookPtr;
   WV_SP_GRUB4DOS_DRIVE_MAPPING Grub4DosDriveMapSlotPtr;
-  winvblock__uint32 i;
+  UINT32 i;
   winvblock__bool FoundGrub4DosMapping = FALSE;
   WV_SP_FILEDISK_T filedisk_ptr;
   const char sig[] = "GRUB4DOS";
@@ -346,7 +346,7 @@ filedisk_grub4dos__find (
 	}
       Grub4DosDriveMapSlotPtr = (WV_SP_GRUB4DOS_DRIVE_MAPPING) (
           PhysicalMemory +
-          (((winvblock__uint32) InterruptVector->Segment) << 4)
+          (((UINT32) InterruptVector->Segment) << 4)
           + 0x20
         );
       /*

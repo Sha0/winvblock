@@ -63,7 +63,7 @@ typedef NTSTATUS STDCALL WV_F_DISK_IO(
     IN WV_SP_DEV_T,
     IN WV_E_DISK_IO_MODE,
     IN LONGLONG,
-    IN winvblock__uint32,
+    IN UINT32,
     IN PUCHAR,
     IN PIRP
   );
@@ -75,7 +75,7 @@ typedef WV_F_DISK_IO * WV_FP_DISK_IO;
  * @v disk_ptr        The disk being queried.
  * @ret UINT32        The maximum transfer length.
  */
-typedef winvblock__uint32 WV_F_DISK_MAX_XFER_LEN(IN WV_SP_DISK_T);
+typedef UINT32 WV_F_DISK_MAX_XFER_LEN(IN WV_SP_DISK_T);
 typedef WV_F_DISK_MAX_XFER_LEN * WV_FP_DISK_MAX_XFER_LEN;
 
 /**
@@ -111,10 +111,10 @@ struct WV_DISK_T {
     WV_S_DISK_OPS disk_ops;
     ULONGLONG LBADiskSize;
     ULONGLONG Cylinders;
-    winvblock__uint32 Heads;
-    winvblock__uint32 Sectors;
-    winvblock__uint32 SectorSize;
-    winvblock__uint32 SpecialFileCount;
+    UINT32 Heads;
+    UINT32 Sectors;
+    UINT32 SectorSize;
+    UINT32 SpecialFileCount;
     LIST_ENTRY tracking;
     winvblock__any_ptr ext;
   };
@@ -137,15 +137,15 @@ typedef UCHAR chs[3];
 #endif
 struct WVL_DISK_MBR {
     UCHAR code[440];
-    winvblock__uint32 disk_sig;
+    UINT32 disk_sig;
     winvblock__uint16 pad;
     struct {
         UCHAR status;
         chs chs_start;
         UCHAR type;
         chs chs_end;
-        winvblock__uint32 lba_start;
-        winvblock__uint32 lba_count;
+        UINT32 lba_start;
+        UINT32 lba_count;
       } partition[4] __attribute__((packed));
     winvblock__uint16 mbr_sig;
   } __attribute__((__packed__));

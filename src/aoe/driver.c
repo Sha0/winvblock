@@ -105,7 +105,7 @@ struct AOE_PACKET_ {
     winvblock__uint16 Major;
     UCHAR Minor;
     UCHAR Command;
-    winvblock__uint32 Tag;
+    UINT32 Tag;
 
     UCHAR WriteAFlag:1;
     UCHAR AsyncAFlag:1;
@@ -142,11 +142,11 @@ typedef struct AOE_PACKET_ AOE_S_PACKET_, * AOE_SP_PACKET_;
 /** An I/O request. */
 typedef struct AOE_IO_REQ_ {
     WV_E_DISK_IO_MODE Mode;
-    winvblock__uint32 SectorCount;
+    UINT32 SectorCount;
     PUCHAR Buffer;
     PIRP Irp;
-    winvblock__uint32 TagCount;
-    winvblock__uint32 TotalTags;
+    UINT32 TagCount;
+    UINT32 TotalTags;
   } AOE_S_IO_REQ_, * AOE_SP_IO_REQ_;
 
 /** A work item "tag". */
@@ -154,13 +154,13 @@ typedef struct AOE_WORK_TAG_ {
     AOE_E_TAG_TYPE_ type;
     WV_SP_DEV_T device;
     AOE_SP_IO_REQ_ request_ptr;
-    winvblock__uint32 Id;
+    UINT32 Id;
     AOE_SP_PACKET_ packet_data;
-    winvblock__uint32 PacketSize;
+    UINT32 PacketSize;
     LARGE_INTEGER FirstSendTime;
     LARGE_INTEGER SendTime;
-    winvblock__uint32 BufferOffset;
-    winvblock__uint32 SectorCount;
+    UINT32 BufferOffset;
+    UINT32 SectorCount;
     struct AOE_WORK_TAG_ * next;
     struct AOE_WORK_TAG_ * previous;
   } AOE_S_WORK_TAG_, * AOE_SP_WORK_TAG_;
@@ -187,13 +187,13 @@ typedef enum AOE_SEARCH_STATE_ {
 /** The AoE disk type. */
 typedef struct AOE_DISK_ {
     WV_SP_DISK_T disk;
-    winvblock__uint32 MTU;
+    UINT32 MTU;
     UCHAR ClientMac[6];
     UCHAR ServerMac[6];
-    winvblock__uint32 Major;
-    winvblock__uint32 Minor;
-    winvblock__uint32 MaxSectorsPerPacket;
-    winvblock__uint32 Timeout;
+    UINT32 Major;
+    UINT32 Minor;
+    UINT32 MaxSectorsPerPacket;
+    UINT32 Timeout;
     AOE_E_SEARCH_STATE_ search_state;
     WV_FP_DEV_FREE prev_free;
     LIST_ENTRY tracking;
@@ -457,7 +457,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
     AOE_SP_WORK_TAG_ tag, tag_walker;
     KIRQL Irql, InnerIrql;
     LARGE_INTEGER MaxSectorsPerPacketSendTime;
-    winvblock__uint32 MTU;
+    UINT32 MTU;
     AOE_SP_DISK_ aoe_disk_ptr;
 
     aoe_disk_ptr = AoeDiskFromDev_(disk_ptr->Dev);
@@ -806,14 +806,14 @@ static NTSTATUS STDCALL AoeDiskIo_(
     IN WV_SP_DEV_T dev_ptr,
     IN WV_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
-    IN winvblock__uint32 sector_count,
+    IN UINT32 sector_count,
     IN PUCHAR buffer,
     IN PIRP irp
   ) {
     AOE_SP_IO_REQ_ request_ptr;
     AOE_SP_WORK_TAG_ tag, new_tag_list = NULL, previous_tag = NULL;
     KIRQL Irql;
-    winvblock__uint32 i;
+    UINT32 i;
     PHYSICAL_ADDRESS PhysicalAddress;
     PUCHAR PhysicalMemory;
     WV_SP_DISK_T disk_ptr;
@@ -1092,7 +1092,7 @@ NTSTATUS STDCALL aoe__reply(
     IN PUCHAR SourceMac,
     IN PUCHAR DestinationMac,
     IN PUCHAR Data,
-    IN winvblock__uint32 DataSize
+    IN UINT32 DataSize
   )
   {
     AOE_SP_PACKET_ reply = (AOE_SP_PACKET_) Data;
@@ -1190,7 +1190,7 @@ NTSTATUS STDCALL aoe__reply(
 
     KeQuerySystemTime ( &CurrentTime );
     aoe_disk_ptr->Timeout -=
-      ( winvblock__uint32 ) ( ( aoe_disk_ptr->Timeout -
+      ( UINT32 ) ( ( aoe_disk_ptr->Timeout -
               ( CurrentTime.QuadPart -
           tag->FirstSendTime.QuadPart ) ) / 1024 );
     /*
@@ -1312,14 +1312,14 @@ static void STDCALL AoeThread_(IN void *StartContext)
   {
     NTSTATUS status;
     LARGE_INTEGER Timeout, CurrentTime, ProbeTime, ReportTime;
-    winvblock__uint32 NextTagId = 1;
+    UINT32 NextTagId = 1;
     AOE_SP_WORK_TAG_ tag;
     KIRQL Irql;
-    winvblock__uint32 Sends = 0;
-    winvblock__uint32 Resends = 0;
-    winvblock__uint32 ResendFails = 0;
-    winvblock__uint32 Fails = 0;
-    winvblock__uint32 RequestTimeout = 0;
+    UINT32 Sends = 0;
+    UINT32 Resends = 0;
+    UINT32 ResendFails = 0;
+    UINT32 Fails = 0;
+    UINT32 RequestTimeout = 0;
     WV_SP_DISK_T disk_ptr;
     AOE_SP_DISK_ aoe_disk_ptr;
 
@@ -1479,13 +1479,13 @@ static void STDCALL AoeThread_(IN void *StartContext)
     DBG ( "Exit\n" );
   }
 
-static winvblock__uint32 AoeDiskMaxXferLen_(IN WV_SP_DISK_T disk_ptr) {
+static UINT32 AoeDiskMaxXferLen_(IN WV_SP_DISK_T disk_ptr) {
     AOE_SP_DISK_ aoe_disk_ptr = AoeDiskFromDev_(disk_ptr->Dev);
 
     return disk_ptr->SectorSize * aoe_disk_ptr->MaxSectorsPerPacket;
   }
 
-static winvblock__uint32 STDCALL query_id(
+static UINT32 STDCALL query_id(
     IN WV_SP_DEV_T dev,
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
@@ -1505,7 +1505,7 @@ static winvblock__uint32 STDCALL query_id(
             ) + 1;
 
         case BusQueryHardwareIDs: {
-            winvblock__uint32 tmp;
+            UINT32 tmp;
 
             tmp = swprintf(*buf, WVL_M_WLIT L"\\AoEHardDisk") + 1;
             tmp += swprintf(*buf + tmp, L"GenDisk") + 4;
@@ -1524,8 +1524,8 @@ static winvblock__uint32 STDCALL query_id(
 #  pragma pack(1)
 #endif
 struct AOE_ABFT {
-    winvblock__uint32 Signature;  /* 0x54464261 (aBFT) */
-    winvblock__uint32 Length;
+    UINT32 Signature;  /* 0x54464261 (aBFT) */
+    UINT32 Length;
     UCHAR Revision;
     UCHAR Checksum;
     UCHAR OEMID[6];
@@ -1548,7 +1548,7 @@ static void STDCALL AoeDiskClose_(IN WV_SP_DISK_T disk_ptr) {
 static void AoeProcessAbft_(void) {
     PHYSICAL_ADDRESS PhysicalAddress;
     PUCHAR PhysicalMemory;
-    winvblock__uint32 Offset, Checksum, i;
+    UINT32 Offset, Checksum, i;
     winvblock__bool FoundAbft = FALSE;
     AOE_S_ABFT AoEBootRecord;
     AOE_SP_DISK_ aoe_disk;
@@ -1642,7 +1642,7 @@ static void AoeProcessAbft_(void) {
 
 NTSTATUS STDCALL AoeBusDevCtlScan(IN PIRP irp) {
     KIRQL irql;
-    winvblock__uint32 count;
+    UINT32 count;
     AOE_SP_TARGET_LIST_ target_walker;
     AOE_SP_MOUNT_TARGETS targets;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
@@ -1697,7 +1697,7 @@ NTSTATUS STDCALL AoeBusDevCtlScan(IN PIRP irp) {
   }
 
 NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
-    winvblock__uint32 count;
+    UINT32 count;
     WVL_SP_BUS_NODE walker;
     AOE_SP_MOUNT_DISKS disks;
     wv_size_t size;

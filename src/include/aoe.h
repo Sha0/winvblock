@@ -64,28 +64,28 @@ CTL_CODE(                               \
 typedef struct AOE_MOUNT_TARGET {
     UCHAR ClientMac[6];
     UCHAR ServerMac[6];
-    winvblock__uint32 Major;
-    winvblock__uint32 Minor;
+    UINT32 Major;
+    UINT32 Minor;
     LONGLONG LBASize;
     LARGE_INTEGER ProbeTime;
   } AOE_S_MOUNT_TARGET, * AOE_SP_MOUNT_TARGET;
 
 typedef struct AOE_MOUNT_TARGETS {
-    winvblock__uint32 Count;
+    UINT32 Count;
     AOE_S_MOUNT_TARGET Target[];
   } AOE_S_MOUNT_TARGETS, * AOE_SP_MOUNT_TARGETS;
 
 typedef struct AOE_MOUNT_DISK {
-    winvblock__uint32 Disk;
+    UINT32 Disk;
     UCHAR ClientMac[6];
     UCHAR ServerMac[6];
-    winvblock__uint32 Major;
-    winvblock__uint32 Minor;
+    UINT32 Major;
+    UINT32 Minor;
     LONGLONG LBASize;
   } AOE_S_MOUNT_DISK, * AOE_SP_MOUNT_DISK;
 
 typedef struct AOE_MOUNT_DISKS {
-    winvblock__uint32 Count;
+    UINT32 Count;
     AOE_S_MOUNT_DISK Disk[];
   } AOE_S_MOUNT_DISKS, * AOE_SP_MOUNT_DISKS;
 

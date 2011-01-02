@@ -62,15 +62,15 @@ typedef NTSTATUS STDCALL driver__dispatch_func(
   );
 /* PnP IDs for a dummy device. */
 typedef struct WV_DRIVER_DUMMY_IDS {
-    winvblock__uint32 DevOffset;
-    winvblock__uint32 DevLen;
-    winvblock__uint32 InstanceOffset;
-    winvblock__uint32 InstanceLen;
-    winvblock__uint32 HardwareOffset;
-    winvblock__uint32 HardwareLen;
-    winvblock__uint32 CompatOffset;
-    winvblock__uint32 CompatLen;
-    winvblock__uint32 Len;
+    UINT32 DevOffset;
+    UINT32 DevLen;
+    UINT32 InstanceOffset;
+    UINT32 InstanceLen;
+    UINT32 HardwareOffset;
+    UINT32 HardwareLen;
+    UINT32 CompatOffset;
+    UINT32 CompatLen;
+    UINT32 Len;
     const WCHAR * Ids;
     WCHAR Text[1];
   } WV_S_DRIVER_DUMMY_IDS, * WV_SP_DRIVER_DUMMY_IDS;

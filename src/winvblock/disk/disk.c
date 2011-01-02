@@ -78,7 +78,7 @@ WV_S_DEV_IRP_MJ disk__irp_mj_ = {
     disk_pnp__dispatch,
   };
 
-static winvblock__uint32 default_max_xfer_len(IN WV_SP_DISK_T disk_ptr) {
+static UINT32 default_max_xfer_len(IN WV_SP_DISK_T disk_ptr) {
     return 1024 * 1024;
   }
 
@@ -133,7 +133,7 @@ static PDEVICE_OBJECT STDCALL create_pdo(IN WV_SP_DEV_T dev_ptr) {
     PDEVICE_OBJECT dev_obj_ptr;
     static DEVICE_TYPE disk_types[WvDiskMediaTypes] =
       { FILE_DEVICE_DISK, FILE_DEVICE_DISK, FILE_DEVICE_CD_ROM };
-    static winvblock__uint32 characteristics[WvDiskMediaTypes] =
+    static UINT32 characteristics[WvDiskMediaTypes] =
       { FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE, 0,
       FILE_REMOVABLE_MEDIA | FILE_READ_ONLY_DEVICE
     };
@@ -181,7 +181,7 @@ struct WV_DISK_FAT_EXTRA {
     UCHAR bs_drvnum;
     UCHAR bs_resv1;
     UCHAR bs_bootsig;
-    winvblock__uint32 bs_volid;
+    UINT32 bs_volid;
     char bs_vollab[11];
     char bs_filsystype[8];
   } __attribute__((packed));
@@ -200,15 +200,15 @@ struct WV_DISK_FAT_SUPER {
     winvblock__uint16 bpb_fatsz16;
     winvblock__uint16 bpb_secpertrk;
     winvblock__uint16 bpb_numheads;
-    winvblock__uint32 bpb_hiddsec;
-    winvblock__uint32 bpb_totsec32;
+    UINT32 bpb_hiddsec;
+    UINT32 bpb_totsec32;
     union {
         struct { WV_S_DISK_FAT_EXTRA extra; } fat16;
         struct {
-            winvblock__uint32 bpb_fatsz32;
+            UINT32 bpb_fatsz32;
             winvblock__uint16 bpb_extflags;
             winvblock__uint16 bpb_fsver;
-            winvblock__uint32 bpb_rootclus;
+            UINT32 bpb_rootclus;
             winvblock__uint16 bpb_fsinfo;
             winvblock__uint16 bpb_bkbootsec;
             char bpb_reserved[12];
@@ -409,7 +409,7 @@ NTSTATUS STDCALL disk__io(
     IN WV_SP_DEV_T dev_ptr,
     IN WV_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
-    IN winvblock__uint32 sector_count,
+    IN UINT32 sector_count,
     IN PUCHAR buffer,
     IN PIRP irp
   ) {
@@ -429,6 +429,6 @@ NTSTATUS STDCALL disk__io(
   }
 
 /* See header for details. */
-winvblock__uint32 disk__max_xfer_len(IN WV_SP_DISK_T disk_ptr) {
+UINT32 disk__max_xfer_len(IN WV_SP_DISK_T disk_ptr) {
     return disk_ptr->disk_ops.MaxXferLen(disk_ptr);
   }

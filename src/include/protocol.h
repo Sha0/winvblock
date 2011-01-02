@@ -31,14 +31,14 @@
 extern winvblock__bool STDCALL Protocol_SearchNIC (
   IN PUCHAR Mac
  );
-extern winvblock__uint32 STDCALL Protocol_GetMTU (
+extern UINT32 STDCALL Protocol_GetMTU (
   IN PUCHAR Mac
  );
 extern winvblock__bool STDCALL Protocol_Send (
   IN PUCHAR SourceMac,
   IN PUCHAR DestinationMac,
   IN PUCHAR Data,
-  IN winvblock__uint32 DataSize,
+  IN UINT32 DataSize,
   IN void *PacketContext
  );
 extern NTSTATUS Protocol_Start (

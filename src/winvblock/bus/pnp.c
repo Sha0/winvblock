@@ -137,7 +137,7 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
     NTSTATUS status;
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-    winvblock__uint32 i;
+    UINT32 i;
     PDEVICE_RELATIONS dev_relations;
     PLIST_ENTRY node_link;
 

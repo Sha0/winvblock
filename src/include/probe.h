@@ -40,8 +40,8 @@ struct WV_PROBE_SAFE_MBR_HOOK {
     UCHAR Signature[8];
     UCHAR VendorId[8];
     WV_S_PROBE_INT_VECTOR PrevHook;
-    winvblock__uint32 Flags;
-    winvblock__uint32 Mbft;     /* MEMDISK only. */
+    UINT32 Flags;
+    UINT32 Mbft;     /* MEMDISK only. */
   } __attribute__((__packed__));
 #ifdef _MSC_VER
 #  pragma pack()

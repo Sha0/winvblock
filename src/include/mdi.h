@@ -27,12 +27,12 @@ struct WV_MDI_PATCH_AREA {
     winvblock__uint16 mdi_bytes;
     UCHAR mdi_version_minor;
     UCHAR mdi_version_major;
-    winvblock__uint32 diskbuf;
-    winvblock__uint32 disksize;
+    UINT32 diskbuf;
+    UINT32 disksize;
     winvblock__uint16 cmdline_off, cmdline_seg;
 
-    winvblock__uint32 oldint13;
-    winvblock__uint32 oldint15;
+    UINT32 oldint13;
+    UINT32 oldint15;
 
     winvblock__uint16 olddosmem;
     UCHAR bootloaderid;
@@ -47,10 +47,10 @@ struct WV_MDI_PATCH_AREA {
 
     winvblock__uint16 cylinders;
     winvblock__uint16 heads;
-    winvblock__uint32 sectors;
+    UINT32 sectors;
 
-    winvblock__uint32 mem1mb;
-    winvblock__uint32 mem16mb;
+    UINT32 mem1mb;
+    UINT32 mem16mb;
 
     UCHAR driveno;
     /* WinVBlock does not need anything more. */
@@ -65,13 +65,13 @@ typedef struct WV_MDI_PATCH_AREA WV_S_MDI_PATCH_AREA, * WV_SP_MDI_PATCH_AREA;
 #endif
 struct WV_MDI_MBFT {
     UCHAR Signature[4];	/* ("mBFT") */
-    winvblock__uint32 Length;
+    UINT32 Length;
     UCHAR Revision;
     UCHAR Checksum;
     UCHAR OEMID[6];
     UCHAR OEMTableID[8];
     UCHAR Reserved1[12];
-    winvblock__uint32 SafeHook;
+    UINT32 SafeHook;
     WV_S_MDI_PATCH_AREA mdi;
   } __attribute__((__packed__));
 typedef struct WV_MDI_MBFT WV_S_MDI_MBFT, * WV_SP_MDI_MBFT;

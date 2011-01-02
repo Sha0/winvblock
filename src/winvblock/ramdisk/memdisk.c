@@ -40,10 +40,10 @@
 
 static winvblock__bool STDCALL WvMemdiskCheckMbft_(
     PUCHAR phys_mem,
-    winvblock__uint32 offset
+    UINT32 offset
   ) {
     WV_SP_MDI_MBFT mbft = (WV_SP_MDI_MBFT) (phys_mem + offset);
-    winvblock__uint32 i;
+    UINT32 i;
     UCHAR chksum = 0;
     WV_SP_PROBE_SAFE_MBR_HOOK assoc_hook;
     WV_SP_RAMDISK_T ramdisk;
@@ -113,7 +113,7 @@ void WvMemdiskFind(void) {
     PUCHAR phys_mem;
     WV_SP_PROBE_INT_VECTOR int_vector;
     WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook;
-    winvblock__uint32 offset;
+    UINT32 offset;
     winvblock__bool found = FALSE;
 
     /* Find a MEMDISK.  We check the "safe hook" chain, then scan for mBFTs. */

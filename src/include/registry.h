@@ -48,7 +48,7 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlRegFetchMultiSz(
 extern WVL_M_LIB NTSTATUS STDCALL WvlRegFetchDword(
     IN HANDLE,
     IN LPCWSTR,
-    OUT winvblock__uint32 *
+    OUT UINT32 *
   );
 extern WVL_M_LIB NTSTATUS STDCALL WvlRegStoreSz(
     HANDLE,
@@ -58,7 +58,7 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlRegStoreSz(
 extern WVL_M_LIB NTSTATUS STDCALL WvlRegStoreDword(
     HANDLE,
     LPCWSTR,
-    winvblock__uint32
+    UINT32
   );
 
 #endif  /* WV_M_REGISTRY_H_ */

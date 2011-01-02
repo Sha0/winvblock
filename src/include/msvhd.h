@@ -37,20 +37,20 @@
 #endif
 struct WV_MSVHD_FOOTER {
     char cookie[8];
-    byte__array_union(winvblock__uint32, features);
-    byte__array_union(winvblock__uint32, file_ver);
+    byte__array_union(UINT32, features);
+    byte__array_union(UINT32, file_ver);
     byte__array_union(ULONGLONG, data_offset);
-    byte__array_union(winvblock__uint32, timestamp);
+    byte__array_union(UINT32, timestamp);
     char creator_app[4];
-    byte__array_union(winvblock__uint32, creator_ver);
-    byte__array_union(winvblock__uint32, creator_os);
+    byte__array_union(UINT32, creator_ver);
+    byte__array_union(UINT32, creator_os);
     byte__array_union(ULONGLONG, orig_size);
     byte__array_union(ULONGLONG, cur_size);
     byte__array_union(winvblock__uint16, geom_cyls);
     UCHAR geom_heads;
     UCHAR geom_sects_per_track;
-    byte__array_union(winvblock__uint32, type);
-    byte__array_union(winvblock__uint32, checksum);
+    byte__array_union(UINT32, type);
+    byte__array_union(UINT32, checksum);
     char uid[16];
     char saved_state;
     char reserved[427];

@@ -607,7 +607,7 @@ WVL_M_LIB NTSTATUS STDCALL WvBusEnqueueCustomWorkItem(
  * @v Node              The node whose unit number we request.
  * @ret UINT32          The unit number for the node.
  */
-WVL_M_LIB winvblock__uint32 STDCALL WvBusGetNodeNum(
+WVL_M_LIB UINT32 STDCALL WvBusGetNodeNum(
     IN WVL_SP_BUS_NODE Node
   ) {
     return Node->BusPrivate_.Num;
@@ -661,7 +661,7 @@ WVL_M_LIB PDEVICE_OBJECT STDCALL WvBusGetNodePdo(
  * In order for this function to yield a race-free, useful result, it
  * should be used by whatever thread calls WvBusProcessWorkItems()
  */
-WVL_M_LIB winvblock__uint32 STDCALL WvBusGetNodeCount(
+WVL_M_LIB UINT32 STDCALL WvBusGetNodeCount(
     WVL_SP_BUS_T Bus
   ) {
     return Bus->BusPrivate_.NodeCount;

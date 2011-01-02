@@ -51,7 +51,7 @@ xDbgPrint ( __FILE__, ( const PCHAR )__FUNCTION__, \
 extern WVL_M_LIB NTSTATUS STDCALL xDbgPrint (
   IN PCHAR File,
   IN PCHAR Function,
-  IN winvblock__uint32 Line
+  IN UINT32 Line
  );
 extern void Debug_Initialize (
   void

@@ -27,8 +27,8 @@
 
 typedef struct WV_RAMDISK_T {
     WV_SP_DISK_T disk;
-    winvblock__uint32 DiskBuf;
-    winvblock__uint32 DiskSize;
+    UINT32 DiskBuf;
+    UINT32 DiskSize;
     WV_FP_DEV_FREE prev_free;
     LIST_ENTRY tracking;
   } WV_S_RAMDISK_T, * WV_SP_RAMDISK_T;

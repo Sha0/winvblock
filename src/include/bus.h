@@ -65,7 +65,7 @@ typedef struct WVL_BUS_T {
     PDEVICE_OBJECT LowerDeviceObject;
     PDEVICE_OBJECT Pdo;
     PDEVICE_OBJECT Fdo;
-    winvblock__uint32 Children;
+    UINT32 Children;
     WVL_FP_BUS_THREAD Thread;
     KEVENT ThreadSignal;
     winvblock__bool Stop;
@@ -87,7 +87,7 @@ typedef struct WV_BUS_NODE {
         PDEVICE_OBJECT Pdo;
         WVL_SP_BUS_T Bus;
         /* The child's unit number relative to the parent bus. */
-        winvblock__uint32 Num;
+        UINT32 Num;
       } BusPrivate_;
   } WVL_S_BUS_NODE, * WVL_SP_BUS_NODE;
 
@@ -146,7 +146,7 @@ extern WVL_M_LIB NTSTATUS STDCALL WvBusPnp(
     IN PIRP,
     IN UCHAR
   );
-extern WVL_M_LIB winvblock__uint32 STDCALL WvBusGetNodeNum(
+extern WVL_M_LIB UINT32 STDCALL WvBusGetNodeNum(
     IN WVL_SP_BUS_NODE
   );
 extern WVL_M_LIB WVL_SP_BUS_NODE STDCALL WvBusGetNextNode(
@@ -156,7 +156,7 @@ extern WVL_M_LIB WVL_SP_BUS_NODE STDCALL WvBusGetNextNode(
 extern WVL_M_LIB PDEVICE_OBJECT STDCALL WvBusGetNodePdo(
     IN WVL_SP_BUS_NODE
   );
-extern WVL_M_LIB winvblock__uint32 STDCALL WvBusGetNodeCount(
+extern WVL_M_LIB UINT32 STDCALL WvBusGetNodeCount(
     WVL_SP_BUS_T
   );
 

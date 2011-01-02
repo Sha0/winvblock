@@ -28,7 +28,7 @@
 typedef struct WV_FILEDISK_T {
     WV_SP_DISK_T disk;
     HANDLE file;
-    winvblock__uint32 hash;
+    UINT32 hash;
     WV_FP_DEV_FREE prev_free;
     LIST_ENTRY tracking;
     LARGE_INTEGER offset;

@@ -53,7 +53,7 @@ static NTSTATUS STDCALL io(
     IN WV_SP_DEV_T dev_ptr,
     IN WV_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
-    IN winvblock__uint32 sector_count,
+    IN UINT32 sector_count,
     IN PUCHAR buffer,
     IN PIRP irp
   ) {
@@ -102,7 +102,7 @@ static NTSTATUS STDCALL io(
   return status;
 }
 
-static winvblock__uint32 STDCALL query_id(
+static UINT32 STDCALL query_id(
     IN WV_SP_DEV_T dev,
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
@@ -123,7 +123,7 @@ static winvblock__uint32 STDCALL query_id(
           return swprintf(*buf, L"Hash_%08X", filedisk->hash) + 1;
 
         case BusQueryHardwareIDs: {
-            winvblock__uint32 tmp;
+            UINT32 tmp;
 
             tmp = swprintf(*buf, hw_ids[disk->Media]) + 1;
             tmp += swprintf(*buf + tmp, WvDiskCompatIds[disk->Media]) + 4;
@@ -215,7 +215,7 @@ NTSTATUS STDCALL filedisk__attach(IN WV_SP_DEV_T dev, IN PIRP irp) {
    * A really stupid "hash".  RtlHashUnicodeString() would have been
    * good, but is only available >= Windows XP
    */
-  filedisk_ptr->hash = ( winvblock__uint32 ) filedisk_ptr->disk->LBADiskSize;
+  filedisk_ptr->hash = ( UINT32 ) filedisk_ptr->disk->LBADiskSize;
   {
     char *path_iterator = file_path1.Buffer;
 
@@ -348,7 +348,7 @@ typedef struct WV_FILEDISK_THREAD_REQ {
     WV_SP_DEV_T dev_ptr;
     WV_E_DISK_IO_MODE mode;
     LONGLONG start_sector;
-    winvblock__uint32 sector_count;
+    UINT32 sector_count;
     PUCHAR buffer;
     PIRP irp;
   } WV_S_FILEDISK_THREAD_REQ, * WV_SP_FILEDISK_THREAD_REQ;
@@ -406,7 +406,7 @@ static NTSTATUS STDCALL threaded_io(
     IN WV_SP_DEV_T dev_ptr,
     IN WV_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
-    IN winvblock__uint32 sector_count,
+    IN UINT32 sector_count,
     IN PUCHAR buffer,
     IN PIRP irp
   ) {

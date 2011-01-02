@@ -66,7 +66,7 @@ const WV_S_DRIVER_DUMMY_IDS * AoeBusDummyIds;
 
 static NTSTATUS STDCALL AoeBusDevCtlDetach_(IN PIRP irp) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-    winvblock__uint32 unit_num;
+    UINT32 unit_num;
     WVL_SP_BUS_NODE walker;
 
     if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
@@ -81,7 +81,7 @@ static NTSTATUS STDCALL AoeBusDevCtlDetach_(IN PIRP irp) {
         return status;
       }
     /* If we get here, we should be called by WvBusProcessWorkItems() */
-    unit_num = *((winvblock__uint32_ptr) irp->AssociatedIrp.SystemBuffer);
+    unit_num = *((PUINT32) irp->AssociatedIrp.SystemBuffer);
     DBG("Request to detach unit: %d\n", unit_num);
 
     walker = NULL;
@@ -151,7 +151,7 @@ void AoeBusFree(void) {
     return;
   }
 
-static winvblock__uint32 STDCALL AoeBusPnpId_(
+static UINT32 STDCALL AoeBusPnpId_(
     IN WV_SP_DEV_T dev,
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
@@ -181,7 +181,7 @@ static NTSTATUS STDCALL AoeBusPnpQueryDevText_(
     WCHAR (*str)[512];
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
-    winvblock__uint32 str_len;
+    UINT32 str_len;
 
     /* Allocate a string buffer. */
     str = wv_mallocz(sizeof *str);

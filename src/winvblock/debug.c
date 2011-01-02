@@ -53,7 +53,7 @@ extern int sprintf (
 typedef struct _DEBUG_IRPLIST
 {
   PIRP Irp;
-  winvblock__uint32 Number;
+  UINT32 Number;
   PCHAR DebugMessage;
   struct _DEBUG_IRPLIST *Next;
   struct _DEBUG_IRPLIST *Previous;
@@ -62,7 +62,7 @@ typedef struct _DEBUG_IRPLIST
 
 static PDEBUG_IRPLIST Debug_Globals_IrpList = NULL;
 static KSPIN_LOCK Debug_Globals_SpinLock;
-static winvblock__uint32 Debug_Globals_Number = 0;
+static UINT32 Debug_Globals_Number = 0;
 
 /* in this file */
 static PDEBUG_IRPLIST STDCALL Debug_IrpListRecord (
@@ -95,7 +95,7 @@ static PCHAR STDCALL Debug_SrbFunctionString (
   IN UCHAR Function
  );
 static PCHAR STDCALL Debug_DeviceIoControlString (
-  IN winvblock__uint32 IoControlCode
+  IN UINT32 IoControlCode
  );
 static PCHAR STDCALL Debug_DeviceTextTypeString (
   IN DEVICE_TEXT_TYPE DeviceTextType
@@ -108,7 +108,7 @@ WVL_M_LIB NTSTATUS STDCALL
 xDbgPrint (
   IN PCHAR File,
   IN PCHAR Function,
-  IN winvblock__uint32 Line
+  IN UINT32 Line
  )
 {
   return DbgPrint ( "%s: %s() @ line %d: ", File, Function, Line );
@@ -232,7 +232,7 @@ Debug_DecodeIrp (
   PIO_STACK_LOCATION Stack = IoGetCurrentIrpStackLocation ( Irp );
   PSCSI_REQUEST_BLOCK Srb;
   PCDB Cdb;
-  winvblock__uint32 StartSector,
+  UINT32 StartSector,
    SectorCount;
   PSTORAGE_PROPERTY_QUERY StoragePropertyQuery;
 
@@ -630,7 +630,7 @@ Debug_SrbFunctionString (
 
 static PCHAR STDCALL
 Debug_DeviceIoControlString (
-  IN winvblock__uint32 IoControlCode
+  IN UINT32 IoControlCode
  )
 {
   switch ( IoControlCode )

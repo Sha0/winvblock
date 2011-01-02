@@ -65,7 +65,7 @@ static NTSTATUS STDCALL io(
     IN WV_SP_DEV_T dev_ptr,
     IN WV_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
-    IN winvblock__uint32 sector_count,
+    IN UINT32 sector_count,
     IN PUCHAR buffer,
     IN PIRP irp
   ) {
@@ -119,7 +119,7 @@ static NTSTATUS STDCALL io(
   return STATUS_SUCCESS;
 }
 
-static winvblock__uint32 STDCALL query_id(
+static UINT32 STDCALL query_id(
     IN WV_SP_DEV_T dev,
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
@@ -141,7 +141,7 @@ static winvblock__uint32 STDCALL query_id(
           return swprintf(*buf, L"RAM_at_%08X", ramdisk->DiskBuf) + 1;
 
         case BusQueryHardwareIDs: {
-            winvblock__uint32 tmp;
+            UINT32 tmp;
 
             tmp = swprintf(*buf, hw_ids[disk->Media]) + 1;
             tmp += swprintf(*buf + tmp, WvDiskCompatIds[disk->Media]) + 4;

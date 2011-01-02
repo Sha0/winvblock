@@ -49,7 +49,7 @@ extern NTSTATUS STDCALL aoe__reply (
   IN PUCHAR SourceMac,
   IN PUCHAR DestinationMac,
   IN PUCHAR Data,
-  IN winvblock__uint32 DataSize
+  IN UINT32 DataSize
  );
 
 /** In this file */
@@ -71,7 +71,7 @@ static void STDCALL Protocol_TransferDataComplete (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN PNDIS_PACKET Packet,
   IN NDIS_STATUS Status,
-  IN winvblock__uint32 BytesTransferred
+  IN UINT32 BytesTransferred
  );
 static void STDCALL Protocol_ResetComplete (
   IN NDIS_HANDLE ProtocolBindingContext,
@@ -86,10 +86,10 @@ static NDIS_STATUS STDCALL Protocol_Receive (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN NDIS_HANDLE MacReceiveContext,
   IN void *HeaderBuffer,
-  IN winvblock__uint32 HeaderBufferSize,
+  IN UINT32 HeaderBufferSize,
   IN void *LookAheadBuffer,
-  IN winvblock__uint32 LookaheadBufferSize,
-  IN winvblock__uint32 PacketSize
+  IN UINT32 LookaheadBufferSize,
+  IN UINT32 PacketSize
  );
 static void STDCALL Protocol_ReceiveComplete (
   IN NDIS_HANDLE ProtocolBindingContext
@@ -98,7 +98,7 @@ static void STDCALL Protocol_Status (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN NDIS_STATUS GeneralStatus,
   IN void *StatusBuffer,
-  IN winvblock__uint32 StatusBufferSize
+  IN UINT32 StatusBufferSize
  );
 static void STDCALL Protocol_StatusComplete (
   IN NDIS_HANDLE ProtocolBindingContext
@@ -141,7 +141,7 @@ typedef struct _PROTOCOL_BINDINGCONTEXT
 {
   winvblock__bool Active;
   UCHAR Mac[6];
-  winvblock__uint32 MTU;
+  UINT32 MTU;
   NDIS_STATUS Status;
   NDIS_HANDLE PacketPoolHandle;
   NDIS_HANDLE BufferPoolHandle;
@@ -247,7 +247,7 @@ Protocol_SearchNIC (
   return FALSE;
 }
 
-winvblock__uint32 STDCALL
+UINT32 STDCALL
 Protocol_GetMTU (
   IN PUCHAR Mac
  )
@@ -269,7 +269,7 @@ Protocol_Send (
   IN PUCHAR SourceMac,
   IN PUCHAR DestinationMac,
   IN PUCHAR Data,
-  IN winvblock__uint32 DataSize,
+  IN UINT32 DataSize,
   IN void *PacketContext
  )
 {
@@ -408,13 +408,13 @@ Protocol_TransferDataComplete (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN PNDIS_PACKET Packet,
   IN NDIS_STATUS Status,
-  IN winvblock__uint32 BytesTransferred
+  IN UINT32 BytesTransferred
  )
 {
   PNDIS_BUFFER Buffer;
   PPROTOCOL_HEADER Header = NULL;
   PUCHAR Data = NULL;
-  winvblock__uint32 HeaderSize,
+  UINT32 HeaderSize,
    DataSize;
 #ifndef DEBUGALLPROTOCOLCALLS
   if ( !NT_SUCCESS ( Status ) )
@@ -485,10 +485,10 @@ Protocol_Receive (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN NDIS_HANDLE MacReceiveContext,
   IN void *HeaderBuffer,
-  IN winvblock__uint32 HeaderBufferSize,
+  IN UINT32 HeaderBufferSize,
   IN void *LookAheadBuffer,
-  IN winvblock__uint32 LookaheadBufferSize,
-  IN winvblock__uint32 PacketSize
+  IN UINT32 LookaheadBufferSize,
+  IN UINT32 PacketSize
  )
 {
   PPROTOCOL_BINDINGCONTEXT Context =
@@ -499,7 +499,7 @@ Protocol_Receive (
   PPROTOCOL_HEADER Header;
   PUCHAR HeaderCopy,
    Data;
-  winvblock__uint32 BytesTransferred;
+  UINT32 BytesTransferred;
 #ifdef DEBUGALLPROTOCOLCALLS
   DBG ( "Entry\n" );
 #endif
@@ -594,7 +594,7 @@ Protocol_Status (
   IN NDIS_HANDLE ProtocolBindingContext,
   IN NDIS_STATUS GeneralStatus,
   IN void *StatusBuffer,
-  IN winvblock__uint32 StatusBufferSize
+  IN UINT32 StatusBufferSize
  )
 {
 #if !defined(DEBUGMOSTPROTOCOLCALLS) && !defined(DEBUGALLPROTOCOLCALLS)
@@ -629,12 +629,12 @@ Protocol_BindAdapter (
    Walker;
   NDIS_STATUS Status;
   NDIS_STATUS OpenErrorStatus;
-  winvblock__uint32 SelectedMediumIndex,
+  UINT32 SelectedMediumIndex,
    MTU;
   NDIS_MEDIUM MediumArray[] = { NdisMedium802_3 };
   NDIS_STRING AdapterInstanceName;
   NDIS_REQUEST Request;
-  winvblock__uint32 InformationBuffer = NDIS_PACKET_TYPE_DIRECTED;
+  UINT32 InformationBuffer = NDIS_PACKET_TYPE_DIRECTED;
   UCHAR Mac[6];
   KIRQL Irql;
 #if defined(DEBUGMOSTPROTOCOLCALLS) || defined(DEBUGALLPROTOCOLCALLS)
