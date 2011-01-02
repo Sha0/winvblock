@@ -170,14 +170,14 @@ static PDEVICE_OBJECT STDCALL create_pdo(IN WV_SP_DEV_T dev_ptr) {
   }
 
 /*
- * fat_extra and fat_super taken from syslinux/memdisk/setup.c by
+ * WV_S_DISK_FAT_EXTRA and fat_super taken from syslinux/memdisk/setup.c by
  * H. Peter Anvin.  Licensed under the terms of the GNU General Public
  * License version 2 or later.
  */
 #ifdef _MSC_VER
 #  pragma pack(1)
 #endif
-winvblock__def_struct(fat_extra) {
+struct WV_DISK_FAT_EXTRA {
     winvblock__uint8 bs_drvnum;
     winvblock__uint8 bs_resv1;
     winvblock__uint8 bs_bootsig;
@@ -185,6 +185,7 @@ winvblock__def_struct(fat_extra) {
     char bs_vollab[11];
     char bs_filsystype[8];
   } __attribute__((packed));
+typedef struct WV_DISK_FAT_EXTRA WV_S_DISK_FAT_EXTRA, * WV_SP_DISK_FAT_EXTRA;
 
 winvblock__def_struct(fat_super) {
     winvblock__uint8 bs_jmpboot[3];
@@ -202,7 +203,7 @@ winvblock__def_struct(fat_super) {
     winvblock__uint32 bpb_hiddsec;
     winvblock__uint32 bpb_totsec32;
     union {
-        struct { fat_extra extra; } fat16;
+        struct { WV_S_DISK_FAT_EXTRA extra; } fat16;
         struct {
             winvblock__uint32 bpb_fatsz32;
             winvblock__uint16 bpb_extflags;
@@ -212,7 +213,7 @@ winvblock__def_struct(fat_super) {
             winvblock__uint16 bpb_bkbootsec;
             char bpb_reserved[12];
             /* Clever, eh?  Same fields, different offset... */
-            fat_extra extra;
+            WV_S_DISK_FAT_EXTRA extra;
           } fat32 __attribute__((packed));
       } x;
   } __attribute__((__packed__));
@@ -247,7 +248,7 @@ WVL_M_LIB void disk__guess_geometry(
          * enough like one, use geometry from that.  This takes care of
          * megafloppy images and unpartitioned hard disks. 
          */
-        fat_extra_ptr extra = NULL;
+        WV_SP_DISK_FAT_EXTRA extra = NULL;
         fat_super_ptr fs = (fat_super_ptr) boot_sect_ptr;
   
         if (
