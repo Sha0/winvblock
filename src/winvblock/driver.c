@@ -56,13 +56,13 @@ static winvblock__bool WvDriverStarted_ = FALSE;
 static PDEVICE_OBJECT WvDriverBusFdo_ = NULL;
 static KSPIN_LOCK WvDriverBusFdoLock_;
 static UNICODE_STRING WvDriverBusName_ = {
-    sizeof WV_M_BUS_NAME_,
-    sizeof WV_M_BUS_NAME_,
+    sizeof WV_M_BUS_NAME_ - sizeof (WCHAR),
+    sizeof WV_M_BUS_NAME_ - sizeof (WCHAR),
     WV_M_BUS_NAME_
   };
 static UNICODE_STRING WvDriverBusDosname_ = {
-    sizeof WV_M_BUS_DOSNAME_,
-    sizeof WV_M_BUS_DOSNAME_,
+    sizeof WV_M_BUS_DOSNAME_ - sizeof (WCHAR),
+    sizeof WV_M_BUS_DOSNAME_ - sizeof (WCHAR),
     WV_M_BUS_DOSNAME_
   };
 /* The main bus. */
