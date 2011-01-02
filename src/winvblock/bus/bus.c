@@ -47,7 +47,7 @@ typedef struct WV_BUS_WORK_ITEM_ {
     LIST_ENTRY Link;
     WV_E_BUS_WORK_ITEM_CMD_ Cmd;
     union {
-        WV_SP_BUS_NODE Node;
+        WVL_SP_BUS_NODE Node;
         PIRP Irp;
         WV_SP_BUS_CUSTOM_WORK_ITEM Custom;
       } Context;
@@ -187,7 +187,7 @@ static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(
  * Don't call this function yourself.  It expects to have exclusive
  * access to the bus' list of children.
  */
-static void STDCALL WvBusAddNode_(WVL_SP_BUS_T bus, WV_SP_BUS_NODE new_node) {
+static void STDCALL WvBusAddNode_(WVL_SP_BUS_T bus, WVL_SP_BUS_NODE new_node) {
     PLIST_ENTRY walker;
 
     DBG("Adding PDO to bus...\n");
@@ -200,9 +200,9 @@ static void STDCALL WvBusAddNode_(WVL_SP_BUS_T bus, WV_SP_BUS_NODE new_node) {
     walker = &bus->BusPrivate_.Nodes;
     new_node->BusPrivate_.Num = 0;
     while ((walker = walker->Flink) != &bus->BusPrivate_.Nodes) {
-        WV_SP_BUS_NODE node = CONTAINING_RECORD(
+        WVL_SP_BUS_NODE node = CONTAINING_RECORD(
             walker,
-            WV_S_BUS_NODE,
+            WVL_S_BUS_NODE,
             BusPrivate_.Link
           );
 
@@ -236,7 +236,7 @@ static void STDCALL WvBusAddNode_(WVL_SP_BUS_T bus, WV_SP_BUS_NODE new_node) {
  */
 static void STDCALL WvBusRemoveNode_(
     WVL_SP_BUS_T bus,
-    WV_SP_BUS_NODE node
+    WVL_SP_BUS_NODE node
   ) {
     DBG("Removing PDO from bus...\n");
     RemoveEntryList(&node->BusPrivate_.Link);
@@ -252,7 +252,7 @@ static void STDCALL WvBusRemoveNode_(
  */
 winvblock__lib_func void WvBusProcessWorkItems(WVL_SP_BUS_T Bus) {
     WV_SP_BUS_WORK_ITEM_ work_item;
-    WV_SP_BUS_NODE node;
+    WVL_SP_BUS_NODE node;
     PIRP irp;
     PIO_STACK_LOCATION io_stack_loc;
     PDEVICE_OBJECT dev_obj;
@@ -446,7 +446,7 @@ winvblock__lib_func NTSTATUS WvBusStartThread(
  * @ret winvblock__bool FALSE for a NULL argument, otherwise TRUE
  */
 winvblock__lib_func winvblock__bool STDCALL WvBusInitNode(
-    OUT WV_SP_BUS_NODE Node,
+    OUT WVL_SP_BUS_NODE Node,
     IN PDEVICE_OBJECT Pdo
   ) {
     if (!Node || !Pdo)
@@ -470,7 +470,7 @@ winvblock__lib_func winvblock__bool STDCALL WvBusInitNode(
  */
 winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
     WVL_SP_BUS_T Bus,
-    WV_SP_BUS_NODE Node
+    WVL_SP_BUS_NODE Node
   ) {
     WV_SP_BUS_WORK_ITEM_ work_item;
 
@@ -508,7 +508,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
  * then remove the node.  This is usually from the bus' thread.
  */
 winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(
-    WV_SP_BUS_NODE Node
+    WVL_SP_BUS_NODE Node
   ) {
     WVL_SP_BUS_T bus;
     WV_SP_BUS_WORK_ITEM_ work_item;
@@ -608,7 +608,7 @@ winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueCustomWorkItem(
  * @ret UINT32          The unit number for the node.
  */
 winvblock__lib_func winvblock__uint32 STDCALL WvBusGetNodeNum(
-    IN WV_SP_BUS_NODE Node
+    IN WVL_SP_BUS_NODE Node
   ) {
     return Node->BusPrivate_.Num;
   }
@@ -618,15 +618,15 @@ winvblock__lib_func winvblock__uint32 STDCALL WvBusGetNodeNum(
  *
  * @v Bus               The bus whose nodes are fetched.
  * @v PrevNode          The previous node.  Pass NULL to begin.
- * @ret WV_SP_BUS_NODE  Returns NULL when there are no more nodes.
+ * @ret WVL_SP_BUS_NODE  Returns NULL when there are no more nodes.
  *
  * This function should only be called within the thread context of
  * whichever thread calls WvBusProcessWorkItems() because it expects
  * the list of child nodes to remain static between calls.
  */
-winvblock__lib_func WV_SP_BUS_NODE STDCALL WvBusGetNextNode(
+winvblock__lib_func WVL_SP_BUS_NODE STDCALL WvBusGetNextNode(
     IN WVL_SP_BUS_T Bus,
-    IN WV_SP_BUS_NODE PrevNode
+    IN WVL_SP_BUS_NODE PrevNode
   ) {
     PLIST_ENTRY link;
 
@@ -637,7 +637,7 @@ winvblock__lib_func WV_SP_BUS_NODE STDCALL WvBusGetNextNode(
     link = link->Flink;
     if (link == &Bus->BusPrivate_.Nodes)
       return NULL;
-    return CONTAINING_RECORD(link, WV_S_BUS_NODE, BusPrivate_.Link);
+    return CONTAINING_RECORD(link, WVL_S_BUS_NODE, BusPrivate_.Link);
   }
 
 /**
@@ -647,7 +647,7 @@ winvblock__lib_func WV_SP_BUS_NODE STDCALL WvBusGetNextNode(
  * @ret PDEVICE_OBJECT  The PDO for the node.
  */
 winvblock__lib_func PDEVICE_OBJECT STDCALL WvBusGetNodePdo(
-    IN WV_SP_BUS_NODE Node
+    IN WVL_SP_BUS_NODE Node
   ) {
     return Node->BusPrivate_.Pdo;
   }

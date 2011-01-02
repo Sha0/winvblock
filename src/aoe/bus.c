@@ -67,7 +67,7 @@ const WV_S_DRIVER_DUMMY_IDS * AoeBusDummyIds;
 static NTSTATUS STDCALL AoeBusDevCtlDetach_(IN PIRP irp) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     winvblock__uint32 unit_num;
-    WV_SP_BUS_NODE walker;
+    WVL_SP_BUS_NODE walker;
 
     if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
         NTSTATUS status;

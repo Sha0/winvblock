@@ -89,7 +89,7 @@ typedef struct WV_BUS_NODE {
         /* The child's unit number relative to the parent bus. */
         winvblock__uint32 Num;
       } BusPrivate_;
-  } WV_S_BUS_NODE, * WV_SP_BUS_NODE;
+  } WVL_S_BUS_NODE, * WVL_SP_BUS_NODE;
 
 /**
  * A custom work-item function.
@@ -118,14 +118,14 @@ extern winvblock__lib_func NTSTATUS WvBusStartThread(
     OUT PETHREAD *
   );
 extern winvblock__lib_func winvblock__bool STDCALL WvBusInitNode(
-    OUT WV_SP_BUS_NODE,
+    OUT WVL_SP_BUS_NODE,
     IN PDEVICE_OBJECT
   );
 extern winvblock__lib_func NTSTATUS STDCALL WvBusAddNode(
     WVL_SP_BUS_T,
-    WV_SP_BUS_NODE
+    WVL_SP_BUS_NODE
   );
-extern winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(WV_SP_BUS_NODE);
+extern winvblock__lib_func NTSTATUS STDCALL WvBusRemoveNode(WVL_SP_BUS_NODE);
 extern winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueIrp(WVL_SP_BUS_T, PIRP);
 extern winvblock__lib_func NTSTATUS STDCALL WvBusEnqueueCustomWorkItem(
     WVL_SP_BUS_T,
@@ -146,14 +146,14 @@ extern winvblock__lib_func NTSTATUS STDCALL WvBusPnp(
     IN UCHAR
   );
 extern winvblock__lib_func winvblock__uint32 STDCALL WvBusGetNodeNum(
-    IN WV_SP_BUS_NODE
+    IN WVL_SP_BUS_NODE
   );
-extern winvblock__lib_func WV_SP_BUS_NODE STDCALL WvBusGetNextNode(
+extern winvblock__lib_func WVL_SP_BUS_NODE STDCALL WvBusGetNextNode(
     IN WVL_SP_BUS_T,
-    IN WV_SP_BUS_NODE
+    IN WVL_SP_BUS_NODE
   );
 extern winvblock__lib_func PDEVICE_OBJECT STDCALL WvBusGetNodePdo(
-    IN WV_SP_BUS_NODE
+    IN WVL_SP_BUS_NODE
   );
 extern winvblock__lib_func winvblock__uint32 STDCALL WvBusGetNodeCount(
     WVL_SP_BUS_T

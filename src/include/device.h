@@ -178,7 +178,7 @@ struct WV_DEV_T {
     /* Previous state of the device. */
     WV_E_DEV_STATE OldState;
     /* Support being a node on a bus. */
-    WV_S_BUS_NODE BusNode;
+    WVL_S_BUS_NODE BusNode;
     /* The device operations. */
     WV_S_DEV_OPS Ops;
     /* Points to further extensions. */

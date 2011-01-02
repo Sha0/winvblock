@@ -665,7 +665,7 @@ static NTSTATUS STDCALL WvDriverBusDevCtlDetach_(
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     winvblock__uint32 unit_num;
-    WV_SP_BUS_NODE walker;
+    WVL_SP_BUS_NODE walker;
 
     if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
         NTSTATUS status;

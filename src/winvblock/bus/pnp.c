@@ -109,9 +109,9 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WVL_SP_BUS_T bus, IN PIRP irp) {
     /* Remove all children. */
     node_link = &bus->BusPrivate_.Nodes;
     while ((node_link = node_link->Flink) != &bus->BusPrivate_.Nodes) {
-        WV_SP_BUS_NODE node = CONTAINING_RECORD(
+        WVL_SP_BUS_NODE node = CONTAINING_RECORD(
             node_link,
-            WV_S_BUS_NODE,
+            WVL_S_BUS_NODE,
             BusPrivate_.Link
           );
 
@@ -183,9 +183,9 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
     i = 0;
     node_link = &bus->BusPrivate_.Nodes;
     while ((node_link = node_link->Flink) != &bus->BusPrivate_.Nodes) {
-        WV_SP_BUS_NODE node = CONTAINING_RECORD(
+        WVL_SP_BUS_NODE node = CONTAINING_RECORD(
             node_link,
-            WV_S_BUS_NODE,
+            WVL_S_BUS_NODE,
             BusPrivate_.Link
           );
 

@@ -1700,7 +1700,7 @@ NTSTATUS STDCALL AoeBusDevCtlScan(IN PIRP irp) {
 
 NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
     winvblock__uint32 count;
-    WV_SP_BUS_NODE walker;
+    WVL_SP_BUS_NODE walker;
     aoe__mount_disks_ptr disks;
     wv_size_t size;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
