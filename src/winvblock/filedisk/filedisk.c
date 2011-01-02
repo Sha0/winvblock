@@ -342,17 +342,16 @@ static void STDCALL free_filedisk(IN WV_SP_DEV_T dev_ptr)
     wv_free(filedisk_ptr);
   }
 
-/* Threaded read/write request */
-winvblock__def_struct ( thread_req )
-{
-  LIST_ENTRY list_entry;
-  WV_SP_DEV_T dev_ptr;
-  WV_E_DISK_IO_MODE mode;
-  LONGLONG start_sector;
-  winvblock__uint32 sector_count;
-  winvblock__uint8_ptr buffer;
-  PIRP irp;
-};
+/* Threaded read/write request. */
+typedef struct WV_FILEDISK_THREAD_REQ {
+    LIST_ENTRY list_entry;
+    WV_SP_DEV_T dev_ptr;
+    WV_E_DISK_IO_MODE mode;
+    LONGLONG start_sector;
+    winvblock__uint32 sector_count;
+    winvblock__uint8_ptr buffer;
+    PIRP irp;
+  } WV_S_FILEDISK_THREAD_REQ, * WV_SP_FILEDISK_THREAD_REQ;
 
 /**
  * A threaded, file-backed disk's worker thread
@@ -391,9 +390,9 @@ thread (
 	      ExInterlockedRemoveHeadList ( &filedisk_ptr->req_list,
 					    &filedisk_ptr->req_list_lock ) )
 	{
-	  thread_req_ptr req;
+	  WV_SP_FILEDISK_THREAD_REQ req;
 
-	  req = CONTAINING_RECORD ( walker, thread_req, list_entry );
+	  req = CONTAINING_RECORD(walker, WV_S_FILEDISK_THREAD_REQ, list_entry);
 	  filedisk_ptr->sync_io ( req->dev_ptr, req->mode, req->start_sector,
 				  req->sector_count, req->buffer, req->irp );
     wv_free(req);
@@ -412,7 +411,7 @@ static NTSTATUS STDCALL threaded_io(
     IN PIRP irp
   ) {
   WV_SP_FILEDISK_T filedisk_ptr;
-  thread_req_ptr req;
+  WV_SP_FILEDISK_THREAD_REQ req;
 
   filedisk_ptr = filedisk__get_ptr ( dev_ptr );
   /*
