@@ -344,3 +344,43 @@ winvblock__bool AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
     DBG("Exit with failure\n");
     return FALSE;
   }
+
+/**
+ * Add a child node to the AoE bus.
+ *
+ * @v Dev               Points to the child device to add.
+ * @ret                 TRUE for success, FALSE for failure.
+ */
+winvblock__bool STDCALL AoeBusAddDev(
+    IN OUT WV_SP_DEV_T Dev
+  ) {
+    /* The new node's device object. */
+    PDEVICE_OBJECT dev_obj;
+
+    DBG("Entry\n");
+    if (!AoeBusMain.Fdo || !Dev) {
+        DBG("No bus or no device!\n");
+        return FALSE;
+      }
+    /* Create the child device. */
+    dev_obj = WvDevCreatePdo(Dev);
+    if (!dev_obj) {
+        DBG("PDO creation failed!\n");
+        return FALSE;
+      }
+    WvBusInitNode(&Dev->BusNode, dev_obj);
+    /* Associate the parent bus. */
+    Dev->Parent = AoeBusMain.Fdo;
+    /*
+     * Initialize the device.  For disks, this routine is responsible for
+     * determining the disk's geometry appropriately for AoE disks.
+     */
+    Dev->Ops.Init(Dev);
+    dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
+    /* Add the new PDO device to the bus' list of children. */
+    WvBusAddNode(&AoeBusMain, &Dev->BusNode);
+    Dev->DevNum = WvBusGetNodeNum(&Dev->BusNode);
+
+    DBG("Exit\n");
+    return TRUE;
+  }

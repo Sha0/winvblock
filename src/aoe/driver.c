@@ -61,6 +61,7 @@ extern NTSTATUS STDCALL AoeBusAttachFdo(
     IN PDEVICE_OBJECT
   );
 extern const WV_S_DRIVER_DUMMY_IDS * AoeBusDummyIds;
+extern winvblock__bool STDCALL AoeBusAddDev(IN OUT WV_SP_DEV_T);
 /* From aoe/registry.c */
 extern winvblock__bool STDCALL AoeRegSetup(OUT PNTSTATUS);
 
@@ -1630,7 +1631,7 @@ static void AoeProcessAbft_(void) {
     aoe_disk->Timeout = 200000;          /* 20 ms. */
     aoe_disk->disk->Dev->Boot = TRUE;
     aoe_disk->disk->Media = WvDiskMediaTypeHard;
-    WvDriverBusAddDev(aoe_disk->disk->Dev);
+    AoeBusAddDev(aoe_disk->disk->Dev);
     return;
 
     out_no_abft:
@@ -1803,7 +1804,7 @@ NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
     aoe_disk->Timeout = 200000;             /* 20 ms. */
     aoe_disk->disk->Dev->Boot = FALSE;
     aoe_disk->disk->Media = WvDiskMediaTypeHard;
-    WvDriverBusAddDev(aoe_disk->disk->Dev);
+    AoeBusAddDev(aoe_disk->disk->Dev);
 
     return driver__complete_irp(irp, 0, STATUS_SUCCESS);
   }
