@@ -617,7 +617,7 @@ WVL_M_LIB WVL_SP_BUS_NODE STDCALL WvlBusGetNextNode(
  * @v Node              The node whose PDO will be returned.
  * @ret PDEVICE_OBJECT  The PDO for the node.
  */
-WVL_M_LIB PDEVICE_OBJECT STDCALL WvBusGetNodePdo(
+WVL_M_LIB PDEVICE_OBJECT STDCALL WvlBusGetNodePdo(
     IN WVL_SP_BUS_NODE Node
   ) {
     return Node->BusPrivate_.Pdo;

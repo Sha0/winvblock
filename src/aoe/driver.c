@@ -1736,7 +1736,7 @@ NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
     walker = NULL;
     /* For each node on the bus... */
     while (walker = WvlBusGetNextNode(&AoeBusMain, walker)) {
-        WV_SP_DEV_T dev = WvDevFromDevObj(WvBusGetNodePdo(walker));
+        WV_SP_DEV_T dev = WvDevFromDevObj(WvlBusGetNodePdo(walker));
         WV_SP_DISK_T disk = disk__get_ptr(dev);
         AOE_SP_DISK_ aoe_disk = AoeDiskFromDev_(dev);
 
