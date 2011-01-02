@@ -223,7 +223,7 @@ Parameters:\n\
   }
 
 static int STDCALL cmd_scan(void) {
-    AOE_S_MOUNT_TARGETS_ptr targets;
+    AOE_SP_MOUNT_TARGETS targets;
     DWORD bytes_returned;
     winvblock__uint32 i;
     winvblock__uint8 string[256];
@@ -298,7 +298,7 @@ static int STDCALL cmd_scan(void) {
   }
 
 static int STDCALL cmd_show(void) {
-    AOE_S_MOUNT_DISKS_ptr mounted_disks;
+    AOE_SP_MOUNT_DISKS mounted_disks;
     DWORD bytes_returned;
     winvblock__uint32 i;
     winvblock__uint8 string[256];
