@@ -46,9 +46,7 @@ typedef struct WV_DEV_EXT {
     struct WV_DEV_T * device;
   } WV_S_DEV_EXT, * WV_SP_DEV_EXT;
 
-extern WVL_M_LIB BOOLEAN STDCALL WvDriverBusAddDev(
-    IN WV_SP_DEV_T
-  );
+extern BOOLEAN STDCALL WvBusAddDev(IN WV_SP_DEV_T);
 extern NTSTATUS STDCALL WvDriverGetDevCapabilities(
     IN PDEVICE_OBJECT,
     IN PDEVICE_CAPABILITIES

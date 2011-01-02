@@ -27,6 +27,9 @@
  * Bus specifics.
  */
 
+/* Forward declaration. */
+struct WVL_BUS_T;
+
 /**
  * A bus thread routine.
  *
@@ -35,7 +38,7 @@
  * If you implement your own bus thread routine, you should call
  * WvlBusProcessWorkItems() within its loop.
  */
-typedef VOID STDCALL WVL_F_BUS_THREAD(IN WVL_SP_BUS_T);
+typedef VOID STDCALL WVL_F_BUS_THREAD(IN struct WVL_BUS_T *);
 typedef WVL_F_BUS_THREAD * WVL_FP_BUS_THREAD;
 
 /**
@@ -45,7 +48,7 @@ typedef WVL_F_BUS_THREAD * WVL_FP_BUS_THREAD;
  * @v irp               The IRP to process.
  * @ret NTSTATUS        The status of the operation.
  */
-typedef NTSTATUS STDCALL WVL_F_BUS_PNP(IN WVL_SP_BUS_T, IN PIRP);
+typedef NTSTATUS STDCALL WVL_F_BUS_PNP(IN struct WVL_BUS_T *, IN PIRP);
 typedef WVL_F_BUS_PNP * WVL_FP_BUS_PNP;
 
 /* Device state. */

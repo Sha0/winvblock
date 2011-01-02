@@ -1,7 +1,7 @@
 [Project]
 FileName=WinVBlock.dev
 Name=WinVBlock
-UnitCount=65
+UnitCount=66
 PchHead=-1
 PchSource=-1
 Ver=3
@@ -632,9 +632,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit66]
-FileName=src\include\aoe_bus.h
+FileName=src\winvblock\bus.c
 CompileCpp=1
-Folder=Include
+Folder=WinVBlock
 Compile=1
 Link=1
 Priority=1000

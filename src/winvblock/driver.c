@@ -44,9 +44,18 @@
 #include "ramdisk.h"
 #include "debug.h"
 
-/* Names for the main bus. */
-#define WV_M_BUS_NAME (L"\\Device\\" WVL_M_WLIT)
-#define WV_M_BUS_DOSNAME (L"\\DosDevices\\" WVL_M_WLIT)
+/* From bus.c */
+extern WVL_S_BUS_T WvBus;
+extern WV_S_DEV_T WvBusDev;
+extern UNICODE_STRING WvBusName;
+extern UNICODE_STRING WvBusDosname;
+extern PETHREAD WvBusThread;
+extern WV_F_DEV_DISPATCH WvBusSysCtl;
+extern WV_F_DEV_CTL WvBusDevCtl;
+extern WV_F_DEV_DISPATCH WvBusPower;
+extern WV_F_DEV_PNP WvBusPnp;
+extern WVL_F_BUS_PNP WvBusPnpQueryDevText;
+extern NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING);
 
 /* Exported. */
 PDRIVER_OBJECT WvDriverObj = NULL;
@@ -54,22 +63,6 @@ PDRIVER_OBJECT WvDriverObj = NULL;
 /* Globals. */
 static PVOID WvDriverStateHandle;
 static BOOLEAN WvDriverStarted = FALSE;
-static PDEVICE_OBJECT WvBusFdo = NULL;
-static KSPIN_LOCK WvBusFdoLock;
-static UNICODE_STRING WvBusName = {
-    sizeof WV_M_BUS_NAME - sizeof (WCHAR),
-    sizeof WV_M_BUS_NAME - sizeof (WCHAR),
-    WV_M_BUS_NAME
-  };
-static UNICODE_STRING WvBusDosname = {
-    sizeof WV_M_BUS_DOSNAME - sizeof (WCHAR),
-    sizeof WV_M_BUS_DOSNAME - sizeof (WCHAR),
-    WV_M_BUS_DOSNAME
-  };
-/* The main bus. */
-WVL_S_BUS_T WvBus = {0};
-static WV_S_DEV_T WvBusDev = {0};
-static PETHREAD WvBusThread = NULL;
 /* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters. */
 static LPWSTR WvOsLoadOpts = NULL;
 
@@ -87,11 +80,6 @@ static __drv_dispatchType(IRP_MJ_DEVICE_CONTROL)
 static __drv_dispatchType(IRP_MJ_SCSI) DRIVER_DISPATCH WvIrpScsi;
 static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH WvIrpPnp;
 static DRIVER_UNLOAD WvUnload;
-static WV_F_DEV_DISPATCH WvBusSysCtl;
-static WV_F_DEV_CTL WvBusDevCtl;
-static WV_F_DEV_DISPATCH WvBusPower;
-static WV_F_DEV_PNP WvBusPnp;
-static WVL_F_BUS_PNP WvBusPnpQueryDevText;
 
 static LPWSTR STDCALL WvGetOpt(IN LPWSTR opt_name) {
     LPWSTR our_opts, the_opt;
@@ -152,7 +140,6 @@ static NTSTATUS STDCALL WvAttachFdo(
     IN PDRIVER_OBJECT DriverObject,
     IN PDEVICE_OBJECT Pdo
   ) {
-    KIRQL irql;
     NTSTATUS status;
     PLIST_ENTRY walker;
     PDEVICE_OBJECT fdo = NULL;
@@ -166,7 +153,7 @@ static NTSTATUS STDCALL WvAttachFdo(
 
     DBG("Entry\n");
     /* Do we alreay have our main bus? */
-    if (WvBusFdo) {
+    if (WvBus.Fdo) {
         DBG("Already have the main bus.  Refusing.\n");
         status = STATUS_NOT_SUPPORTED;
         goto err_already_established;
@@ -222,23 +209,12 @@ static NTSTATUS STDCALL WvAttachFdo(
         goto err_thread;
       }
     /* Ok! */
-    KeAcquireSpinLock(&WvBusFdoLock, &irql);
-    if (WvBusFdo) {
-        KeReleaseSpinLock(&WvBusFdoLock, irql);
-        DBG("Beaten to it!\n");
-        status = STATUS_NOT_SUPPORTED;
-        goto err_race_failed;
-      }
     fdo->Flags &= ~DO_DEVICE_INITIALIZING;
     #ifdef RIS
     WvBus.Dev.State = Started;
     #endif
-    WvBusFdo = fdo;
-    KeReleaseSpinLock(&WvBusFdoLock, irql);
     DBG("Exit\n");
     return STATUS_SUCCESS;
-
-    err_race_failed:
 
     err_thread:
 
@@ -253,64 +229,6 @@ static NTSTATUS STDCALL WvAttachFdo(
     err_already_established:
 
     DBG("Exit with failure\n");
-    return status;
-  }
-
-/* Establish the bus PDO. */
-static NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING RegistryPath) {
-    NTSTATUS status;
-    HANDLE reg_key;
-    UINT32 pdo_done = 0;
-    PDEVICE_OBJECT bus_pdo = NULL;
-
-    /* Open our Registry path. */
-    status = WvlRegOpenKey(RegistryPath->Buffer, &reg_key);
-    if (!NT_SUCCESS(status))
-      return status;
-
-    /* Check the Registry to see if we've already got a PDO. */
-    status = WvlRegFetchDword(reg_key, L"PdoDone", &pdo_done);
-    if (NT_SUCCESS(status) && pdo_done) {
-        WvlRegCloseKey(reg_key);
-        return status;
-      }
-
-    /* Create a root-enumerated PDO for our bus. */
-    IoReportDetectedDevice(
-        WvDriverObj,
-        InterfaceTypeUndefined,
-        -1,
-        -1,
-        NULL,
-        NULL,
-        FALSE,
-        &bus_pdo
-      );
-    if (bus_pdo == NULL) {
-        DBG("IoReportDetectedDevice() went wrong!  Exiting.\n");
-        status = STATUS_UNSUCCESSFUL;
-        goto err_driver_bus;
-      }
-
-    /* Remember that we have a PDO for next time. */
-    status = WvlRegStoreDword(reg_key, L"PdoDone", 1);
-    if (!NT_SUCCESS(status)) {
-        DBG("Couldn't save PdoDone to Registry.  Oh well.\n");
-      }
-    /* Attach FDO to PDO. */
-    status = WvAttachFdo(WvDriverObj, bus_pdo);
-    if (!NT_SUCCESS(status)) {
-        DBG("WvAttachFdo() went wrong!\n");
-        goto err_add_dev;
-      }
-    /* PDO created, FDO attached.  All done. */
-    return STATUS_SUCCESS;
-
-    err_add_dev:
-
-    IoDeleteDevice(bus_pdo);
-    err_driver_bus:
-
     return status;
   }
 
@@ -339,7 +257,6 @@ NTSTATUS STDCALL DriverEntry(
       return WvlError("WvlRegNoteOsLoadOpts", status);
 
     WvDriverStateHandle = NULL;
-    KeInitializeSpinLock(&WvBusFdoLock);
 
     if ((WvDriverStateHandle = PoRegisterSystemState(
         NULL,
@@ -563,144 +480,10 @@ static VOID STDCALL WvUnload(IN PDRIVER_OBJECT DriverObject) {
     if (WvDriverStateHandle != NULL)
       PoUnregisterSystemState(WvDriverStateHandle);
     IoDeleteSymbolicLink(&WvBusDosname);
-    WvBusFdo = NULL;
+    WvBus.Fdo = NULL;
     wv_free(WvOsLoadOpts);
     WvDriverStarted = FALSE;
     DBG("Done\n");
-  }
-
-/* Pass an IRP_MJ_SYSTEM_CONTROL IRP to the bus. */
-static NTSTATUS STDCALL WvBusSysCtl(IN WV_SP_DEV_T dev, IN PIRP irp) {
-    return WvlBusSysCtl(&WvBus, irp);
-  }
-
-/* Pass a power IRP to the bus. */
-static NTSTATUS STDCALL WvBusPower(IN WV_SP_DEV_T dev, IN PIRP irp) {
-    return WvlBusPower(&WvBus, irp);
-  }
-
-/* Pass an IRP_MJ_PNP to the bus. */
-static NTSTATUS STDCALL WvBusPnp(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp,
-    IN UCHAR code
-  ) {
-    return WvlBusPnpIrp(&WvBus, irp, code);
-  }
-    
-/**
- * Add a child node to the bus.
- *
- * @v Dev               Points to the child device to add.
- * @ret                 TRUE for success, FALSE for failure.
- */
-WVL_M_LIB BOOLEAN STDCALL WvDriverBusAddDev(
-    IN OUT WV_SP_DEV_T Dev
-  ) {
-    /* The new node's device object. */
-    PDEVICE_OBJECT dev_obj;
-
-    DBG("Entry\n");
-    if (!WvBusFdo || !Dev) {
-        DBG("No bus or no device!\n");
-        return FALSE;
-      }
-    /* Create the child device. */
-    dev_obj = WvDevCreatePdo(Dev);
-    if (!dev_obj) {
-        DBG("PDO creation failed!\n");
-        return FALSE;
-      }
-    WvlBusInitNode(&Dev->BusNode, dev_obj);
-    /* Associate the parent bus. */
-    Dev->Parent = WvBus.Fdo;
-    /*
-     * Initialize the device.  For disks, this routine is responsible for
-     * determining the disk's geometry appropriately for AoE/RAM/file disks.
-     */
-    Dev->Ops.Init(Dev);
-    dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
-    /* Add the new PDO device to the bus' list of children. */
-    WvlBusAddNode(&WvBus, &Dev->BusNode);
-    Dev->DevNum = WvlBusGetNodeNum(&Dev->BusNode);
-
-    DBG("Exit\n");
-    return TRUE;
-  }
-
-static NTSTATUS STDCALL WvBusDevCtlDetach(
-    IN PIRP irp
-  ) {
-    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-    UINT32 unit_num;
-    WVL_SP_BUS_NODE walker;
-
-    if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
-        NTSTATUS status;
-
-        /* Enqueue the IRP. */
-        status = WvlBusEnqueueIrp(&WvBus, irp);
-        if (status != STATUS_PENDING)
-          /* Problem. */
-          return WvlIrpComplete(irp, 0, status);
-        /* Ok. */
-        return status;
-      }
-    /* If we get here, we should be called by WvlBusProcessWorkItems() */
-    unit_num = *((PUINT32) irp->AssociatedIrp.SystemBuffer);
-    DBG("Request to detach unit: %d\n", unit_num);
-
-    walker = NULL;
-    /* For each node on the bus... */
-    while (walker = WvlBusGetNextNode(&WvBus, walker)) {
-        WV_SP_DEV_T dev = WvDevFromDevObj(WvlBusGetNodePdo(walker));
-
-        /* If the unit number matches... */
-        if (WvlBusGetNodeNum(walker) == unit_num) {
-            /* If it's not a boot-time device... */
-            if (dev->Boot) {
-                DBG("Cannot detach a boot-time device.\n");
-                /* Signal error. */
-                walker = NULL;
-                break;
-              }
-            /* Detach the node and free it. */
-            DBG("Removing unit %d\n", unit_num);
-            WvlBusRemoveNode(walker);
-            WvDevClose(dev);
-            IoDeleteDevice(dev->Self);
-            WvDevFree(dev);
-            break;
-          }
-      }
-    if (!walker)
-      return WvlIrpComplete(irp, 0, STATUS_INVALID_PARAMETER);
-    return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
-  }
-
-static NTSTATUS STDCALL WvBusDevCtl(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp,
-    IN ULONG POINTER_ALIGNMENT code
-  ) {
-    NTSTATUS status;
-
-    switch (code) {
-        case IOCTL_FILE_ATTACH:
-          status = filedisk__attach(dev, irp);
-          break;
-
-        case IOCTL_FILE_DETACH:
-          return WvBusDevCtlDetach(irp);
-
-        default:
-          irp->IoStatus.Information = 0;
-          status = STATUS_INVALID_DEVICE_REQUEST;
-      }
-
-    irp->IoStatus.Status = status;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
-    return status;
   }
 
 NTSTATUS STDCALL WvDriverGetDevCapabilities(
@@ -755,73 +538,4 @@ NTSTATUS STDCALL WvDriverGetDevCapabilities(
       }
     ObDereferenceObject(target_obj);
     return status;
-  }
-
-static NTSTATUS STDCALL WvBusPnpQueryDevText(
-    IN WVL_SP_BUS_T bus,
-    IN PIRP irp
-  ) {
-    WCHAR (*str)[512];
-    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-    NTSTATUS status;
-    UINT32 str_len;
-
-    /* Allocate a string buffer. */
-    str = wv_mallocz(sizeof *str);
-    if (str == NULL) {
-        DBG("wv_malloc IRP_MN_QUERY_DEVICE_TEXT\n");
-        status = STATUS_INSUFFICIENT_RESOURCES;
-        goto alloc_str;
-      }
-    /* Determine the query type. */
-    switch (io_stack_loc->Parameters.QueryDeviceText.DeviceTextType) {
-        case DeviceTextDescription:
-          str_len = swprintf(*str, WVL_M_WLIT L" Bus") + 1;
-          irp->IoStatus.Information =
-            (ULONG_PTR) wv_palloc(str_len * sizeof *str);
-          if (irp->IoStatus.Information == 0) {
-              DBG("wv_palloc DeviceTextDescription\n");
-              status = STATUS_INSUFFICIENT_RESOURCES;
-              goto alloc_info;
-            }
-          RtlCopyMemory(
-              (PWCHAR) irp->IoStatus.Information,
-              str,
-              str_len * sizeof (WCHAR)
-            );
-          status = STATUS_SUCCESS;
-          goto alloc_info;
-
-        case DeviceTextLocationInformation:
-          str_len = WvDevPnpId(
-              &WvBusDev,
-              BusQueryInstanceID,
-              str
-            );
-          irp->IoStatus.Information =
-            (ULONG_PTR) wv_palloc(str_len * sizeof *str);
-          if (irp->IoStatus.Information == 0) {
-              DBG("wv_palloc DeviceTextLocationInformation\n");
-              status = STATUS_INSUFFICIENT_RESOURCES;
-              goto alloc_info;
-            }
-          RtlCopyMemory(
-              (PWCHAR) irp->IoStatus.Information,
-              str,
-              str_len * sizeof (WCHAR)
-            );
-          status = STATUS_SUCCESS;
-          goto alloc_info;
-
-        default:
-          irp->IoStatus.Information = 0;
-          status = STATUS_NOT_SUPPORTED;
-      }
-    /* irp->IoStatus.Information not freed. */
-    alloc_info:
-
-    wv_free(str);
-    alloc_str:
-
-    return WvlIrpComplete(irp, irp->IoStatus.Information, status);
   }

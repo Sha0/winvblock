@@ -100,7 +100,7 @@ static BOOLEAN STDCALL WvMemdiskCheckMbft_(
     ramdisk->disk->Dev->Boot = TRUE;
 
     /* Add the ramdisk to the bus. */
-    if (!WvDriverBusAddDev(ramdisk->disk->Dev)) {
+    if (!WvBusAddDev(ramdisk->disk->Dev)) {
         WvDevFree(ramdisk->disk->Dev);
         return FALSE;
       }
