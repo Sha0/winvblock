@@ -127,7 +127,7 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlBusAddNode(
   );
 extern WVL_M_LIB NTSTATUS STDCALL WvlBusRemoveNode(WVL_SP_BUS_NODE);
 extern WVL_M_LIB NTSTATUS STDCALL WvlBusEnqueueIrp(WVL_SP_BUS_T, PIRP);
-extern WVL_M_LIB NTSTATUS STDCALL WvBusEnqueueCustomWorkItem(
+extern WVL_M_LIB NTSTATUS STDCALL WvlBusEnqueueCustomWorkItem(
     WVL_SP_BUS_T,
     WVL_SP_BUS_CUSTOM_WORK_ITEM
   );

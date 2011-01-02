@@ -1014,7 +1014,7 @@ WVL_M_LIB NTSTATUS STDCALL WvDriverAddDummy(
 
     KeInitializeEvent(&event, SynchronizationEvent, FALSE);
 
-    status = WvBusEnqueueCustomWorkItem(&WvDriverBus_, &work_item);
+    status = WvlBusEnqueueCustomWorkItem(&WvDriverBus_, &work_item);
     if (!NT_SUCCESS(status))
       return status;
 

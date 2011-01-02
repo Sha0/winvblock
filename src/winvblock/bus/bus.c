@@ -546,7 +546,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusEnqueueIrp(
  * @v CustomWorkItem    The custom work item for the bus' thread to process.
  * @ret NTSTATUS        The status of the operation.
  */
-WVL_M_LIB NTSTATUS STDCALL WvBusEnqueueCustomWorkItem(
+WVL_M_LIB NTSTATUS STDCALL WvlBusEnqueueCustomWorkItem(
     WVL_SP_BUS_T Bus,
     WVL_SP_BUS_CUSTOM_WORK_ITEM CustomWorkItem
   ) {
