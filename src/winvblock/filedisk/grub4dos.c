@@ -212,16 +212,17 @@ dud:
   return STATUS_NO_MEDIA_IN_DEVICE;
 }
 
-winvblock__def_struct ( drive_file_set )
-{
-  winvblock__uint8 int13_drive_num;
-  char *filepath;
-};
+typedef struct WV_FILEDISK_GRUB4DOS_DRIVE_FILE_SET {
+    winvblock__uint8 int13_drive_num;
+    char *filepath;
+  }
+  WV_S_FILEDISK_GRUB4DOS_DRIVE_FILE_SET,
+  * WV_SP_FILEDISK_GRUB4DOS_DRIVE_FILE_SET;
 
 static void STDCALL
 process_param_block (
   const char *param_block,
-  drive_file_set_ptr sets
+  WV_SP_FILEDISK_GRUB4DOS_DRIVE_FILE_SET sets
  )
 {
   const char *end = param_block + 2047;
@@ -249,7 +250,7 @@ process_param_block (
   /*
    * We are interested in {filepath, NUL, X} sets, where X is INT13h drive num
    */
-  RtlZeroMemory ( sets, sizeof ( drive_file_set ) * 8 );
+  RtlZeroMemory ( sets, sizeof *sets * 8 );
   while ( param_block < end && i != 8 )
     {
       const char *walker = param_block;
@@ -317,7 +318,8 @@ filedisk_grub4dos__find (
   winvblock__bool FoundGrub4DosMapping = FALSE;
   WV_SP_FILEDISK_T filedisk_ptr;
   const char sig[] = "GRUB4DOS";
-  drive_file_set sets[8];	/* Matches disks to files */
+  /* Matches disks to files. */
+  WV_S_FILEDISK_GRUB4DOS_DRIVE_FILE_SET sets[8];
 
   /*
    * Find a GRUB4DOS sector-mapped disk.  Start by looking at the
