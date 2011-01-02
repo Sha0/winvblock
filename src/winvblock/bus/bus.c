@@ -282,7 +282,7 @@ WVL_M_LIB VOID WvlBusProcessWorkItems(WVL_SP_BUS_T Bus) {
  *
  * @v Bus       The bus to cancel pending work items for.
  */
-WVL_M_LIB VOID WvBusCancelWorkItems(WVL_SP_BUS_T Bus) {
+WVL_M_LIB VOID WvlBusCancelWorkItems(WVL_SP_BUS_T Bus) {
     WV_SP_BUS_WORK_ITEM_ work_item;
 
     DBG("Canceling work items.\n");
@@ -326,7 +326,7 @@ static VOID STDCALL WvBusThread_(IN PVOID context) {
  * your thread routine should call WvlBusProcessWorkItems() within
  * its loop.  To start a bus thread, use WvBusStartThread()
  * If you implement your own thread routine, you are also responsible
- * for calling WvBusCancelWorkItems() and freeing the bus.
+ * for calling WvlBusCancelWorkItems() and freeing the bus.
  */
 static VOID STDCALL WvBusDefaultThread_(IN WVL_SP_BUS_T bus) {
     LARGE_INTEGER timeout;
@@ -352,7 +352,7 @@ static VOID STDCALL WvBusDefaultThread_(IN WVL_SP_BUS_T bus) {
         WvlBusProcessWorkItems(bus);
       } /* while !bus->Stop */
 
-    WvBusCancelWorkItems(bus);
+    WvlBusCancelWorkItems(bus);
     return;
   }
 

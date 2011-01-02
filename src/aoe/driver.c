@@ -1355,7 +1355,7 @@ static VOID STDCALL AoeThread_(IN PVOID StartContext)
         if ( AoeStop_ )
     {
       DBG ( "Stopping...\n" );
-      WvBusCancelWorkItems(&AoeBusMain);
+      WvlBusCancelWorkItems(&AoeBusMain);
       PsTerminateSystemThread ( STATUS_SUCCESS );
     }
         WvlBusProcessWorkItems(&AoeBusMain);
