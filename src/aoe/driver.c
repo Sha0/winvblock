@@ -83,7 +83,8 @@ static
   __drv_dispatchType(IRP_MJ_CREATE)
   __drv_dispatchType(IRP_MJ_CLOSE)
   DRIVER_DISPATCH AoeIrpCreateClose;
-static driver__dispatch_func AoeDriverIrpSysCtl_;
+static __drv_dispatchType(IRP_MJ_SYSTEM_CONTROL)
+  DRIVER_DISPATCH AoeIrpSysCtl;
 static driver__dispatch_func AoeDriverIrpDevCtl_;
 static driver__dispatch_func AoeDriverIrpScsi_;
 static driver__dispatch_func AoeDriverIrpPnp_;
@@ -337,7 +338,7 @@ NTSTATUS STDCALL DriverEntry(
     DriverObject->MajorFunction[IRP_MJ_POWER] = AoeIrpPower;
     DriverObject->MajorFunction[IRP_MJ_CREATE] = AoeIrpCreateClose;
     DriverObject->MajorFunction[IRP_MJ_CLOSE] = AoeIrpCreateClose;
-    DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = AoeDriverIrpSysCtl_;
+    DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = AoeIrpSysCtl;
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = AoeDriverIrpDevCtl_;
     DriverObject->MajorFunction[IRP_MJ_SCSI] = AoeDriverIrpScsi_;
     /* Set the driver Unload callback. */
@@ -1944,7 +1945,7 @@ static NTSTATUS AoeIrpCreateClose(
   }
 
 /* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
-static NTSTATUS AoeDriverIrpSysCtl_(
+static NTSTATUS AoeIrpSysCtl(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
