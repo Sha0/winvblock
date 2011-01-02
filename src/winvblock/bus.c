@@ -276,27 +276,6 @@ NTSTATUS STDCALL WvBusPnpQueryDevText(
           status = STATUS_SUCCESS;
           goto alloc_info;
 
-        case DeviceTextLocationInformation:
-          str_len = WvDevPnpId(
-              &WvBusDev,
-              BusQueryInstanceID,
-              str
-            );
-          irp->IoStatus.Information =
-            (ULONG_PTR) wv_palloc(str_len * sizeof *str);
-          if (irp->IoStatus.Information == 0) {
-              DBG("wv_palloc DeviceTextLocationInformation\n");
-              status = STATUS_INSUFFICIENT_RESOURCES;
-              goto alloc_info;
-            }
-          RtlCopyMemory(
-              (PWCHAR) irp->IoStatus.Information,
-              str,
-              str_len * sizeof (WCHAR)
-            );
-          status = STATUS_SUCCESS;
-          goto alloc_info;
-
         default:
           irp->IoStatus.Information = 0;
           status = STATUS_NOT_SUPPORTED;
