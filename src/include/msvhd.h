@@ -46,7 +46,7 @@ struct WV_MSVHD_FOOTER {
     byte__array_union(UINT32, creator_os);
     byte__array_union(ULONGLONG, orig_size);
     byte__array_union(ULONGLONG, cur_size);
-    byte__array_union(winvblock__uint16, geom_cyls);
+    byte__array_union(UINT16, geom_cyls);
     UCHAR geom_heads;
     UCHAR geom_sects_per_track;
     byte__array_union(UINT32, type);

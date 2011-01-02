@@ -32,10 +32,10 @@ typedef struct WV_GRUB4DOS_DRIVE_MAPPING {
     UCHAR MaxHead;
     UCHAR MaxSector:6;
     UCHAR RestrictionX:1;
-    winvblock__uint16 DestMaxCylinder:13;
-    winvblock__uint16 SourceODD:1;
-    winvblock__uint16 DestODD:1;
-    winvblock__uint16 DestLBASupport:1;
+    UINT16 DestMaxCylinder:13;
+    UINT16 SourceODD:1;
+    UINT16 DestODD:1;
+    UINT16 DestLBASupport:1;
     UCHAR DestMaxHead;
     UCHAR DestMaxSector:6;
     UCHAR RestrictionY:1;

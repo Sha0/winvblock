@@ -127,8 +127,8 @@ typedef UCHAR chs[3];
 
 #define     chs_head(chs) chs[0]
 #define   chs_sector(chs) (chs[1] & 0x3F)
-#define chs_cyl_high(chs) (((winvblock__uint16) (chs[1] & 0xC0)) << 2)
-#define  chs_cyl_low(chs) ((winvblock__uint16) chs[2])
+#define chs_cyl_high(chs) (((UINT16) (chs[1] & 0xC0)) << 2)
+#define  chs_cyl_low(chs) ((UINT16) chs[2])
 #define chs_cylinder(chs) (chs_cyl_high(chs) | chs_cyl_low(chs))
 
 /* An MBR. */
@@ -138,7 +138,7 @@ typedef UCHAR chs[3];
 struct WVL_DISK_MBR {
     UCHAR code[440];
     UINT32 disk_sig;
-    winvblock__uint16 pad;
+    UINT16 pad;
     struct {
         UCHAR status;
         chs chs_start;
@@ -147,7 +147,7 @@ struct WVL_DISK_MBR {
         UINT32 lba_start;
         UINT32 lba_count;
       } partition[4] __attribute__((packed));
-    winvblock__uint16 mbr_sig;
+    UINT16 mbr_sig;
   } __attribute__((__packed__));
 typedef struct WVL_DISK_MBR WVL_S_DISK_MBR, * WVL_SP_DISK_MBR;
 #ifdef _MSC_VER

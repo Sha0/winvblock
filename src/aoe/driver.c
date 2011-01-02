@@ -102,7 +102,7 @@ struct AOE_PACKET_ {
     UCHAR ResponseFlag:1;
     UCHAR Ver:4;
     UCHAR Error;
-    winvblock__uint16 Major;
+    UINT16 Major;
     UCHAR Minor;
     UCHAR Command;
     UINT32 Tag;
@@ -130,7 +130,7 @@ struct AOE_PACKET_ {
     UCHAR Lba3;
     UCHAR Lba4;
     UCHAR Lba5;
-    winvblock__uint16 Reserved;
+    UINT16 Reserved;
 
     UCHAR Data[];
   } __attribute__((__packed__));
@@ -280,7 +280,7 @@ NTSTATUS STDCALL DriverEntry(
     /* Initialize the probe tag's AoE packet. */
     AoeProbeTag_->packet_data->Ver = AOEPROTOCOLVER;
     AoeProbeTag_->packet_data->Major =
-      htons((winvblock__uint16) -1);
+      htons((UINT16) -1);
     AoeProbeTag_->packet_data->Minor = (UCHAR) -1;
     AoeProbeTag_->packet_data->Cmd = 0xec;           /* IDENTIFY DEVICE */
     AoeProbeTag_->packet_data->Count = 1;
@@ -729,7 +729,7 @@ static winvblock__bool STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
     }
         tag->packet_data->Ver = AOEPROTOCOLVER;
         tag->packet_data->Major =
-    htons ( ( winvblock__uint16 ) aoe_disk_ptr->Major );
+    htons ( ( UINT16 ) aoe_disk_ptr->Major );
         tag->packet_data->Minor = ( UCHAR ) aoe_disk_ptr->Minor;
         tag->packet_data->ExtendedAFlag = TRUE;
 
@@ -939,7 +939,7 @@ static NTSTATUS STDCALL AoeDiskIo_(
     }
         tag->packet_data->Ver = AOEPROTOCOLVER;
         tag->packet_data->Major =
-    htons ( ( winvblock__uint16 ) aoe_disk_ptr->Major );
+    htons ( ( UINT16 ) aoe_disk_ptr->Major );
         tag->packet_data->Minor = ( UCHAR ) aoe_disk_ptr->Minor;
         tag->packet_data->Tag = 0;
         tag->packet_data->Command = 0;
@@ -1026,7 +1026,7 @@ static NTSTATUS STDCALL AoeDiskIo_(
 static void STDCALL add_target(
     IN PUCHAR ClientMac,
     IN PUCHAR ServerMac,
-    winvblock__uint16 Major,
+    UINT16 Major,
     UCHAR Minor,
     LONGLONG LBASize
   )
@@ -1531,7 +1531,7 @@ struct AOE_ABFT {
     UCHAR OEMID[6];
     UCHAR OEMTableID[8];
     UCHAR Reserved1[12];
-    winvblock__uint16 Major;
+    UINT16 Major;
     UCHAR Minor;
     UCHAR Reserved2;
     UCHAR ClientMac[6];
@@ -1782,7 +1782,7 @@ NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
         buffer[3],
         buffer[4],
         buffer[5],
-        *(winvblock__uint16_ptr) (buffer + 6),
+        *(PUINT16) (buffer + 6),
         (UCHAR) buffer[8]
       );
     aoe_disk = AoeDiskCreate_();
@@ -1796,7 +1796,7 @@ NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
       }
     RtlCopyMemory(aoe_disk->ClientMac, buffer, 6);
     RtlFillMemory(aoe_disk->ServerMac, 6, 0xff);
-    aoe_disk->Major = *(winvblock__uint16_ptr) (buffer + 6);
+    aoe_disk->Major = *(PUINT16) (buffer + 6);
     aoe_disk->Minor = (UCHAR) buffer[8];
     aoe_disk->MaxSectorsPerPacket = 1;
     aoe_disk->Timeout = 200000;             /* 20 ms. */

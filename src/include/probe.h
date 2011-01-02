@@ -28,8 +28,8 @@
  */
 
 typedef struct WV_PROBE_INT_VECTOR {
-    winvblock__uint16 Offset;
-    winvblock__uint16 Segment;
+    UINT16 Offset;
+    UINT16 Segment;
   } WV_S_PROBE_INT_VECTOR, * WV_SP_PROBE_INT_VECTOR;
 
 #ifdef _MSC_VER

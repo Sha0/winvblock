@@ -41,7 +41,6 @@ typedef old new, *new##_ptr
 typedef enum _##x x, *x##_ptr
 
 /* Common type definitions */
-winvblock__def_type ( UINT16, winvblock__uint16 );
 winvblock__def_type ( BOOLEAN, winvblock__bool );
 typedef void *winvblock__any_ptr;
 

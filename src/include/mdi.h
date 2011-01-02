@@ -24,29 +24,29 @@
 #  pragma pack(1)
 #endif
 struct WV_MDI_PATCH_AREA {
-    winvblock__uint16 mdi_bytes;
+    UINT16 mdi_bytes;
     UCHAR mdi_version_minor;
     UCHAR mdi_version_major;
     UINT32 diskbuf;
     UINT32 disksize;
-    winvblock__uint16 cmdline_off, cmdline_seg;
+    UINT16 cmdline_off, cmdline_seg;
 
     UINT32 oldint13;
     UINT32 oldint15;
 
-    winvblock__uint16 olddosmem;
+    UINT16 olddosmem;
     UCHAR bootloaderid;
     UCHAR _pad1;
 
-    winvblock__uint16 dpt_ptr;
+    UINT16 dpt_ptr;
     /* End of the official MemDisk_Info */
     UCHAR driveshiftlimit;
     UCHAR _pad2;
-    winvblock__uint16 _pad3;
-    winvblock__uint16 memint1588;
+    UINT16 _pad3;
+    UINT16 memint1588;
 
-    winvblock__uint16 cylinders;
-    winvblock__uint16 heads;
+    UINT16 cylinders;
+    UINT16 heads;
     UINT32 sectors;
 
     UINT32 mem1mb;

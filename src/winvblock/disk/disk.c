@@ -190,27 +190,27 @@ typedef struct WV_DISK_FAT_EXTRA WV_S_DISK_FAT_EXTRA, * WV_SP_DISK_FAT_EXTRA;
 struct WV_DISK_FAT_SUPER {
     UCHAR bs_jmpboot[3];
     char bs_oemname[8];
-    winvblock__uint16 bpb_bytspersec;
+    UINT16 bpb_bytspersec;
     UCHAR bpb_secperclus;
-    winvblock__uint16 bpb_rsvdseccnt;
+    UINT16 bpb_rsvdseccnt;
     UCHAR bpb_numfats;
-    winvblock__uint16 bpb_rootentcnt;
-    winvblock__uint16 bpb_totsec16;
+    UINT16 bpb_rootentcnt;
+    UINT16 bpb_totsec16;
     UCHAR bpb_media;
-    winvblock__uint16 bpb_fatsz16;
-    winvblock__uint16 bpb_secpertrk;
-    winvblock__uint16 bpb_numheads;
+    UINT16 bpb_fatsz16;
+    UINT16 bpb_secpertrk;
+    UINT16 bpb_numheads;
     UINT32 bpb_hiddsec;
     UINT32 bpb_totsec32;
     union {
         struct { WV_S_DISK_FAT_EXTRA extra; } fat16;
         struct {
             UINT32 bpb_fatsz32;
-            winvblock__uint16 bpb_extflags;
-            winvblock__uint16 bpb_fsver;
+            UINT16 bpb_extflags;
+            UINT16 bpb_fsver;
             UINT32 bpb_rootclus;
-            winvblock__uint16 bpb_fsinfo;
-            winvblock__uint16 bpb_bkbootsec;
+            UINT16 bpb_fsinfo;
+            UINT16 bpb_bkbootsec;
             char bpb_reserved[12];
             /* Clever, eh?  Same fields, different offset... */
             WV_S_DISK_FAT_EXTRA extra;
@@ -232,7 +232,7 @@ WVL_M_LIB void disk__guess_geometry(
     IN WV_AP_DISK_BOOT_SECT boot_sect_ptr,
     IN OUT WV_SP_DISK_T disk_ptr
   ) {
-    winvblock__uint16 heads = 0, sects_per_track = 0, cylinders;
+    UINT16 heads = 0, sects_per_track = 0, cylinders;
     WVL_SP_DISK_MBR as_mbr;
 
     if ((boot_sect_ptr == NULL) || (disk_ptr == NULL))

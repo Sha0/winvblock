@@ -28,9 +28,9 @@
  */
 
 #  define htons(x) \
-  (winvblock__uint16)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
+  (UINT16)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
 #  define ntohs(x) \
-  (winvblock__uint16)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
+  (UINT16)((((x) << 8) & 0xff00) | (((x) >> 8) & 0xff))
 
 #  define IOCTL_AOE_SCAN                \
 CTL_CODE(                               \

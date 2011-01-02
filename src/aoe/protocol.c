@@ -130,7 +130,7 @@ typedef struct _PROTOCOL_HEADER
 {
   UCHAR DestinationMac[6];
   UCHAR SourceMac[6];
-  winvblock__uint16 Protocol;
+  UINT16 Protocol;
   UCHAR Data[];
 } __attribute__ ( ( __packed__ ) ) PROTOCOL_HEADER, *PPROTOCOL_HEADER;
 #ifdef _MSC_VER

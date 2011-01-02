@@ -410,7 +410,7 @@ static int STDCALL cmd_mount(void) {
         mac_addr[5]
       );
     memcpy(in_buf, mac_addr, 6);
-    *((winvblock__uint16_ptr) (in_buf + 6)) = (winvblock__uint16) ver_major;
+    *((PUINT16) (in_buf + 6)) = (UINT16) ver_major;
     *((PUCHAR) (in_buf + 8)) = (UCHAR) ver_minor;
     if (!DeviceIoControl(
         boot_bus,
