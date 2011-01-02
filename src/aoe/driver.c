@@ -70,7 +70,6 @@ extern BOOLEAN STDCALL AoeRegSetup(OUT PNTSTATUS);
 struct AOE_DISK_;
 static VOID STDCALL AoeThread_(IN PVOID);
 static VOID AoeProcessAbft_(void);
-static VOID STDCALL AoeUnload_(IN PDRIVER_OBJECT);
 static struct AOE_DISK_ * AoeDiskCreate_(void);
 static WV_F_DEV_FREE AoeDiskFree_;
 static WV_F_DISK_IO AoeDiskIo_;
@@ -89,7 +88,7 @@ static __drv_dispatchType(IRP_MJ_DEVICE_CONTROL)
   DRIVER_DISPATCH AoeIrpDevCtl;
 static __drv_dispatchType(IRP_MJ_SCSI) DRIVER_DISPATCH AoeIrpScsi;
 static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH AoeIrpPnp;
-static VOID STDCALL AoeDriverUnload_(IN PDRIVER_OBJECT);
+static DRIVER_UNLOAD AoeUnload;
 
 /** Tag types. */
 typedef enum AOE_TAG_TYPE_ {
@@ -343,13 +342,13 @@ NTSTATUS STDCALL DriverEntry(
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = AoeIrpDevCtl;
     DriverObject->MajorFunction[IRP_MJ_SCSI] = AoeIrpScsi;
     /* Set the driver Unload callback. */
-    DriverObject->DriverUnload = AoeUnload_;
+    DriverObject->DriverUnload = AoeUnload;
     /* Set the driver AddDevice callback. */
     DriverObject->DriverExtension->AddDevice = AoeBusAttachFdo;
     AoeStarted_ = TRUE;
     if (!AoeBusCreate(DriverObject)) {
         DBG("Unable to create AoE bus!\n");
-        AoeUnload_(DriverObject);
+        AoeUnload(DriverObject);
         return STATUS_INSUFFICIENT_RESOURCES;
       }
     AoeProcessAbft_();
@@ -360,7 +359,7 @@ NTSTATUS STDCALL DriverEntry(
 /**
  * Stop AoE operations.
  */
-static VOID STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
+static VOID STDCALL AoeUnload(IN PDRIVER_OBJECT DriverObject) {
     NTSTATUS Status;
     AOE_SP_DISK_SEARCH_ disk_searcher, previous_disk_searcher;
     AOE_SP_WORK_TAG_ tag;
