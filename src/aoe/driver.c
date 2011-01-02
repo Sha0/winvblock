@@ -79,7 +79,10 @@ static WV_F_DISK_INIT AoeDiskInit_;
 static WV_F_DISK_CLOSE AoeDiskClose_;
 static driver__dispatch_func AoeDriverIrpNotSupported_;
 static __drv_dispatchType(IRP_MJ_POWER) DRIVER_DISPATCH AoeIrpPower;
-static driver__dispatch_func AoeDriverIrpCreateClose_;
+static
+  __drv_dispatchType(IRP_MJ_CREATE)
+  __drv_dispatchType(IRP_MJ_CLOSE)
+  DRIVER_DISPATCH AoeIrpCreateClose;
 static driver__dispatch_func AoeDriverIrpSysCtl_;
 static driver__dispatch_func AoeDriverIrpDevCtl_;
 static driver__dispatch_func AoeDriverIrpScsi_;
@@ -332,8 +335,8 @@ NTSTATUS STDCALL DriverEntry(
       DriverObject->MajorFunction[i] = AoeDriverIrpNotSupported_;
     DriverObject->MajorFunction[IRP_MJ_PNP] = AoeDriverIrpPnp_;
     DriverObject->MajorFunction[IRP_MJ_POWER] = AoeIrpPower;
-    DriverObject->MajorFunction[IRP_MJ_CREATE] = AoeDriverIrpCreateClose_;
-    DriverObject->MajorFunction[IRP_MJ_CLOSE] = AoeDriverIrpCreateClose_;
+    DriverObject->MajorFunction[IRP_MJ_CREATE] = AoeIrpCreateClose;
+    DriverObject->MajorFunction[IRP_MJ_CLOSE] = AoeIrpCreateClose;
     DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = AoeDriverIrpSysCtl_;
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = AoeDriverIrpDevCtl_;
     DriverObject->MajorFunction[IRP_MJ_SCSI] = AoeDriverIrpScsi_;
@@ -1919,7 +1922,7 @@ static NTSTATUS AoeIrpPower(
   }
 
 /* Handle an IRP_MJ_CREATE or IRP_MJ_CLOSE IRP. */
-static NTSTATUS AoeDriverIrpCreateClose_(
+static NTSTATUS AoeIrpCreateClose(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
