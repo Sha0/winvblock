@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2010, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -42,7 +42,7 @@ static winvblock__bool STDCALL WvMemdiskCheckMbft_(
     winvblock__uint8_ptr phys_mem,
     winvblock__uint32 offset
   ) {
-    mdi__mbft_ptr mbft = (mdi__mbft_ptr) (phys_mem + offset);
+    WV_SP_MDI_MBFT mbft = (WV_SP_MDI_MBFT) (phys_mem + offset);
     winvblock__uint32 i;
     winvblock__uint8 chksum = 0;
     WV_SP_PROBE_SAFE_MBR_HOOK assoc_hook;
