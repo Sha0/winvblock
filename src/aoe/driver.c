@@ -2043,7 +2043,7 @@ static NTSTATUS AoeDriverIrpPnp_(
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)
-      return WvBusPnp(&AoeBusMain, irp, io_stack_loc->MinorFunction);
+      return WvlBusPnpIrp(&AoeBusMain, irp, io_stack_loc->MinorFunction);
     /* WvDevFromDevObj() checks for a NULL dev_obj */
     dev = WvDevFromDevObj(dev_obj);
     /* Check that the device exists. */

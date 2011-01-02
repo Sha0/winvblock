@@ -617,7 +617,7 @@ static NTSTATUS STDCALL WvDriverBusPnp_(
     IN PIRP irp,
     IN UCHAR code
   ) {
-    return WvBusPnp(&WvDriverBus_, irp, code);
+    return WvlBusPnpIrp(&WvDriverBus_, irp, code);
   }
     
 /**
@@ -654,7 +654,7 @@ WVL_M_LIB BOOLEAN STDCALL WvDriverBusAddDev(
     dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
     /* Add the new PDO device to the bus' list of children. */
     WvlBusAddNode(&WvDriverBus_, &Dev->BusNode);
-    Dev->DevNum = WvBusGetNodeNum(&Dev->BusNode);
+    Dev->DevNum = WvlBusGetNodeNum(&Dev->BusNode);
 
     DBG("Exit\n");
     return TRUE;
@@ -688,7 +688,7 @@ static NTSTATUS STDCALL WvDriverBusDevCtlDetach_(
         WV_SP_DEV_T dev = WvDevFromDevObj(WvBusGetNodePdo(walker));
 
         /* If the unit number matches... */
-        if (WvBusGetNodeNum(walker) == unit_num) {
+        if (WvlBusGetNodeNum(walker) == unit_num) {
             /* If it's not a boot-time device... */
             if (dev->Boot) {
                 DBG("Cannot detach a boot-time device.\n");
@@ -962,7 +962,7 @@ static VOID STDCALL WvDriverAddDummy_(PVOID context) {
     dev->Parent = WvDriverBus_.Fdo;
     /* Add the new PDO device to the bus' list of children. */
     WvlBusAddNode(&WvDriverBus_, &dev->BusNode);
-    dev->DevNum = WvBusGetNodeNum(&dev->BusNode);
+    dev->DevNum = WvlBusGetNodeNum(&dev->BusNode);
     pdo->Flags &= ~DO_DEVICE_INITIALIZING;
 
     dummy_context->Status = STATUS_SUCCESS;

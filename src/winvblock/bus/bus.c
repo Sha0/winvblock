@@ -578,7 +578,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusEnqueueCustomWorkItem(
  * @v Node              The node whose unit number we request.
  * @ret UINT32          The unit number for the node.
  */
-WVL_M_LIB UINT32 STDCALL WvBusGetNodeNum(
+WVL_M_LIB UINT32 STDCALL WvlBusGetNodeNum(
     IN WVL_SP_BUS_NODE Node
   ) {
     return Node->BusPrivate_.Num;

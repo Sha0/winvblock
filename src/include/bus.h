@@ -140,12 +140,12 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlBusPower(
     IN PIRP
   );
 /* IRP_MJ_PNP dispatcher in bus/pnp.c */
-extern WVL_M_LIB NTSTATUS STDCALL WvBusPnp(
+extern WVL_M_LIB NTSTATUS STDCALL WvlBusPnpIrp(
     IN WVL_SP_BUS_T,
     IN PIRP,
     IN UCHAR
   );
-extern WVL_M_LIB UINT32 STDCALL WvBusGetNodeNum(
+extern WVL_M_LIB UINT32 STDCALL WvlBusGetNodeNum(
     IN WVL_SP_BUS_NODE
   );
 extern WVL_M_LIB WVL_SP_BUS_NODE STDCALL WvBusGetNextNode(

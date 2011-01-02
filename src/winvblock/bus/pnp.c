@@ -336,7 +336,7 @@ static NTSTATUS STDCALL WvBusPnpSimple_(
   }
 
 /* Bus PnP dispatch routine. */
-WVL_M_LIB NTSTATUS STDCALL WvBusPnp(
+WVL_M_LIB NTSTATUS STDCALL WvlBusPnpIrp(
     IN WVL_SP_BUS_T bus,
     IN PIRP irp,
     IN UCHAR code

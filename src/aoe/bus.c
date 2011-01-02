@@ -90,7 +90,7 @@ static NTSTATUS STDCALL AoeBusDevCtlDetach_(IN PIRP irp) {
         WV_SP_DEV_T dev = WvDevFromDevObj(WvBusGetNodePdo(walker));
 
         /* If the unit number matches... */
-        if (WvBusGetNodeNum(walker) == unit_num) {
+        if (WvlBusGetNodeNum(walker) == unit_num) {
             /* If it's not a boot-time device... */
             if (dev->Boot) {
                 DBG("Cannot detach a boot-time device.\n");
@@ -379,7 +379,7 @@ BOOLEAN STDCALL AoeBusAddDev(
     dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
     /* Add the new PDO device to the bus' list of children. */
     WvlBusAddNode(&AoeBusMain, &Dev->BusNode);
-    Dev->DevNum = WvBusGetNodeNum(&Dev->BusNode);
+    Dev->DevNum = WvlBusGetNodeNum(&Dev->BusNode);
 
     DBG("Exit\n");
     return TRUE;
