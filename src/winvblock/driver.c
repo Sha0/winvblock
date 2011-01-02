@@ -50,7 +50,6 @@ extern WV_S_DEV_T WvBusDev;
 extern UNICODE_STRING WvBusName;
 extern UNICODE_STRING WvBusDosname;
 extern PETHREAD WvBusThread;
-extern WV_F_DEV_DISPATCH WvBusSysCtl;
 extern WV_F_DEV_CTL WvBusDevCtl;
 extern WV_F_DEV_PNP WvBusPnp;
 extern WVL_F_BUS_PNP WvBusPnpQueryDevText;
@@ -144,7 +143,7 @@ static NTSTATUS STDCALL WvAttachFdo(
     PDEVICE_OBJECT fdo = NULL;
     static WV_S_DEV_IRP_MJ irp_mj = {
         (WV_FP_DEV_DISPATCH) 0,
-        WvBusSysCtl,
+        (WV_FP_DEV_DISPATCH) 0,
         WvBusDevCtl,
         (WV_FP_DEV_SCSI) 0,
         WvBusPnp,
@@ -368,12 +367,16 @@ static NTSTATUS WvIrpSysCtl(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    /* WvDevFromDevObj() checks for a NULL dev_obj */
-    WV_SP_DEV_T dev = WvDevFromDevObj(dev_obj);
+    WV_SP_DEV_T dev;
 
     #ifdef DEBUGIRPS
     Debug_IrpStart(dev_obj, irp);
     #endif
+    /* Check for a bus IRP. */
+    if (dev_obj == WvBus.Fdo)
+      return WvlBusSysCtl(&WvBus, irp);
+    /* WvDevFromDevObj() checks for a NULL dev_obj */
+    dev = WvDevFromDevObj(dev_obj);
     /* Check that the device exists. */
     if (!dev || dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);

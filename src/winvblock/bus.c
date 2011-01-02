@@ -65,7 +65,6 @@ WV_S_DEV_T WvBusDev = {0};
 PETHREAD WvBusThread = NULL;
 
 /* Forward declarations. */
-WV_F_DEV_DISPATCH WvBusSysCtl;
 WV_F_DEV_CTL WvBusDevCtl;
 WV_F_DEV_PNP WvBusPnp;
 WVL_F_BUS_PNP WvBusPnpQueryDevText;
@@ -126,11 +125,6 @@ NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING RegistryPath) {
     err_driver_bus:
 
     return status;
-  }
-
-/* Pass an IRP_MJ_SYSTEM_CONTROL IRP to the bus. */
-NTSTATUS STDCALL WvBusSysCtl(IN WV_SP_DEV_T dev, IN PIRP irp) {
-    return WvlBusSysCtl(&WvBus, irp);
   }
 
 /* Pass an IRP_MJ_PNP to the bus. */
