@@ -46,11 +46,6 @@ typedef struct WV_DEV_EXT {
     struct WV_DEV_T * device;
   } WV_S_DEV_EXT, * WV_SP_DEV_EXT;
 
-/* The prototype for a device IRP dispatch. */
-typedef NTSTATUS STDCALL driver__dispatch_func(
-    IN PDEVICE_OBJECT,
-    IN PIRP
-  );
 /* PnP IDs for a dummy device. */
 typedef struct WV_DRIVER_DUMMY_IDS {
     UINT32 DevOffset;
