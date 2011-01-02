@@ -887,7 +887,7 @@ typedef struct WV_DRIVER_ADD_DUMMY_ {
   } WV_S_DRIVER_ADD_DUMMY_, * WV_SP_DRIVER_ADD_DUMMY_;
 
 /* Prototype safety. */
-static WV_F_BUS_WORK_ITEM WvDriverAddDummy_;
+static WVL_F_BUS_WORK_ITEM WvDriverAddDummy_;
 /**
  * Add a dummy PDO child node in the context of the bus' thread.
  *

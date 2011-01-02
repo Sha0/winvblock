@@ -101,10 +101,11 @@ typedef struct WV_BUS_NODE {
  * WvBusProcessWorkItems()), then this is the function prototype to be
  * used.
  */
-typedef void STDCALL WV_F_BUS_WORK_ITEM(void *);
-typedef WV_F_BUS_WORK_ITEM * WV_FP_BUS_WORK_ITEM;
+typedef void STDCALL WVL_F_BUS_WORK_ITEM(void *);
+typedef WVL_F_BUS_WORK_ITEM * WVL_FP_BUS_WORK_ITEM;
+
 typedef struct WV_BUS_CUSTOM_WORK_ITEM {
-    WV_FP_BUS_WORK_ITEM Func;
+    WVL_FP_BUS_WORK_ITEM Func;
     void * Context;
   } WV_S_BUS_CUSTOM_WORK_ITEM, * WV_SP_BUS_CUSTOM_WORK_ITEM;
 
