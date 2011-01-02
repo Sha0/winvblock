@@ -148,7 +148,7 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlBusPnpIrp(
 extern WVL_M_LIB UINT32 STDCALL WvlBusGetNodeNum(
     IN WVL_SP_BUS_NODE
   );
-extern WVL_M_LIB WVL_SP_BUS_NODE STDCALL WvBusGetNextNode(
+extern WVL_M_LIB WVL_SP_BUS_NODE STDCALL WvlBusGetNextNode(
     IN WVL_SP_BUS_T,
     IN WVL_SP_BUS_NODE
   );

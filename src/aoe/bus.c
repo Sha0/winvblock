@@ -86,7 +86,7 @@ static NTSTATUS STDCALL AoeBusDevCtlDetach_(IN PIRP irp) {
 
     walker = NULL;
     /* For each node on the bus... */
-    while (walker = WvBusGetNextNode(&AoeBusMain, walker)) {
+    while (walker = WvlBusGetNextNode(&AoeBusMain, walker)) {
         WV_SP_DEV_T dev = WvDevFromDevObj(WvBusGetNodePdo(walker));
 
         /* If the unit number matches... */

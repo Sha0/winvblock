@@ -684,7 +684,7 @@ static NTSTATUS STDCALL WvDriverBusDevCtlDetach_(
 
     walker = NULL;
     /* For each node on the bus... */
-    while (walker = WvBusGetNextNode(&WvDriverBus_, walker)) {
+    while (walker = WvlBusGetNextNode(&WvDriverBus_, walker)) {
         WV_SP_DEV_T dev = WvDevFromDevObj(WvBusGetNodePdo(walker));
 
         /* If the unit number matches... */

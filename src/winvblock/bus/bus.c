@@ -595,7 +595,7 @@ WVL_M_LIB UINT32 STDCALL WvlBusGetNodeNum(
  * whichever thread calls WvlBusProcessWorkItems() because it expects
  * the list of child nodes to remain static between calls.
  */
-WVL_M_LIB WVL_SP_BUS_NODE STDCALL WvBusGetNextNode(
+WVL_M_LIB WVL_SP_BUS_NODE STDCALL WvlBusGetNextNode(
     IN WVL_SP_BUS_T Bus,
     IN WVL_SP_BUS_NODE PrevNode
   ) {
