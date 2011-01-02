@@ -70,7 +70,7 @@ static NTSTATUS STDCALL WvBusPnpStartDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
       }
     if (NT_SUCCESS(status = irp->IoStatus.Status)) {
         bus->OldState = bus->State;
-        bus->State = WvBusStateStarted;
+        bus->State = WvlBusStateStarted;
       }
     return driver__complete_irp(
         irp,
@@ -98,7 +98,7 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WV_SP_BUS_T bus, IN PIRP irp) {
     status = STATUS_SUCCESS;
     lower = bus->LowerDeviceObject;
     bus->OldState = bus->State;
-    bus->State = WvBusStateDeleted;
+    bus->State = WvlBusStateDeleted;
     /* Pass the IRP on to any lower DEVICE_OBJECT */
     if (lower) {
         irp->IoStatus.Information = 0;
@@ -279,7 +279,7 @@ static NTSTATUS STDCALL WvBusPnpSimple_(
         case IRP_MN_QUERY_STOP_DEVICE:
           DBG("bus_pnp: IRP_MN_QUERY_STOP_DEVICE\n");
           bus->OldState = bus->State;
-          bus->State = WvBusStateStopPending;
+          bus->State = WvlBusStateStopPending;
           status = STATUS_SUCCESS;
           break;
 
@@ -292,14 +292,14 @@ static NTSTATUS STDCALL WvBusPnpSimple_(
         case IRP_MN_STOP_DEVICE:
           DBG("bus_pnp: IRP_MN_STOP_DEVICE\n");
           bus->OldState = bus->State;
-          bus->State = WvBusStateStopped;
+          bus->State = WvlBusStateStopped;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_QUERY_REMOVE_DEVICE:
           DBG("bus_pnp: IRP_MN_QUERY_REMOVE_DEVICE\n");
           bus->OldState = bus->State;
-          bus->State = WvBusStateRemovePending;
+          bus->State = WvlBusStateRemovePending;
           status = STATUS_SUCCESS;
           break;
 
@@ -312,7 +312,7 @@ static NTSTATUS STDCALL WvBusPnpSimple_(
         case IRP_MN_SURPRISE_REMOVAL:
           DBG("bus_pnp: IRP_MN_SURPRISE_REMOVAL\n");
           bus->OldState = bus->State;
-          bus->State = WvBusStateSurpriseRemovePending;
+          bus->State = WvlBusStateSurpriseRemovePending;
           status = STATUS_SUCCESS;
           break;
 

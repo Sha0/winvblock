@@ -329,7 +329,7 @@ winvblock__bool AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
     AoeBusMain.Fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
     AoeBusMain.Fdo->Flags &= ~DO_DEVICE_INITIALIZING;
     #ifdef RIS
-    AoeBusMain.State = WvBusStateStarted;
+    AoeBusMain.State = WvlBusStateStarted;
     #endif
     /* All done. */
     DBG("Exit\n");

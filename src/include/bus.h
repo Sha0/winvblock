@@ -49,16 +49,16 @@ typedef NTSTATUS STDCALL WVL_F_BUS_PNP(IN WV_SP_BUS_T, IN PIRP);
 typedef WVL_F_BUS_PNP * WVL_FP_BUS_PNP;
 
 /* Device state. */
-typedef enum WV_BUS_STATE {
-    WvBusStateNotStarted,
-    WvBusStateStarted,
-    WvBusStateStopPending,
-    WvBusStateStopped,
-    WvBusStateRemovePending,
-    WvBusStateSurpriseRemovePending,
-    WvBusStateDeleted,
-    WvBusStates
-  } WV_E_BUS_STATE, * WV_EP_BUS_STATE;
+typedef enum WVL_BUS_STATE {
+    WvlBusStateNotStarted,
+    WvlBusStateStarted,
+    WvlBusStateStopPending,
+    WvlBusStateStopped,
+    WvlBusStateRemovePending,
+    WvlBusStateSurpriseRemovePending,
+    WvlBusStateDeleted,
+    WvlBusStates
+  } WVL_E_BUS_STATE, * WVL_EP_BUS_STATE;
 
 /* The bus type. */
 typedef struct WV_BUS_T {
@@ -69,8 +69,8 @@ typedef struct WV_BUS_T {
     WVL_FP_BUS_THREAD Thread;
     KEVENT ThreadSignal;
     winvblock__bool Stop;
-    WV_E_BUS_STATE OldState;
-    WV_E_BUS_STATE State;
+    WVL_E_BUS_STATE OldState;
+    WVL_E_BUS_STATE State;
     WVL_FP_BUS_PNP QueryDevText;
     struct {
         LIST_ENTRY Nodes;
