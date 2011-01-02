@@ -602,16 +602,6 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit63]
-FileName=src\winvblock\libbus\pnp.c
-CompileCpp=1
-Folder=WinVBlock/LibBus
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit64]
 FileName=src\include\dummy.h
 CompileCpp=1
 Folder=Include
@@ -621,7 +611,7 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit65]
+[Unit64]
 FileName=src\winvblock\dummy.c
 CompileCpp=1
 Folder=WinVBlock
@@ -631,10 +621,20 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit66]
+[Unit65]
 FileName=src\winvblock\bus.c
 CompileCpp=1
 Folder=WinVBlock
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit66]
+FileName=src\winvblock\libbus\libbus.c
+CompileCpp=1
+Folder=WinVBlock/LibBus
 Compile=1
 Link=1
 Priority=1000
@@ -731,16 +731,6 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit62]
-FileName=src\winvblock\libbus\bus.c
-CompileCpp=1
-Folder=WinVBlock/LibBus
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
 [Unit16]
 FileName=src\winvblock\disk\disk.c
 CompileCpp=1
@@ -765,6 +755,16 @@ CompileCpp=1
 FileName=src\winvblock\disk\dev_ctl.c
 CompileCpp=1
 Folder=WinVBlock/Disk
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit62]
+FileName=src\winvblock\libbus\pnp.c
+CompileCpp=1
+Folder=WinVBlock/LibBus
 Compile=1
 Link=1
 Priority=1000

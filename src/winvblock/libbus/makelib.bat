@@ -2,7 +2,7 @@
 
 set libname=libbus
 
-set c=bus.c pnp.c
+set c=libbus.c pnp.c
 
 echo !INCLUDE $(NTMAKEENV)\makefile.def	> makefile
 
