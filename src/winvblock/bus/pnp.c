@@ -37,7 +37,7 @@
 #include "debug.h"
 #include "probe.h"
 
-static NTSTATUS STDCALL WvBusPnpIoCompletion_(
+static NTSTATUS STDCALL WvlBusPnpIoCompletion(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
     IN PKEVENT event
@@ -46,7 +46,7 @@ static NTSTATUS STDCALL WvBusPnpIoCompletion_(
     return STATUS_MORE_PROCESSING_REQUIRED;
   }
 
-static NTSTATUS STDCALL WvBusPnpStartDev_(IN WVL_SP_BUS_T bus, IN PIRP irp) {
+static NTSTATUS STDCALL WvlBusPnpStartDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
     NTSTATUS status;
     KEVENT event;
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
@@ -57,7 +57,7 @@ static NTSTATUS STDCALL WvBusPnpStartDev_(IN WVL_SP_BUS_T bus, IN PIRP irp) {
     IoCopyCurrentIrpStackLocationToNext(irp);
     IoSetCompletionRoutine(
         irp,
-        (PIO_COMPLETION_ROUTINE) WvBusPnpIoCompletion_,
+        (PIO_COMPLETION_ROUTINE) WvlBusPnpIoCompletion,
         (PVOID) &event,
         TRUE,
         TRUE,
@@ -79,7 +79,7 @@ static NTSTATUS STDCALL WvBusPnpStartDev_(IN WVL_SP_BUS_T bus, IN PIRP irp) {
       );
   }
 
-static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WVL_SP_BUS_T bus, IN PIRP irp) {
+static NTSTATUS STDCALL WvlBusPnpRemoveDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
     PDEVICE_OBJECT lower;
@@ -130,7 +130,7 @@ static NTSTATUS STDCALL WvBusPnpRemoveDev_(IN WVL_SP_BUS_T bus, IN PIRP irp) {
     return status;
   }
 
-static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
+static NTSTATUS STDCALL WvlBusPnpQueryDevRelations(
     IN WVL_SP_BUS_T bus,
     IN PIRP irp
   ) {
@@ -201,7 +201,7 @@ static NTSTATUS STDCALL WvBusPnpQueryDevRelations_(
     return driver__complete_irp(irp, irp->IoStatus.Information, status);
   }
 
-static NTSTATUS STDCALL WvBusPnpQueryCapabilities_(
+static NTSTATUS STDCALL WvlBusPnpQueryCapabilities(
     IN WVL_SP_BUS_T bus,
     IN PIRP irp
   ) {
@@ -237,7 +237,10 @@ DEFINE_GUID(
     0xb1
   );
 
-static NTSTATUS STDCALL WvBusPnpQueryBusInfo_(IN WVL_SP_BUS_T bus, IN PIRP irp) {
+static NTSTATUS STDCALL WvlBusPnpQueryBusInfo(
+    IN WVL_SP_BUS_T bus,
+    IN PIRP irp
+  ) {
     PPNP_BUS_INFORMATION pnp_bus_info;
     NTSTATUS status;
 
@@ -261,7 +264,7 @@ static NTSTATUS STDCALL WvBusPnpQueryBusInfo_(IN WVL_SP_BUS_T bus, IN PIRP irp) 
     return status;
   }
 
-static NTSTATUS STDCALL WvBusPnpSimple_(
+static NTSTATUS STDCALL WvlBusPnpSimple(
     IN WVL_SP_BUS_T bus,
     IN PIRP irp,
     IN UCHAR code
@@ -269,48 +272,49 @@ static NTSTATUS STDCALL WvBusPnpSimple_(
     NTSTATUS status;
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
 
+    DBG("WvlBusPnpSimple(): ");
     switch (code) {
         case IRP_MN_QUERY_PNP_DEVICE_STATE:
-          DBG("bus_pnp: IRP_MN_QUERY_PNP_DEVICE_STATE\n");
+          DBG("IRP_MN_QUERY_PNP_DEVICE_STATE\n");
           irp->IoStatus.Information = 0;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_QUERY_STOP_DEVICE:
-          DBG("bus_pnp: IRP_MN_QUERY_STOP_DEVICE\n");
+          DBG("IRP_MN_QUERY_STOP_DEVICE\n");
           bus->OldState = bus->State;
           bus->State = WvlBusStateStopPending;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_CANCEL_STOP_DEVICE:
-          DBG("bus_pnp: IRP_MN_CANCEL_STOP_DEVICE\n");
+          DBG("IRP_MN_CANCEL_STOP_DEVICE\n");
           bus->State = bus->OldState;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_STOP_DEVICE:
-          DBG("bus_pnp: IRP_MN_STOP_DEVICE\n");
+          DBG("IRP_MN_STOP_DEVICE\n");
           bus->OldState = bus->State;
           bus->State = WvlBusStateStopped;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_QUERY_REMOVE_DEVICE:
-          DBG("bus_pnp: IRP_MN_QUERY_REMOVE_DEVICE\n");
+          DBG("IRP_MN_QUERY_REMOVE_DEVICE\n");
           bus->OldState = bus->State;
           bus->State = WvlBusStateRemovePending;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_CANCEL_REMOVE_DEVICE:
-          DBG("bus_pnp: IRP_MN_CANCEL_REMOVE_DEVICE\n");
+          DBG("IRP_MN_CANCEL_REMOVE_DEVICE\n");
           bus->State = bus->OldState;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_SURPRISE_REMOVAL:
-          DBG("bus_pnp: IRP_MN_SURPRISE_REMOVAL\n");
+          DBG("IRP_MN_SURPRISE_REMOVAL\n");
           bus->OldState = bus->State;
           bus->State = WvlBusStateSurpriseRemovePending;
           status = STATUS_SUCCESS;
@@ -318,12 +322,12 @@ static NTSTATUS STDCALL WvBusPnpSimple_(
 
         case IRP_MN_QUERY_RESOURCES:
         case IRP_MN_QUERY_RESOURCE_REQUIREMENTS:
-          DBG("bus_pnp: IRP_MN_QUERY_RESOURCE*\n");
+          DBG("IRP_MN_QUERY_RESOURCE*\n");
           IoCompleteRequest(irp, IO_NO_INCREMENT);
           return STATUS_SUCCESS;
           
         default:
-          DBG("bus_pnp: Unhandled IRP_MN_*: %d\n", code);
+          DBG("Unhandled IRP_MN_*: %d\n", code);
           status = irp->IoStatus.Status;
       }
 
@@ -337,36 +341,38 @@ static NTSTATUS STDCALL WvBusPnpSimple_(
 
 /* Bus PnP dispatch routine. */
 WVL_M_LIB NTSTATUS STDCALL WvlBusPnpIrp(
-    IN WVL_SP_BUS_T bus,
-    IN PIRP irp,
-    IN UCHAR code
+    IN WVL_SP_BUS_T Bus,
+    IN PIRP Irp,
+    IN UCHAR Code
   ) {
-    switch (code) {
+    DBG("WvlBusPnpIrp(): ");
+    switch (Code) {
         case IRP_MN_QUERY_DEVICE_TEXT:
-          DBG("bus_pnp: IRP_MN_QUERY_DEVICE_TEXT\n");
-          return bus->QueryDevText(bus, irp);
+          DBG("IRP_MN_QUERY_DEVICE_TEXT\n");
+          return Bus->QueryDevText(Bus, Irp);
 
         case IRP_MN_QUERY_BUS_INFORMATION:
-          DBG("bus_pnp: IRP_MN_QUERY_BUS_INFORMATION\n");
-          return WvBusPnpQueryBusInfo_(bus, irp);
+          DBG("IRP_MN_QUERY_BUS_INFORMATION\n");
+          return WvlBusPnpQueryBusInfo(Bus, Irp);
 
         case IRP_MN_QUERY_DEVICE_RELATIONS:
-          DBG("bus_pnp: IRP_MN_QUERY_DEVICE_RELATIONS\n");
-          return WvBusPnpQueryDevRelations_(bus, irp);
+          DBG("IRP_MN_QUERY_DEVICE_RELATIONS\n");
+          return WvlBusPnpQueryDevRelations(Bus, Irp);
 
         case IRP_MN_QUERY_CAPABILITIES:
-          DBG("bus_pnp: IRP_MN_QUERY_CAPABILITIES\n");
-          return WvBusPnpQueryCapabilities_(bus, irp);
+          DBG("IRP_MN_QUERY_CAPABILITIES\n");
+          return WvlBusPnpQueryCapabilities(Bus, Irp);
 
         case IRP_MN_REMOVE_DEVICE:
-          DBG("bus_pnp: IRP_MN_REMOVE_DEVICE\n");
-          return WvBusPnpRemoveDev_(bus, irp);
+          DBG("IRP_MN_REMOVE_DEVICE\n");
+          return WvlBusPnpRemoveDev(Bus, Irp);
 
         case IRP_MN_START_DEVICE:
-          DBG("bus_pnp: IRP_MN_START_DEVICE\n");
-          return WvBusPnpStartDev_(bus, irp);
+          DBG("IRP_MN_START_DEVICE\n");
+          return WvlBusPnpStartDev(Bus, Irp);
 
         default:
-          return WvBusPnpSimple_(bus, irp, code);
+          DBG("Simple\n");
+          return WvlBusPnpSimple(Bus, Irp, Code);
       }
   }
