@@ -231,7 +231,7 @@ WVL_M_LIB void disk__guess_geometry(
     IN OUT WV_SP_DISK_T disk_ptr
   ) {
     winvblock__uint16 heads = 0, sects_per_track = 0, cylinders;
-    mbr_ptr as_mbr;
+    WVL_SP_DISK_MBR as_mbr;
 
     if ((boot_sect_ptr == NULL) || (disk_ptr == NULL))
       return;
@@ -277,7 +277,7 @@ WVL_M_LIB void disk__guess_geometry(
      * If we couldn't parse a FAT superblock, try checking MBR params.
      * Logic derived from syslinux/memdisk/setup.c by H. Peter Anvin.
      */
-    as_mbr = (mbr_ptr) boot_sect_ptr;
+    as_mbr = (WVL_SP_DISK_MBR) boot_sect_ptr;
     if (
         (heads == 0 ) &&
         (sects_per_track == 0) &&

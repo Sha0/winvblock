@@ -131,12 +131,11 @@ typedef winvblock__uint8 chs[3];
 #define  chs_cyl_low(chs) ((winvblock__uint16) chs[2])
 #define chs_cylinder(chs) (chs_cyl_high(chs) | chs_cyl_low(chs))
 
+/* An MBR. */
 #ifdef _MSC_VER
 #  pragma pack(1)
 #endif
-
-/* An MBR. */
-winvblock__def_struct (mbr) {
+struct WVL_DISK_MBR {
     winvblock__uint8 code[440];
     winvblock__uint32 disk_sig;
     winvblock__uint16 pad;
@@ -150,7 +149,7 @@ winvblock__def_struct (mbr) {
       } partition[4] __attribute__((packed));
     winvblock__uint16 mbr_sig;
   } __attribute__((__packed__));
-
+typedef struct WVL_DISK_MBR WVL_S_DISK_MBR, * WVL_SP_DISK_MBR;
 #ifdef _MSC_VER
 #  pragma pack()
 #endif
