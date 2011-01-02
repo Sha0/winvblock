@@ -428,13 +428,17 @@ static NTSTATUS WvIrpScsi(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    /* WvDevFromDevObj() checks for a NULL dev_obj */
-    WV_SP_DEV_T dev = WvDevFromDevObj(dev_obj);
+    WV_SP_DEV_T dev;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     #ifdef DEBUGIRPS
     Debug_IrpStart(dev_obj, irp);
     #endif
+    /* Check for a bus IRP. */
+    if (dev_obj == WvBus.Fdo)
+      return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+    /* WvDevFromDevObj() checks for a NULL dev_obj */
+    dev = WvDevFromDevObj(dev_obj);
     /* Check that the device exists. */
     if (!dev || dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
