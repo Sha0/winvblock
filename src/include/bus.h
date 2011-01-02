@@ -45,8 +45,8 @@ typedef WVL_F_BUS_THREAD * WVL_FP_BUS_THREAD;
  * @v irp               The IRP to process.
  * @ret NTSTATUS        The status of the operation.
  */
-typedef NTSTATUS STDCALL WV_F_BUS_PNP(IN WV_SP_BUS_T, IN PIRP);
-typedef WV_F_BUS_PNP * WV_FP_BUS_PNP;
+typedef NTSTATUS STDCALL WVL_F_BUS_PNP(IN WV_SP_BUS_T, IN PIRP);
+typedef WVL_F_BUS_PNP * WVL_FP_BUS_PNP;
 
 /* Device state. */
 typedef enum WV_BUS_STATE {
@@ -71,7 +71,7 @@ typedef struct WV_BUS_T {
     winvblock__bool Stop;
     WV_E_BUS_STATE OldState;
     WV_E_BUS_STATE State;
-    WV_FP_BUS_PNP QueryDevText;
+    WVL_FP_BUS_PNP QueryDevText;
     struct {
         LIST_ENTRY Nodes;
         USHORT NodeCount;

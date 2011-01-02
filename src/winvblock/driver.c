@@ -85,7 +85,7 @@ static WV_F_DEV_DISPATCH WvDriverBusSysCtl_;
 static WV_F_DEV_CTL WvDriverBusDevCtl_;
 static WV_F_DEV_DISPATCH WvDriverBusPower_;
 static WV_F_DEV_PNP WvDriverBusPnp_;
-static WV_F_BUS_PNP WvDriverBusPnpQueryDevText_;
+static WVL_F_BUS_PNP WvDriverBusPnpQueryDevText_;
 
 static LPWSTR STDCALL get_opt(IN LPWSTR opt_name) {
     LPWSTR our_opts, the_opt;
