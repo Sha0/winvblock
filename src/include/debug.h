@@ -62,5 +62,6 @@ extern VOID STDCALL Debug_IrpEnd (
   IN PIRP Irp,
   IN NTSTATUS Status
  );
+extern WVL_M_LIB NTSTATUS STDCALL WvlError(IN PCHAR, IN NTSTATUS);
 
 #endif  /* WV_M_DEBUG_H_ */

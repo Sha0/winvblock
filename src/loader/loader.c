@@ -32,7 +32,6 @@
 #include <newdev.h>
 
 #include "portable.h"
-typedef int NTSTATUS;   /* Argh. */
 #include "winvblock.h"
 
 #define MAX_CLASS_NAME_LEN 64

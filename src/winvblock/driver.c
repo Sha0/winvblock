@@ -1055,13 +1055,3 @@ WVL_M_LIB NTSTATUS STDCALL WvDriverDummyIds(
 
     return WvlIrpComplete(Irp, Irp->IoStatus.Information, status);
   }
-
-/** Library functions that don't depend on the WinVBlock bus. */
-
-WVL_M_LIB NTSTATUS STDCALL WvlError(
-    IN PCHAR Message,
-    IN NTSTATUS Status
-  ) {
-    DBG("%s: 0x%08x\n", Message, Status);
-    return Status;
-  }

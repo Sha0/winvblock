@@ -31,7 +31,6 @@
 #include <malloc.h>
 
 #include "portable.h"
-typedef int NTSTATUS;   /* Argh. */
 #include "winvblock.h"
 #include "mount.h"
 #include "aoe.h"

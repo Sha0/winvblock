@@ -820,3 +820,11 @@ Debug_SCSIOPString (
 	return "SCSIOP_UNKNOWN";
     }
 }
+
+WVL_M_LIB NTSTATUS STDCALL WvlError(
+    IN PCHAR Message,
+    IN NTSTATUS Status
+  ) {
+    DBG("%s: 0x%08x\n", Message, Status);
+    return Status;
+  }
