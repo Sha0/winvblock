@@ -158,7 +158,7 @@ static WV_SP_BUS_WORK_ITEM_ WvBusGetWorkItem_(
  * Don't call this function yourself.  It expects to have exclusive
  * access to the bus' list of children.
  */
-static VOID STDCALL WvBusAddNode_(WVL_SP_BUS_T bus, WVL_SP_BUS_NODE new_node) {
+static VOID STDCALL WvlBusAddNode_(WVL_SP_BUS_T bus, WVL_SP_BUS_NODE new_node) {
     PLIST_ENTRY walker;
 
     DBG("Adding PDO to bus...\n");
@@ -234,7 +234,7 @@ WVL_M_LIB VOID WvlBusProcessWorkItems(WVL_SP_BUS_T Bus) {
         switch (work_item->Cmd) {
             case WvBusWorkItemCmdAddPdo_:
               node = work_item->Context.Node;
-              WvBusAddNode_(Bus, node);
+              WvlBusAddNode_(Bus, node);
               nodes_changed = TRUE;
               break;
 
@@ -439,7 +439,7 @@ WVL_M_LIB BOOLEAN STDCALL WvlBusInitNode(
  * When WvlBusProcessWorkItems() is called for the bus, the
  * node will be added.  This is usually from the bus' thread.
  */
-WVL_M_LIB NTSTATUS STDCALL WvBusAddNode(
+WVL_M_LIB NTSTATUS STDCALL WvlBusAddNode(
     WVL_SP_BUS_T Bus,
     WVL_SP_BUS_NODE Node
   ) {

@@ -378,7 +378,7 @@ BOOLEAN STDCALL AoeBusAddDev(
     Dev->Ops.Init(Dev);
     dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
     /* Add the new PDO device to the bus' list of children. */
-    WvBusAddNode(&AoeBusMain, &Dev->BusNode);
+    WvlBusAddNode(&AoeBusMain, &Dev->BusNode);
     Dev->DevNum = WvBusGetNodeNum(&Dev->BusNode);
 
     DBG("Exit\n");

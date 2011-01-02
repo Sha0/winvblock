@@ -653,7 +653,7 @@ WVL_M_LIB BOOLEAN STDCALL WvDriverBusAddDev(
     Dev->Ops.Init(Dev);
     dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
     /* Add the new PDO device to the bus' list of children. */
-    WvBusAddNode(&WvDriverBus_, &Dev->BusNode);
+    WvlBusAddNode(&WvDriverBus_, &Dev->BusNode);
     Dev->DevNum = WvBusGetNodeNum(&Dev->BusNode);
 
     DBG("Exit\n");
@@ -961,7 +961,7 @@ static VOID STDCALL WvDriverAddDummy_(PVOID context) {
     /* Associate the parent bus. */
     dev->Parent = WvDriverBus_.Fdo;
     /* Add the new PDO device to the bus' list of children. */
-    WvBusAddNode(&WvDriverBus_, &dev->BusNode);
+    WvlBusAddNode(&WvDriverBus_, &dev->BusNode);
     dev->DevNum = WvBusGetNodeNum(&dev->BusNode);
     pdo->Flags &= ~DO_DEVICE_INITIALIZING;
 
