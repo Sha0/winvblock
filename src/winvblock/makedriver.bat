@@ -1,6 +1,6 @@
 @echo off
 
-set lib=libbus disk ramdisk filedisk
+set lib=libbus disk ramdisk filedisk libthread
 
 set links=
 for /d %%a in (%lib%) do (

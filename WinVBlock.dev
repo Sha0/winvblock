@@ -1,14 +1,14 @@
 [Project]
 FileName=WinVBlock.dev
 Name=WinVBlock
-UnitCount=66
+UnitCount=68
 PchHead=-1
 PchSource=-1
 Ver=3
 IsCpp=1
 ProfilesCount=2
 ProfileIndex=0
-Folders=AoE,HTTPDisk,HTTPDisk_Util,Include,Util,WinVBlock,WinVBlock/Disk,WinVBlock/FileDisk,WinVBlock/LibBus,WinVBlock/RAMDisk
+Folders=AoE,HTTPDisk,HTTPDisk_Util,Include,Util,WinVBlock,WinVBlock/Disk,WinVBlock/FileDisk,WinVBlock/LibBus,WinVBlock/LibThread,WinVBlock/RAMDisk
 
 [VersionInfo]
 Major=0
@@ -642,9 +642,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit67]
-FileName=src\include\aoe_bus.h
+FileName=src\winvblock\libthread\libthread.c
 CompileCpp=1
-Folder=Include
+Folder=WinVBlock/LibThread
 Compile=1
 Link=1
 Priority=1000
@@ -652,9 +652,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit68]
-FileName=src\aoe\bus.c
+FileName=src\include\libthread.h
 CompileCpp=1
-Folder=AoE
+Folder=Include
 Compile=1
 Link=1
 Priority=1000
