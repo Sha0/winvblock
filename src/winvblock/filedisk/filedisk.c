@@ -148,7 +148,7 @@ static UINT32 STDCALL query_id(
       }
   }
 
-NTSTATUS STDCALL WvFilediskAttach(IN WV_SP_DEV_T dev, IN PIRP irp) {
+NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
     ANSI_STRING file_path1;
     PUCHAR buf = irp->AssociatedIrp.SystemBuffer;
     WV_SP_MOUNT_DISK params = (WV_SP_MOUNT_DISK) buf;

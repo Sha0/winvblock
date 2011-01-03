@@ -41,7 +41,7 @@ typedef struct WV_FILEDISK_T {
     UNICODE_STRING filepath_unicode;
   } WV_S_FILEDISK_T, * WV_SP_FILEDISK_T;
 
-extern WV_F_DEV_DISPATCH WvFilediskAttach;
+extern NTSTATUS STDCALL WvFilediskAttach(IN PIRP);
 
 extern NTSTATUS WvFilediskModuleInit(void);
 
