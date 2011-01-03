@@ -256,6 +256,8 @@ WVL_M_LIB VOID WvlBusProcessWorkItems(WVL_SP_BUS_T Bus) {
               irp = work_item->Context.Irp;
               io_stack_loc = IoGetCurrentIrpStackLocation(irp);
               dev_obj = Bus->Fdo;
+              if (!dev_obj)
+                WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
               driver_obj = dev_obj->DriverObject;
               driver_obj->MajorFunction[io_stack_loc->MajorFunction](
                   dev_obj,
