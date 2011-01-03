@@ -660,7 +660,7 @@ static BOOLEAN STDCALL hot_swap(WV_SP_FILEDISK_T filedisk_ptr) {
     return NT_SUCCESS(status) ? TRUE : FALSE;
   }
 
-VOID STDCALL filedisk__hot_swap_thread(IN PVOID StartContext) {
+VOID STDCALL WvFilediskHotSwapThread(IN PVOID StartContext) {
     WV_SP_FILEDISK_T filedisk_ptr = StartContext;
     KEVENT signal;
     LARGE_INTEGER timeout;

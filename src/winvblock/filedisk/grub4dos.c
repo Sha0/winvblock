@@ -435,7 +435,7 @@ VOID filedisk_grub4dos__find(void) {
 					     OBJ_KERNEL_HANDLE, NULL, NULL );
 		PsCreateSystemThread ( &thread_handle, THREAD_ALL_ACCESS,
 				       &obj_attrs, NULL, NULL,
-				       filedisk__hot_swap_thread,
+				       WvFilediskHotSwapThread,
 				       filedisk_ptr );
 	      }
 	  }

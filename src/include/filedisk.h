@@ -70,6 +70,6 @@ extern WV_SP_FILEDISK_T WvFilediskCreateThreaded(void);
 #define filedisk__get_ptr(dev_ptr) \
   ((WV_SP_FILEDISK_T) (disk__get_ptr(dev_ptr))->ext)
 
-extern VOID STDCALL filedisk__hot_swap_thread(IN PVOID);
+extern VOID STDCALL WvFilediskHotSwapThread(IN PVOID);
 
 #endif  /* WV_M_FILEDISK_H_ */
