@@ -190,6 +190,7 @@ static NTSTATUS STDCALL WvlBusPnpQueryDevRelations(
           );
 
         dev_relations->Objects[i] = node->BusPrivate_.Pdo;
+        ObReferenceObject(node->BusPrivate_.Pdo);
         i++;
       }
     irp->IoStatus.Information = (ULONG_PTR) dev_relations;
