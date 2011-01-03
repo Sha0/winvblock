@@ -270,7 +270,6 @@ static NTSTATUS STDCALL WvlBusPnpSimple(
     NTSTATUS status;
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
 
-    DBG("WvlBusPnpSimple(): ");
     switch (code) {
         case IRP_MN_QUERY_PNP_DEVICE_STATE:
           DBG("IRP_MN_QUERY_PNP_DEVICE_STATE\n");
@@ -343,7 +342,6 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusPnpIrp(
     IN PIRP Irp,
     IN UCHAR Code
   ) {
-    DBG("WvlBusPnpIrp(): ");
     switch (Code) {
         case IRP_MN_QUERY_DEVICE_TEXT:
           DBG("IRP_MN_QUERY_DEVICE_TEXT\n");
