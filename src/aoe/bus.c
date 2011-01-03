@@ -48,7 +48,7 @@ extern NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP);
 
 /* Forward declarations. */
 static WV_F_DEV_PNP_ID AoeBusPnpId_;
-BOOLEAN AoeBusCreate(IN PDRIVER_OBJECT);
+NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT);
 VOID AoeBusFree(void);
 
 /* Globals. */
@@ -63,7 +63,6 @@ static UNICODE_STRING AoeBusDosname_ = {
     sizeof AOE_M_BUS_DOSNAME_ - sizeof (WCHAR),
     AOE_M_BUS_DOSNAME_
   };
-const WV_S_DUMMY_IDS * AoeBusDummyIds;
 
 static NTSTATUS STDCALL AoeBusDevCtlDetach_(IN PIRP irp) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
@@ -142,7 +141,7 @@ NTSTATUS STDCALL AoeBusDevCtl(
   X_(Y_, Instance, L"0"                 ) \
   X_(Y_, Hardware, WVL_M_WLIT L"\\AoE\0") \
   X_(Y_, Compat,   WVL_M_WLIT L"\\AoE\0")
-WV_M_DUMMY_ID_GEN(AoeBusDummyIds_, AOE_M_BUS_IDS);
+WV_M_DUMMY_ID_GEN(AoeBusDummyIds, AOE_M_BUS_IDS);
 
 /* Destroy the AoE bus. */
 VOID AoeBusFree(void) {
@@ -286,17 +285,27 @@ NTSTATUS STDCALL AoeBusAttachFdo(
   }
 
 /**
- * Create the AoE bus.
+ * Create the AoE bus PDO and FDO.
  *
- * @ret         TRUE for success, else FALSE.
+ * @ret NTSTATUS        The status of the operation.
  */
-BOOLEAN AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
+NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
     NTSTATUS status;
 
     /* Do we already have our main bus? */
     if (AoeBusMain.Fdo) {
         DBG("AoeBusCreate called twice.\n");
-        return FALSE;
+        return STATUS_UNSUCCESSFUL;
+      }
+    /* Create the PDO for the sub-bus on the WinVBlock bus. */
+    status = WvDummyAdd(
+        &AoeBusDummyIds,
+        FILE_DEVICE_CONTROLLER,
+        FILE_DEVICE_SECURE_OPEN
+      );
+    if (!NT_SUCCESS(status)) {
+        DBG("Couldn't add AoE bus to WinVBlock bus!\n");
+        goto err_pdo;
       }
     /* Initialize the bus. */
     WvlBusInit(&AoeBusMain);
@@ -324,7 +333,6 @@ BOOLEAN AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
         goto err_dos_symlink;
       }
     /* Ok! */
-    AoeBusDummyIds = &AoeBusDummyIds_;
     AoeBusMain.QueryDevText = AoeBusPnpQueryDevText_;
     AoeBusMain.Fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
     AoeBusMain.Fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
@@ -334,7 +342,7 @@ BOOLEAN AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
     #endif
     /* All done. */
     DBG("Exit\n");
-    return TRUE;
+    return status;
 
     IoDeleteSymbolicLink(&AoeBusDosname_);
     err_dos_symlink:
@@ -342,8 +350,10 @@ BOOLEAN AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
     IoDeleteDevice(AoeBusMain.Fdo);
     err_fdo:
 
+    err_pdo:
+
     DBG("Exit with failure\n");
-    return FALSE;
+    return status;
   }
 
 /**

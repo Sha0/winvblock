@@ -54,14 +54,13 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject(
 
 /* From aoe/bus.c */
 extern WVL_S_BUS_T AoeBusMain;
-extern BOOLEAN AoeBusCreate(IN PDRIVER_OBJECT);
+extern NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT);
 extern VOID AoeBusFree(void);
 extern NTSTATUS STDCALL AoeBusDevCtl(IN PIRP, IN ULONG POINTER_ALIGNMENT);
 extern NTSTATUS STDCALL AoeBusAttachFdo(
     IN PDRIVER_OBJECT,
     IN PDEVICE_OBJECT
   );
-extern const WV_S_DUMMY_IDS * AoeBusDummyIds;
 extern BOOLEAN STDCALL AoeBusAddDev(IN OUT WV_SP_DEV_T);
 /* From aoe/registry.c */
 extern BOOLEAN STDCALL AoeRegSetup(OUT PNTSTATUS);
@@ -346,10 +345,11 @@ NTSTATUS STDCALL DriverEntry(
     /* Set the driver AddDevice callback. */
     DriverObject->DriverExtension->AddDevice = AoeBusAttachFdo;
     AoeStarted_ = TRUE;
-    if (!AoeBusCreate(DriverObject)) {
+    Status = AoeBusCreate(DriverObject);
+    if (!NT_SUCCESS(Status)) {
         DBG("Unable to create AoE bus!\n");
         AoeUnload(DriverObject);
-        return STATUS_INSUFFICIENT_RESOURCES;
+        return Status;
       }
     AoeProcessAbft_();
     DBG("Exit\n");
@@ -1330,18 +1330,6 @@ static VOID STDCALL AoeThread_(IN PVOID StartContext)
     AOE_SP_DISK_ aoe_disk_ptr;
 
     DBG ( "Entry\n" );
-
-    /* Create the PDO for the sub-bus on the WinVBlock bus. */
-    status = WvDummyAdd(
-        AoeBusDummyIds,
-        FILE_DEVICE_CONTROLLER,
-        FILE_DEVICE_SECURE_OPEN
-      );
-    if (!NT_SUCCESS(status)) {
-        DBG("Couldn't add AoE bus to WinVBlock bus!\n");
-        status = PsTerminateSystemThread(status);
-        return;
-      }
 
     ReportTime.QuadPart = 0LL;
     ProbeTime.QuadPart = 0LL;
