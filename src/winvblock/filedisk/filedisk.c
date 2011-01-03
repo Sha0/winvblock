@@ -459,7 +459,7 @@ static VOID STDCALL free_threaded_filedisk(IN WV_SP_DEV_T dev_ptr)
  *
  * See the header file for additional details
  */
-WV_SP_FILEDISK_T filedisk__create_threaded(void) {
+WV_SP_FILEDISK_T WvFilediskCreateThreaded(void) {
   WV_SP_FILEDISK_T filedisk_ptr;
   OBJECT_ATTRIBUTES obj_attrs;
   HANDLE thread_handle;

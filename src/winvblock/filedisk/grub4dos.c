@@ -407,7 +407,7 @@ VOID filedisk_grub4dos__find(void) {
 	   * read/write routine so we can accessing the backing disk
 	   * late(r) during the boot process
 	   */
-	  filedisk_ptr = filedisk__create_threaded (  );
+	  filedisk_ptr = WvFilediskCreateThreaded();
 	  if ( filedisk_ptr == NULL )
 	    {
 	      DBG ( "Could not create GRUB4DOS disk!\n" );

@@ -46,9 +46,9 @@ extern WV_F_DEV_DISPATCH WvFilediskAttach;
 extern NTSTATUS WvFilediskModuleInit(void);
 
 /**
- * Create a new file-backed disk
+ * Create a new file-backed disk.
  *
- * @ret filedisk_ptr    The address of a new filedisk, or NULL for failure
+ * @ret filedisk_ptr    The address of a new filedisk, or NULL for failure.
  *
  * This function should not be confused with a PDO creation routine, which is
  * actually implemented for each device type.  This routine will allocate a
@@ -64,7 +64,7 @@ extern WV_SP_FILEDISK_T filedisk__create(void);
  * See filedisk__create() above.  This routine uses threaded routines
  * for disk reads/writes, and frees asynchronously, too.
  */
-extern WV_SP_FILEDISK_T filedisk__create_threaded(void);
+extern WV_SP_FILEDISK_T WvFilediskCreateThreaded(void);
 
 /*
  * Yield a pointer to the file-backed disk
