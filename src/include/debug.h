@@ -26,33 +26,34 @@
 /**
  * @file
  *
- * Debugging message system
+ * Debugging message system.
  *
  * We wrap the DbgPrint() function in order to automatically display file,
  * function and line number in any debugging output messages.
  */
 
-#  ifdef DBG
-#    undef DBG
-#  endif
-/* Uncomment to enable */
-#  if 0
-#    define DBG( ... ) \
-\
-xDbgPrint ( __FILE__, ( const PCHAR )__FUNCTION__, \
-            __LINE__ ) || 1 ? DbgPrint ( __VA_ARGS__ ) : 0
-#  else
-#    define DBG( ... ) (VOID) 0
-#  endif
+/* DBG() macro to output debugging messages. */
+#ifdef DBG
+#  undef DBG
+#endif
+/* Uncomment to enable. */
+#if 0
+#  define DBG(...) (                \
+    WvlDebugPrint(                  \
+        __FILE__,                   \
+        (const PCHAR) __FUNCTION__, \
+        __LINE__                    \
+      ),                            \
+    DbgPrint(__VA_ARGS__)           \
+  )
+#else
+#  define DBG( ... ) ((VOID) 0)
+#endif
 
-/* Define to enable verbose IRP debugging output */
-#  undef DEBUGIRPS
+/* Define to enable verbose IRP debugging output. */
+#undef DEBUGIRPS
 
-extern WVL_M_LIB NTSTATUS STDCALL xDbgPrint (
-  IN PCHAR File,
-  IN PCHAR Function,
-  IN UINT32 Line
- );
+extern WVL_M_LIB NTSTATUS STDCALL WvlDebugPrint(IN PCHAR, IN PCHAR, IN UINT32);
 extern VOID Debug_Initialize(void);
 extern VOID STDCALL Debug_IrpStart (
   IN PDEVICE_OBJECT DeviceObject,

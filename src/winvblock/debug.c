@@ -104,15 +104,13 @@ static PCHAR STDCALL Debug_SCSIOPString (
   IN UCHAR OperationCode
  );
 
-WVL_M_LIB NTSTATUS STDCALL
-xDbgPrint (
-  IN PCHAR File,
-  IN PCHAR Function,
-  IN UINT32 Line
- )
-{
-  return DbgPrint ( "%s: %s() @ line %d: ", File, Function, Line );
-}
+WVL_M_LIB NTSTATUS STDCALL WvlDebugPrint(
+    IN PCHAR File,
+    IN PCHAR Function,
+    IN UINT32 Line
+  ) {
+    return DbgPrint("%s: %s() @ line %d: ", File, Function, Line);
+  }
 
 VOID Debug_Initialize(void) {
   KeInitializeSpinLock ( &Debug_Globals_SpinLock );
