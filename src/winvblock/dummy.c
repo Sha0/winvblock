@@ -188,6 +188,9 @@ WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
     if (!DummyIds)
       return STATUS_INVALID_PARAMETER;
 
+    if (!WvBus.Fdo)
+      return STATUS_NO_SUCH_DEVICE;
+
     KeInitializeEvent(&event, SynchronizationEvent, FALSE);
 
     status = WvlBusEnqueueCustomWorkItem(&WvBus, &work_item);
