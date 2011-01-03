@@ -161,7 +161,11 @@ static WVL_SP_BUS_WORK_ITEM WvlBusGetWorkItem(
 static VOID STDCALL WvlBusAddNode_(WVL_SP_BUS_T bus, WVL_SP_BUS_NODE new_node) {
     PLIST_ENTRY walker;
 
-    DBG("Adding PDO to bus...\n");
+    DBG(
+        "Adding PDO 0x%08X to bus 0x%08X.\n",
+        (PVOID) new_node->BusPrivate_.Pdo,
+        (PVOID) bus
+      );
     ObReferenceObject(new_node->BusPrivate_.Pdo);
     bus->BusPrivate_.NodeCount++;
     /* It's too bad about having both linked list and bus ref. */
@@ -209,7 +213,11 @@ static VOID STDCALL WvlBusRemoveNode_(
     WVL_SP_BUS_T bus,
     WVL_SP_BUS_NODE node
   ) {
-    DBG("Removing PDO from bus...\n");
+    DBG(
+        "Removing PDO 0x%08X from bus 0x%08X.\n",
+        (PVOID) node->BusPrivate_.Pdo,
+        (PVOID) bus
+      );
     RemoveEntryList(&node->BusPrivate_.Link);
     ObDereferenceObject(node->BusPrivate_.Pdo);
     bus->BusPrivate_.NodeCount--;
