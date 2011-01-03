@@ -80,6 +80,7 @@ typedef struct WVL_BUS_T {
         USHORT NodeCount;
         LIST_ENTRY WorkItems;
         KSPIN_LOCK WorkItemsLock;
+        PETHREAD Thread;
       } BusPrivate_;
   } WVL_S_BUS_T, * WVL_SP_BUS_T;
 
@@ -161,5 +162,7 @@ extern WVL_M_LIB PDEVICE_OBJECT STDCALL WvlBusGetNodePdo(
 extern WVL_M_LIB UINT32 STDCALL WvlBusGetNodeCount(
     WVL_SP_BUS_T
   );
+extern WVL_M_LIB BOOLEAN STDCALL WvlBusRegisterOwnerThread(IN WVL_SP_BUS_T);
+extern WVL_M_LIB BOOLEAN STDCALL WvlBusNotOwned(IN WVL_SP_BUS_T);
 
 #endif  /* WVL_M_BUS_H_ */

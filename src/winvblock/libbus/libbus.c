@@ -647,3 +647,38 @@ WVL_M_LIB UINT32 STDCALL WvlBusGetNodeCount(
   ) {
     return Bus->BusPrivate_.NodeCount;
   }
+
+/**
+ * Register an owning thread for a bus.
+ *
+ * @v Bus               The bus to take ownership of with the current thread.
+ * @ret BOOLEAN         FALSE if the bus is already owned, else TRUE.
+ *
+ * Some operations, such as manipulations of the child node list,
+ * are best carried out serialized on a single, owning thread.
+ * This is to avoid race conditions but without holding an
+ * expensive lock.
+ */
+WVL_M_LIB BOOLEAN STDCALL WvlBusRegisterOwnerThread(IN WVL_SP_BUS_T Bus) {
+    if (Bus->BusPrivate_.Thread)
+      return FALSE;
+    Bus->BusPrivate_.Thread = PsGetCurrentThread();
+    return TRUE;
+  }
+
+/**
+ * Check if the current thread owns a bus.
+ *
+ * @v Bus               The bus to check ownership of.
+ * @ret BOOLEAN         FALSE if the bus is owned or ownerless, else TRUE.
+ *
+ * If a bus doesn't have an owning thread, this returns FALSE.
+ */
+WVL_M_LIB BOOLEAN STDCALL WvlBusNotOwned(IN WVL_SP_BUS_T Bus) {
+    if (
+        !Bus->BusPrivate_.Thread ||
+        (Bus->BusPrivate_.Thread == PsGetCurrentThread())
+      )
+      return FALSE;
+    return TRUE;
+  }
