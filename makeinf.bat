@@ -18,10 +18,13 @@
 ===
 :_main
 
+mkdir bin %_%
 %@% Extracting WinVBlk.INF...
 %@%
-mkdir bin %_%
 call :_extract WinVBlk > bin\WinVBlk.INF
+%@% Extracting AoE.INF...
+%@%
+call :_extract AoE > bin\AoE.INF
 %Q%
 
 -----EOF-----
@@ -91,6 +94,68 @@ ServiceType=0x00000001
 StartType=0x00000000
 ErrorControl=0x00000001
 ServiceBinary=%12%\wvblk64.sys
+-----EOF-----
+
+
+
+-----AoE-----
+[Version]
+Signature="$Windows NT$"
+Class=SCSIAdapter
+ClassGUID={4D36E97B-E325-11CE-BFC1-08002BE10318}
+Provider=WinVBlock
+CatalogFile=aoe.cat
+DriverVer=05/16/2010,0.0.0.8
+ 
+[Manufacturer]
+WinVBlock=AoEDriver,,NTamd64
+  
+[AoEDriver]
+"AoE Driver"=AoE,WinVBlock\AoE
+ 
+[AoEDriver.NTamd64]
+"AoE Driver"=AoE.NTamd64,WinVBlock\AoE
+ 
+[SourceDisksNames]
+0="Install Disk"
+ 
+[SourceDisksFiles]
+aoe32.sys=0
+aoe64.sys=0
+ 
+[DestinationDirs]
+Files.Driver=12
+Files.Driver.NTamd64=12
+ 
+[Files.Driver]
+aoe32.sys
+ 
+[Files.Driver.NTamd64]
+aoe64.sys
+ 
+[AoE]
+CopyFiles=Files.Driver
+ 
+[AoE.NTamd64]
+CopyFiles=Files.Driver.NTamd64
+ 
+[AoE.Services]
+AddService=AoE,0x00000002,Service
+ 
+[AoE.NTamd64.Services]
+AddService=AoE,0x00000002,Service.NTamd64
+ 
+[Service]
+ServiceType=0x00000001
+StartType=0x00000000
+ErrorControl=0x00000001
+ServiceBinary=%12%\aoe32.sys
+ 
+[Service.NTamd64]
+ServiceType=0x00000001
+StartType=0x00000000
+ErrorControl=0x00000001
+ServiceBinary=%12%\aoe64.sys
 -----EOF-----
 
 
