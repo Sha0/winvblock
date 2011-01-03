@@ -291,6 +291,7 @@ NTSTATUS STDCALL AoeBusAttachFdo(
  */
 NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
     NTSTATUS status;
+    PDEVICE_OBJECT pdo;
 
     /* Do we already have our main bus? */
     if (AoeBusMain.Fdo) {
@@ -301,7 +302,8 @@ NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
     status = WvDummyAdd(
         &AoeBusDummyIds,
         FILE_DEVICE_CONTROLLER,
-        FILE_DEVICE_SECURE_OPEN
+        FILE_DEVICE_SECURE_OPEN,
+        &pdo
       );
     if (!NT_SUCCESS(status)) {
         DBG("Couldn't add AoE bus to WinVBlock bus!\n");

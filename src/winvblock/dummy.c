@@ -62,6 +62,7 @@ typedef struct WV_ADD_DUMMY {
     ULONG DevCharacteristics;
     PKEVENT Event;
     NTSTATUS Status;
+    PDEVICE_OBJECT Pdo;
   } WV_S_ADD_DUMMY, * WV_SP_ADD_DUMMY;
 
 /**
@@ -142,6 +143,7 @@ static VOID STDCALL WvDummyAdd_(PVOID context) {
     pdo->Flags &= ~DO_DEVICE_INITIALIZING;
 
     dummy_context->Status = STATUS_SUCCESS;
+    dummy_context->Pdo = pdo;
     KeSetEvent(dummy_context->Event, 0, FALSE);
     return;
 
@@ -164,12 +166,14 @@ static VOID STDCALL WvDummyAdd_(PVOID context) {
  * @v DummyIds                  The PnP IDs for the dummy.
  * @v DevType                   The type for the dummy device.
  * @v DevCharacteristics        The dummy device characteristics.
+ * @v Pdo                       Filled with a pointer to the created PDO.
  * @ret NTSTATUS                The status of the operation.
  */
 WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
     IN const WV_S_DUMMY_IDS * DummyIds,
     IN DEVICE_TYPE DevType,
-    IN ULONG DevCharacteristics
+    IN ULONG DevCharacteristics,
+    OUT PDEVICE_OBJECT * Pdo
   ) {
     KEVENT event;
     WV_S_ADD_DUMMY context = {
@@ -177,7 +181,8 @@ WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
         DevType,
         DevCharacteristics,
         &event,
-        STATUS_UNSUCCESSFUL
+        STATUS_UNSUCCESSFUL,
+        NULL
       };
     WVL_S_BUS_CUSTOM_WORK_ITEM work_item = {
         WvDummyAdd_,
@@ -206,6 +211,8 @@ WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
         NULL
       );
 
+    if (context.Pdo)
+      *Pdo = context.Pdo;
     return context.Status;
   }
 

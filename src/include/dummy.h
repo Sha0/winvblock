@@ -99,7 +99,8 @@ static const WV_S_DUMMY_IDS DummyIds = {        \
 extern WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
     IN const WV_S_DUMMY_IDS *,
     IN DEVICE_TYPE,
-    IN ULONG
+    IN ULONG,
+    OUT PDEVICE_OBJECT *
   );
 
 #endif	/* WV_M_DUMMY_H_ */
