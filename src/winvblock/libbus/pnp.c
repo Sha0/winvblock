@@ -35,7 +35,6 @@
 #include "irp.h"
 #include "bus.h"
 #include "debug.h"
-#include "probe.h"
 
 static NTSTATUS STDCALL WvlBusPnpIoCompletion(
     IN PDEVICE_OBJECT dev_obj,
@@ -165,7 +164,6 @@ static NTSTATUS STDCALL WvlBusPnpQueryDevRelations(
             irp->IoStatus.Status
           );
       }
-    WvProbeDisks();
     dev_relations = wv_malloc(
         sizeof *dev_relations +
           (sizeof (PDEVICE_OBJECT) * bus->BusPrivate_.NodeCount)

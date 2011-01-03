@@ -42,6 +42,7 @@
 #include "mount.h"
 #include "filedisk.h"
 #include "ramdisk.h"
+#include "probe.h"
 #include "debug.h"
 
 /* From bus.c */
@@ -468,8 +469,11 @@ static NTSTATUS WvIrpPnp(
     Debug_IrpStart(dev_obj, irp);
     #endif
     /* Check for a bus IRP. */
-    if (dev_obj == WvBus.Fdo)
-      return WvlBusPnpIrp(&WvBus, irp, io_stack_loc->MinorFunction);
+    if (dev_obj == WvBus.Fdo) {
+        if (io_stack_loc->MinorFunction == IRP_MN_QUERY_DEVICE_RELATIONS)
+          WvProbeDisks();
+        return WvlBusPnpIrp(&WvBus, irp, io_stack_loc->MinorFunction);
+      }
     /* WvDevFromDevObj() checks for a NULL dev_obj */
     dev = WvDevFromDevObj(dev_obj);
     /* Check that the device exists. */
