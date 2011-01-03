@@ -43,7 +43,7 @@ typedef struct WV_FILEDISK_T {
 
 extern WV_F_DEV_DISPATCH WvFilediskAttach;
 
-extern NTSTATUS filedisk__module_init(void);
+extern NTSTATUS WvFilediskModuleInit(void);
 
 /**
  * Create a new file-backed disk

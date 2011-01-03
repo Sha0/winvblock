@@ -304,7 +304,7 @@ err_nodisk:
  *
  * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure.
  */
-NTSTATUS filedisk__module_init(void) {
+NTSTATUS WvFilediskModuleInit(void) {
     /* Initialize the global list of file-backed disks. */
     InitializeListHead(&filedisk_list);
     KeInitializeSpinLock(&filedisk_list_lock);
