@@ -2031,14 +2031,20 @@ static NTSTATUS AoeIrpPnp(
     IN PIRP irp
   ) {
     WV_SP_DEV_T dev;
-    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    UCHAR code = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
 
     #ifdef DEBUGIRPS
     WvlDebugIrpStart(dev_obj, irp);
     #endif
     /* Check for a bus IRP. */
-    if (dev_obj == AoeBusMain.Fdo)
-      return WvlBusPnpIrp(&AoeBusMain, irp, io_stack_loc->MinorFunction);
+    if (dev_obj == AoeBusMain.Fdo) {
+        NTSTATUS status;
+
+        status = WvlBusPnpIrp(&AoeBusMain, irp, code);
+        if (NT_SUCCESS(status) && (code == IRP_MN_REMOVE_DEVICE))
+          AoeBusPdo = NULL;
+        return status;
+      }
     /* WvDevFromDevObj() checks for a NULL dev_obj */
     dev = WvDevFromDevObj(dev_obj);
     /* Check that the device exists. */
@@ -2049,7 +2055,7 @@ static NTSTATUS AoeIrpPnp(
         return dev->IrpMj->Pnp(
             dev,
             irp,
-            io_stack_loc->MinorFunction
+            code
           );
       }
     /* Otherwise, we don't support the IRP. */
