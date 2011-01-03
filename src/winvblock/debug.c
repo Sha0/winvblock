@@ -109,7 +109,13 @@ WVL_M_LIB NTSTATUS STDCALL WvlDebugPrint(
     IN PCHAR Function,
     IN UINT32 Line
   ) {
-    return DbgPrint("%s: %s() @ line %d: ", File, Function, Line);
+    return DbgPrint(
+        "%s: Thread 0x%08X: %s() @ line %d: ",
+        File,
+        (PVOID) PsGetCurrentThread(),
+        Function,
+        Line
+      );
   }
 
 VOID Debug_Initialize(void) {
