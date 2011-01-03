@@ -53,6 +53,7 @@ VOID AoeBusFree(void);
 
 /* Globals. */
 WVL_S_BUS_T AoeBusMain = {0};
+PDEVICE_OBJECT AoeBusPdo = NULL;
 static UNICODE_STRING AoeBusName_ = {
     sizeof AOE_M_BUS_NAME_ - sizeof (WCHAR),
     sizeof AOE_M_BUS_NAME_ - sizeof (WCHAR),
@@ -148,6 +149,8 @@ VOID AoeBusFree(void) {
     IoDeleteSymbolicLink(&AoeBusDosname_);
     if (AoeBusMain.Fdo)
       IoDeleteDevice(AoeBusMain.Fdo);
+    /* TODO: Delete the PDO. */
+    AoeBusPdo = NULL;
     return;
   }
 
@@ -258,7 +261,12 @@ NTSTATUS STDCALL AoeBusAttachFdo(
         status = STATUS_NOT_SUPPORTED;
         goto err_already_established;
       }
-
+    /* Is this the PDO we requested from the WinVBlock bus? */
+    if (pdo != AoeBusPdo) {
+        DBG("PDO is not on the WinVBlock bus.\n");
+        status = STATUS_NOT_SUPPORTED;
+        goto err_invalid_pdo;
+      }
     /* Set associations for the bus, FDO, PDO. */
     AoeBusMain.Pdo = pdo;
     /* Attach the FDO to the PDO. */
@@ -278,6 +286,8 @@ NTSTATUS STDCALL AoeBusAttachFdo(
 
     err_attach:
 
+    err_invalid_pdo:
+
     err_already_established:
 
     DBG("Exit with failure\n");
@@ -291,7 +301,6 @@ NTSTATUS STDCALL AoeBusAttachFdo(
  */
 NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
     NTSTATUS status;
-    PDEVICE_OBJECT pdo;
 
     /* Do we already have our main bus? */
     if (AoeBusMain.Fdo) {
@@ -303,7 +312,7 @@ NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
         &AoeBusDummyIds,
         FILE_DEVICE_CONTROLLER,
         FILE_DEVICE_SECURE_OPEN,
-        &pdo
+        &AoeBusPdo
       );
     if (!NT_SUCCESS(status)) {
         DBG("Couldn't add AoE bus to WinVBlock bus!\n");
@@ -352,6 +361,8 @@ NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
     IoDeleteDevice(AoeBusMain.Fdo);
     err_fdo:
 
+    /* TODO: Delete the PDO. */
+    AoeBusPdo = NULL;
     err_pdo:
 
     DBG("Exit with failure\n");
