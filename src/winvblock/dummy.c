@@ -217,6 +217,18 @@ WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
   }
 
 /**
+ * Remove a dummy PDO node on the WinVBlock bus.
+ *
+ * @v Pdo               The PDO to remove.
+ * @ret NTSTATUS        The status of the operation.
+ *
+ * It might actually be better to handle a PnP remove IOCTL.
+ */
+WVL_M_LIB NTSTATUS STDCALL WvDummyRemove(IN PDEVICE_OBJECT Pdo) {
+    return WvlBusRemoveNode(&WvDevFromDevObj(Pdo)->BusNode);
+  }
+
+/**
  * Handle a PnP ID query with a WV_S_DUMMY_IDS object.
  *
  * @v Irp               The PnP ID query IRP to handle.

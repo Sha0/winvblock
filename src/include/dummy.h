@@ -102,5 +102,6 @@ extern WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
     IN ULONG,
     OUT PDEVICE_OBJECT *
   );
+extern WVL_M_LIB NTSTATUS STDCALL WvDummyRemove(IN PDEVICE_OBJECT);
 
 #endif	/* WV_M_DUMMY_H_ */
