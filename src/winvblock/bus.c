@@ -225,7 +225,7 @@ NTSTATUS STDCALL WvBusDevCtl(
 
     switch (code) {
         case IOCTL_FILE_ATTACH:
-          status = filedisk__attach(dev, irp);
+          status = WvFilediskAttach(dev, irp);
           break;
 
         case IOCTL_FILE_DETACH:
