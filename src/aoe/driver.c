@@ -1573,7 +1573,7 @@ static VOID AoeProcessAbft_(void) {
             DBG(
                 "Found aBFT with mismatched revision v%d at "
                   "segment 0x%4x. want v1.\n",
-                ((abft_ptr) (PhysicalMemory + Offset))->Revision,
+                ((AOE_SP_ABFT) (PhysicalMemory + Offset))->Revision,
                 (Offset / 0x10)
               );
             continue;
