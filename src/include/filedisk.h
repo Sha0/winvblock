@@ -57,21 +57,19 @@ extern NTSTATUS WvFilediskModuleInit(void);
  */
 extern WV_SP_FILEDISK_T WvFilediskCreate(void);
 /**
- * Create a new threaded, file-backed disk
+ * Create a new threaded, file-backed disk.
  *
- * @ret filedisk_ptr    The address of a new filedisk, or NULL for failure
+ * @ret filedisk_ptr    The address of a new filedisk, or NULL for failure.
  *
  * See WvFilediskCreate() above.  This routine uses threaded routines
  * for disk reads/writes, and frees asynchronously, too.
  */
 extern WV_SP_FILEDISK_T WvFilediskCreateThreaded(void);
 
-/*
- * Yield a pointer to the file-backed disk
- */
-#  define filedisk__get_ptr( dev_ptr ) \
+/* Yield a pointer to the file-backed disk. */
+#define filedisk__get_ptr(dev_ptr) \
   ((WV_SP_FILEDISK_T) (disk__get_ptr(dev_ptr))->ext)
 
-extern VOID STDCALL filedisk__hot_swap_thread(IN PVOID StartContext);
+extern VOID STDCALL filedisk__hot_swap_thread(IN PVOID);
 
 #endif  /* WV_M_FILEDISK_H_ */
