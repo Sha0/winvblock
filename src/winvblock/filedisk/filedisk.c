@@ -150,7 +150,7 @@ NTSTATUS STDCALL WvFilediskAttach(IN WV_SP_DEV_T dev, IN PIRP irp) {
   FILE_STANDARD_INFORMATION info;
   WV_SP_FILEDISK_T filedisk_ptr;
 
-  filedisk_ptr = filedisk__create (  );
+  filedisk_ptr = WvFilediskCreate (  );
   if ( filedisk_ptr == NULL )
     {
       DBG ( "Could not create file-backed disk!\n" );
@@ -256,7 +256,7 @@ static VOID STDCALL close(IN WV_SP_DISK_T disk_ptr) {
  *
  * See the header file for additional details
  */
-WV_SP_FILEDISK_T filedisk__create(void) {
+WV_SP_FILEDISK_T WvFilediskCreate(void) {
   WV_SP_DISK_T disk_ptr;
   WV_SP_FILEDISK_T filedisk_ptr;
 
@@ -467,7 +467,7 @@ WV_SP_FILEDISK_T WvFilediskCreateThreaded(void) {
   /*
    * Try to create a filedisk
    */
-  filedisk_ptr = filedisk__create (  );
+  filedisk_ptr = WvFilediskCreate();
   if ( filedisk_ptr == NULL )
     goto err_nofiledisk;
   /*

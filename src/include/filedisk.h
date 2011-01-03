@@ -55,13 +55,13 @@ extern NTSTATUS WvFilediskModuleInit(void);
  * WV_S_FILEDISK_T, track it in a global list, as well as populate the disk
  * with default values.
  */
-extern WV_SP_FILEDISK_T filedisk__create(void);
+extern WV_SP_FILEDISK_T WvFilediskCreate(void);
 /**
  * Create a new threaded, file-backed disk
  *
  * @ret filedisk_ptr    The address of a new filedisk, or NULL for failure
  *
- * See filedisk__create() above.  This routine uses threaded routines
+ * See WvFilediskCreate() above.  This routine uses threaded routines
  * for disk reads/writes, and frees asynchronously, too.
  */
 extern WV_SP_FILEDISK_T WvFilediskCreateThreaded(void);
