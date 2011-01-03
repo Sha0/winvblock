@@ -149,7 +149,8 @@ VOID AoeBusFree(void) {
     IoDeleteSymbolicLink(&AoeBusDosname_);
     if (AoeBusMain.Fdo)
       IoDeleteDevice(AoeBusMain.Fdo);
-    /* TODO: Delete the PDO. */
+    if (AoeBusPdo)
+      WvDummyRemove(AoeBusPdo);
     AoeBusPdo = NULL;
     return;
   }
@@ -361,7 +362,7 @@ NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
     IoDeleteDevice(AoeBusMain.Fdo);
     err_fdo:
 
-    /* TODO: Delete the PDO. */
+    WvDummyRemove(AoeBusPdo);
     AoeBusPdo = NULL;
     err_pdo:
 
