@@ -50,7 +50,10 @@ extern WV_S_DEV_T WvBusDev;
 extern UNICODE_STRING WvBusName;
 extern UNICODE_STRING WvBusDosname;
 extern PETHREAD WvBusThread;
-extern WV_F_DEV_CTL WvBusDevCtl;
+extern NTSTATUS STDCALL WvBusDevCtl(
+    IN PIRP,
+    IN ULONG POINTER_ALIGNMENT
+  );
 extern WVL_F_BUS_PNP WvBusPnpQueryDevText;
 extern NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING);
 
@@ -400,7 +403,6 @@ static NTSTATUS WvIrpDevCtl(
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo) {
         return WvBusDevCtl(
-            &WvBusDev,
             irp,
             io_stack_loc->Parameters.DeviceIoControl.IoControlCode
           );

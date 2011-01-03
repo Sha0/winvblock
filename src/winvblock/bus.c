@@ -65,7 +65,10 @@ WV_S_DEV_T WvBusDev = {0};
 PETHREAD WvBusThread = NULL;
 
 /* Forward declarations. */
-WV_F_DEV_CTL WvBusDevCtl;
+NTSTATUS STDCALL WvBusDevCtl(
+    IN PIRP,
+    IN ULONG POINTER_ALIGNMENT
+  );
 WVL_F_BUS_PNP WvBusPnpQueryDevText;
 
 /* Establish the bus PDO. */
@@ -217,7 +220,6 @@ static NTSTATUS STDCALL WvBusDevCtlDetach(
   }
 
 NTSTATUS STDCALL WvBusDevCtl(
-    IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN ULONG POINTER_ALIGNMENT code
   ) {
