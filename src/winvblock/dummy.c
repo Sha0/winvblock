@@ -49,11 +49,20 @@ static NTSTATUS STDCALL WvDummyPnp(
     IN PIRP irp,
     IN UCHAR code
   ) {
-    if (code != IRP_MN_QUERY_ID)
-      return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+    switch (code) {
+        case IRP_MN_QUERY_ID:
+          /* The WV_S_DEV_T extension points to the dummy IDs. */
+          return WvDummyIds(irp, dev->ext);
 
-    /* The WV_S_DEV_T extension points to the dummy IDs. */
-    return WvDummyIds(irp, dev->ext);
+        case IRP_MN_QUERY_REMOVE_DEVICE:
+          return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
+
+        case IRP_MN_REMOVE_DEVICE:
+          return WvlIrpComplete(irp, 0, WvlBusRemoveNode(&dev->BusNode));
+
+        default:
+          return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+      }
   }
 
 typedef struct WV_ADD_DUMMY {
