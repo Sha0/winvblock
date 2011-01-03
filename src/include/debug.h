@@ -55,9 +55,9 @@
 
 extern WVL_M_LIB NTSTATUS STDCALL WvlDebugPrint(IN PCHAR, IN PCHAR, IN UINT32);
 extern VOID Debug_Initialize(void);
-extern VOID STDCALL Debug_IrpStart (
-  IN PDEVICE_OBJECT DeviceObject,
-  IN PIRP Irp
+extern WVL_M_LIB VOID STDCALL WvlDebugIrpStart (
+  IN PDEVICE_OBJECT,
+  IN PIRP
  );
 extern VOID STDCALL Debug_IrpEnd (
   IN PIRP Irp,

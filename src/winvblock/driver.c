@@ -322,7 +322,7 @@ static NTSTATUS WvIrpPower(
     WV_SP_DEV_T dev;
 
     #ifdef DEBUGIRPS
-    Debug_IrpStart(dev_obj, irp);
+    WvlDebugIrpStart(dev_obj, irp);
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo)
@@ -350,7 +350,7 @@ static NTSTATUS WvIrpCreateClose(
     WV_SP_DEV_T dev;
 
     #ifdef DEBUGIRPS
-    Debug_IrpStart(dev_obj, irp);
+    WvlDebugIrpStart(dev_obj, irp);
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo)
@@ -373,7 +373,7 @@ static NTSTATUS WvIrpSysCtl(
     WV_SP_DEV_T dev;
 
     #ifdef DEBUGIRPS
-    Debug_IrpStart(dev_obj, irp);
+    WvlDebugIrpStart(dev_obj, irp);
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo)
@@ -399,7 +399,7 @@ static NTSTATUS WvIrpDevCtl(
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     #ifdef DEBUGIRPS
-    Debug_IrpStart(dev_obj, irp);
+    WvlDebugIrpStart(dev_obj, irp);
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo) {
@@ -434,7 +434,7 @@ static NTSTATUS WvIrpScsi(
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     #ifdef DEBUGIRPS
-    Debug_IrpStart(dev_obj, irp);
+    WvlDebugIrpStart(dev_obj, irp);
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo)
@@ -466,7 +466,7 @@ static NTSTATUS WvIrpPnp(
     NTSTATUS status;
 
     #ifdef DEBUGIRPS
-    Debug_IrpStart(dev_obj, irp);
+    WvlDebugIrpStart(dev_obj, irp);
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo) {

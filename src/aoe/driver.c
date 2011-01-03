@@ -54,6 +54,7 @@ extern NTSTATUS STDCALL ZwWaitForSingleObject(
 
 /* From aoe/bus.c */
 extern WVL_S_BUS_T AoeBusMain;
+extern PDEVICE_OBJECT AoeBusPdo;
 extern NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT);
 extern VOID AoeBusFree(void);
 extern NTSTATUS STDCALL AoeBusDevCtl(IN PIRP, IN ULONG POINTER_ALIGNMENT);
@@ -1890,7 +1891,7 @@ static NTSTATUS AoeIrpPower(
     WV_SP_DEV_T dev;
 
     #ifdef DEBUGIRPS
-    Debug_IrpStart(dev_obj, irp);
+    WvlDebugIrpStart(dev_obj, irp);
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)
@@ -1918,7 +1919,7 @@ static NTSTATUS AoeIrpCreateClose(
     WV_SP_DEV_T dev;
 
     #ifdef DEBUGIRPS
-    Debug_IrpStart(dev_obj, irp);
+    WvlDebugIrpStart(dev_obj, irp);
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)
@@ -1940,7 +1941,7 @@ static NTSTATUS AoeIrpSysCtl(
     WV_SP_DEV_T dev;
 
     #ifdef DEBUGIRPS
-    Debug_IrpStart(dev_obj, irp);
+    WvlDebugIrpStart(dev_obj, irp);
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)
@@ -1966,7 +1967,7 @@ static NTSTATUS AoeIrpDevCtl(
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     #ifdef DEBUGIRPS
-    Debug_IrpStart(dev_obj, irp);
+    WvlDebugIrpStart(dev_obj, irp);
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo) {
@@ -2001,7 +2002,7 @@ static NTSTATUS AoeIrpScsi(
     PIO_STACK_LOCATION io_stack_loc;
 
     #ifdef DEBUGIRPS
-    Debug_IrpStart(dev_obj, irp);
+    WvlDebugIrpStart(dev_obj, irp);
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)
@@ -2033,7 +2034,7 @@ static NTSTATUS AoeIrpPnp(
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     #ifdef DEBUGIRPS
-    Debug_IrpStart(dev_obj, irp);
+    WvlDebugIrpStart(dev_obj, irp);
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)

@@ -138,12 +138,10 @@ Debug_IrpListRecord (
   return Record;
 }
 
-VOID STDCALL
-Debug_IrpStart (
-  IN PDEVICE_OBJECT DeviceObject,
-  IN PIRP Irp
- )
-{
+WVL_M_LIB VOID STDCALL WvlDebugIrpStart(
+    IN PDEVICE_OBJECT DeviceObject,
+    IN PIRP Irp
+  ) {
   PCHAR DebugMessage;
   PDEBUG_IRPLIST Record,
    Temp;
