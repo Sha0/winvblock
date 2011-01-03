@@ -124,6 +124,8 @@ static NTSTATUS STDCALL WvlBusPnpRemoveDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
       IoDetachDevice(lower);
     /* Delete. */
     IoDeleteDevice(bus->Fdo);
+    /* Disassociate. */
+    bus->Fdo = NULL;
     /* Stop the thread. */
     bus->Stop = TRUE;
     return status;
