@@ -31,6 +31,7 @@
 
 #include "portable.h"
 #include "winvblock.h"
+#include "libthread.h"
 #include "wv_stdlib.h"
 #include "wv_string.h"
 #include "irp.h"
@@ -309,6 +310,7 @@ static NTSTATUS STDCALL WvIrpNotSupported(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
+    WvlThreadTestMsg("WvIrpNotSupported");
     irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
     IoCompleteRequest(irp, IO_NO_INCREMENT);
     return irp->IoStatus.Status;
@@ -324,6 +326,7 @@ static NTSTATUS WvIrpPower(
     #ifdef DEBUGIRPS
     WvlDebugIrpStart(dev_obj, irp);
     #endif
+    WvlThreadTestMsg("WvIrpNotPower");
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo)
       return WvlBusPower(&WvBus, irp);
@@ -352,6 +355,7 @@ static NTSTATUS WvIrpCreateClose(
     #ifdef DEBUGIRPS
     WvlDebugIrpStart(dev_obj, irp);
     #endif
+    WvlThreadTestMsg("WvIrpCreateClose");
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo)
       /* Succeed with nothing to do. */
@@ -375,6 +379,7 @@ static NTSTATUS WvIrpSysCtl(
     #ifdef DEBUGIRPS
     WvlDebugIrpStart(dev_obj, irp);
     #endif
+    WvlThreadTestMsg("WvIrpSysCtl");
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo)
       return WvlBusSysCtl(&WvBus, irp);
@@ -401,6 +406,7 @@ static NTSTATUS WvIrpDevCtl(
     #ifdef DEBUGIRPS
     WvlDebugIrpStart(dev_obj, irp);
     #endif
+    WvlThreadTestMsg("WvIrpDevCtl");
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo) {
         return WvBusDevCtl(
@@ -436,6 +442,7 @@ static NTSTATUS WvIrpScsi(
     #ifdef DEBUGIRPS
     WvlDebugIrpStart(dev_obj, irp);
     #endif
+    WvlThreadTestMsg("WvIrpScsi");
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo)
       return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
@@ -468,6 +475,7 @@ static NTSTATUS WvIrpPnp(
     #ifdef DEBUGIRPS
     WvlDebugIrpStart(dev_obj, irp);
     #endif
+    WvlThreadTestMsg("WvIrpPnp");
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo) {
         if (io_stack_loc->MinorFunction == IRP_MN_QUERY_DEVICE_RELATIONS)
