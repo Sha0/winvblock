@@ -497,33 +497,6 @@ static NTSTATUS WvIrpPnp(
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
-static WVL_F_THREAD_ITEM WvTestThreadTestStop;
-static VOID STDCALL WvTestThreadTestStop(IN OUT WVL_SP_THREAD_ITEM item) {
-    static WVL_S_THREAD_ITEM stopper = { {0}, WvTestThreadTestStop };
-    static WVL_SP_THREAD thread = NULL;
-    static KEVENT event;
-
-    /* If we have an item, we're in the thread.  Remember it. */
-    if (item) {
-        thread = WvlThreadGetCurrent();
-        KeSetEvent(&event, 0, FALSE);
-        return;
-      }
-    /* Otherwise, enqueue ourself. */
-    KeInitializeEvent(&event, SynchronizationEvent, FALSE);
-    WvlThreadTest(&stopper);
-    KeWaitForSingleObject(
-        &event,
-        Executive,
-        KernelMode,
-        FALSE,
-        NULL
-      );
-    /* Now we should know the thread.  Stop it and wait. */
-    WvlThreadSendStopAndWait(thread);
-    return;
-  }
-
 static VOID STDCALL WvUnload(IN PDRIVER_OBJECT DriverObject) {
     DBG("Unloading...\n");
     WvBus.Stop = TRUE;
@@ -538,7 +511,6 @@ static VOID STDCALL WvUnload(IN PDRIVER_OBJECT DriverObject) {
           );
         ObDereferenceObject(WvBusThread);
       }
-    WvTestThreadTestStop(NULL);
     if (WvDriverStateHandle != NULL)
       PoUnregisterSystemState(WvDriverStateHandle);
     IoDeleteSymbolicLink(&WvBusDosname);
