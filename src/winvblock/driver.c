@@ -49,15 +49,13 @@
 /* From bus.c */
 extern WVL_S_BUS_T WvBus;
 extern WV_S_DEV_T WvBusDev;
-extern UNICODE_STRING WvBusName;
-extern UNICODE_STRING WvBusDosname;
-extern PETHREAD WvBusThread;
 extern NTSTATUS STDCALL WvBusDevCtl(
     IN PIRP,
     IN ULONG POINTER_ALIGNMENT
   );
-extern WVL_F_BUS_PNP WvBusPnpQueryDevText;
+extern NTSTATUS STDCALL WvBusAttach(IN PDEVICE_OBJECT);
 extern NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING);
+extern VOID WvBusCleanup(void);
 
 /* Exported. */
 PDRIVER_OBJECT WvDriverObj = NULL;
@@ -139,99 +137,10 @@ static LPWSTR STDCALL WvGetOpt(IN LPWSTR opt_name) {
   }
 
 static NTSTATUS STDCALL WvAttachFdo(
-    IN PDRIVER_OBJECT DriverObject,
-    IN PDEVICE_OBJECT Pdo
+    IN PDRIVER_OBJECT driver_obj,
+    IN PDEVICE_OBJECT pdo
   ) {
-    NTSTATUS status;
-    PLIST_ENTRY walker;
-    PDEVICE_OBJECT fdo = NULL;
-    static WV_S_DEV_IRP_MJ irp_mj = {
-        (WV_FP_DEV_DISPATCH) 0,
-        (WV_FP_DEV_DISPATCH) 0,
-        (WV_FP_DEV_CTL) 0,
-        (WV_FP_DEV_SCSI) 0,
-        (WV_FP_DEV_PNP) 0,
-      };
-
-    DBG("Entry\n");
-    /* Do we alreay have our main bus? */
-    if (WvBus.Fdo) {
-        DBG("Already have the main bus.  Refusing.\n");
-        status = STATUS_NOT_SUPPORTED;
-        goto err_already_established;
-      }
-    /* Initialize the bus. */
-    WvlBusInit(&WvBus);
-    WvDevInit(&WvBusDev);
-    /* Create the bus FDO. */
-    status = IoCreateDevice(
-        DriverObject,
-        sizeof (WV_S_DEV_EXT),
-        &WvBusName,
-        FILE_DEVICE_CONTROLLER,
-        FILE_DEVICE_SECURE_OPEN,
-        FALSE,
-        &fdo
-      );
-    if (!NT_SUCCESS(status)) {
-        DBG("IoCreateDevice() failed!\n");
-        goto err_fdo;
-      }
-    /* DosDevice symlink. */
-    status = IoCreateSymbolicLink(
-        &WvBusDosname,
-        &WvBusName
-      );
-    if (!NT_SUCCESS(status)) {
-        DBG("IoCreateSymbolicLink() failed!\n");
-        goto err_dos_symlink;
-      }
-    /* Set associations for the bus, device, FDO, PDO. */
-    WvDevForDevObj(fdo, &WvBusDev);
-    WvBusDev.Self = WvBus.Fdo = fdo;
-    WvBusDev.IsBus = TRUE;
-    WvBusDev.IrpMj = &irp_mj;
-    WvBus.QueryDevText = WvBusPnpQueryDevText;
-    WvBus.Pdo = Pdo;
-    fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
-    fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
-    /* Attach the FDO to the PDO. */
-    WvBus.LowerDeviceObject = IoAttachDeviceToDeviceStack(
-        fdo,
-        Pdo
-      );
-    if (WvBus.LowerDeviceObject == NULL) {
-        status = STATUS_NO_SUCH_DEVICE;
-        DBG("IoAttachDeviceToDeviceStack() failed!\n");
-        goto err_attach;
-      }
-    status = WvlBusStartThread(&WvBus, &WvBusThread);
-    if (!NT_SUCCESS(status)) {
-        DBG("Couldn't start bus thread!\n");
-        goto err_thread;
-      }
-    /* Ok! */
-    fdo->Flags &= ~DO_DEVICE_INITIALIZING;
-    #ifdef RIS
-    WvBus.Dev.State = Started;
-    #endif
-    DBG("Exit\n");
-    return STATUS_SUCCESS;
-
-    err_thread:
-
-    err_attach:
-
-    IoDeleteSymbolicLink(&WvBusDosname);
-    err_dos_symlink:
-
-    IoDeleteDevice(fdo);
-    err_fdo:
-
-    err_already_established:
-
-    DBG("Exit with failure\n");
-    return status;
+    return WvBusAttach(pdo);
   }
 
 /*
@@ -499,22 +408,9 @@ static NTSTATUS WvIrpPnp(
 
 static VOID STDCALL WvUnload(IN PDRIVER_OBJECT DriverObject) {
     DBG("Unloading...\n");
-    WvBus.Stop = TRUE;
-    KeSetEvent(&WvBus.ThreadSignal, 0, FALSE);
-    if (WvBusThread) {
-        KeWaitForSingleObject(
-            WvBusThread,
-            Executive,
-            KernelMode,
-            FALSE,
-            NULL
-          );
-        ObDereferenceObject(WvBusThread);
-      }
+    WvBusCleanup();
     if (WvDriverStateHandle != NULL)
       PoUnregisterSystemState(WvDriverStateHandle);
-    IoDeleteSymbolicLink(&WvBusDosname);
-    WvBus.Fdo = NULL;
     wv_free(WvOsLoadOpts);
     WvDriverStarted = FALSE;
     DBG("Done\n");

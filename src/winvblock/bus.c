@@ -31,6 +31,7 @@
 
 #include "portable.h"
 #include "winvblock.h"
+#include "libthread.h"
 #include "wv_stdlib.h"
 #include "wv_string.h"
 #include "irp.h"
@@ -59,10 +60,10 @@ UNICODE_STRING WvBusDosname = {
     sizeof WV_M_BUS_DOSNAME - sizeof (WCHAR),
     WV_M_BUS_DOSNAME
   };
+BOOLEAN WvSymlinkDone = FALSE;
 /* The main bus. */
 WVL_S_BUS_T WvBus = {0};
 WV_S_DEV_T WvBusDev = {0};
-PETHREAD WvBusThread = NULL;
 
 /* Forward declarations. */
 NTSTATUS STDCALL WvBusDevCtl(
@@ -71,17 +72,160 @@ NTSTATUS STDCALL WvBusDevCtl(
   );
 WVL_F_BUS_PNP WvBusPnpQueryDevText;
 
+static WVL_S_THREAD WvBusThread_ = {0};
+static WVL_F_THREAD_ITEM WvBusThread;
+static VOID STDCALL WvBusThread(IN OUT WVL_SP_THREAD_ITEM item) {
+    LARGE_INTEGER timeout;
+    PVOID signals[] = {&WvBusThread_.Signal, &WvBus.ThreadSignal};
+    WVL_SP_THREAD_ITEM work_item;
+
+    if (!item) {
+        DBG("Bad call!\n");
+        return;
+      }
+
+    /* Wake up at most every 30 seconds. */
+    timeout.QuadPart = -300000000LL;
+    WvBusThread_.State = WvlThreadStateStarted;
+
+    do {
+        WvlBusProcessWorkItems(&WvBus);
+
+        /* Wait for the work signal or the timeout. */
+        KeWaitForMultipleObjects(
+            sizeof signals / sizeof *signals,
+            signals,
+            WaitAny,
+            Executive,
+            KernelMode,
+            FALSE,
+            &timeout,
+            NULL
+          );
+        /* Reset the work signals. */
+        KeResetEvent(&WvBusThread_.Signal);
+        KeResetEvent(&WvBus.ThreadSignal);
+
+        while (work_item = WvlThreadGetItem(&WvBusThread_))
+          /* Launch the item. */
+          work_item->Func(work_item);
+        if (WvBusThread_.State == WvlThreadStateStopping)
+          WvBusThread_.State = WvlThreadStateStopped;
+      } while (
+        (WvBusThread_.State == WvlThreadStateStarted) ||
+        (WvBusThread_.State == WvlThreadStateStopping)
+      );
+    WvlBusCancelWorkItems(&WvBus);
+    return;
+  }
+
+NTSTATUS STDCALL WvBusAttach(PDEVICE_OBJECT pdo) {
+    NTSTATUS status;
+    PDEVICE_OBJECT lower;
+    static WV_S_DEV_IRP_MJ irp_mj = {
+        (WV_FP_DEV_DISPATCH) 0,
+        (WV_FP_DEV_DISPATCH) 0,
+        (WV_FP_DEV_CTL) 0,
+        (WV_FP_DEV_SCSI) 0,
+        (WV_FP_DEV_PNP) 0,
+      };
+
+    DBG("Attaching to PDO %p...\n", pdo);
+    /* Do we alreay have our main bus? */
+    if (WvBus.Pdo) {
+        DBG("Already have the main bus.  Refusing.\n");
+        status = STATUS_NOT_SUPPORTED;
+        goto err_already_established;
+      }
+    /* Attach the FDO to the PDO. */
+    lower = IoAttachDeviceToDeviceStack(
+        WvBus.Fdo,
+        pdo
+      );
+    if (lower == NULL) {
+        status = STATUS_NO_SUCH_DEVICE;
+        DBG("IoAttachDeviceToDeviceStack() failed!\n");
+        goto err_attach;
+      }
+    /* Set associations for the bus, device, FDO, PDO. */
+    WvDevForDevObj(WvBus.Fdo, &WvBusDev);
+    WvBusDev.Self = WvBus.Fdo;
+    WvBusDev.IsBus = TRUE;
+    WvBusDev.IrpMj = &irp_mj;
+    WvBus.QueryDevText = WvBusPnpQueryDevText;
+    WvBus.Pdo = pdo;
+    WvBus.LowerDeviceObject = lower;
+    WvBus.Fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
+    WvBus.Fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
+    WvBus.Fdo->Flags &= ~DO_DEVICE_INITIALIZING;
+    #ifdef RIS
+    WvBus.Dev.State = Started;
+    #endif
+    DBG("Exit\n");
+    return STATUS_SUCCESS;
+
+    err_attach:
+
+    err_already_established:
+
+    DBG("Failed to attach.\n");
+    return status;
+  }
+
 /* Establish the bus PDO. */
 NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING RegistryPath) {
     NTSTATUS status;
+    PDEVICE_OBJECT fdo = NULL;
     HANDLE reg_key;
     UINT32 pdo_done = 0;
-    PDEVICE_OBJECT bus_pdo = NULL;
+    PDEVICE_OBJECT pdo = NULL;
+
+    /* Initialize the bus. */
+    WvlBusInit(&WvBus);
+    WvDevInit(&WvBusDev);
+
+    /* Create the bus FDO. */
+    status = IoCreateDevice(
+        WvDriverObj,
+        sizeof (WV_S_DEV_EXT),
+        &WvBusName,
+        FILE_DEVICE_CONTROLLER,
+        FILE_DEVICE_SECURE_OPEN,
+        FALSE,
+        &fdo
+      );
+    if (!NT_SUCCESS(status)) {
+        DBG("IoCreateDevice() failed!\n");
+        goto err_fdo;
+      }
+    WvBus.Fdo = fdo;
+
+    /* DosDevice symlink. */
+    status = IoCreateSymbolicLink(
+        &WvBusDosname,
+        &WvBusName
+      );
+    if (!NT_SUCCESS(status)) {
+        DBG("IoCreateSymbolicLink() failed!\n");
+        goto err_dos_symlink;
+      }
+    WvSymlinkDone = TRUE;
+
+    /* Start thread. */
+    DBG("Starting thread...\n");
+    WvBusThread_.Main.Func = WvBusThread;
+    status = WvlThreadStart(&WvBusThread_);
+    if (!NT_SUCCESS(status)) {
+        DBG("Couldn't start bus thread!\n");
+        goto err_thread;
+      }
 
     /* Open our Registry path. */
     status = WvlRegOpenKey(RegistryPath->Buffer, &reg_key);
-    if (!NT_SUCCESS(status))
-      return status;
+    if (!NT_SUCCESS(status)) {
+        DBG("Couldn't open Registry path!\n");
+        goto err_reg;
+      }
 
     /* Check the Registry to see if we've already got a PDO. */
     status = WvlRegFetchDword(reg_key, L"PdoDone", &pdo_done);
@@ -99,12 +243,12 @@ NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING RegistryPath) {
         NULL,
         NULL,
         FALSE,
-        &bus_pdo
+        &pdo
       );
-    if (bus_pdo == NULL) {
+    if (pdo == NULL) {
         DBG("IoReportDetectedDevice() went wrong!  Exiting.\n");
         status = STATUS_UNSUCCESSFUL;
-        goto err_driver_bus;
+        goto err_pdo;
       }
 
     /* Remember that we have a PDO for next time. */
@@ -113,20 +257,48 @@ NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING RegistryPath) {
         DBG("Couldn't save PdoDone to Registry.  Oh well.\n");
       }
     /* Attach FDO to PDO. */
-    status = WvDriverObj->DriverExtension->AddDevice(WvDriverObj, bus_pdo);
+    status = WvBusAttach(pdo);
     if (!NT_SUCCESS(status)) {
-        DBG("WvAttachFdo() went wrong!\n");
-        goto err_add_dev;
+        DBG("WvBusAttach() went wrong!\n");
+        goto err_attach;
       }
     /* PDO created, FDO attached.  All done. */
     return STATUS_SUCCESS;
 
-    err_add_dev:
+    err_attach:
 
-    IoDeleteDevice(bus_pdo);
-    err_driver_bus:
+    /* Should we really delete an IoReportDetectedDevice() device? */
+    IoDeleteDevice(pdo);
+    err_pdo:
+
+    WvlRegCloseKey(reg_key);
+    err_reg:
+
+    /* Cleanup by WvBusCleanup() */
+    err_thread:
+
+    /* Cleanup by WvBusCleanup() */
+    err_dos_symlink:
+
+    /* Cleanup by WvBusCleanup() */
+    err_fdo:
 
     return status;
+  }
+
+/* Tear down WinVBlock bus resources. */
+VOID WvBusCleanup(void) {
+    if (WvSymlinkDone)
+      IoDeleteSymbolicLink(&WvBusDosname);
+    if (WvBusThread_.State != WvlThreadStateNotStarted) {
+        DBG("Stopping thread...\n");
+        WvlThreadSendStopAndWait(&WvBusThread_);
+      }
+    if (WvBus.Fdo) {
+        IoDeleteDevice(WvBus.Fdo);
+        WvBus.Fdo = NULL;
+      }
+    return;
   }
 
 /**
