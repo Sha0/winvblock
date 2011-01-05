@@ -46,12 +46,6 @@
 
 #define AOEPROTOCOLVER 1
 
-extern NTSTATUS STDCALL ZwWaitForSingleObject(
-    IN HANDLE Handle,
-    IN BOOLEAN Alertable,
-    IN PLARGE_INTEGER Timeout OPTIONAL
-  );
-
 /* From aoe/bus.c */
 extern WVL_S_BUS_T AoeBusMain;
 extern PDEVICE_OBJECT AoeBusPdo;
@@ -88,7 +82,7 @@ static __drv_dispatchType(IRP_MJ_DEVICE_CONTROL)
   DRIVER_DISPATCH AoeIrpDevCtl;
 static __drv_dispatchType(IRP_MJ_SCSI) DRIVER_DISPATCH AoeIrpScsi;
 static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH AoeIrpPnp;
-static DRIVER_UNLOAD AoeUnload;
+static DRIVER_UNLOAD AoeUnload_;
 
 /** Tag types. */
 typedef enum AOE_TAG_TYPE_ {
@@ -221,6 +215,7 @@ static AOE_SP_WORK_TAG_ AoeProbeTag_ = NULL;
 static AOE_SP_DISK_SEARCH_ AoeDiskSearchList_ = NULL;
 static LONG AoePendingTags_ = 0;
 static HANDLE AoeThreadHandle_;
+static PETHREAD AoeThreadObj_ = NULL;
 static BOOLEAN AoeStarted_ = FALSE;
 static LIST_ENTRY AoeDiskList_;
 static KSPIN_LOCK AoeDiskListLock_;
@@ -230,62 +225,126 @@ static AOE_SP_DISK_ AoeDiskFromDev_(WV_SP_DEV_T dev_ptr) {
     return disk__get_ptr(dev_ptr)->ext;
   }
 
+typedef enum AOE_CLEANUP_ {
+    AoeCleanupReg_,
+    AoeCleanupProtocol_,
+    AoeCleanupProbeTag_,
+    AoeCleanupProbeTagPacket_,
+    AoeCleanupBus_,
+    AoeCleanupThread_,
+    AoeCleanupThreadRef_,
+    AoeCleanupAll_
+  } AOE_E_CLEANUP_, * AOE_EP_CLEANUP_;
+  
+static VOID AoeCleanup_(AOE_E_CLEANUP_ cleanup) {
+    switch (cleanup) {
+        default:
+          DBG("Unknown cleanup request!\n");
+        case AoeCleanupAll_:
+
+        AoeStop_ = TRUE;
+        KeSetEvent(&AoeSignal_, 0, FALSE);
+        KeWaitForSingleObject(
+            AoeThreadObj_,
+            Executive,
+            KernelMode,
+            FALSE,
+            NULL
+          );
+        ObDereferenceObject(AoeThreadObj_);
+        case AoeCleanupThreadRef_:
+
+        /* Duplication from above, but is hopefully harmless. */
+        AoeStop_ = TRUE;
+        KeSetEvent(&AoeSignal_, 0, FALSE);
+        ZwClose(AoeThreadHandle_);
+        case AoeCleanupThread_:
+
+        AoeBusFree();
+        case AoeCleanupBus_:
+
+        wv_free(AoeProbeTag_->packet_data);
+        case AoeCleanupProbeTagPacket_:
+    
+        wv_free(AoeProbeTag_);
+        case AoeCleanupProbeTag_:
+    
+        Protocol_Stop();
+        case AoeCleanupProtocol_:
+
+        case AoeCleanupReg_:
+
+        DBG("Done.\n");
+      }
+    return;
+  }
+
 /**
  * Start AoE operations.
  *
- * @ret Status          Return status code.
+ * @v DriverObject      Unique to this driver.
+ * @v RegistryPath      Unique to this driver.
+ * @ret NTSTATUS        The status of driver startup.
  */
 NTSTATUS STDCALL DriverEntry(
     IN PDRIVER_OBJECT DriverObject,
     IN PUNICODE_STRING RegistryPath
   ) {
-    NTSTATUS Status;
-    OBJECT_ATTRIBUTES ObjectAttributes;
-    PVOID ThreadObject;
-    WVL_SP_BUS_T bus_ptr;
-    int i;
+    NTSTATUS status;
+    OBJECT_ATTRIBUTES obj_attrs;
+    UINT i;
 
     DBG("Entry\n");
 
     if (AoeStarted_)
       return STATUS_SUCCESS;
+
     /* Initialize the global list of AoE disks. */
     InitializeListHead(&AoeDiskList_);
     KeInitializeSpinLock(&AoeDiskListLock_);
+
     /* Setup the Registry. */
-    if (!NT_SUCCESS(AoeRegSetup(&Status))) {
+    AoeRegSetup(&status);
+    if (!NT_SUCCESS(status)) {
         DBG("Could not update Registry!\n");
-        return Status;
+        AoeCleanup_(AoeCleanupReg_);
+        return status;
       } else {
         DBG("Registry updated\n");
       }
+
     /* Start up the protocol. */
-    if (!NT_SUCCESS(Status = Protocol_Start())) {
+    status = Protocol_Start();
+    if (!NT_SUCCESS(status)) {
         DBG("Protocol startup failure!\n");
-        return Status;
+        AoeCleanup_(AoeCleanupProtocol_);
+        return status;
       }
+
     /* Allocate and zero-fill the global probe tag. */
     AoeProbeTag_ = wv_mallocz(sizeof *AoeProbeTag_);
     if (AoeProbeTag_ == NULL) {
         DBG("Couldn't allocate probe tag; bye!\n");
+        AoeCleanup_(AoeCleanupProbeTag_);
         return STATUS_INSUFFICIENT_RESOURCES;
       }
 
     /* Set up the probe tag's AoE packet reference. */
     AoeProbeTag_->PacketSize = sizeof (AOE_S_PACKET_);
+
     /* Allocate and zero-fill the probe tag's packet reference. */
     AoeProbeTag_->packet_data = wv_mallocz(AoeProbeTag_->PacketSize);
     if (AoeProbeTag_->packet_data == NULL) {
         DBG("Couldn't allocate AoeProbeTag_->packet_data\n");
-        wv_free(AoeProbeTag_);
+        AoeCleanup_(AoeCleanupProbeTagPacket_);
         return STATUS_INSUFFICIENT_RESOURCES;
       }
+
     AoeProbeTag_->SendTime.QuadPart = 0LL;
 
     /* Initialize the probe tag's AoE packet. */
     AoeProbeTag_->packet_data->Ver = AOEPROTOCOLVER;
-    AoeProbeTag_->packet_data->Major =
-      htons((UINT16) -1);
+    AoeProbeTag_->packet_data->Major = htons((UINT16) -1);
     AoeProbeTag_->packet_data->Minor = (UCHAR) -1;
     AoeProbeTag_->packet_data->Cmd = 0xec;           /* IDENTIFY DEVICE */
     AoeProbeTag_->packet_data->Count = 1;
@@ -297,41 +356,55 @@ NTSTATUS STDCALL DriverEntry(
     KeInitializeSpinLock(&AoeLock_);
     KeInitializeEvent(&AoeSignal_, SynchronizationEvent, FALSE);
 
-    /* Initialize object attributes for thread. */
+    /* Establish the AoE bus. */
+    status = AoeBusCreate(DriverObject);
+    if (!NT_SUCCESS(status)) {
+        DBG("Unable to create AoE bus!\n");
+        AoeCleanup_(AoeCleanupBus_);
+        return status;
+      }
+
+    /* Initialize object attributes for the global thread. */
     InitializeObjectAttributes(
-        &ObjectAttributes,
+        &obj_attrs,
         NULL,
         OBJ_KERNEL_HANDLE,
         NULL,
         NULL
       );
 
-    /* Create global thread. */
-    if (!NT_SUCCESS(Status = PsCreateSystemThread(
+    /* Create the global thread. */
+    status = PsCreateSystemThread(
         &AoeThreadHandle_,
         THREAD_ALL_ACCESS,
-        &ObjectAttributes,
+        &obj_attrs,
         NULL,
         NULL,
         AoeThread_,
         NULL
-      )))
-      return WvlError("PsCreateSystemThread", Status);
-
-    if (!NT_SUCCESS(Status = ObReferenceObjectByHandle(
-        AoeThreadHandle_,
-        THREAD_ALL_ACCESS,
-        NULL,
-        KernelMode,
-        &ThreadObject,
-        NULL
-      ))) {
-        ZwClose(AoeThreadHandle_);
-        WvlError("ObReferenceObjectByHandle", Status);
-        AoeStop_ = TRUE;
-        KeSetEvent(&AoeSignal_, 0, FALSE);
+      );
+    if (!NT_SUCCESS(status)) {
+        WvlError("PsCreateSystemThread", status);
+        AoeCleanup_(AoeCleanupThread_);
+        return status;
       }
 
+    /* Increment reference count on thread object. */
+    status = ObReferenceObjectByHandle(
+        AoeThreadHandle_,
+        THREAD_ALL_ACCESS,
+        *PsThreadType,
+        KernelMode,
+        &AoeThreadObj_,
+        NULL
+      );
+    if (!NT_SUCCESS(status)) {
+        WvlError("ObReferenceObjectByHandle", status);
+        AoeCleanup_(AoeCleanupThreadRef_);
+        return status;
+      }
+
+    /* Initialize DriverObject for IRPs. */
     for (i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++)
       DriverObject->MajorFunction[i] = AoeIrpNotSupported;
     DriverObject->MajorFunction[IRP_MJ_PNP] = AoeIrpPnp;
@@ -342,25 +415,22 @@ NTSTATUS STDCALL DriverEntry(
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = AoeIrpDevCtl;
     DriverObject->MajorFunction[IRP_MJ_SCSI] = AoeIrpScsi;
     /* Set the driver Unload callback. */
-    DriverObject->DriverUnload = AoeUnload;
+    DriverObject->DriverUnload = AoeUnload_;
     /* Set the driver AddDevice callback. */
     DriverObject->DriverExtension->AddDevice = AoeBusAttachFdo;
     AoeStarted_ = TRUE;
-    Status = AoeBusCreate(DriverObject);
-    if (!NT_SUCCESS(Status)) {
-        DBG("Unable to create AoE bus!\n");
-        AoeUnload(DriverObject);
-        return Status;
-      }
+
     AoeProcessAbft_();
     DBG("Exit\n");
-    return Status;
+    return status;
   }
 
 /**
  * Stop AoE operations.
+ *
+ * @v DriverObject      Unique to this driver.
  */
-static VOID STDCALL AoeUnload(IN PDRIVER_OBJECT DriverObject) {
+static VOID STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
     NTSTATUS Status;
     AOE_SP_DISK_SEARCH_ disk_searcher, previous_disk_searcher;
     AOE_SP_WORK_TAG_ tag;
@@ -371,23 +441,8 @@ static VOID STDCALL AoeUnload(IN PDRIVER_OBJECT DriverObject) {
     /* If we're not already started, there's nothing to do. */
     if (!AoeStarted_)
       return;
-    /* Destroy the AoE bus. */
-    AoeBusFree();
-    /* Stop the AoE protocol. */
-    Protocol_Stop();
-    /* If we're not already shutting down, signal the event. */
-    if (!AoeStop_) {
-        AoeStop_ = TRUE;
-        KeSetEvent(&AoeSignal_, 0, FALSE);
-        /* Wait until the event has been signalled. */
-        if (!NT_SUCCESS(Status = ZwWaitForSingleObject(
-            AoeThreadHandle_,
-            FALSE,
-            NULL
-          )))
-          WvlError("AoE_Stop ZwWaitForSingleObject", Status);
-        ZwClose(AoeThreadHandle_);
-      }
+    /* General cleanup. */
+    AoeCleanup_(AoeCleanupAll_);
 
     /* Free the target list. */
     KeAcquireSpinLock(&AoeTargetListLock_, &Irql2);
@@ -437,15 +492,10 @@ static VOID STDCALL AoeUnload(IN PDRIVER_OBJECT DriverObject) {
     AoeTagListFirst_ = NULL;
     AoeTagListLast_ = NULL;
 
-    /* Free the global probe tag and its AoE packet. */
-    wv_free(AoeProbeTag_->packet_data);
-    wv_free(AoeProbeTag_);
-
     /* Release the global spin-lock. */
     KeReleaseSpinLock(&AoeLock_, Irql);
-    AoeBusFree();
     AoeStarted_ = FALSE;
-    DBG("Exit\n");
+    DBG("Unloaded.\n");
   }
 
 /**
