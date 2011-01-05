@@ -197,6 +197,7 @@ static VOID STDCALL WvlBusAddNode_(WVL_SP_BUS_T bus, WVL_SP_BUS_NODE new_node) {
       } /* while */
     /* Insert before walker. */
     InsertTailList(walker, &new_node->BusPrivate_.Link);
+    new_node->Linked = TRUE;
     return;
   }
 
@@ -219,6 +220,7 @@ static VOID STDCALL WvlBusRemoveNode_(
         (PVOID) bus
       );
     RemoveEntryList(&node->BusPrivate_.Link);
+    node->Linked = FALSE;
     ObDereferenceObject(node->BusPrivate_.Pdo);
     bus->BusPrivate_.NodeCount--;
     return;    

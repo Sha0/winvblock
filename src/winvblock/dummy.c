@@ -35,8 +35,9 @@
 #include "dummy.h"
 #include "debug.h"
 
-/* From driver.c */
+/* From bus.c */
 extern WVL_S_BUS_T WvBus;
+extern NTSTATUS STDCALL WvBusRemoveDev(IN WV_SP_DEV_T);
 
 /* Forward declarations. */
 static NTSTATUS STDCALL WvDummyIds(IN PIRP, IN WV_SP_DUMMY_IDS);
@@ -60,11 +61,8 @@ static NTSTATUS STDCALL WvDummyPnp(
           return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
 
         case IRP_MN_REMOVE_DEVICE:
-          WvlBusRemoveNode(&dev->BusNode);
-          IoDeleteDevice(dev->Self);
-          /* dev->ext is the PnP IDs' data. */
-          wv_free(dev->ext);
-          wv_free(dev);
+          /* Any error status for the removal slips away, here. */
+          WvBusRemoveDev(dev);
           return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
 
         default:
@@ -240,8 +238,8 @@ WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
  *
  * It might actually be better to handle a PnP remove IOCTL.
  */
-WVL_M_LIB NTSTATUS STDCALL WvDummyRemove(IN PDEVICE_OBJECT Pdo) {
-    return WvlBusRemoveNode(&WvDevFromDevObj(Pdo)->BusNode);
+WVL_M_LIB NTSTATUS STDCALL WvDummyRemove(IN PDEVICE_OBJECT Pdo) {    
+    return WvBusRemoveDev(WvDevFromDevObj(Pdo));
   }
 
 /**

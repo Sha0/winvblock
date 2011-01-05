@@ -341,6 +341,59 @@ BOOLEAN STDCALL WvBusAddDev(
     return TRUE;
   }
 
+/* Bus node removal thread item.  Internal. */
+typedef struct WV_BUS_NODE_REMOVAL_ {
+    WVL_S_THREAD_ITEM item;
+    WV_SP_DEV_T dev;
+    KEVENT signal;
+  } WV_S_BUS_NODE_REMOVAL_, * WV_SP_BUS_NODE_REMOVAL_;
+
+/* Remove a bus node within the bus thread's context.  Internal. */
+static WVL_F_THREAD_ITEM WvBusRemoveDev_;
+static VOID STDCALL WvBusRemoveDev_(IN OUT WVL_SP_THREAD_ITEM item) {
+    WV_SP_BUS_NODE_REMOVAL_ removal;
+
+    removal = CONTAINING_RECORD(item, WV_S_BUS_NODE_REMOVAL_, item);
+    /* If the node has been unlinked and we are called again, delete it. */
+    if (!removal->dev->BusNode.Linked) {
+        IoDeleteDevice(removal->dev->Self);
+        /* dev->ext is the PnP IDs' data. */
+        wv_free(removal->dev->ext);
+        wv_free(removal->dev);
+      } else {        
+        /* Enqueue the node's removal. */
+        WvlBusRemoveNode(&removal->dev->BusNode);
+        /* We are in the thread's context, so process the removal right now. */
+        WvlBusProcessWorkItems(&WvBus);
+      }
+    /* The removal should be complete.  Signal completion. */
+    KeSetEvent(&removal->signal, 0, FALSE);
+    return;
+  }
+
+/**
+ * Remove a device node from the WinVBlock bus.
+ *
+ * @v Dev               The device to remove.
+ * @ret NTSTATUS        The status of the operation.
+ */
+NTSTATUS STDCALL WvBusRemoveDev(IN WV_SP_DEV_T Dev) {
+    WV_S_BUS_NODE_REMOVAL_ removal;
+    NTSTATUS status;
+
+    removal.dev = Dev;
+    KeInitializeEvent(&removal.signal, SynchronizationEvent, FALSE);
+    removal.item.Func = WvBusRemoveDev_;
+    /* Enqueue the removal. */
+    status = WvlThreadAddItem(&WvBusThread_, &removal.item);
+    if (!NT_SUCCESS(status))
+      return status;
+
+    /* Wait for it. */
+    KeWaitForSingleObject(&removal.signal, Executive, KernelMode, FALSE, NULL);
+    return status;
+  }
+
 static NTSTATUS STDCALL WvBusDevCtlDetach(
     IN PIRP irp
   ) {

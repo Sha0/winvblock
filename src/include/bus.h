@@ -93,6 +93,7 @@ typedef struct WVL_BUS_NODE {
         /* The child's unit number relative to the parent bus. */
         UINT32 Num;
       } BusPrivate_;
+    BOOLEAN Linked;
   } WVL_S_BUS_NODE, * WVL_SP_BUS_NODE;
 
 /**
