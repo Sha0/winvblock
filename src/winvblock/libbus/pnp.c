@@ -116,6 +116,7 @@ static NTSTATUS STDCALL WvlBusPnpRemoveDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
 
         DBG("Removing PDO from bus...\n");
         RemoveEntryList(&node->BusPrivate_.Link);
+        node->Linked = FALSE;
         ObDereferenceObject(node->BusPrivate_.Pdo);
         bus->BusPrivate_.NodeCount--;
       }
