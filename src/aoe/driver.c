@@ -1274,6 +1274,13 @@ static VOID STDCALL AoeThread_(IN PVOID StartContext) {
         if (AoeStop_) {
             DBG("Stopping...\n");
             WvlBusCancelWorkItems(&AoeBusMain);
+            /* Detach from any lower DEVICE_OBJECT */
+            if (AoeBusMain.LowerDeviceObject)
+              IoDetachDevice(AoeBusMain.LowerDeviceObject);
+            /* Delete. */
+            IoDeleteDevice(AoeBusMain.Fdo);
+            /* Disassociate. */
+            AoeBusMain.Fdo = NULL;
             PsTerminateSystemThread(STATUS_SUCCESS);
           }
         WvlBusProcessWorkItems(&AoeBusMain);

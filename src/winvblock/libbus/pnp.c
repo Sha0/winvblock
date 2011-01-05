@@ -120,13 +120,6 @@ static NTSTATUS STDCALL WvlBusPnpRemoveDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
         ObDereferenceObject(node->BusPrivate_.Pdo);
         bus->BusPrivate_.NodeCount--;
       }
-    /* Detach from any lower DEVICE_OBJECT */
-    if (lower)
-      IoDetachDevice(lower);
-    /* Delete. */
-    IoDeleteDevice(bus->Fdo);
-    /* Disassociate. */
-    bus->Fdo = NULL;
     /* Stop the thread. */
     bus->Stop = TRUE;
     return status;

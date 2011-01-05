@@ -116,6 +116,13 @@ static VOID STDCALL WvBusThread(IN OUT WVL_SP_THREAD_ITEM item) {
         (WvBusThread_.State == WvlThreadStateStopping)
       );
     WvlBusCancelWorkItems(&WvBus);
+    /* Detach from any lower DEVICE_OBJECT */
+    if (WvBus.LowerDeviceObject)
+      IoDetachDevice(WvBus.LowerDeviceObject);
+    /* Delete. */
+    IoDeleteDevice(WvBus.Fdo);
+    /* Disassociate. */
+    WvBus.Fdo = NULL;
     return;
   }
 
