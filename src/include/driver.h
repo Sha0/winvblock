@@ -52,4 +52,27 @@ extern NTSTATUS STDCALL WvDriverGetDevCapabilities(
     IN PDEVICE_CAPABILITIES
   );
 
+/**
+ * Miscellaneous: Grouped memory allocation functions.
+ */
+
+/* A group of memory allocations. */
+typedef struct WVL_MEM_GROUP {
+    PCHAR First;
+    PCHAR Last;
+    PCHAR Current;
+  } WVL_S_MEM_GROUP, * WVL_SP_MEM_GROUP;
+extern WVL_M_LIB VOID STDCALL WvlMemGroupInit(OUT WVL_SP_MEM_GROUP);
+extern WVL_M_LIB PVOID STDCALL WvlMemGroupAlloc(
+    IN OUT WVL_SP_MEM_GROUP,
+    IN SIZE_T
+  );
+extern WVL_M_LIB VOID STDCALL WvlMemGroupFree(IN OUT WVL_SP_MEM_GROUP);
+extern WVL_M_LIB PVOID STDCALL WvlMemGroupNextObj(IN OUT WVL_SP_MEM_GROUP);
+extern WVL_M_LIB PVOID STDCALL WvlMemGroupBatchAlloc(
+    IN OUT WVL_SP_MEM_GROUP,
+    IN SIZE_T,
+    IN UINT32
+  );
+
 #endif	/* WV_M_DRIVER_H_ */

@@ -469,3 +469,197 @@ NTSTATUS STDCALL WvDriverGetDevCapabilities(
     ObDereferenceObject(target_obj);
     return status;
   }
+
+/**
+ * Miscellaneous: Grouped memory allocation functions.
+ */
+
+/* Internal type describing the layout of the tracking data. */
+typedef struct WVL_MEM_GROUP_ITEM_ {
+    PCHAR Next;
+    PVOID Obj;
+  } WVL_S_MEM_GROUP_ITEM_, * WVL_SP_MEM_GROUP_ITEM_;
+
+/**
+ * Initialize a memory group for use.
+ *
+ * @v Group             The memory group to initialize.
+ */
+WVL_M_LIB VOID STDCALL WvlMemGroupInit(OUT WVL_SP_MEM_GROUP Group) {
+    if (!Group)
+      return;
+    Group->First = Group->Current = Group->Last = NULL;
+    return;
+  }
+
+/**
+ * Attempt to allocate a memory resource and add it to a group.
+ *
+ * @v Group             The group to add the resource to.
+ * @v Size              The size, in bytes, of the object to allocate.
+ * @ret PVOID           A pointer to the newly allocated object, or NULL.
+ *
+ * The advantage to having an allocation associated with a group is
+ * that all items in a group can be freed simultaneously.  Each resource _can_
+ * be individually freed once a batch free is no longer desirable.  Do _not_
+ * perform a regular wv_free() on an item and then try to free a group.
+ */
+WVL_M_LIB PVOID STDCALL WvlMemGroupAlloc(
+    IN OUT WVL_SP_MEM_GROUP Group,
+    IN SIZE_T Size
+  ) {
+    WVL_S_MEM_GROUP_ITEM_ item;
+    PCHAR item_ptr;
+
+    if (!Group || !Size)
+      return NULL;
+
+    /* We allocate the object, with a footer item. */
+    item.Obj = wv_mallocz(Size + sizeof item);
+    if (!item.Obj)
+      return NULL;
+
+    /* Note the footer where the item will be copied to. */
+    item_ptr = (PCHAR) item.Obj + Size;
+    /* We are obviously the last item. */
+    item.Next = NULL;
+    /* Copy item into the new object. */
+    RtlCopyMemory(item_ptr, &item, sizeof item);
+    /* Point the previously last item's 'Next' member to the new item. */
+    if (Group->Last)
+      RtlCopyMemory(Group->Last, &item_ptr, sizeof item_ptr);
+    /* Note the new item as the last in the group. */
+    Group->Last = item_ptr;
+    /* Note the new item as the first in the group, if applicable. */
+    if (!Group->First)
+      Group->First = item_ptr;
+
+    /* All done. */
+    return item.Obj;
+  }
+
+/**
+ * Free all memory resources in a group.
+ *
+ * @v Group             The group of resources to free.
+ *
+ * Do _not_ perform a regular wv_free() on an item and then try to
+ * free a group with this function.  The tracking data will have
+ * already been freed, so resources iteration is expected to fail.
+ */
+WVL_M_LIB VOID STDCALL WvlMemGroupFree(IN OUT WVL_SP_MEM_GROUP Group) {
+    WVL_S_MEM_GROUP_ITEM_ item;
+    PCHAR next;
+
+    if (!Group || !Group->First)
+      return;
+
+    /* Point to the first item. */
+    next = Group->First;
+    /* For each item, fetch it and free it. */
+    while (next) {
+        /* Fill with the next item. */
+        RtlCopyMemory(&item, next, sizeof item);
+        wv_free(item.Obj);
+        next = item.Next;
+      }
+    Group->First = Group->Current = Group->Last = NULL;
+    return;
+  }
+
+/**
+ * Iterate through memory resources in a group.
+ *
+ * @v Group             The group of resources to iterate through.
+ * @ret PVOID           The next available object in the group, or NULL.
+ *
+ * Before beginning iteration, set Group->Current = Group->First.
+ */
+WVL_M_LIB PVOID STDCALL WvlMemGroupNextObj(IN OUT WVL_SP_MEM_GROUP Group) {
+    WVL_S_MEM_GROUP_ITEM_ item;
+
+    if (!Group || !Group->First)
+      return NULL;
+
+    /* Copy the current item for inspection. */
+    RtlCopyMemory(&item, Group->Current, sizeof item);
+    /* Remember the next object for next time. */
+    Group->Current = item.Next;
+    return item.Obj;
+  }
+
+/**
+ * Attempt to allocate a batch of identically-sized memory
+ * resources, and associate them with a group.
+ *
+ * @v Group             The group to associate the allocations with.
+ * @v Size              The size, in bytes, of each object to allocate.
+ * @v Count             The count of objects to allocate.
+ * @ret PVOID           Points to the first allocated object in the batch.
+ *
+ * If a single allocation in the batch fails, any of the allocations in
+ * that batch will be freed.  Do not confuse that to mean that all resources
+ * in the group are freed.
+ *
+ * You might use this function to allocate a batch of objects with size X
+ * and have them associated with a group.  Then you might call it again for
+ * a batch of objects with size Y which will have the same group.  Then you
+ * might add some individual objects to the group with WvlMemGroupAllocate().
+ * Perhaps the last allocation fails; you can still free all allocations
+ * with WvlMemGroupFree().
+ */
+WVL_M_LIB PVOID STDCALL WvlMemGroupBatchAlloc(
+    IN OUT WVL_SP_MEM_GROUP Group,
+    IN SIZE_T Size,
+    IN UINT32 Count
+  ) {
+    WVL_S_MEM_GROUP_ITEM_ item;
+    PVOID first_obj;
+    WVL_S_MEM_GROUP tmp_group = {0};
+    PCHAR item_ptr, last = (PCHAR) &tmp_group.First;
+
+    if (!Group || !Size || !Count)
+      return NULL;
+
+    /* Allocate the first object and remember it. */
+    first_obj = item.Obj = wv_mallocz(Size + sizeof item);
+    if (!first_obj)
+      return NULL;
+    goto jump_in;
+    do {
+        /* We allocate each object, with a footer item. */
+        item.Obj = wv_mallocz(Size + sizeof item);
+        if (!item.Obj) {
+            break;
+          }
+        jump_in:
+        /* Note the footer where the item will be copied to. */
+        item_ptr = (PCHAR) item.Obj + Size;
+        /* We are obviously the newest item in the batch. */
+        item.Next = NULL;
+        /* Copy item into the new object. */
+        RtlCopyMemory(item_ptr, &item, sizeof item);
+        /* Point the previous item's 'Next' member to the new item. */
+        RtlCopyMemory(last, &item_ptr, sizeof item_ptr);
+        /* Note the new item as the last in the batch. */
+        last = item_ptr;
+      } while (--Count);
+
+    /* Abort? */
+    if (Count) {
+        WvlMemGroupFree(&tmp_group);
+        return NULL;
+      }
+
+    /*
+     * Success. Point the real group's last item's
+     * 'Next' member to the batch's first item.
+     */
+    if (Group->Last)
+      RtlCopyMemory(Group->Last, &tmp_group.First, sizeof tmp_group.First);
+    /* Set the real group's 'First' member, if applicable. */
+    if (!Group->First)
+      Group->First = tmp_group.First;
+    /* All done. */
+    return first_obj;
+  }
