@@ -467,345 +467,265 @@ static BOOLEAN STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
     AOE_SP_DISK_ aoe_disk_ptr;
 
     aoe_disk_ptr = AoeDiskFromDev_(disk_ptr->Dev);
-    /*
-     * Allocate our disk search 
-     */
+    /* Allocate our disk search. */
     if ((disk_searcher = wv_malloc(sizeof *disk_searcher)) == NULL) {
-        DBG ( "Couldn't allocate for disk_searcher; bye!\n" );
+        DBG("Couldn't allocate for disk_searcher; bye!\n");
         return FALSE;
       }
 
-    /*
-     * Initialize the disk search 
-     */
+    /* Initialize the disk search. */
     disk_searcher->device = disk_ptr->Dev;
     disk_searcher->next = NULL;
     aoe_disk_ptr->search_state = AoeSearchStateSearchNic_;
-    KeResetEvent ( &disk_ptr->SearchEvent );
+    KeResetEvent(&disk_ptr->SearchEvent);
 
-    /*
-     * Wait until we have the global spin-lock 
-     */
-    KeAcquireSpinLock ( &AoeLock_, &Irql );
+    /* Wait until we have the global spin-lock. */
+    KeAcquireSpinLock(&AoeLock_, &Irql);
 
-    /*
-     * Add our disk search to the global list of disk searches 
-     */
-    if ( AoeDiskSearchList_ == NULL )
-      {
+    /* Add our disk search to the global list of disk searches. */
+    if (AoeDiskSearchList_ == NULL) {
         AoeDiskSearchList_ = disk_searcher;
-      }
-    else
-      {
+      } else {
         disk_search_walker = AoeDiskSearchList_;
-        while ( disk_search_walker->next )
-    disk_search_walker = disk_search_walker->next;
+        while (disk_search_walker->next)
+          disk_search_walker = disk_search_walker->next;
         disk_search_walker->next = disk_searcher;
       }
 
-    /*
-     * Release the global spin-lock 
-     */
-    KeReleaseSpinLock ( &AoeLock_, Irql );
+    /* Release the global spin-lock. */
+    KeReleaseSpinLock(&AoeLock_, Irql);
 
-    /*
-     * We go through all the states until the disk is ready for use 
-     */
-    while ( TRUE )
-      {
-        /*
-         * Wait for our device's extension's search to be signalled 
-         */
-        /*
-         * TODO: Make the below value a #defined constant 
-         */
-        /*
+    /* We go through all the states until the disk is ready for use. */
+    while (TRUE) {
+        /* Wait for our device's extension's search to be signalled.
+         *
+         * TODO: Make the below value a #defined constant:
          * 500.000 * 100ns = 50.000.000 ns = 50ms 
          */
         Timeout.QuadPart = -500000LL;
-        KeWaitForSingleObject ( &disk_ptr->SearchEvent, Executive, KernelMode,
-              FALSE, &Timeout );
-        if ( AoeStop_ )
-    {
-      DBG ( "AoE is shutting down; bye!\n" );
-      return FALSE;
-    }
+        KeWaitForSingleObject(
+            &disk_ptr->SearchEvent,
+            Executive,
+            KernelMode,
+            FALSE,
+            &Timeout
+          );
+        if (AoeStop_) {
+            DBG("AoE is shutting down; bye!\n");
+            return FALSE;
+          }
 
-        /*
-         * Wait until we have the device extension's spin-lock 
-         */
-        KeAcquireSpinLock ( &disk_ptr->SpinLock, &Irql );
+        /* Wait until we have the device extension's spin-lock. */
+        KeAcquireSpinLock(&disk_ptr->SpinLock, &Irql);
 
-        if (aoe_disk_ptr->search_state == AoeSearchStateSearchNic_)
-    {
-      if ( !Protocol_SearchNIC ( aoe_disk_ptr->ClientMac ) )
-        {
-          KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
-          continue;
-        }
-      else
-        {
-          /*
-           * We found the adapter to use, get MTU next 
-           */
-          aoe_disk_ptr->MTU = Protocol_GetMTU ( aoe_disk_ptr->ClientMac );
-          aoe_disk_ptr->search_state = AoeSearchStateGetSize_;
-        }
-    }
+        if (aoe_disk_ptr->search_state == AoeSearchStateSearchNic_) {
+            if (!Protocol_SearchNIC(aoe_disk_ptr->ClientMac)) {
+                KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+                continue;
+              } else {
+                /* We found the adapter to use, get MTU next. */
+                aoe_disk_ptr->MTU = Protocol_GetMTU(aoe_disk_ptr->ClientMac);
+                aoe_disk_ptr->search_state = AoeSearchStateGetSize_;
+              }
+          }
 
-        if (aoe_disk_ptr->search_state == AoeSearchStateGettingSize_)
-    {
-      /*
-       * Still getting the disk's size 
-       */
-      KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
-      continue;
-    }
-        if (aoe_disk_ptr->search_state == AoeSearchStateGettingGeometry_)
-    {
-      /*
-       * Still getting the disk's geometry 
-       */
-      KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
-      continue;
-    }
+        if (aoe_disk_ptr->search_state == AoeSearchStateGettingSize_) {
+            /* Still getting the disk's size. */
+            KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+            continue;
+          }
+        if (aoe_disk_ptr->search_state == AoeSearchStateGettingGeometry_) {
+            /* Still getting the disk's geometry. */
+            KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+            continue;
+          }
         if (aoe_disk_ptr->search_state ==
-          AoeSearchStateGettingMaxSectsPerPacket_)
-    {
-      KeQuerySystemTime ( &CurrentTime );
-      /*
-       * TODO: Make the below value a #defined constant 
-       */
-      /*
-       * 2.500.000 * 100ns = 250.000.000 ns = 250ms 
-       */
-      if ( CurrentTime.QuadPart >
-           MaxSectorsPerPacketSendTime.QuadPart + 2500000LL )
-        {
-          DBG ( "No reply after 250ms for MaxSectorsPerPacket %d, "
-          "giving up\n", aoe_disk_ptr->MaxSectorsPerPacket );
-          aoe_disk_ptr->MaxSectorsPerPacket--;
-          aoe_disk_ptr->search_state = AoeSearchStateDone_;
-        }
-      else
-        {
-          /*
-           * Still getting the maximum sectors per packet count 
-           */
-          KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
-          continue;
-        }
-    }
+          AoeSearchStateGettingMaxSectsPerPacket_) {
+            KeQuerySystemTime(&CurrentTime);
+            /*
+             * TODO: Make the below value a #defined constant:
+             * 2.500.000 * 100ns = 250.000.000 ns = 250ms 
+             */
+            if (
+                CurrentTime.QuadPart >
+                MaxSectorsPerPacketSendTime.QuadPart + 2500000LL
+              ) {
+                DBG(
+                    "No reply after 250ms for MaxSectorsPerPacket %d, "
+                      "giving up\n",
+                    aoe_disk_ptr->MaxSectorsPerPacket
+                  );
+                aoe_disk_ptr->MaxSectorsPerPacket--;
+                aoe_disk_ptr->search_state = AoeSearchStateDone_;
+              } else {
+                /* Still getting the maximum sectors per packet count. */
+                KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+                continue;
+              }
+          }
 
-        if (aoe_disk_ptr->search_state == AoeSearchStateDone_)
-    {
-      /*
-       * We've finished the disk search; perform clean-up 
-       */
-      KeAcquireSpinLock ( &AoeLock_, &InnerIrql );
+        if (aoe_disk_ptr->search_state == AoeSearchStateDone_) {
+            /* We've finished the disk search; perform clean-up. */
+            KeAcquireSpinLock(&AoeLock_, &InnerIrql);
 
-      /*
-       * Tag clean-up: Find out if our tag is in the global tag list 
-       */
-      tag_walker = AoeTagListFirst_;
-      while ( tag_walker != NULL && tag_walker != tag )
-        tag_walker = tag_walker->next;
-      if ( tag_walker != NULL )
-        {
-          /*
-           * We found it.  If it's at the beginning of the list, adjust
-           * the list to point the the next tag
-           */
-          if ( tag->previous == NULL )
-      AoeTagListFirst_ = tag->next;
-          else
-      /*
-       * Remove our tag from the list 
-       */
-      tag->previous->next = tag->next;
-          /*
-           * If we 're at the end of the list, adjust the list's end to
-           * point to the penultimate tag
-           */
-          if ( tag->next == NULL )
-      AoeTagListLast_ = tag->previous;
-          else
-      /*
-       * Remove our tag from the list 
-       */
-      tag->next->previous = tag->previous;
-          AoePendingTags_--;
-          if ( AoePendingTags_ < 0 )
-      DBG ( "AoePendingTags_ < 0!!\n" );
-          /*
-           * Free our tag and its AoE packet 
-           */
-          wv_free(tag->packet_data);
-          wv_free(tag);
-        }
+            /* Tag clean-up: Find out if our tag is in the global tag list. */
+            tag_walker = AoeTagListFirst_;
+            while (tag_walker != NULL && tag_walker != tag)
+              tag_walker = tag_walker->next;
+            if (tag_walker != NULL) {
+                /*
+                 * We found it.  If it's at the beginning of the list, adjust
+                 * the list to point the the next tag.
+                 */
+                if (tag->previous == NULL)
+                  AoeTagListFirst_ = tag->next;
+                  else
+                  /* Remove our tag from the list. */
+                  tag->previous->next = tag->next;
+                /*
+                 * If we 're at the end of the list, adjust the list's end to
+                 * point to the penultimate tag.
+                 */
+                if (tag->next == NULL)
+                  AoeTagListLast_ = tag->previous;
+                  else
+                  /* Remove our tag from the list. */
+                  tag->next->previous = tag->previous;
+                AoePendingTags_--;
+                if (AoePendingTags_ < 0)
+                  DBG("AoePendingTags_ < 0!!\n");
+                /* Free our tag and its AoE packet. */
+                wv_free(tag->packet_data);
+                wv_free(tag);
+              } /* found tag. */
 
-      /*
-       * Disk search clean-up 
-       */
-      if ( AoeDiskSearchList_ == NULL )
-        {
-          DBG ( "AoeDiskSearchList_ == NULL!!\n" );
-        }
-      else
-        {
-          /*
-           * Find our disk search in the global list of disk searches 
-           */
-          disk_search_walker = AoeDiskSearchList_;
-          while (
-              disk_search_walker &&
-              disk_search_walker->device != disk_ptr->Dev
-            ) {
-        previous_disk_searcher = disk_search_walker;
-        disk_search_walker = disk_search_walker->next;
-      }
-          if ( disk_search_walker )
-      {
-        /*
-         * We found our disk search.  If it's the first one in
-         * the list, adjust the list and remove it
-         */
-        if ( disk_search_walker == AoeDiskSearchList_ )
-          AoeDiskSearchList_ = disk_search_walker->next;
-        else
-          /*
-           * Just remove it 
-           */
-          previous_disk_searcher->next = disk_search_walker->next;
-        /*
-         * Free our disk search 
-         */
-        wv_free(disk_search_walker);
-      }
-          else
-      {
-        DBG ( "Disk not found in AoeDiskSearchList_!!\n" );
-      }
-        }
+            /* Disk search clean-up. */
+            if (AoeDiskSearchList_ == NULL) {
+                DBG("AoeDiskSearchList_ == NULL!!\n");
+              } else {
+                /* Find our disk search in the global list of disk searches. */
+                disk_search_walker = AoeDiskSearchList_;
+                while (
+                    disk_search_walker &&
+                    disk_search_walker->device != disk_ptr->Dev
+                  ) {
+                    previous_disk_searcher = disk_search_walker;
+                    disk_search_walker = disk_search_walker->next;
+                  }
+                if (disk_search_walker) {
+                    /*
+                     * We found our disk search.  If it's the first one in
+                     * the list, adjust the list and remove it
+                     */
+                    if (disk_search_walker == AoeDiskSearchList_)
+                      AoeDiskSearchList_ = disk_search_walker->next;
+                      else
+                      /* Just remove it. */
+                      previous_disk_searcher->next = disk_search_walker->next;
+                    /* Free our disk search. */
+                    wv_free(disk_search_walker);
+                  } else {
+                    DBG("Disk not found in AoeDiskSearchList_!!\n");
+                  }
+              } /* if AoeDiskSearchList_ */
 
-      /*
-       * Release global and device extension spin-locks 
-       */
-      KeReleaseSpinLock ( &AoeLock_, InnerIrql );
-      KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
+            /* Release global and device extension spin-locks. */
+            KeReleaseSpinLock(&AoeLock_, InnerIrql);
+            KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
 
-      DBG ( "Disk size: %I64uM cylinders: %I64u heads: %u "
-      "sectors: %u sectors per packet: %u\n",
-      disk_ptr->LBADiskSize / 2048, disk_ptr->Cylinders,
-      disk_ptr->Heads, disk_ptr->Sectors,
-      aoe_disk_ptr->MaxSectorsPerPacket );
-      return TRUE;
-    }
+            DBG(
+                "Disk size: %I64uM cylinders: %I64u heads: %u"
+                  "sectors: %u sectors per packet: %u\n",
+                disk_ptr->LBADiskSize / 2048,
+                disk_ptr->Cylinders,
+                disk_ptr->Heads,
+                disk_ptr->Sectors,
+                aoe_disk_ptr->MaxSectorsPerPacket
+              );
+            return TRUE;
+          } /* if AoeSearchStateDone */
 
         #if 0
-        if ( aoe_disk_ptr->search_state == AoeSearchStateDone_)
+        if (aoe_disk_ptr->search_state == AoeSearchStateDone_)
         #endif
-        /*
-         * Establish our tag 
-         */
+        /* Establish our tag. */
         if ((tag = wv_mallocz(sizeof *tag)) == NULL) {
-      DBG ( "Couldn't allocate tag\n" );
-      KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
-      /*
-       * Maybe next time around 
-       */
-      continue;
-    }
+            DBG("Couldn't allocate tag\n");
+            KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+            /* Maybe next time around. */
+            continue;
+          }
         tag->type = AoeTagTypeSearchDrive_;
         tag->device = disk_ptr->Dev;
 
-        /*
-         * Establish our tag's AoE packet 
-         */
+        /* Establish our tag's AoE packet. */
         tag->PacketSize = sizeof (AOE_S_PACKET_);
         if ((tag->packet_data = wv_mallocz(tag->PacketSize)) == NULL) {
-      DBG ( "Couldn't allocate tag->packet_data\n" );
-      wv_free(tag);
-      tag = NULL;
-      KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
-      /*
-       * Maybe next time around 
-       */
-      continue;
-    }
+            DBG("Couldn't allocate tag->packet_data\n");
+            wv_free(tag);
+            tag = NULL;
+            KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+            /* Maybe next time around. */
+            continue;
+          }
         tag->packet_data->Ver = AOEPROTOCOLVER;
-        tag->packet_data->Major =
-    htons ( ( UINT16 ) aoe_disk_ptr->Major );
-        tag->packet_data->Minor = ( UCHAR ) aoe_disk_ptr->Minor;
+        tag->packet_data->Major = htons((UINT16) aoe_disk_ptr->Major);
+        tag->packet_data->Minor = (UCHAR) aoe_disk_ptr->Minor;
         tag->packet_data->ExtendedAFlag = TRUE;
 
-        /*
-         * Initialize the packet appropriately based on our current phase 
-         */
-        switch ( aoe_disk_ptr->search_state )
-    {
-      case AoeSearchStateGetSize_:
-        /*
-         * TODO: Make the below value into a #defined constant 
-         */
-        tag->packet_data->Cmd = 0xec;  /* IDENTIFY DEVICE */
-        tag->packet_data->Count = 1;
-        aoe_disk_ptr->search_state = AoeSearchStateGettingSize_;
-        break;
-      case AoeSearchStateGetGeometry_:
-        /*
-         * TODO: Make the below value into a #defined constant 
-         */
-        tag->packet_data->Cmd = 0x24;  /* READ SECTOR */
-        tag->packet_data->Count = 1;
-        aoe_disk_ptr->search_state = AoeSearchStateGettingGeometry_;
-        break;
-      case AoeSearchStateGetMaxSectsPerPacket_:
-        /*
-         * TODO: Make the below value into a #defined constant 
-         */
-        tag->packet_data->Cmd = 0x24;  /* READ SECTOR */
-        tag->packet_data->Count =
-          ( UCHAR ) ( ++aoe_disk_ptr->MaxSectorsPerPacket );
-        KeQuerySystemTime ( &MaxSectorsPerPacketSendTime );
-        aoe_disk_ptr->search_state =
-          AoeSearchStateGettingMaxSectsPerPacket_;
-        /*
-         * TODO: Make the below value into a #defined constant 
-         */
-        aoe_disk_ptr->Timeout = 200000;
-        break;
-      default:
-        DBG ( "Undefined search_state!!\n" );
-        wv_free(tag->packet_data);
-        wv_free(tag);
-        /*
-         * TODO: Do we need to nullify tag here? 
-         */
-        KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
-        continue;
-        break;
-    }
+        /* Initialize the packet appropriately based on our current phase. */
+        switch (aoe_disk_ptr->search_state) {
+            case AoeSearchStateGetSize_:
+              /* TODO: Make the below value into a #defined constant. */
+              tag->packet_data->Cmd = 0xec;  /* IDENTIFY DEVICE */
+              tag->packet_data->Count = 1;
+              aoe_disk_ptr->search_state = AoeSearchStateGettingSize_;
+              break;
 
-        /*
-         * Enqueue our tag 
-         */
+            case AoeSearchStateGetGeometry_:
+              /* TODO: Make the below value into a #defined constant. */
+              tag->packet_data->Cmd = 0x24;  /* READ SECTOR */
+              tag->packet_data->Count = 1;
+              aoe_disk_ptr->search_state = AoeSearchStateGettingGeometry_;
+              break;
+
+            case AoeSearchStateGetMaxSectsPerPacket_:
+              /* TODO: Make the below value into a #defined constant. */
+              tag->packet_data->Cmd = 0x24;  /* READ SECTOR */
+              tag->packet_data->Count = (UCHAR) (
+                  ++aoe_disk_ptr->MaxSectorsPerPacket
+                );
+              KeQuerySystemTime(&MaxSectorsPerPacketSendTime);
+              aoe_disk_ptr->search_state =
+                AoeSearchStateGettingMaxSectsPerPacket_;
+              /* TODO: Make the below value into a #defined constant. */
+              aoe_disk_ptr->Timeout = 200000;
+              break;
+
+            default:
+              DBG("Undefined search_state!!\n");
+              wv_free(tag->packet_data);
+              wv_free(tag);
+              /* TODO: Do we need to nullify tag here? */
+              KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+              continue;
+              break;
+          }
+
+        /* Enqueue our tag. */
         tag->next = NULL;
-        KeAcquireSpinLock ( &AoeLock_, &InnerIrql );
-        if ( AoeTagListFirst_ == NULL )
-    {
-      AoeTagListFirst_ = tag;
-      tag->previous = NULL;
-    }
-        else
-    {
-      AoeTagListLast_->next = tag;
-      tag->previous = AoeTagListLast_;
-    }
+        KeAcquireSpinLock(&AoeLock_, &InnerIrql);
+        if (AoeTagListFirst_ == NULL) {
+            AoeTagListFirst_ = tag;
+            tag->previous = NULL;
+          } else {
+            AoeTagListLast_->next = tag;
+            tag->previous = AoeTagListLast_;
+          }
         AoeTagListLast_ = tag;
-        KeReleaseSpinLock ( &AoeLock_, InnerIrql );
-        KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
-      }
+        KeReleaseSpinLock(&AoeLock_, InnerIrql);
+        KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+      } /* while TRUE */
   }
 
 static NTSTATUS STDCALL AoeDiskIo_(
@@ -825,207 +745,160 @@ static NTSTATUS STDCALL AoeDiskIo_(
     WV_SP_DISK_T disk_ptr;
     AOE_SP_DISK_ aoe_disk_ptr;
 
-    /*
-     * Establish pointers to the disk and AoE disk
-     */
-    disk_ptr = disk__get_ptr ( dev_ptr );
+    /* Establish pointers to the disk and AoE disk. */
+    disk_ptr = disk__get_ptr(dev_ptr);
     aoe_disk_ptr = AoeDiskFromDev_(dev_ptr);
 
-    if ( AoeStop_ )
-      {
-        /*
-         * Shutting down AoE; we can't service this request 
-         */
+    if (AoeStop_) {
+        /* Shutting down AoE; we can't service this request. */
         irp->IoStatus.Information = 0;
         irp->IoStatus.Status = STATUS_CANCELLED;
-        IoCompleteRequest ( irp, IO_NO_INCREMENT );
+        IoCompleteRequest(irp, IO_NO_INCREMENT);
         return STATUS_CANCELLED;
       }
 
-    if ( sector_count < 1 )
-      {
-        /*
-         * A silly request 
-         */
-        DBG ( "sector_count < 1; cancelling\n" );
+    if (sector_count < 1) {
+        /* A silly request. */
+        DBG("sector_count < 1; cancelling\n");
         irp->IoStatus.Information = 0;
         irp->IoStatus.Status = STATUS_CANCELLED;
-        IoCompleteRequest ( irp, IO_NO_INCREMENT );
+        IoCompleteRequest(irp, IO_NO_INCREMENT);
         return STATUS_CANCELLED;
       }
 
-    /*
-     * Allocate and zero-fill our request 
-     */
+    /* Allocate and zero-fill our request. */
     if ((request_ptr = wv_mallocz(sizeof *request_ptr)) == NULL) {
-        DBG ( "Couldn't allocate for reques_ptr; bye!\n" );
+        DBG("Couldn't allocate for reques_ptr; bye!\n");
         irp->IoStatus.Information = 0;
         irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-        IoCompleteRequest ( irp, IO_NO_INCREMENT );
+        IoCompleteRequest(irp, IO_NO_INCREMENT);
         return STATUS_INSUFFICIENT_RESOURCES;
       }
 
-    /*
-     * Initialize the request 
-     */
+    /* Initialize the request. */
     request_ptr->Mode = mode;
     request_ptr->SectorCount = sector_count;
     request_ptr->Buffer = buffer;
     request_ptr->Irp = irp;
     request_ptr->TagCount = 0;
 
-    /*
-     * Split the requested sectors into packets in tags
-     */
-    for ( i = 0; i < sector_count; i += aoe_disk_ptr->MaxSectorsPerPacket )
-      {
-        /*
-         * Allocate each tag 
-         */
+    /* Split the requested sectors into packets in tags. */
+    for (i = 0; i < sector_count; i += aoe_disk_ptr->MaxSectorsPerPacket) {
+        /* Allocate each tag. */
         if ((tag = wv_mallocz(sizeof *tag)) == NULL) {
-      DBG ( "Couldn't allocate tag; bye!\n" );
-      /*
-       * We failed while allocating tags; free the ones we built 
-       */
-      tag = new_tag_list;
-      while ( tag != NULL )
-        {
-          previous_tag = tag;
-          tag = tag->next;
-          wv_free(previous_tag->packet_data);
-          wv_free(previous_tag);
-        }
-      wv_free(request_ptr);
-      irp->IoStatus.Information = 0;
-      irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-      IoCompleteRequest ( irp, IO_NO_INCREMENT );
-      return STATUS_INSUFFICIENT_RESOURCES;
-    }
+            DBG("Couldn't allocate tag; bye!\n");
+            /* We failed while allocating tags; free the ones we built. */
+            tag = new_tag_list;
+            while (tag != NULL) {
+                previous_tag = tag;
+                tag = tag->next;
+                wv_free(previous_tag->packet_data);
+                wv_free(previous_tag);
+              }
+            wv_free(request_ptr);
+            irp->IoStatus.Information = 0;
+            irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+            IoCompleteRequest ( irp, IO_NO_INCREMENT );
+            return STATUS_INSUFFICIENT_RESOURCES;
+          } /* if !tag */
 
-        /*
-         * Initialize each tag 
-         */
+        /* Initialize each tag. */
         tag->type = AoeTagTypeIo_;
         tag->request_ptr = request_ptr;
         tag->device = dev_ptr;
         request_ptr->TagCount++;
         tag->Id = 0;
         tag->BufferOffset = i * disk_ptr->SectorSize;
-        tag->SectorCount =
-    ( ( sector_count - i ) <
-      aoe_disk_ptr->MaxSectorsPerPacket ? sector_count -
-      i : aoe_disk_ptr->MaxSectorsPerPacket );
+        tag->SectorCount = (
+            (sector_count - i) <
+            aoe_disk_ptr->MaxSectorsPerPacket ?
+            sector_count - i :
+            aoe_disk_ptr->MaxSectorsPerPacket
+          );
 
-        /*
-         * Allocate and initialize each tag's AoE packet 
-         */
+        /* Allocate and initialize each tag's AoE packet. */
         tag->PacketSize = sizeof (AOE_S_PACKET_);
         if (mode == WvDiskIoModeWrite)
-    tag->PacketSize += tag->SectorCount * disk_ptr->SectorSize;
+          tag->PacketSize += tag->SectorCount * disk_ptr->SectorSize;
         if ((tag->packet_data = wv_mallocz(tag->PacketSize)) == NULL) {
-      DBG ( "Couldn't allocate tag->packet_data; bye!\n" );
-      /*
-       * We failed while allocating an AoE packet; free
-       * the tags we built
-       */
-      wv_free(tag);
-      tag = new_tag_list;
-      while ( tag != NULL )
-        {
-          previous_tag = tag;
-          tag = tag->next;
-          wv_free(previous_tag->packet_data);
-          wv_free(previous_tag);
-        }
-      wv_free(request_ptr);
-      irp->IoStatus.Information = 0;
-      irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-      IoCompleteRequest ( irp, IO_NO_INCREMENT );
-      return STATUS_INSUFFICIENT_RESOURCES;
-    }
+            DBG("Couldn't allocate tag->packet_data; bye!\n");
+            /*
+             * We failed while allocating an AoE packet; free
+             * the tags we built.
+             */
+            wv_free(tag);
+            tag = new_tag_list;
+            while (tag != NULL) {
+                previous_tag = tag;
+                tag = tag->next;
+                wv_free(previous_tag->packet_data);
+                wv_free(previous_tag);
+              }
+            wv_free(request_ptr);
+            irp->IoStatus.Information = 0;
+            irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
+            IoCompleteRequest(irp, IO_NO_INCREMENT);
+            return STATUS_INSUFFICIENT_RESOURCES;
+          } /* if !tag->packet_data */
         tag->packet_data->Ver = AOEPROTOCOLVER;
-        tag->packet_data->Major =
-    htons ( ( UINT16 ) aoe_disk_ptr->Major );
-        tag->packet_data->Minor = ( UCHAR ) aoe_disk_ptr->Minor;
+        tag->packet_data->Major = htons ((UINT16) aoe_disk_ptr->Major);
+        tag->packet_data->Minor = (UCHAR) aoe_disk_ptr->Minor;
         tag->packet_data->Tag = 0;
         tag->packet_data->Command = 0;
         tag->packet_data->ExtendedAFlag = TRUE;
         if (mode == WvDiskIoModeRead)
-    {
-      tag->packet_data->Cmd = 0x24;  /* READ SECTOR */
-    }
-        else
-    {
-      tag->packet_data->Cmd = 0x34;  /* WRITE SECTOR */
-      tag->packet_data->WriteAFlag = 1;
-    }
-        tag->packet_data->Count = ( UCHAR ) tag->SectorCount;
-        tag->packet_data->Lba0 =
-    ( UCHAR ) ( ( ( start_sector + i ) >> 0 ) & 255 );
-        tag->packet_data->Lba1 =
-    ( UCHAR ) ( ( ( start_sector + i ) >> 8 ) & 255 );
-        tag->packet_data->Lba2 =
-    ( UCHAR ) ( ( ( start_sector + i ) >> 16 ) & 255 );
-        tag->packet_data->Lba3 =
-    ( UCHAR ) ( ( ( start_sector + i ) >> 24 ) & 255 );
-        tag->packet_data->Lba4 =
-    ( UCHAR ) ( ( ( start_sector + i ) >> 32 ) & 255 );
-        tag->packet_data->Lba5 =
-    ( UCHAR ) ( ( ( start_sector + i ) >> 40 ) & 255 );
+          tag->packet_data->Cmd = 0x24;  /* READ SECTOR */
+          else {
+            tag->packet_data->Cmd = 0x34;  /* WRITE SECTOR */
+            tag->packet_data->WriteAFlag = 1;
+          }
+        tag->packet_data->Count = (UCHAR) tag->SectorCount;
+        tag->packet_data->Lba0 = (UCHAR) (((start_sector + i) >> 0) & 255);
+        tag->packet_data->Lba1 = (UCHAR) (((start_sector + i) >> 8) & 255);
+        tag->packet_data->Lba2 = (UCHAR) (((start_sector + i) >> 16) & 255);
+        tag->packet_data->Lba3 = (UCHAR) (((start_sector + i) >> 24) & 255);
+        tag->packet_data->Lba4 = (UCHAR) (((start_sector + i) >> 32) & 255);
+        tag->packet_data->Lba5 = (UCHAR) (((start_sector + i) >> 40) & 255);
 
         /* For a write request, copy from the buffer into the AoE packet. */
-        if (mode == WvDiskIoModeWrite)
-    RtlCopyMemory ( tag->packet_data->Data, &buffer[tag->BufferOffset],
-        tag->SectorCount * disk_ptr->SectorSize );
-
-        /*
-         * Add this tag to the request's tag list 
-         */
+        if (mode == WvDiskIoModeWrite) {
+            RtlCopyMemory(
+                tag->packet_data->Data,
+                buffer + (tag->BufferOffset),
+                tag->SectorCount * disk_ptr->SectorSize
+              );
+          }
+        /* Add this tag to the request's tag list. */
         tag->previous = previous_tag;
         tag->next = NULL;
-        if ( new_tag_list == NULL )
-    {
-      new_tag_list = tag;
-    }
-        else
-    {
-      previous_tag->next = tag;
-    }
+        if (new_tag_list == NULL)
+          new_tag_list = tag;
+          else
+          previous_tag->next = tag;
         previous_tag = tag;
-      }
-    /*
-     * Split the requested sectors into packets in tags
-     */
+      } /* for */
+    /* Split the requested sectors into packets in tags. */
     request_ptr->TotalTags = request_ptr->TagCount;
 
-    /*
-     * Wait until we have the global spin-lock 
-     */
-    KeAcquireSpinLock ( &AoeLock_, &Irql );
+    /* Wait until we have the global spin-lock. */
+    KeAcquireSpinLock(&AoeLock_, &Irql);
 
-    /*
-     * Enqueue our request's tag list to the global tag list 
-     */
-    if ( AoeTagListLast_ == NULL )
-      {
-        AoeTagListFirst_ = new_tag_list;
-      }
-    else
-      {
+    /* Enqueue our request's tag list to the global tag list. */
+    if (AoeTagListLast_ == NULL)
+      AoeTagListFirst_ = new_tag_list;
+      else {
         AoeTagListLast_->next = new_tag_list;
         new_tag_list->previous = AoeTagListLast_;
       }
-    /*
-     * Adjust the global list to reflect our last tag 
-     */
+    /* Adjust the global list to reflect our last tag. */
     AoeTagListLast_ = tag;
 
     irp->IoStatus.Information = 0;
     irp->IoStatus.Status = STATUS_PENDING;
-    IoMarkIrpPending ( irp );
+    IoMarkIrpPending(irp);
 
-    KeReleaseSpinLock ( &AoeLock_, Irql );
-    KeSetEvent ( &AoeSignal_, 0, FALSE );
+    KeReleaseSpinLock(&AoeLock_, Irql);
+    KeSetEvent(&AoeSignal_, 0, FALSE);
     return STATUS_PENDING;
   }
 
@@ -1035,55 +908,55 @@ static VOID STDCALL add_target(
     UINT16 Major,
     UCHAR Minor,
     LONGLONG LBASize
-  )
-  {
+  ) {
     AOE_SP_TARGET_LIST_ Walker, Last;
     KIRQL Irql;
 
-    KeAcquireSpinLock ( &AoeTargetListLock_, &Irql );
+    KeAcquireSpinLock(&AoeTargetListLock_, &Irql);
     Walker = Last = AoeTargetList_;
-    while ( Walker != NULL )
-      {
-        if (wv_memcmpeq(&Walker->Target.ClientMac, ClientMac, 6) &&
-          wv_memcmpeq(&Walker->Target.ServerMac, ServerMac, 6) &&
-          Walker->Target.Major == Major
-          && Walker->Target.Minor == Minor) {
-      if ( Walker->Target.LBASize != LBASize )
-        {
-          DBG ( "LBASize changed for e%d.%d " "(%I64u->%I64u)\n", Major,
-          Minor, Walker->Target.LBASize, LBASize );
-          Walker->Target.LBASize = LBASize;
-        }
-      KeQuerySystemTime ( &Walker->Target.ProbeTime );
-      KeReleaseSpinLock ( &AoeTargetListLock_, Irql );
-      return;
-    }
+    while (Walker != NULL) {
+        if (
+            wv_memcmpeq(&Walker->Target.ClientMac, ClientMac, 6) &&
+            wv_memcmpeq(&Walker->Target.ServerMac, ServerMac, 6) &&
+            Walker->Target.Major == Major &&
+            Walker->Target.Minor == Minor
+          ) {
+            if (Walker->Target.LBASize != LBASize) {
+                DBG(
+                    "LBASize changed for e%d.%d " "(%I64u->%I64u)\n",
+                    Major,
+                    Minor,
+                    Walker->Target.LBASize,
+                    LBASize
+                  );
+                Walker->Target.LBASize = LBASize;
+              }
+            KeQuerySystemTime(&Walker->Target.ProbeTime);
+            KeReleaseSpinLock(&AoeTargetListLock_, Irql);
+            return;
+          }
         Last = Walker;
         Walker = Walker->next;
-      }
+      } /* while Walker */
 
     if ((Walker = wv_malloc(sizeof *Walker)) == NULL) {
         DBG("wv_malloc Walker\n");
-        KeReleaseSpinLock ( &AoeTargetListLock_, Irql );
+        KeReleaseSpinLock(&AoeTargetListLock_, Irql);
         return;
       }
     Walker->next = NULL;
-    RtlCopyMemory ( Walker->Target.ClientMac, ClientMac, 6 );
-    RtlCopyMemory ( Walker->Target.ServerMac, ServerMac, 6 );
+    RtlCopyMemory(Walker->Target.ClientMac, ClientMac, 6);
+    RtlCopyMemory(Walker->Target.ServerMac, ServerMac, 6);
     Walker->Target.Major = Major;
     Walker->Target.Minor = Minor;
     Walker->Target.LBASize = LBASize;
-    KeQuerySystemTime ( &Walker->Target.ProbeTime );
+    KeQuerySystemTime(&Walker->Target.ProbeTime);
 
-    if ( Last == NULL )
-      {
-        AoeTargetList_ = Walker;
-      }
-    else
-      {
-        Last->next = Walker;
-      }
-    KeReleaseSpinLock ( &AoeTargetListLock_, Irql );
+    if (Last == NULL)
+      AoeTargetList_ = Walker;
+      else
+      Last->next = Walker;
+    KeReleaseSpinLock(&AoeTargetListLock_, Irql);
   }
 
 /**
@@ -1110,213 +983,212 @@ NTSTATUS STDCALL aoe__reply(
     WV_SP_DISK_T disk_ptr;
     AOE_SP_DISK_ aoe_disk_ptr;
 
-    /*
-     * Discard non-responses 
-     */
-    if ( !reply->ResponseFlag )
+    /* Discard non-responses. */
+    if (!reply->ResponseFlag)
       return STATUS_SUCCESS;
 
-    /*
-     * If the response matches our probe, add the AoE disk device 
-     */
-    if ( AoeProbeTag_->Id == reply->Tag )
-      {
-        RtlCopyMemory ( &LBASize, &reply->Data[200], sizeof ( LONGLONG ) );
-        add_target ( DestinationMac, SourceMac, ntohs ( reply->Major ),
-         reply->Minor, LBASize );
+    /* If the response matches our probe, add the AoE disk device. */
+    if (AoeProbeTag_->Id == reply->Tag) {
+        RtlCopyMemory(&LBASize, &reply->Data[200], sizeof (LONGLONG));
+        add_target(
+            DestinationMac,
+            SourceMac,
+            ntohs(reply->Major),
+            reply->Minor,
+            LBASize
+          );
         return STATUS_SUCCESS;
       }
 
-    /*
-     * Wait until we have the global spin-lock 
-     */
-    KeAcquireSpinLock ( &AoeLock_, &Irql );
+    /* Wait until we have the global spin-lock. */
+    KeAcquireSpinLock(&AoeLock_, &Irql);
 
-    /*
-     * Search for request tag 
-     */
-    if ( AoeTagListFirst_ == NULL )
-      {
-        KeReleaseSpinLock ( &AoeLock_, Irql );
+    /* Search for request tag. */
+    if (AoeTagListFirst_ == NULL) {
+        KeReleaseSpinLock(&AoeLock_, Irql);
         return STATUS_SUCCESS;
       }
     tag = AoeTagListFirst_;
-    while ( tag != NULL )
-      {
-        if ( ( tag->Id == reply->Tag )
-       && ( tag->packet_data->Major == reply->Major )
-       && ( tag->packet_data->Minor == reply->Minor ) )
-    {
-      Found = TRUE;
-      break;
-    }
+    while (tag != NULL) {
+        if (
+            (tag->Id == reply->Tag) &&
+            (tag->packet_data->Major == reply->Major) &&
+            (tag->packet_data->Minor == reply->Minor)
+          ) {
+            Found = TRUE;
+            break;
+          }
         tag = tag->next;
-      }
-    if ( !Found )
-      {
-        KeReleaseSpinLock ( &AoeLock_, Irql );
+      } /* while tag */
+    if (!Found) {
+        KeReleaseSpinLock(&AoeLock_, Irql);
         return STATUS_SUCCESS;
-      }
-    else
-      {
-        /*
-         * Remove the tag from the global tag list 
-         */
-        if ( tag->previous == NULL )
-    AoeTagListFirst_ = tag->next;
-        else
-    tag->previous->next = tag->next;
-        if ( tag->next == NULL )
-    AoeTagListLast_ = tag->previous;
-        else
-    tag->next->previous = tag->previous;
+      } else {
+        /* Remove the tag from the global tag list. */
+        if (tag->previous == NULL)
+          AoeTagListFirst_ = tag->next;
+          else
+          tag->previous->next = tag->next;
+        if (tag->next == NULL)
+          AoeTagListLast_ = tag->previous;
+          else
+          tag->next->previous = tag->previous;
         AoePendingTags_--;
-        if ( AoePendingTags_ < 0 )
-    DBG ( "AoePendingTags_ < 0!!\n" );
-        KeSetEvent ( &AoeSignal_, 0, FALSE );
-      }
-    KeReleaseSpinLock ( &AoeLock_, Irql );
+        if (AoePendingTags_ < 0)
+          DBG("AoePendingTags_ < 0!!\n");
+        KeSetEvent(&AoeSignal_, 0, FALSE);
+      } /* if !Found */
+    KeReleaseSpinLock(&AoeLock_, Irql);
 
-    /*
-     * Establish pointers to the disk device and AoE disk
-     */
-    disk_ptr = disk__get_ptr ( tag->device );
+    /* Establish pointers to the disk device and AoE disk. */
+    disk_ptr = disk__get_ptr(tag->device);
     aoe_disk_ptr = AoeDiskFromDev_(tag->device);
 
-    /*
-     * If our tag was a discovery request, note the server 
-     */
+    /* If our tag was a discovery request, note the server. */
     if (wv_memcmpeq(aoe_disk_ptr->ServerMac, "\xff\xff\xff\xff\xff\xff", 6)) {
-        RtlCopyMemory ( aoe_disk_ptr->ServerMac, SourceMac, 6 );
-        DBG ( "Major: %d minor: %d found on server "
-        "%02x:%02x:%02x:%02x:%02x:%02x\n", aoe_disk_ptr->Major,
-        aoe_disk_ptr->Minor, SourceMac[0], SourceMac[1], SourceMac[2],
-        SourceMac[3], SourceMac[4], SourceMac[5] );
+        RtlCopyMemory(aoe_disk_ptr->ServerMac, SourceMac, 6);
+        DBG(
+            "Major: %d minor: %d found on server "
+              "%02x:%02x:%02x:%02x:%02x:%02x\n",
+            aoe_disk_ptr->Major,
+            aoe_disk_ptr->Minor,
+            SourceMac[0],
+            SourceMac[1],
+            SourceMac[2],
+            SourceMac[3],
+            SourceMac[4],
+            SourceMac[5]
+          );
       }
 
-    KeQuerySystemTime ( &CurrentTime );
-    aoe_disk_ptr->Timeout -=
-      ( UINT32 ) ( ( aoe_disk_ptr->Timeout -
-              ( CurrentTime.QuadPart -
-          tag->FirstSendTime.QuadPart ) ) / 1024 );
-    /*
-     * TODO: Replace the values below with #defined constants 
-     */
-    if ( aoe_disk_ptr->Timeout > 100000000 )
+    KeQuerySystemTime(&CurrentTime);
+    aoe_disk_ptr->Timeout -= (UINT32) ((
+        aoe_disk_ptr->Timeout -
+        (CurrentTime.QuadPart - tag->FirstSendTime.QuadPart)
+      ) / 1024);
+    /* TODO: Replace the values below with #defined constants. */
+    if (aoe_disk_ptr->Timeout > 100000000)
       aoe_disk_ptr->Timeout = 100000000;
 
-    switch ( tag->type )
-      {
+    switch (tag->type) {
         case AoeTagTypeSearchDrive_:
-    KeAcquireSpinLock ( &disk_ptr->SpinLock, &Irql );
-    switch ( aoe_disk_ptr->search_state )
-      {
-        case AoeSearchStateGettingSize_:
-          /*
-           * The reply tells us the disk size
-           */
-          RtlCopyMemory ( &disk_ptr->LBADiskSize, &reply->Data[200],
-              sizeof ( LONGLONG ) );
-          /*
-           * Next we are concerned with the disk geometry
-           */
-          aoe_disk_ptr->search_state = AoeSearchStateGetGeometry_;
-          break;
-        case AoeSearchStateGettingGeometry_:
-          /*
-           * FIXME: use real values from partition table.
-           * We used to truncate a fractional end cylinder, but
-           * now leave it be in the hopes everyone uses LBA
-           */
-          disk_ptr->SectorSize = 512;
-          disk_ptr->Heads = 255;
-          disk_ptr->Sectors = 63;
-          disk_ptr->Cylinders =
-      disk_ptr->LBADiskSize / ( disk_ptr->Heads *
-              disk_ptr->Sectors );
-          /*
-           * Next we are concerned with the maximum sectors per packet
-           */
-          aoe_disk_ptr->search_state =
-            AoeSearchStateGetMaxSectsPerPacket_;
-          break;
-        case AoeSearchStateGettingMaxSectsPerPacket_:
-          DataSize -= sizeof (AOE_S_PACKET_);
-          if ( DataSize <
-         ( aoe_disk_ptr->MaxSectorsPerPacket *
-           disk_ptr->SectorSize ) )
-      {
-        DBG ( "Packet size too low while getting "
-        "MaxSectorsPerPacket (tried %d, got size of %d)\n",
-        aoe_disk_ptr->MaxSectorsPerPacket, DataSize );
-        aoe_disk_ptr->MaxSectorsPerPacket--;
-        aoe_disk_ptr->search_state = AoeSearchStateDone_;
-      }
-          else if ( aoe_disk_ptr->MTU <
-        ( sizeof (AOE_S_PACKET_) +
-          ( ( aoe_disk_ptr->MaxSectorsPerPacket +
-              1 ) * disk_ptr->SectorSize ) ) )
-      {
-        DBG ( "Got MaxSectorsPerPacket %d at size of %d. "
-        "MTU of %d reached\n",
-        aoe_disk_ptr->MaxSectorsPerPacket, DataSize,
-        aoe_disk_ptr->MTU );
-        aoe_disk_ptr->search_state = AoeSearchStateDone_;
-      }
-          else
-      {
-        DBG ( "Got MaxSectorsPerPacket %d at size of %d, "
-        "trying next...\n", aoe_disk_ptr->MaxSectorsPerPacket,
-        DataSize );
-        aoe_disk_ptr->search_state =
-          AoeSearchStateGetMaxSectsPerPacket_;
-      }
-          break;
-        default:
-          DBG ( "Undefined search_state!\n" );
-          break;
-      }
-    KeReleaseSpinLock ( &disk_ptr->SpinLock, Irql );
-    KeSetEvent ( &disk_ptr->SearchEvent, 0, FALSE );
-    break;
-        case AoeTagTypeIo_:
-    /* If the reply is in response to a read request, get our data! */
-    if (tag->request_ptr->Mode == WvDiskIoModeRead)
-      RtlCopyMemory ( &tag->request_ptr->Buffer[tag->BufferOffset],
-          reply->Data,
-          tag->SectorCount * disk_ptr->SectorSize );
-    /*
-     * If this is the last reply expected for the read request,
-     * complete the IRP and free the request
-     */
-    if ( InterlockedDecrement ( &tag->request_ptr->TagCount ) == 0 )
-      {
-        WvlIrpComplete(
-            tag->request_ptr->Irp,
-            tag->request_ptr->SectorCount * disk_ptr->SectorSize,
-            STATUS_SUCCESS
-          );
-        wv_free(tag->request_ptr);
-      }
-    break;
-        default:
-    DBG ( "Unknown tag type!!\n" );
-    break;
-      }
+          KeAcquireSpinLock(&disk_ptr->SpinLock, &Irql);
+          switch (aoe_disk_ptr->search_state) {
+              case AoeSearchStateGettingSize_:
+                /* The reply tells us the disk size. */
+                RtlCopyMemory(
+                    &disk_ptr->LBADiskSize,
+                    &reply->Data[200],
+                    sizeof (LONGLONG)
+                  );
+                /* Next we are concerned with the disk geometry. */
+                aoe_disk_ptr->search_state = AoeSearchStateGetGeometry_;
+                break;
 
-    KeSetEvent ( &AoeSignal_, 0, FALSE );
+              case AoeSearchStateGettingGeometry_:
+                /*
+                 * FIXME: use real values from partition table.
+                 * We used to truncate a fractional end cylinder, but
+                 * now leave it be in the hopes everyone uses LBA
+                 */
+                disk_ptr->SectorSize = 512;
+                disk_ptr->Heads = 255;
+                disk_ptr->Sectors = 63;
+                disk_ptr->Cylinders =
+                  disk_ptr->LBADiskSize /
+                  (disk_ptr->Heads * disk_ptr->Sectors);
+                /* Next we are concerned with the max. sectors per packet. */
+                aoe_disk_ptr->search_state =
+                  AoeSearchStateGetMaxSectsPerPacket_;
+                break;
+
+              case AoeSearchStateGettingMaxSectsPerPacket_:
+                DataSize -= sizeof (AOE_S_PACKET_);
+                if (DataSize < (
+                    aoe_disk_ptr->MaxSectorsPerPacket *
+                    disk_ptr->SectorSize
+                  )) {
+                    DBG(
+                        "Packet size too low while getting "
+                          "MaxSectorsPerPacket (tried %d, got size of %d)\n",
+                        aoe_disk_ptr->MaxSectorsPerPacket,
+                        DataSize
+                      );
+                    aoe_disk_ptr->MaxSectorsPerPacket--;
+                    aoe_disk_ptr->search_state = AoeSearchStateDone_;
+                  } else if (
+                    aoe_disk_ptr->MTU <
+                    (sizeof (AOE_S_PACKET_) +
+                    ((aoe_disk_ptr->MaxSectorsPerPacket + 1)
+                    * disk_ptr->SectorSize))
+                  ) {
+                      DBG(
+                          "Got MaxSectorsPerPacket %d at size of %d. "
+                            "MTU of %d reached\n",
+                          aoe_disk_ptr->MaxSectorsPerPacket,
+                          DataSize,
+                          aoe_disk_ptr->MTU
+                        );
+                      aoe_disk_ptr->search_state = AoeSearchStateDone_;
+                    } else {
+                      DBG(
+                          "Got MaxSectorsPerPacket %d at size of %d, "
+                            "trying next...\n",
+                            aoe_disk_ptr->MaxSectorsPerPacket,
+                            DataSize
+                        );
+                      aoe_disk_ptr->search_state =
+                        AoeSearchStateGetMaxSectsPerPacket_;
+                    }
+                break;
+
+              default:
+                DBG("Undefined search_state!\n");
+                break;
+            } /* switch search state. */
+          KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+          KeSetEvent(&disk_ptr->SearchEvent, 0, FALSE);
+          break;
+
+        case AoeTagTypeIo_:
+          /* If the reply is in response to a read request, get our data! */
+          if (tag->request_ptr->Mode == WvDiskIoModeRead) {
+              RtlCopyMemory(
+                  tag->request_ptr->Buffer + (tag->BufferOffset),
+                  reply->Data,
+                  tag->SectorCount * disk_ptr->SectorSize
+                );
+            }
+          /*
+           * If this is the last reply expected for the read request,
+           * complete the IRP and free the request.
+           */
+          if (InterlockedDecrement(&tag->request_ptr->TagCount) == 0) {
+              WvlIrpComplete(
+                  tag->request_ptr->Irp,
+                  tag->request_ptr->SectorCount * disk_ptr->SectorSize,
+                  STATUS_SUCCESS
+                );
+              wv_free(tag->request_ptr);
+            }
+          break;
+
+        default:
+          DBG("Unknown tag type!!\n");
+          break;
+      } /* switch tag type. */
+
+    KeSetEvent(&AoeSignal_, 0, FALSE);
     wv_free(tag->packet_data);
     wv_free(tag);
     return STATUS_SUCCESS;
   }
 
-VOID aoe__reset_probe(void)
-  {
+VOID aoe__reset_probe(void) {
     AoeProbeTag_->SendTime.QuadPart = 0LL;
   }
 
-static VOID STDCALL AoeThread_(IN PVOID StartContext)
-  {
+static VOID STDCALL AoeThread_(IN PVOID StartContext) {
     NTSTATUS status;
     LARGE_INTEGER Timeout, CurrentTime, ProbeTime, ReportTime;
     UINT32 NextTagId = 1;
@@ -1330,148 +1202,145 @@ static VOID STDCALL AoeThread_(IN PVOID StartContext)
     WV_SP_DISK_T disk_ptr;
     AOE_SP_DISK_ aoe_disk_ptr;
 
-    DBG ( "Entry\n" );
+    DBG("Entry\n");
 
     ReportTime.QuadPart = 0LL;
     ProbeTime.QuadPart = 0LL;
 
-    while ( TRUE )
-      {
+    while (TRUE) {
         /*
-         * TODO: Make the below value a #defined constant 
-         */
-        /*
+         * TODO: Make the below value a #defined constant:
          * 100.000 * 100ns = 10.000.000 ns = 10ms
          */
         Timeout.QuadPart = -100000LL;
-        KeWaitForSingleObject ( &AoeSignal_, Executive,
-              KernelMode, FALSE, &Timeout );
-        KeResetEvent ( &AoeSignal_ );
-        if ( AoeStop_ )
-    {
-      DBG ( "Stopping...\n" );
-      WvlBusCancelWorkItems(&AoeBusMain);
-      PsTerminateSystemThread ( STATUS_SUCCESS );
-    }
+        KeWaitForSingleObject(
+            &AoeSignal_,
+            Executive,
+            KernelMode,
+            FALSE,
+            &Timeout
+          );
+        KeResetEvent(&AoeSignal_);
+        if (AoeStop_) {
+            DBG("Stopping...\n");
+            WvlBusCancelWorkItems(&AoeBusMain);
+            PsTerminateSystemThread(STATUS_SUCCESS);
+          }
         WvlBusProcessWorkItems(&AoeBusMain);
 
-        KeQuerySystemTime ( &CurrentTime );
-        /*
-         * TODO: Make the below value a #defined constant 
-         */
-        if ( CurrentTime.QuadPart > ( ReportTime.QuadPart + 10000000LL ) )
-    {
-      DBG ( "Sends: %d  Resends: %d  ResendFails: %d  Fails: %d  "
-      "AoePendingTags_: %d  RequestTimeout: %d\n", Sends,
-      Resends, ResendFails, Fails, AoePendingTags_,
-      RequestTimeout );
-      Sends = 0;
-      Resends = 0;
-      ResendFails = 0;
-      Fails = 0;
-      KeQuerySystemTime ( &ReportTime );
-    }
+        KeQuerySystemTime(&CurrentTime);
+        /* TODO: Make the below value a #defined constant. */
+        if (CurrentTime.QuadPart > (ReportTime.QuadPart + 10000000LL)) {
+            DBG(
+                "Sends: %d  Resends: %d  ResendFails: %d  Fails: %d  "
+                  "AoePendingTags_: %d  RequestTimeout: %d\n",
+                Sends,
+                Resends,
+                ResendFails,
+                Fails,
+                AoePendingTags_,
+                RequestTimeout
+              );
+            Sends = 0;
+            Resends = 0;
+            ResendFails = 0;
+            Fails = 0;
+            KeQuerySystemTime(&ReportTime);
+          }
 
-        /*
-         * TODO: Make the below value a #defined constant 
-         */
-        if ( CurrentTime.QuadPart >
-       ( AoeProbeTag_->SendTime.QuadPart + 100000000LL ) )
-    {
-      AoeProbeTag_->Id = NextTagId++;
-      if ( NextTagId == 0 )
-        NextTagId++;
-      AoeProbeTag_->packet_data->Tag = AoeProbeTag_->Id;
-      Protocol_Send ( "\xff\xff\xff\xff\xff\xff",
-          "\xff\xff\xff\xff\xff\xff",
-          ( PUCHAR ) AoeProbeTag_->
-          packet_data, AoeProbeTag_->PacketSize,
-          NULL );
-      KeQuerySystemTime ( &AoeProbeTag_->SendTime );
-    }
+        /* TODO: Make the below value a #defined constant. */
+        if (
+            CurrentTime.QuadPart >
+            (AoeProbeTag_->SendTime.QuadPart + 100000000LL)
+          ) {
+            AoeProbeTag_->Id = NextTagId++;
+            if (NextTagId == 0)
+              NextTagId++;
+            AoeProbeTag_->packet_data->Tag = AoeProbeTag_->Id;
+            Protocol_Send(
+                "\xff\xff\xff\xff\xff\xff",
+                "\xff\xff\xff\xff\xff\xff",
+                (PUCHAR) AoeProbeTag_->packet_data,
+                AoeProbeTag_->PacketSize,
+                NULL
+              );
+            KeQuerySystemTime(&AoeProbeTag_->SendTime);
+          }
 
-        KeAcquireSpinLock ( &AoeLock_, &Irql );
-        if ( AoeTagListFirst_ == NULL )
-    {
-      KeReleaseSpinLock ( &AoeLock_, Irql );
-      continue;
-    }
+        KeAcquireSpinLock(&AoeLock_, &Irql);
+        if (AoeTagListFirst_ == NULL) {
+            KeReleaseSpinLock(&AoeLock_, Irql);
+            continue;
+          }
         tag = AoeTagListFirst_;
-        while ( tag != NULL )
-    {
-      /*
-       * Establish pointers to the disk and AoE disk
-       */
-      disk_ptr = disk__get_ptr ( tag->device );
-      aoe_disk_ptr = AoeDiskFromDev_(tag->device);
-
-      RequestTimeout = aoe_disk_ptr->Timeout;
-      if ( tag->Id == 0 )
-        {
-          if ( AoePendingTags_ <= 64 )
-      {
-        /*
-         * if ( AoePendingTags_ <= 102400 ) { 
-         */
-        if ( AoePendingTags_ < 0 )
-          DBG ( "AoePendingTags_ < 0!!\n" );
-        tag->Id = NextTagId++;
-        if ( NextTagId == 0 )
-          NextTagId++;
-        tag->packet_data->Tag = tag->Id;
-        if ( Protocol_Send
-             ( aoe_disk_ptr->ClientMac, aoe_disk_ptr->ServerMac,
-         ( PUCHAR ) tag->packet_data,
-         tag->PacketSize, tag ) )
-          {
-            KeQuerySystemTime ( &tag->FirstSendTime );
-            KeQuerySystemTime ( &tag->SendTime );
-            AoePendingTags_++;
-            Sends++;
-          }
-        else
-          {
-            Fails++;
-            tag->Id = 0;
-            break;
-          }
-      }
-        }
-      else
-        {
-          KeQuerySystemTime ( &CurrentTime );
-          if ( CurrentTime.QuadPart >
-         ( tag->SendTime.QuadPart +
-           ( LONGLONG ) ( aoe_disk_ptr->Timeout * 2 ) ) )
-      {
-        if ( Protocol_Send
-             ( aoe_disk_ptr->ClientMac, aoe_disk_ptr->ServerMac,
-         ( PUCHAR ) tag->packet_data,
-         tag->PacketSize, tag ) )
-          {
-            KeQuerySystemTime ( &tag->SendTime );
-            aoe_disk_ptr->Timeout += aoe_disk_ptr->Timeout / 1000;
-            if ( aoe_disk_ptr->Timeout > 100000000 )
-        aoe_disk_ptr->Timeout = 100000000;
-            Resends++;
-          }
-        else
-          {
-            ResendFails++;
-            break;
-          }
-      }
-        }
-      tag = tag->next;
-      if ( tag == AoeTagListFirst_ )
-        {
-          DBG ( "Taglist Cyclic!!\n" );
-          break;
-        }
-    }
-        KeReleaseSpinLock ( &AoeLock_, Irql );
-      }
-    DBG ( "Exit\n" );
+        while (tag != NULL) {
+            /* Establish pointers to the disk and AoE disk. */
+            disk_ptr = disk__get_ptr(tag->device);
+            aoe_disk_ptr = AoeDiskFromDev_(tag->device);
+      
+            RequestTimeout = aoe_disk_ptr->Timeout;
+            if (tag->Id == 0) {
+                #if 0
+                if (AoePendingTags_ <= 102400) {
+                  }
+                #endif
+                if (AoePendingTags_ <= 64) {
+                    if (AoePendingTags_ < 0)
+                      DBG("AoePendingTags_ < 0!!\n");
+                    tag->Id = NextTagId++;
+                    if (NextTagId == 0)
+                      NextTagId++;
+                    tag->packet_data->Tag = tag->Id;
+                    if (Protocol_Send(
+                        aoe_disk_ptr->ClientMac,
+                        aoe_disk_ptr->ServerMac,
+                        (PUCHAR) tag->packet_data,
+                        tag->PacketSize,
+                        tag
+                      )) {
+                        KeQuerySystemTime(&tag->FirstSendTime);
+                        KeQuerySystemTime(&tag->SendTime);
+                        AoePendingTags_++;
+                        Sends++;
+                      } else {
+                        Fails++;
+                        tag->Id = 0;
+                        break;
+                      } /* if send succeeds. */
+                    } /* if pending tags < 64 */
+              } else {
+                KeQuerySystemTime(&CurrentTime);
+                if (
+                    CurrentTime.QuadPart >
+                    (tag->SendTime.QuadPart + (LONGLONG) (aoe_disk_ptr->Timeout * 2))
+                  ) {
+                    if (Protocol_Send(
+                        aoe_disk_ptr->ClientMac,
+                        aoe_disk_ptr->ServerMac,
+                        (PUCHAR) tag->packet_data,
+                        tag->PacketSize,
+                        tag
+                      )) {
+                        KeQuerySystemTime(&tag->SendTime);
+                        aoe_disk_ptr->Timeout += aoe_disk_ptr->Timeout / 1000;
+                        if (aoe_disk_ptr->Timeout > 100000000)
+                          aoe_disk_ptr->Timeout = 100000000;
+                        Resends++;
+                      } else {
+                        ResendFails++;
+                        break;
+                      }
+                  }
+              } /* if tag ID == 0 */
+            tag = tag->next;
+            if (tag == AoeTagListFirst_) {
+                DBG("Taglist Cyclic!!\n");
+                break;
+              }
+          } /* while tag */
+        KeReleaseSpinLock(&AoeLock_, Irql);
+      } /* while TRUE */
+    DBG("Exit\n");
   }
 
 static UINT32 AoeDiskMaxXferLen_(IN WV_SP_DISK_T disk_ptr) {
