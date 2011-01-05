@@ -24,3 +24,5 @@ BLOCK "VarFileInfo"
 	VALUE "Translation", 0x0000 0x04B0
 }
 }
+
+1 ICON "wv.ico"

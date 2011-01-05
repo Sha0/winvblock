@@ -8,6 +8,7 @@ WinVBlock.layout
 *.err
 *.log
 *.wrn
+*.res
 objchk*
 objfre*
 makefile
