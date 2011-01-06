@@ -30,7 +30,7 @@
 /* For testing and debugging */
 #if 0
 #  define RIS
-#  define DEBUGIRPS
+#  define WVL_M_DEBUG_IRPS 1
 #  define DEBUGMOSTPROTOCOLCALLS
 #  define DEBUGALLPROTOCOLCALLS
 #endif

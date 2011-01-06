@@ -45,8 +45,6 @@ WVL_M_LIB NTSTATUS STDCALL WvlIrpComplete(
     Irp->IoStatus.Information = Info;
     Irp->IoStatus.Status = Status;
     IoCompleteRequest(Irp, IO_NO_INCREMENT);
-    #ifdef DEBUGIRPS
-    Debug_IrpEnd(Irp, Status);
-    #endif
+    WVL_M_DEBUG_IRP_END(Irp, Status);
     return Status;
   }

@@ -44,27 +44,55 @@
 #include "aoe.h"
 #include "debug.h"
 
-extern int sprintf (
-  char *,
-  const char *,
-  ...
- );
+static KSPIN_LOCK Debug_Globals_SpinLock;
 
-typedef struct _DEBUG_IRPLIST
-{
-  PIRP Irp;
-  UINT32 Number;
-  PCHAR DebugMessage;
-  struct _DEBUG_IRPLIST *Next;
-  struct _DEBUG_IRPLIST *Previous;
-} DEBUG_IRPLIST,
-*PDEBUG_IRPLIST;
+#if WVL_M_DEBUG
+WVL_M_LIB NTSTATUS STDCALL WvlDebugPrint(
+    IN PCHAR File,
+    IN PCHAR Function,
+    IN UINT32 Line
+  ) {
+    #if WVL_M_DEBUG_FILE
+    DbgPrint(File);
+    #  if WVL_M_DEBUG_LINE
+    DbgPrint(" @ %d", Line);
+    #  endif
+    DbgPrint(": ");
+    #endif
+    #if WVL_M_DEBUG_THREAD
+    DbgPrint("T[%p]: ", (PVOID) PsGetCurrentThread());
+    #endif
+    return DbgPrint("%s(): ", Function);
+  }
+#endif
+
+VOID Debug_Initialize(void) {
+  KeInitializeSpinLock ( &Debug_Globals_SpinLock );
+}
+
+WVL_M_LIB NTSTATUS STDCALL WvlError(
+    IN PCHAR Message,
+    IN NTSTATUS Status
+  ) {
+    DBG("%s: 0x%08x\n", Message, Status);
+    return Status;
+  }
+
+#if WVL_M_DEBUG && WVL_M_DEBUG_IRPS
+extern int sprintf(char *, const char *, ...);
+
+typedef struct _DEBUG_IRPLIST {
+    PIRP Irp;
+    UINT32 Number;
+    PCHAR DebugMessage;
+    struct _DEBUG_IRPLIST *Next;
+    struct _DEBUG_IRPLIST *Previous;
+  } DEBUG_IRPLIST, *PDEBUG_IRPLIST;
 
 static PDEBUG_IRPLIST Debug_Globals_IrpList = NULL;
-static KSPIN_LOCK Debug_Globals_SpinLock;
 static UINT32 Debug_Globals_Number = 0;
 
-/* in this file */
+/* Forward declarations. */
 static PDEBUG_IRPLIST STDCALL Debug_IrpListRecord (
   IN PIRP Irp
  );
@@ -103,24 +131,6 @@ static PCHAR STDCALL Debug_DeviceTextTypeString (
 static PCHAR STDCALL Debug_SCSIOPString (
   IN UCHAR OperationCode
  );
-
-WVL_M_LIB NTSTATUS STDCALL WvlDebugPrint(
-    IN PCHAR File,
-    IN PCHAR Function,
-    IN UINT32 Line
-  ) {
-    return DbgPrint(
-        "%s: Thread 0x%08X: %s() @ line %d: ",
-        File,
-        (PVOID) PsGetCurrentThread(),
-        Function,
-        Line
-      );
-  }
-
-VOID Debug_Initialize(void) {
-  KeInitializeSpinLock ( &Debug_Globals_SpinLock );
-}
 
 static PDEBUG_IRPLIST STDCALL
 Debug_IrpListRecord (
@@ -178,12 +188,7 @@ WVL_M_LIB VOID STDCALL WvlDebugIrpStart(
   DBG ( "IRP %d: %s\n", Record->Number, Record->DebugMessage );
 }
 
-VOID STDCALL
-Debug_IrpEnd (
-  IN PIRP Irp,
-  IN NTSTATUS Status
- )
-{
+VOID STDCALL WvlDebugIrpEnd(IN PIRP Irp, IN NTSTATUS Status) {
   PDEBUG_IRPLIST Record;
   KIRQL Irql;
 
@@ -195,7 +200,7 @@ Debug_IrpEnd (
     }
   /*
    * There is no race condition between getting the record and unlinking in
-   * Debug_Globals_IrpList, unless Debug_IrpEnd is called more than once on
+   * Debug_Globals_IrpList, unless WvlDebugIrpEnd is called more than once on
    * an irp (which itself is a bug, it should only be called one time).
    */
   KeAcquireSpinLock ( &Debug_Globals_SpinLock, &Irql );
@@ -822,11 +827,4 @@ Debug_SCSIOPString (
 	return "SCSIOP_UNKNOWN";
     }
 }
-
-WVL_M_LIB NTSTATUS STDCALL WvlError(
-    IN PCHAR Message,
-    IN NTSTATUS Status
-  ) {
-    DBG("%s: 0x%08x\n", Message, Status);
-    return Status;
-  }
+#endif  /* WVL_M_DEBUG && WVL_M_DEBUG_IRPS */

@@ -20,8 +20,8 @@
  * Jul-03-2009@22:39: Initial revision.
  */
 
-#ifndef WV_M_DEBUG_H_
-#  define WV_M_DEBUG_H_
+#ifndef WVL_M_DEBUG_H_
+#  define WVL_M_DEBUG_H_
 
 /**
  * @file
@@ -32,12 +32,30 @@
  * function and line number in any debugging output messages.
  */
 
+/** Debugging choices. */
+
+/* Debug messages. */
+#define WVL_M_DEBUG 0
+
+/* Include file. */
+#define WVL_M_DEBUG_FILE 1
+
+/* Include line number.  This depends on WVL_M_DEBUG_FILE */
+#define WVL_M_DEBUG_LINE 1
+
+/* Include thread. */
+#define WVL_M_DEBUG_THREAD 1
+
+/* Verbose IRP debugging.  This depends on WVL_M_DEBUG */
+#define WVL_M_DEBUG_IRPS 0
+
+/** End of debugging choices. */
+
 /* DBG() macro to output debugging messages. */
 #ifdef DBG
 #  undef DBG
 #endif
-/* Uncomment to enable. */
-#if 0
+#if WVL_M_DEBUG
 #  define DBG(...) (                \
     WvlDebugPrint(                  \
         __FILE__,                   \
@@ -46,23 +64,23 @@
       ),                            \
     DbgPrint(__VA_ARGS__)           \
   )
+extern WVL_M_LIB NTSTATUS STDCALL WvlDebugPrint(IN PCHAR, IN PCHAR, IN UINT32);
 #else
-#  define DBG( ... ) ((VOID) 0)
+#  define DBG(...) ((VOID) 0)
 #endif
 
-/* Define to enable verbose IRP debugging output. */
-#undef DEBUGIRPS
+/* Establish macros for verbose IRP debugging messages, if applicable. */
+#if WVL_M_DEBUG && WVL_M_DEBUG_IRPS
+#  define WVL_M_DEBUG_IRP_START(Do_, Irp_) (WvlDebugIrpStart((Do_), (Irp_)))
+#  define WVL_M_DEBUG_IRP_END(Irp_, Status_) (WvlDebugIrpEnd((Irp_), (Status_)))
+extern WVL_M_LIB VOID STDCALL WvlDebugIrpStart(IN PDEVICE_OBJECT, IN PIRP);
+extern VOID STDCALL WvlDebugIrpEnd(IN PIRP, IN NTSTATUS);
+#else
+#  define WVL_M_DEBUG_IRP_START(Do_, Irp_) ((VOID) 0)
+#  define WVL_M_DEBUG_IRP_END(Irp_, Status_) ((VOID) 0)
+#endif
 
-extern WVL_M_LIB NTSTATUS STDCALL WvlDebugPrint(IN PCHAR, IN PCHAR, IN UINT32);
 extern VOID Debug_Initialize(void);
-extern WVL_M_LIB VOID STDCALL WvlDebugIrpStart (
-  IN PDEVICE_OBJECT,
-  IN PIRP
- );
-extern VOID STDCALL Debug_IrpEnd (
-  IN PIRP Irp,
-  IN NTSTATUS Status
- );
 extern WVL_M_LIB NTSTATUS STDCALL WvlError(IN PCHAR, IN NTSTATUS);
 
-#endif  /* WV_M_DEBUG_H_ */
+#endif  /* WVL_M_DEBUG_H_ */

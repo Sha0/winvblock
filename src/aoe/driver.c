@@ -1816,9 +1816,7 @@ static NTSTATUS AoeIrpPower(
   ) {
     WV_SP_DEV_T dev;
 
-    #ifdef DEBUGIRPS
-    WvlDebugIrpStart(dev_obj, irp);
-    #endif
+    WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)
       return WvlBusPower(&AoeBusMain, irp);
@@ -1844,9 +1842,7 @@ static NTSTATUS AoeIrpCreateClose(
   ) {
     WV_SP_DEV_T dev;
 
-    #ifdef DEBUGIRPS
-    WvlDebugIrpStart(dev_obj, irp);
-    #endif
+    WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)
       return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
@@ -1866,9 +1862,7 @@ static NTSTATUS AoeIrpSysCtl(
   ) {
     WV_SP_DEV_T dev;
 
-    #ifdef DEBUGIRPS
-    WvlDebugIrpStart(dev_obj, irp);
-    #endif
+    WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)
       return WvlBusSysCtl(&AoeBusMain, irp);
@@ -1892,9 +1886,7 @@ static NTSTATUS AoeIrpDevCtl(
     WV_SP_DEV_T dev;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
-    #ifdef DEBUGIRPS
-    WvlDebugIrpStart(dev_obj, irp);
-    #endif
+    WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo) {
         return AoeBusDevCtl(
@@ -1927,9 +1919,7 @@ static NTSTATUS AoeIrpScsi(
     WV_SP_DEV_T dev;
     PIO_STACK_LOCATION io_stack_loc;
 
-    #ifdef DEBUGIRPS
-    WvlDebugIrpStart(dev_obj, irp);
-    #endif
+    WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)
       return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
@@ -1959,9 +1949,7 @@ static NTSTATUS AoeIrpPnp(
     WV_SP_DEV_T dev;
     UCHAR code = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
 
-    #ifdef DEBUGIRPS
-    WvlDebugIrpStart(dev_obj, irp);
-    #endif
+    WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo) {
         NTSTATUS status;
