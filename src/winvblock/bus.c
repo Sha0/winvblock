@@ -175,6 +175,9 @@ static VOID STDCALL WvBusAttach_(IN OUT WVL_SP_THREAD_ITEM item) {
     WvBus.Pdo = bus_attach->pdo;
     WvBus.LowerDeviceObject = lower;
     DBG("Attached.\n");
+    /* Probe for disks. */
+    WvProbeDisks();
+    WvlBusProcessWorkItems(&WvBus);
     bus_attach->status = STATUS_SUCCESS;
     KeSetEvent(&bus_attach->signal, 0, FALSE);
     return;
@@ -613,11 +616,8 @@ static VOID STDCALL WvBusIrp_(IN OUT WVL_SP_THREAD_ITEM item) {
 
         case IRP_MJ_PNP:
           DBG(WVL_M_LIT " IRP_MJ_PNP.\n");
-          if (minor == IRP_MN_QUERY_DEVICE_RELATIONS)
-            WvProbeDisks();
-            WvlBusProcessWorkItems(&WvBus);
-            WvlBusPnpIrp(&WvBus, irp, io_stack_loc->MinorFunction);
-            break;
+          WvlBusPnpIrp(&WvBus, irp, io_stack_loc->MinorFunction);
+          break;
 
         case IRP_MJ_DEVICE_CONTROL:
           DBG(WVL_M_LIT " IRP_MJ_DEVICE_CONTROL.\n");

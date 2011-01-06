@@ -69,12 +69,7 @@ WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
   }
 
 VOID WvProbeDisks(void) {
-    static BOOLEAN probed = FALSE;
-
-    if (probed)
-      return;
     WvMemdiskFind();
     ramdisk_grub4dos__find();
     filedisk_grub4dos__find();
-    probed = TRUE;
   }
