@@ -430,10 +430,9 @@ static VOID STDCALL WvBusRemoveDev_(IN OUT WVL_SP_THREAD_ITEM item) {
     removal = CONTAINING_RECORD(item, WV_S_BUS_NODE_REMOVAL_, item);
     /* If the node has been unlinked and we are called again, delete it. */
     if (!removal->dev->BusNode.Linked) {
+        WvDevClose(removal->dev);
         IoDeleteDevice(removal->dev->Self);
-        /* dev->ext is the PnP IDs' data. */
-        wv_free(removal->dev->ext);
-        wv_free(removal->dev);
+        WvDevFree(removal->dev);
       } else {        
         /* Enqueue the node's removal. */
         WvlBusRemoveNode(&removal->dev->BusNode);
@@ -494,6 +493,7 @@ static NTSTATUS STDCALL WvBusDevCtlDetach(
     /* For each node on the bus... */
     while (walker = WvlBusGetNextNode(&WvBus, walker)) {
         WV_SP_DEV_T dev = WvDevFromDevObj(WvlBusGetNodePdo(walker));
+        WV_S_BUS_NODE_REMOVAL_ removal;
 
         /* If the unit number matches... */
         if (WvlBusGetNodeNum(walker) == unit_num) {
@@ -504,12 +504,16 @@ static NTSTATUS STDCALL WvBusDevCtlDetach(
                 walker = NULL;
                 break;
               }
-            /* Detach the node and free it. */
+            /*
+             * Detach the node and free it.  Since we are in the
+             * bus thread context, we use the internal removal.
+             */
             DBG("Removing unit %d\n", unit_num);
-            WvlBusRemoveNode(walker);
-            WvDevClose(dev);
-            IoDeleteDevice(dev->Self);
-            WvDevFree(dev);
+            removal.dev = dev;
+            removal.item.Func = WvBusRemoveDev_;
+            /* We ignore the signal, but initialize it for WvBusRemoveDev_() */
+            KeInitializeEvent(&removal.signal, SynchronizationEvent, FALSE);
+            WvBusRemoveDev_(&removal.item);
             break;
           }
       }
