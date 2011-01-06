@@ -238,7 +238,7 @@ WVL_M_LIB VOID WvlBusProcessWorkItems(WVL_SP_BUS_T Bus) {
     PIO_STACK_LOCATION io_stack_loc;
     PDEVICE_OBJECT dev_obj;
     PDRIVER_OBJECT driver_obj;
-    BOOLEAN nodes_changed;
+    BOOLEAN nodes_changed = FALSE;
 
     while (work_item = WvlBusGetWorkItem(Bus)) {
         switch (work_item->Cmd) {
