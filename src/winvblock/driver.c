@@ -43,16 +43,11 @@
 #include "mount.h"
 #include "filedisk.h"
 #include "ramdisk.h"
-#include "probe.h"
 #include "debug.h"
 
 /* From bus.c */
 extern WVL_S_BUS_T WvBus;
-extern WV_S_DEV_T WvBusDev;
-extern NTSTATUS STDCALL WvBusDevCtl(
-    IN PIRP,
-    IN ULONG POINTER_ALIGNMENT
-  );
+extern NTSTATUS STDCALL WvBusEnqueueIrp(IN OUT PIRP);
 extern NTSTATUS STDCALL WvBusAttach(IN PDEVICE_OBJECT);
 extern NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING);
 extern VOID WvBusCleanup(void);
@@ -219,9 +214,7 @@ static NTSTATUS STDCALL WvIrpNotSupported(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
-    return irp->IoStatus.Status;
+    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
 /* Handle a power IRP. */
@@ -236,7 +229,7 @@ static NTSTATUS WvIrpPower(
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo)
-      return WvlBusPower(&WvBus, irp);
+      return WvBusEnqueueIrp(irp);
     /* WvDevFromDevObj() checks for a NULL dev_obj */
     dev = WvDevFromDevObj(dev_obj);
     /* Check that the device exists. */
@@ -264,8 +257,7 @@ static NTSTATUS WvIrpCreateClose(
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo)
-      /* Succeed with nothing to do. */
-      return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
+      return WvBusEnqueueIrp(irp);
     /* WvDevFromDevObj() checks for a NULL dev_obj */
     dev = WvDevFromDevObj(dev_obj);
     /* Check that the device exists. */
@@ -287,7 +279,7 @@ static NTSTATUS WvIrpSysCtl(
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo)
-      return WvlBusSysCtl(&WvBus, irp);
+      return WvBusEnqueueIrp(irp);
     /* WvDevFromDevObj() checks for a NULL dev_obj */
     dev = WvDevFromDevObj(dev_obj);
     /* Check that the device exists. */
@@ -306,18 +298,13 @@ static NTSTATUS WvIrpDevCtl(
     IN PIRP irp
   ) {
     WV_SP_DEV_T dev;
-    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     #ifdef DEBUGIRPS
     WvlDebugIrpStart(dev_obj, irp);
     #endif
     /* Check for a bus IRP. */
-    if (dev_obj == WvBus.Fdo) {
-        return WvBusDevCtl(
-            irp,
-            io_stack_loc->Parameters.DeviceIoControl.IoControlCode
-          );
-      }
+    if (dev_obj == WvBus.Fdo)
+      return WvBusEnqueueIrp(irp);
     /* WvDevFromDevObj() checks for a NULL dev_obj */
     dev = WvDevFromDevObj(dev_obj);
     /* Check that the device exists. */
@@ -325,6 +312,8 @@ static NTSTATUS WvIrpDevCtl(
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Call the particular device's power handler. */
     if (dev->IrpMj && dev->IrpMj->DevCtl) {
+        PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+
         return dev->IrpMj->DevCtl(
             dev,
             irp,
@@ -348,7 +337,7 @@ static NTSTATUS WvIrpScsi(
     #endif
     /* Check for a bus IRP. */
     if (dev_obj == WvBus.Fdo)
-      return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+      return WvBusEnqueueIrp(irp);
     /* WvDevFromDevObj() checks for a NULL dev_obj */
     dev = WvDevFromDevObj(dev_obj);
     /* Check that the device exists. */
@@ -372,18 +361,14 @@ static NTSTATUS WvIrpPnp(
     IN PIRP irp
   ) {
     WV_SP_DEV_T dev;
-    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
 
     #ifdef DEBUGIRPS
     WvlDebugIrpStart(dev_obj, irp);
     #endif
     /* Check for a bus IRP. */
-    if (dev_obj == WvBus.Fdo) {
-        if (io_stack_loc->MinorFunction == IRP_MN_QUERY_DEVICE_RELATIONS)
-          WvProbeDisks();
-        return WvlBusPnpIrp(&WvBus, irp, io_stack_loc->MinorFunction);
-      }
+    if (dev_obj == WvBus.Fdo)
+      return WvBusEnqueueIrp(irp);
     /* WvDevFromDevObj() checks for a NULL dev_obj */
     dev = WvDevFromDevObj(dev_obj);
     /* Check that the device exists. */
@@ -391,15 +376,13 @@ static NTSTATUS WvIrpPnp(
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Call the particular device's power handler. */
     if (dev->IrpMj && dev->IrpMj->Pnp) {
+        PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+
         status = dev->IrpMj->Pnp(
             dev,
             irp,
             io_stack_loc->MinorFunction
           );
-        if (dev->IsBus) {
-            dev->OldState = WvBus.OldState;
-            dev->State = WvBus.State;
-          }
         return status;
       }
     /* Otherwise, we don't support the IRP. */

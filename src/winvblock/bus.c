@@ -41,6 +41,7 @@
 #include "disk.h"
 #include "registry.h"
 #include "mount.h"
+#include "probe.h"
 #include "filedisk.h"
 #include "ramdisk.h"
 #include "debug.h"
@@ -61,6 +62,7 @@ UNICODE_STRING WvBusDosname = {
     WV_M_BUS_DOSNAME
   };
 BOOLEAN WvSymlinkDone = FALSE;
+KEVENT WvBusStartedSignal_;
 /* The main bus. */
 WVL_S_BUS_T WvBus = {0};
 WV_S_DEV_T WvBusDev = {0};
@@ -87,10 +89,29 @@ static VOID STDCALL WvBusThread(IN OUT WVL_SP_THREAD_ITEM item) {
     /* Wake up at most every 30 seconds. */
     timeout.QuadPart = -300000000LL;
     WvBusThread_.State = WvlThreadStateStarted;
+    /* Notify WvBusEstablish(). */
+    KeSetEvent(&WvBusStartedSignal_, 0, FALSE);
 
     do {
         WvlBusProcessWorkItems(&WvBus);
-
+        while (work_item = WvlThreadGetItem(&WvBusThread_))
+          /* Launch the item. */
+          work_item->Func(work_item);
+        /* Only WvBusCleanup() should be used to stop us. */
+        if (WvBusThread_.State == WvlThreadStateStopping) {
+            WvBusThread_.State = WvlThreadStateStopped;
+            break;
+          }
+        /* Check for detach. */
+        if (WvBus.Stop && WvBus.Pdo) {
+            /* Detach from any lower DEVICE_OBJECT */
+            DBG("Detaching from PDO %p.\n", WvBus.Pdo);
+            if (WvBus.LowerDeviceObject)
+              IoDetachDevice(WvBus.LowerDeviceObject);
+            /* Disassociate. */
+            WvBus.LowerDeviceObject = NULL;
+            WvBus.Pdo = NULL;
+          }
         /* Wait for the work signal or the timeout. */
         KeWaitForMultipleObjects(
             sizeof signals / sizeof *signals,
@@ -105,49 +126,45 @@ static VOID STDCALL WvBusThread(IN OUT WVL_SP_THREAD_ITEM item) {
         /* Reset the work signals. */
         KeResetEvent(&WvBusThread_.Signal);
         KeResetEvent(&WvBus.ThreadSignal);
-
-        while (work_item = WvlThreadGetItem(&WvBusThread_))
-          /* Launch the item. */
-          work_item->Func(work_item);
-        if (WvBusThread_.State == WvlThreadStateStopping)
-          WvBusThread_.State = WvlThreadStateStopped;
       } while (
         (WvBusThread_.State == WvlThreadStateStarted) ||
         (WvBusThread_.State == WvlThreadStateStopping)
       );
     WvlBusCancelWorkItems(&WvBus);
-    /* Detach from any lower DEVICE_OBJECT */
-    if (WvBus.LowerDeviceObject)
-      IoDetachDevice(WvBus.LowerDeviceObject);
-    /* Delete. */
-    IoDeleteDevice(WvBus.Fdo);
-    /* Disassociate. */
-    WvBus.Fdo = NULL;
     return;
   }
 
-NTSTATUS STDCALL WvBusAttach(PDEVICE_OBJECT pdo) {
+typedef struct WV_BUS_ATTACH_ {
+    WVL_S_THREAD_ITEM item;
+    PDEVICE_OBJECT pdo;
+    KEVENT signal;
+    NTSTATUS status;
+  } WV_S_BUS_ATTACH_, * WV_SP_BUS_ATTACH_;
+
+/* Attempt to attach the bus to a PDO, with bus thread context.  Internal. */
+static WVL_F_THREAD_ITEM WvBusAttach_;
+static VOID STDCALL WvBusAttach_(IN OUT WVL_SP_THREAD_ITEM item) {
+    WV_SP_BUS_ATTACH_ bus_attach;
     NTSTATUS status;
     PDEVICE_OBJECT lower;
-    static WV_S_DEV_IRP_MJ irp_mj = {
-        (WV_FP_DEV_DISPATCH) 0,
-        (WV_FP_DEV_DISPATCH) 0,
-        (WV_FP_DEV_CTL) 0,
-        (WV_FP_DEV_SCSI) 0,
-        (WV_FP_DEV_PNP) 0,
-      };
 
-    DBG("Attaching to PDO %p...\n", pdo);
     /* Do we alreay have our main bus? */
     if (WvBus.Pdo) {
         DBG("Already have the main bus.  Refusing.\n");
         status = STATUS_NOT_SUPPORTED;
         goto err_already_established;
       }
+    WvBus.Stop = FALSE;
+    bus_attach = CONTAINING_RECORD(
+        item,
+        WV_S_BUS_ATTACH_,
+        item
+      );
     /* Attach the FDO to the PDO. */
+    DBG("Attaching to PDO %p...\n", bus_attach->pdo);
     lower = IoAttachDeviceToDeviceStack(
         WvBus.Fdo,
-        pdo
+        bus_attach->pdo
       );
     if (lower == NULL) {
         status = STATUS_NO_SUCH_DEVICE;
@@ -155,32 +172,60 @@ NTSTATUS STDCALL WvBusAttach(PDEVICE_OBJECT pdo) {
         goto err_attach;
       }
     /* Set associations for the bus, device, FDO, PDO. */
-    WvDevForDevObj(WvBus.Fdo, &WvBusDev);
-    WvBusDev.Self = WvBus.Fdo;
-    WvBusDev.IsBus = TRUE;
-    WvBusDev.IrpMj = &irp_mj;
-    WvBus.QueryDevText = WvBusPnpQueryDevText;
-    WvBus.Pdo = pdo;
+    WvBus.Pdo = bus_attach->pdo;
     WvBus.LowerDeviceObject = lower;
-    WvBus.Fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
-    WvBus.Fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
-    WvBus.Fdo->Flags &= ~DO_DEVICE_INITIALIZING;
-    #ifdef RIS
-    WvBus.Dev.State = Started;
-    #endif
-    DBG("Exit\n");
-    return STATUS_SUCCESS;
+    DBG("Attached.\n");
+    bus_attach->status = STATUS_SUCCESS;
+    KeSetEvent(&bus_attach->signal, 0, FALSE);
+    return;
 
+    IoDetachDevice(lower);
     err_attach:
 
     err_already_established:
 
     DBG("Failed to attach.\n");
-    return status;
+    bus_attach->status = status;
+    KeSetEvent(&bus_attach->signal, 0, FALSE);
+    return;
   }
 
-/* Establish the bus PDO. */
+/**
+ * Attempt to attach the bus to a PDO.
+ *
+ * @v pdo               The PDO to attach to.
+ * @ret NTSTATUS        The status of the operation.
+ *
+ * This function will return a failure status if the bus is already
+ * attached.  The actual attach operation occurs within the bus thread.
+ */
+NTSTATUS STDCALL WvBusAttach(PDEVICE_OBJECT Pdo) {
+    WV_S_BUS_ATTACH_ bus_attach;
+
+    KeInitializeEvent(&bus_attach.signal, SynchronizationEvent, FALSE);
+    bus_attach.item.Func = WvBusAttach_;
+    bus_attach.pdo = Pdo;
+    if (!WvlThreadAddItem(&WvBusThread_, &bus_attach.item))
+      return STATUS_NO_SUCH_DEVICE;
+    KeWaitForSingleObject(
+        &bus_attach.signal,
+        Executive,
+        KernelMode,
+        FALSE,
+        NULL
+      );
+    return bus_attach.status;
+  }
+
+/* Establish the bus FDO, thread, and possibly PDO. */
 NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING RegistryPath) {
+    static WV_S_DEV_IRP_MJ irp_mj = {
+        (WV_FP_DEV_DISPATCH) 0,
+        (WV_FP_DEV_DISPATCH) 0,
+        (WV_FP_DEV_CTL) 0,
+        (WV_FP_DEV_SCSI) 0,
+        (WV_FP_DEV_PNP) 0,
+      };
     NTSTATUS status;
     PDEVICE_OBJECT fdo = NULL;
     HANDLE reg_key;
@@ -206,6 +251,17 @@ NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING RegistryPath) {
         goto err_fdo;
       }
     WvBus.Fdo = fdo;
+    WvBusDev.Self = WvBus.Fdo;
+    WvBusDev.IsBus = TRUE;
+    WvBusDev.IrpMj = &irp_mj;
+    WvBus.QueryDevText = WvBusPnpQueryDevText;
+    WvDevForDevObj(WvBus.Fdo, &WvBusDev);
+    WvBus.Fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
+    WvBus.Fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
+    WvBus.Fdo->Flags &= ~DO_DEVICE_INITIALIZING;
+    #ifdef RIS
+    WvBus.Dev.State = Started;
+    #endif
 
     /* DosDevice symlink. */
     status = IoCreateSymbolicLink(
@@ -219,13 +275,22 @@ NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING RegistryPath) {
     WvSymlinkDone = TRUE;
 
     /* Start thread. */
-    DBG("Starting thread...\n");
+    KeInitializeEvent(&WvBusStartedSignal_, NotificationEvent, FALSE);
     WvBusThread_.Main.Func = WvBusThread;
+    DBG("Starting thread...\n");
     status = WvlThreadStart(&WvBusThread_);
     if (!NT_SUCCESS(status)) {
         DBG("Couldn't start bus thread!\n");
         goto err_thread;
       }
+    KeWaitForSingleObject(
+        &WvBusStartedSignal_,
+        Executive,
+        KernelMode,
+        FALSE,
+        NULL
+      );
+    KeResetEvent(&WvBusStartedSignal_);
 
     /* Open our Registry path. */
     status = WvlRegOpenKey(RegistryPath->Buffer, &reg_key);
@@ -297,14 +362,13 @@ NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING RegistryPath) {
 VOID WvBusCleanup(void) {
     if (WvSymlinkDone)
       IoDeleteSymbolicLink(&WvBusDosname);
+    WvBus.Stop = TRUE;
     if (WvBusThread_.State != WvlThreadStateNotStarted) {
         DBG("Stopping thread...\n");
         WvlThreadSendStopAndWait(&WvBusThread_);
       }
-    if (WvBus.Fdo) {
-        IoDeleteDevice(WvBus.Fdo);
-        WvBus.Fdo = NULL;
-      }
+    IoDeleteDevice(WvBus.Fdo);
+    WvBus.Fdo = NULL;
     return;
   }
 
@@ -521,4 +585,94 @@ NTSTATUS STDCALL WvBusPnpQueryDevText(
     alloc_str:
 
     return WvlIrpComplete(irp, irp->IoStatus.Information, status);
+  }
+
+typedef struct WV_BUS_IRP_ {
+    WVL_S_THREAD_ITEM item;
+    PIRP irp;
+  } WV_S_BUS_IRP_, * WV_SP_BUS_IRP_;
+
+static WVL_F_THREAD_ITEM WvBusIrp_;
+static VOID STDCALL WvBusIrp_(IN OUT WVL_SP_THREAD_ITEM item) {
+    WV_SP_BUS_IRP_ bus_irp = CONTAINING_RECORD(item, WV_S_BUS_IRP_, item);
+    PIRP irp = bus_irp->irp;
+    PIO_STACK_LOCATION io_stack_loc;
+    UCHAR major, minor;
+
+    wv_free(item);
+    /* We are in the context of the bus thread. */
+    if (WvBus.Stop) {
+        WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
+        return;
+      }
+
+    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    major = io_stack_loc->MajorFunction;
+    minor = io_stack_loc->MinorFunction;
+    switch (major) {
+
+        case IRP_MJ_PNP:
+          DBG(WVL_M_LIT " IRP_MJ_PNP.\n");
+          if (minor == IRP_MN_QUERY_DEVICE_RELATIONS)
+            WvProbeDisks();
+            WvlBusProcessWorkItems(&WvBus);
+            WvlBusPnpIrp(&WvBus, irp, io_stack_loc->MinorFunction);
+            break;
+
+        case IRP_MJ_DEVICE_CONTROL:
+          DBG(WVL_M_LIT " IRP_MJ_DEVICE_CONTROL.\n");
+          WvBusDevCtl(
+              irp,
+              io_stack_loc->Parameters.DeviceIoControl.IoControlCode
+            );
+          break;
+
+        case IRP_MJ_POWER:
+          DBG(WVL_M_LIT " IRP_MJ_POWER.\n");
+          WvlBusPower(&WvBus, irp);
+          break;
+
+        case IRP_MJ_SYSTEM_CONTROL:
+          DBG(WVL_M_LIT " IRP_MJ_SYSTEM_CONTROL.\n");
+          WvlBusSysCtl(&WvBus, irp);
+          break;
+
+        case IRP_MJ_CREATE:
+        case IRP_MJ_CLOSE:
+          DBG(WVL_M_LIT " IRP_MJ_[CREATE|CLOSE].\n");
+          /* Succeed with nothing to do. */
+          WvlIrpComplete(irp, 0, STATUS_SUCCESS);
+          break;
+
+        default:
+          DBG(WVL_M_LIT " unknown IRP: %d, %d.\n", major, minor);
+          WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+          break;
+      }
+    return;
+  }
+
+/**
+ * Enqueue an IRP for the WinVBlock bus.
+ *
+ * @v Irp               The IRP to enqueue.
+ * @ret NTSTATUS        The status of the operation.
+ */
+NTSTATUS STDCALL WvBusEnqueueIrp(IN OUT PIRP Irp) {
+    WV_SP_BUS_IRP_ bus_irp;
+    NTSTATUS status;
+
+    if (!Irp)
+      return STATUS_INVALID_PARAMETER;
+
+    bus_irp = wv_malloc(sizeof *bus_irp);
+    if (!bus_irp)
+      return WvlIrpComplete(Irp, 0, STATUS_INSUFFICIENT_RESOURCES);
+
+    bus_irp->item.Func = WvBusIrp_;
+    bus_irp->irp = Irp;
+    IoMarkIrpPending(Irp);
+    if (!WvlThreadAddItem(&WvBusThread_, &bus_irp->item))
+      WvlIrpComplete(Irp, 0, STATUS_NO_SUCH_DEVICE);
+    return STATUS_PENDING;
   }
