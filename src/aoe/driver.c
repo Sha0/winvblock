@@ -241,22 +241,26 @@ static VOID AoeCleanup_(AOE_E_CLEANUP_ cleanup) {
           DBG("Unknown cleanup request!\n");
         case AoeCleanupAll_:
 
-        AoeStop_ = TRUE;
-        KeSetEvent(&AoeSignal_, 0, FALSE);
-        KeWaitForSingleObject(
-            AoeThreadObj_,
-            Executive,
-            KernelMode,
-            FALSE,
-            NULL
-          );
-        ObDereferenceObject(AoeThreadObj_);
+        if (AoeThreadHandle_) {
+            AoeStop_ = TRUE;
+            KeSetEvent(&AoeSignal_, 0, FALSE);
+            KeWaitForSingleObject(
+                AoeThreadObj_,
+                Executive,
+                KernelMode,
+                FALSE,
+                NULL
+              );
+            ObDereferenceObject(AoeThreadObj_);
+          }
         case AoeCleanupThreadRef_:
 
         /* Duplication from above, but is hopefully harmless. */
-        AoeStop_ = TRUE;
-        KeSetEvent(&AoeSignal_, 0, FALSE);
-        ZwClose(AoeThreadHandle_);
+        if (AoeThreadHandle_) {
+            AoeStop_ = TRUE;
+            KeSetEvent(&AoeSignal_, 0, FALSE);
+            ZwClose(AoeThreadHandle_);
+          }
         case AoeCleanupThread_:
 
         AoeBusFree();
@@ -442,7 +446,6 @@ static VOID STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
       return;
     /* General cleanup. */
     AoeCleanup_(AoeCleanupAll_);
-
     /* Free the target list. */
     KeAcquireSpinLock(&AoeTargetListLock_, &Irql2);
     Walker = AoeTargetList_;
@@ -1272,14 +1275,9 @@ static VOID STDCALL AoeThread_(IN PVOID StartContext) {
         KeResetEvent(&AoeSignal_);
         if (AoeStop_) {
             DBG("Stopping...\n");
-            /* Detach from any lower DEVICE_OBJECT */
-            if (AoeBusMain.LowerDeviceObject)
-              IoDetachDevice(AoeBusMain.LowerDeviceObject);
-            /* Delete. */
-            IoDeleteDevice(AoeBusMain.Fdo);
-            /* Disassociate. */
-            AoeBusMain.Fdo = NULL;
             PsTerminateSystemThread(STATUS_SUCCESS);
+            DBG("Yikes!\n");
+            return;
           }
         KeQuerySystemTime(&CurrentTime);
         /* TODO: Make the below value a #defined constant. */
@@ -1935,8 +1933,33 @@ static NTSTATUS AoeIrpPnp(
 
     WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
-    if (dev_obj == AoeBusMain.Fdo)
-      return WvlBusPnp(&AoeBusMain, irp);
+    if (dev_obj == AoeBusMain.Fdo) {
+        NTSTATUS status;
+
+        status = WvlBusPnp(&AoeBusMain, irp);
+        /* Did the bus detach? */
+        if (AoeBusMain.State == WvlBusStateDeleted) {
+            /* Stop the thread. */
+            AoeStop_ = TRUE;
+            KeSetEvent(&AoeSignal_, 0, FALSE);
+            KeWaitForSingleObject(
+                AoeThreadObj_,
+                Executive,
+                KernelMode,
+                FALSE,
+                NULL
+              );
+            ObDereferenceObject(AoeThreadObj_);
+            ZwClose(AoeThreadHandle_);
+            /* Prevent AoeCleanup() from trying to stop the thread. */
+            AoeThreadHandle_ = NULL;
+            /* Delete. */
+            IoDeleteDevice(AoeBusMain.Fdo);
+            /* Disassociate. */
+            AoeBusMain.Fdo = NULL;
+          }
+        return status;
+      }
     /* WvDevFromDevObj() checks for a NULL dev_obj */
     dev = WvDevFromDevObj(dev_obj);
     /* Check that the device exists. */
