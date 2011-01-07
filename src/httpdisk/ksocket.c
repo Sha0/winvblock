@@ -19,6 +19,10 @@
 #include "ktdi.h"
 #include "ksocket.h"
 
+/* From httpdisk.c */
+extern PVOID HttpDiskMalloc(SIZE_T);
+extern PVOID HttpDiskPalloc(SIZE_T);
+
 typedef struct _STREAM_SOCKET {
     HANDLE              connectionHandle;
     PFILE_OBJECT        connectionFileObject;
@@ -184,7 +188,7 @@ int __cdecl connect(int socket, const struct sockaddr *addr, int addrlen)
 
         if (!s->streamSocket)
         {
-            s->streamSocket = (PSTREAM_SOCKET) ExAllocatePool(NonPagedPool, sizeof(STREAM_SOCKET));
+            s->streamSocket = HttpDiskMalloc(sizeof *s->streamSocket);
 
             if (!s->streamSocket)
             {
@@ -513,7 +517,7 @@ int __cdecl socket(int af, int type, int protocol)
         return STATUS_INVALID_PARAMETER;
     }
 
-    s = (PSOCKET) ExAllocatePool(NonPagedPool, sizeof(SOCKET));
+    s = HttpDiskMalloc(sizeof *s);
 
     if (!s)
     {

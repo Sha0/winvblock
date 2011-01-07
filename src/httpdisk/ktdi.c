@@ -18,6 +18,10 @@
 #include <tdikrnl.h>
 #include "ktdi.h"
 
+/* From httpdisk.c */
+extern PVOID HttpDiskMalloc(SIZE_T);
+extern PVOID HttpDiskPalloc(SIZE_T);
+
 NTSTATUS tdi_open_transport_address(PUNICODE_STRING devName, ULONG addr, USHORT port, BOOLEAN shared, PHANDLE addressHandle, PFILE_OBJECT *addressFileObject)
 {
     OBJECT_ATTRIBUTES           attr;
@@ -38,7 +42,7 @@ NTSTATUS tdi_open_transport_address(PUNICODE_STRING devName, ULONG addr, USHORT 
              1                                                 +
              sizeof(TA_IP_ADDRESS);
 
-    eaBuffer = (PFILE_FULL_EA_INFORMATION) ExAllocatePool(PagedPool, eaSize);
+    eaBuffer = HttpDiskPalloc(eaSize);
 
     if (eaBuffer == NULL)
     {
@@ -114,7 +118,7 @@ NTSTATUS tdi_open_connection_endpoint(PUNICODE_STRING devName, PVOID connectionC
              1                                                 +
              sizeof(int);
 
-    eaBuffer = (PFILE_FULL_EA_INFORMATION) ExAllocatePool(PagedPool, eaSize);
+    eaBuffer = HttpDiskPalloc(eaSize);
 
     if (eaBuffer == NULL)
     {
@@ -281,7 +285,10 @@ NTSTATUS tdi_connect(PFILE_OBJECT connectionFileObject, ULONG addr, USHORT port)
 
     KeInitializeEvent(&event, NotificationEvent, FALSE);
 
-    remoteInfo = (PTDI_CONNECTION_INFORMATION) ExAllocatePool(NonPagedPool, 2 * sizeof(TDI_CONNECTION_INFORMATION) + 2 * sizeof(TA_IP_ADDRESS));
+    remoteInfo = HttpDiskMalloc(
+        2 * sizeof (TDI_CONNECTION_INFORMATION) +
+        2 * sizeof (TA_IP_ADDRESS)
+      );
 
     if (remoteInfo == NULL)
     {
@@ -382,7 +389,10 @@ NTSTATUS tdi_send_dgram(PFILE_OBJECT addressFileObject, ULONG addr, USHORT port,
 
     KeInitializeEvent(&event, NotificationEvent, FALSE);
 
-    remoteInfo = (PTDI_CONNECTION_INFORMATION) ExAllocatePool(NonPagedPool, sizeof(TDI_CONNECTION_INFORMATION) + sizeof(TA_IP_ADDRESS));
+    remoteInfo = HttpDiskMalloc(
+        sizeof (TDI_CONNECTION_INFORMATION) +
+        sizeof (TA_IP_ADDRESS)
+      );
 
     if (remoteInfo == NULL)
     {
@@ -471,7 +481,10 @@ NTSTATUS tdi_recv_dgram(PFILE_OBJECT addressFileObject, PULONG addr, PUSHORT por
 
     KeInitializeEvent(&event, NotificationEvent, FALSE);
 
-    remoteInfo = (PTDI_CONNECTION_INFORMATION) ExAllocatePool(NonPagedPool, 2 * sizeof(TDI_CONNECTION_INFORMATION) + sizeof(TA_IP_ADDRESS));
+    remoteInfo = HttpDiskMalloc(
+        2 * sizeof (TDI_CONNECTION_INFORMATION) +
+        sizeof (TA_IP_ADDRESS)
+      );
 
     if (remoteInfo == NULL)
     {
@@ -694,7 +707,7 @@ NTSTATUS tdi_query_address(PFILE_OBJECT addressFileObject, PULONG addr, PUSHORT 
 
     KeInitializeEvent(&event, NotificationEvent, FALSE);
 
-    localInfo = (PTRANSPORT_ADDRESS) ExAllocatePool(NonPagedPool, sizeof(TDI_ADDRESS_INFO)*10);
+    localInfo = HttpDiskMalloc(sizeof (TDI_ADDRESS_INFO) * 10);
 
     if (localInfo == NULL)
     {

@@ -225,6 +225,20 @@ __int64 __cdecl _atoi64(const char *);
 int __cdecl _snprintf(char *, size_t, const char *, ...);
 int __cdecl swprintf(wchar_t *, const wchar_t *, ...);
 
+/** Memory allocation functions. */
+PVOID HttpDiskMalloc(SIZE_T size) {
+    return ExAllocatePoolWithTag(NonPagedPool, size, 'DHvW');
+  }
+
+PVOID HttpDiskPalloc(SIZE_T size) {
+    /*
+     * The call-points for this function merely place-hold for where
+     * Bo's original work allocated from paged pool.  Since this
+     * version is intended for booting, we don't use paged pool.
+     */
+    return ExAllocatePoolWithTag(NonPagedPool, size, 'DHvW');
+  }
+
 #pragma code_seg("INIT")
 
 NTSTATUS
@@ -246,7 +260,7 @@ DriverEntry (
 
     parameter_path.MaximumLength = RegistryPath->Length + sizeof(PARAMETER_KEY);
 
-    parameter_path.Buffer = (PWSTR) ExAllocatePool(PagedPool, parameter_path.MaximumLength);
+    parameter_path.Buffer = HttpDiskPalloc(parameter_path.MaximumLength);
 
     if (parameter_path.Buffer == NULL)
     {
@@ -1028,7 +1042,9 @@ HttpDiskConnect (
 
     device_extension->port = http_disk_information->Port;
 
-    device_extension->host_name = ExAllocatePool(NonPagedPool, http_disk_information->HostNameLength + 1);
+    device_extension->host_name = HttpDiskMalloc(
+        http_disk_information->HostNameLength + 1
+      );
 
     if (device_extension->host_name == NULL)
     {
@@ -1044,7 +1060,9 @@ HttpDiskConnect (
 
     device_extension->host_name[http_disk_information->HostNameLength] = '\0';
 
-    device_extension->file_name = ExAllocatePool(NonPagedPool, http_disk_information->FileNameLength + 1);
+    device_extension->file_name = HttpDiskMalloc(
+        http_disk_information->FileNameLength + 1
+      );
 
     if (device_extension->file_name == NULL)
     {
@@ -1170,7 +1188,7 @@ HttpDiskGetHeader (
     ASSERT(IoStatus != NULL);
     ASSERT(HttpHeader != NULL);
 
-    buffer = ExAllocatePool(PagedPool, BUFFER_SIZE);
+    buffer = HttpDiskPalloc(BUFFER_SIZE);
 
     if (buffer == NULL)
     {
@@ -1312,7 +1330,7 @@ HttpDiskGetBlock (
 
     IoStatus->Information = 0;
 
-    buffer = ExAllocatePool(PagedPool, BUFFER_SIZE + 1);
+    buffer = HttpDiskPalloc(BUFFER_SIZE + 1);
 
     if (buffer == NULL)
     {
