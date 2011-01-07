@@ -69,35 +69,35 @@ static NTSTATUS STDCALL AoeBusDevCtlDetach_(IN PIRP irp) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     UINT32 unit_num;
     WVL_SP_BUS_NODE walker;
+    WV_SP_DEV_T dev = NULL;
 
     unit_num = *((PUINT32) irp->AssociatedIrp.SystemBuffer);
     DBG("Request to detach unit: %d\n", unit_num);
 
     walker = NULL;
     /* For each node on the bus... */
+    WvlBusLock(&AoeBusMain);
     while (walker = WvlBusGetNextNode(&AoeBusMain, walker)) {
-        WV_SP_DEV_T dev = WvDevFromDevObj(WvlBusGetNodePdo(walker));
-
+        dev = WvDevFromDevObj(WvlBusGetNodePdo(walker));
         /* If the unit number matches... */
         if (WvlBusGetNodeNum(walker) == unit_num) {
             /* If it's not a boot-time device... */
             if (dev->Boot) {
                 DBG("Cannot detach a boot-time device.\n");
                 /* Signal error. */
-                walker = NULL;
+                dev = NULL;
                 break;
               }
-            /* Detach the node and free it. */
-            DBG("Removing unit %d\n", unit_num);
-            WvlBusRemoveNode(walker);
-            WvDevClose(dev);
-            IoDeleteDevice(dev->Self);
-            WvDevFree(dev);
-            break;
           }
       }
-    if (!walker)
-      return WvlIrpComplete(irp, 0, STATUS_INVALID_PARAMETER);
+    WvlBusUnlock(&AoeBusMain);
+    if (!dev) {
+        DBG("Unit %d not found.\n", unit_num);
+        return WvlIrpComplete(irp, 0, STATUS_INVALID_PARAMETER);
+      }
+    /* Detach the node. */
+    WvlBusRemoveNode(&dev->BusNode);
+    DBG("Removed unit %d.\n", unit_num);
     return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
   }
 
