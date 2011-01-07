@@ -1,6 +1,7 @@
 /*
     HTTP Virtual Disk.
     Copyright (C) 2006 Bo Brantén.
+    Portions copyright (C) 2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation; either version 2 of the License, or
@@ -105,8 +106,15 @@ MmGetSystemAddressForMdlPrettySafe (
 }
 #endif
 
+#include "portable.h"
 #include "httpdisk.h"
 
+/* From bus.c */
+extern NTSTATUS STDCALL HttpdiskBusEstablish(void);
+extern VOID HttpdiskBusCleanup(void);
+extern DRIVER_ADD_DEVICE HttpdiskBusAttach;
+
+/* For this file. */
 #define PARAMETER_KEY           L"\\Parameters"
 
 #define NUMBEROFDEVICES_VALUE   L"NumberOfDevices"
@@ -349,8 +357,13 @@ DriverEntry (
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = HttpDiskDeviceControl;
 
     DriverObject->DriverUnload = HttpDiskUnload;
+    DriverObject->DriverExtension->AddDevice = HttpdiskBusAttach;
 
-    return STATUS_SUCCESS;
+    status = HttpdiskBusEstablish();
+    if (!NT_SUCCESS(status))
+      HttpDiskUnload(DriverObject);
+
+    return status;
 }
 
 NTSTATUS
@@ -484,6 +497,8 @@ HttpDiskUnload (
     )
 {
     PDEVICE_OBJECT device_object;
+
+    HttpdiskBusCleanup();
 
     device_object = DriverObject->DeviceObject;
 
