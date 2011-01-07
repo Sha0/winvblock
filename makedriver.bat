@@ -63,7 +63,7 @@ call %ddkdir%\bin\setenv.bat %ddkdir% %arg1% %arg2%
 popd
 
 rem Build order is important here
-set sys=winvblock aoe
+set sys=winvblock aoe httpdisk
 
 for /d %%a in (%sys%) do (
   pushd .
