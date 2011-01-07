@@ -48,7 +48,6 @@
 
 /* From aoe/bus.c */
 extern WVL_S_BUS_T AoeBusMain;
-extern PDEVICE_OBJECT AoeBusPdo;
 extern NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT);
 extern VOID AoeBusFree(void);
 extern NTSTATUS STDCALL AoeBusDevCtl(IN PIRP, IN ULONG POINTER_ALIGNMENT);
@@ -1936,14 +1935,8 @@ static NTSTATUS AoeIrpPnp(
 
     WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
-    if (dev_obj == AoeBusMain.Fdo) {
-        NTSTATUS status;
-
-        status = WvlBusPnp(&AoeBusMain, irp);
-        if (NT_SUCCESS(status) && (code == IRP_MN_REMOVE_DEVICE))
-          AoeBusPdo = NULL;
-        return status;
-      }
+    if (dev_obj == AoeBusMain.Fdo)
+      return WvlBusPnp(&AoeBusMain, irp);
     /* WvDevFromDevObj() checks for a NULL dev_obj */
     dev = WvDevFromDevObj(dev_obj);
     /* Check that the device exists. */
