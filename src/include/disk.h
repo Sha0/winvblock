@@ -117,6 +117,7 @@ struct WV_DISK_T {
     UINT32 SpecialFileCount;
     LIST_ENTRY tracking;
     PVOID ext;
+    PDRIVER_OBJECT DriverObj;
   };
 
 /* Yield a pointer to the disk. */

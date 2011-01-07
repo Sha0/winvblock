@@ -194,6 +194,7 @@ WV_SP_RAMDISK_T ramdisk__create(void) {
   disk_ptr->Dev->Ops.PnpId = query_id;
   disk_ptr->disk_ops.Io = io;
   disk_ptr->ext = ramdisk_ptr;
+  disk_ptr->DriverObj = WvDriverObj;
 
   return ramdisk_ptr;
 

@@ -203,6 +203,7 @@ typedef struct AOE_TARGET_LIST_ {
   } AOE_S_TARGET_LIST_, * AOE_SP_TARGET_LIST_;
 
 /** Private globals. */
+static PDRIVER_OBJECT AoeDriverObj_ = NULL;
 static AOE_SP_TARGET_LIST_ AoeTargetList_ = NULL;
 static KSPIN_LOCK AoeTargetListLock_;
 static BOOLEAN AoeStop_ = FALSE;
@@ -301,6 +302,9 @@ NTSTATUS STDCALL DriverEntry(
 
     if (AoeStarted_)
       return STATUS_SUCCESS;
+
+    /* Note our driver object. */
+    AoeDriverObj_ = DriverObject;
 
     /* Initialize the global list of AoE disks. */
     InitializeListHead(&AoeDiskList_);
@@ -1751,6 +1755,7 @@ static AOE_SP_DISK_ AoeDiskCreate_(void) {
     disk->disk_ops.Init = AoeDiskInit_;
     disk->disk_ops.Close = AoeDiskClose_;
     disk->ext = aoe_disk;
+    disk->DriverObj = AoeDriverObj_;
 
     return aoe_disk;
 

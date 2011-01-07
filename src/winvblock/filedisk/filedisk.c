@@ -305,6 +305,7 @@ WV_SP_FILEDISK_T WvFilediskCreate(void) {
     disk_ptr->disk_ops.Io = io;
     disk_ptr->disk_ops.Close = close;
     disk_ptr->ext = filedisk_ptr;
+    disk_ptr->DriverObj = WvDriverObj;
 
     return filedisk_ptr;
 
