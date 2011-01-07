@@ -51,6 +51,8 @@ extern NTSTATUS STDCALL WvDriverGetDevCapabilities(
     IN PDEVICE_OBJECT,
     IN PDEVICE_CAPABILITIES
   );
+/* From bus.c */
+extern WVL_M_LIB PDEVICE_OBJECT WvBusFdo(void);
 
 /**
  * Miscellaneous: Grouped memory allocation functions.

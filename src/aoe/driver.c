@@ -1273,7 +1273,6 @@ static VOID STDCALL AoeThread_(IN PVOID StartContext) {
         KeResetEvent(&AoeSignal_);
         if (AoeStop_) {
             DBG("Stopping...\n");
-            WvlBusCancelWorkItems(&AoeBusMain);
             /* Detach from any lower DEVICE_OBJECT */
             if (AoeBusMain.LowerDeviceObject)
               IoDetachDevice(AoeBusMain.LowerDeviceObject);
@@ -1283,8 +1282,6 @@ static VOID STDCALL AoeThread_(IN PVOID StartContext) {
             AoeBusMain.Fdo = NULL;
             PsTerminateSystemThread(STATUS_SUCCESS);
           }
-        WvlBusProcessWorkItems(&AoeBusMain);
-
         KeQuerySystemTime(&CurrentTime);
         /* TODO: Make the below value a #defined constant. */
         if (CurrentTime.QuadPart > (ReportTime.QuadPart + 10000000LL)) {
@@ -1624,18 +1621,6 @@ NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
     wv_size_t size;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
-    if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
-        NTSTATUS status;
-
-        /* Enqueue the IRP. */
-        status = WvlBusEnqueueIrp(&AoeBusMain, irp);
-        if (status != STATUS_PENDING)
-          /* Problem. */
-          return WvlIrpComplete(irp, 0, status);
-        /* Ok. */
-        return status;
-      }
-    /* If we get here, we should be called by WvlBusProcessWorkItems() */
     DBG("Got IOCTL_AOE_SHOW...\n");
 
     count = WvlBusGetNodeCount(&AoeBusMain);
@@ -1954,7 +1939,7 @@ static NTSTATUS AoeIrpPnp(
     if (dev_obj == AoeBusMain.Fdo) {
         NTSTATUS status;
 
-        status = WvlBusPnpIrp(&AoeBusMain, irp, code);
+        status = WvlBusPnp(&AoeBusMain, irp);
         if (NT_SUCCESS(status) && (code == IRP_MN_REMOVE_DEVICE))
           AoeBusPdo = NULL;
         return status;

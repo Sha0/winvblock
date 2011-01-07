@@ -79,23 +79,9 @@ static NTSTATUS STDCALL WvlBusPnpStartDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
   }
 
 static NTSTATUS STDCALL WvlBusPnpRemoveDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
-    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    PDEVICE_OBJECT lower = bus->LowerDeviceObject;
     NTSTATUS status;
-    PDEVICE_OBJECT lower;
-    PLIST_ENTRY node_link;
 
-    if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
-        /* Enqueue the IRP. */
-        status = WvlBusEnqueueIrp(bus, irp);
-        if (status != STATUS_PENDING)
-          /* Problem. */
-          return WvlIrpComplete(irp, 0, status);
-        /* Ok. */
-        return status;
-      }
-    /* If we get here, we should be called by WvlBusProcessWorkItems() */
-    status = STATUS_SUCCESS;
-    lower = bus->LowerDeviceObject;
     bus->OldState = bus->State;
     bus->State = WvlBusStateDeleted;
     /* Pass the IRP on to any lower DEVICE_OBJECT */
@@ -105,23 +91,10 @@ static NTSTATUS STDCALL WvlBusPnpRemoveDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
         IoSkipCurrentIrpStackLocation(irp);
         status = IoCallDriver(lower, irp);
       }
-    /* Remove all children. */
-    node_link = &bus->BusPrivate_.Nodes;
-    while ((node_link = node_link->Flink) != &bus->BusPrivate_.Nodes) {
-        WVL_SP_BUS_NODE node = CONTAINING_RECORD(
-            node_link,
-            WVL_S_BUS_NODE,
-            BusPrivate_.Link
-          );
-
-        DBG("Removing PDO from bus...\n");
-        RemoveEntryList(&node->BusPrivate_.Link);
-        node->Linked = FALSE;
-        ObDereferenceObject(node->BusPrivate_.Pdo);
-        bus->BusPrivate_.NodeCount--;
-      }
-    /* Stop the thread. */
-    bus->Stop = TRUE;
+    WvlBusClear(bus);
+    /* Without a lower DEVICE_OBJECT, we have to complete the IRP. */
+    if (!lower)
+      return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
     return status;
   }
 
@@ -129,23 +102,13 @@ static NTSTATUS STDCALL WvlBusPnpQueryDevRelations(
     IN WVL_SP_BUS_T bus,
     IN PIRP irp
   ) {
-    NTSTATUS status;
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-    UINT32 i;
+    KIRQL irql;
     PDEVICE_RELATIONS dev_relations;
+    UINT32 i;
     PLIST_ENTRY node_link;
 
-    if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
-        /* Enqueue the IRP. */
-        status = WvlBusEnqueueIrp(bus, irp);
-        if (status != STATUS_PENDING)
-          /* Problem. */
-          return WvlIrpComplete(irp, 0, status);
-        /* Ok. */
-        return status;
-      }
-    /* If we get here, we should be called by WvlBusProcessWorkItems() */
     if (
         io_stack_loc->Parameters.QueryDeviceRelations.Type != BusRelations ||
         irp->IoStatus.Information
@@ -160,12 +123,14 @@ static NTSTATUS STDCALL WvlBusPnpQueryDevRelations(
             irp->IoStatus.Status
           );
       }
+    KeAcquireSpinLock(&bus->BusPrivate_.NodeLock, &irql);
     dev_relations = wv_malloc(
         sizeof *dev_relations +
           (sizeof (PDEVICE_OBJECT) * bus->BusPrivate_.NodeCount)
       );
     if (dev_relations == NULL) {
         /* Couldn't allocate dev_relations, but silently succeed. */
+        KeReleaseSpinLock(&bus->BusPrivate_.NodeLock, irql);
         if (lower) {
             IoSkipCurrentIrpStackLocation(irp);
             return IoCallDriver(lower, irp);
@@ -187,13 +152,26 @@ static NTSTATUS STDCALL WvlBusPnpQueryDevRelations(
         ObReferenceObject(node->BusPrivate_.Pdo);
         i++;
       }
+    KeReleaseSpinLock(&bus->BusPrivate_.NodeLock, irql);
+    /* Assertion. */
+    if (i != dev_relations->Count) {
+        DBG("Inconsistent node list count!\n");
+        /* Pass it on or report failure. */
+        if (lower) {
+            IoSkipCurrentIrpStackLocation(irp);
+            return IoCallDriver(lower, irp);
+          }
+        return WvlIrpComplete(irp, 0, STATUS_UNSUCCESSFUL);
+      }
     irp->IoStatus.Information = (ULONG_PTR) dev_relations;
-    irp->IoStatus.Status = status = STATUS_SUCCESS;
+    irp->IoStatus.Status = STATUS_SUCCESS;
+    /* Should we pass it on? */
     if (lower) {
         IoSkipCurrentIrpStackLocation(irp);
         return IoCallDriver(lower, irp);
       }
-    return WvlIrpComplete(irp, irp->IoStatus.Information, status);
+    /* Success. */
+    return WvlIrpComplete(irp, irp->IoStatus.Information, STATUS_SUCCESS);
   }
 
 static NTSTATUS STDCALL WvlBusPnpQueryCapabilities(
@@ -205,10 +183,11 @@ static NTSTATUS STDCALL WvlBusPnpQueryCapabilities(
       io_stack_loc->Parameters.DeviceCapabilities.Capabilities;
     NTSTATUS status;
     DEVICE_CAPABILITIES ParentDeviceCapabilities;
-    PDEVICE_OBJECT lower;
+    PDEVICE_OBJECT lower = bus->LowerDeviceObject;;
 
     if (DeviceCapabilities->Version != 1 ||
-        DeviceCapabilities->Size < sizeof (DEVICE_CAPABILITIES)
+        DeviceCapabilities->Size < sizeof (DEVICE_CAPABILITIES) ||
+        !lower
       )
       return WvlIrpComplete(irp, 0, STATUS_UNSUCCESSFUL);
     /* Let the lower DEVICE_OBJECT handle the IRP. */
@@ -326,6 +305,7 @@ static NTSTATUS STDCALL WvlBusPnpSimple(
       }
 
     irp->IoStatus.Status = status;
+    /* Should we pass it on?  We might be a floating FDO. */
     if (lower) {
         IoSkipCurrentIrpStackLocation(irp);
         return IoCallDriver(lower, irp);
@@ -334,12 +314,13 @@ static NTSTATUS STDCALL WvlBusPnpSimple(
   }
 
 /* Bus PnP dispatch routine. */
-WVL_M_LIB NTSTATUS STDCALL WvlBusPnpIrp(
+WVL_M_LIB NTSTATUS STDCALL WvlBusPnp(
     IN WVL_SP_BUS_T Bus,
-    IN PIRP Irp,
-    IN UCHAR Code
+    IN PIRP Irp
   ) {
-    switch (Code) {
+    UCHAR code = IoGetCurrentIrpStackLocation(Irp)->MinorFunction;
+
+    switch (code) {
         case IRP_MN_QUERY_DEVICE_TEXT:
           DBG("IRP_MN_QUERY_DEVICE_TEXT\n");
           return Bus->QueryDevText(Bus, Irp);
@@ -365,7 +346,6 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusPnpIrp(
           return WvlBusPnpStartDev(Bus, Irp);
 
         default:
-          DBG("Simple\n");
-          return WvlBusPnpSimple(Bus, Irp, Code);
+          return WvlBusPnpSimple(Bus, Irp, code);
       }
   }

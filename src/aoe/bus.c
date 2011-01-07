@@ -30,6 +30,7 @@
 #include "winvblock.h"
 #include "wv_stdlib.h"
 #include "irp.h"
+#include "driver.h"
 #include "bus.h"
 #include "device.h"
 #include "dummy.h"
@@ -70,18 +71,6 @@ static NTSTATUS STDCALL AoeBusDevCtlDetach_(IN PIRP irp) {
     UINT32 unit_num;
     WVL_SP_BUS_NODE walker;
 
-    if (!(io_stack_loc->Control & SL_PENDING_RETURNED)) {
-        NTSTATUS status;
-
-        /* Enqueue the IRP. */
-        status = WvlBusEnqueueIrp(&AoeBusMain, irp);
-        if (status != STATUS_PENDING)
-          /* Problem. */
-          return WvlIrpComplete(irp, 0, status);
-        /* Ok. */
-        return status;
-      }
-    /* If we get here, we should be called by WvlBusProcessWorkItems() */
     unit_num = *((PUINT32) irp->AssociatedIrp.SystemBuffer);
     DBG("Request to detach unit: %d\n", unit_num);
 
@@ -137,12 +126,16 @@ NTSTATUS STDCALL AoeBusDevCtl(
   }
 
 /* Generate dummy IDs for the AoE bus PDO. */
-#define AOE_M_BUS_IDS(X_, Y_)             \
-  X_(Y_, Dev,      WVL_M_WLIT L"\\AoE"  ) \
-  X_(Y_, Instance, L"0"                 ) \
-  X_(Y_, Hardware, WVL_M_WLIT L"\\AoE\0") \
-  X_(Y_, Compat,   WVL_M_WLIT L"\\AoE\0")
-WV_M_DUMMY_ID_GEN(AoeBusDummyIds, AOE_M_BUS_IDS);
+WV_M_DUMMY_ID_GEN(
+    static const,
+    AoeBusDummyIds_,
+    WVL_M_WLIT L"\\AoE",
+    L"0",
+    WVL_M_WLIT L"\\AoE\0",
+    WVL_M_WLIT L"\\AoE\0",
+    FILE_DEVICE_CONTROLLER,
+    FILE_DEVICE_SECURE_OPEN
+  );
 
 /* Destroy the AoE bus. */
 VOID AoeBusFree(void) {
@@ -296,6 +289,52 @@ NTSTATUS STDCALL AoeBusAttachFdo(
   }
 
 /**
+ * Request a PDO for the AoE bus from the WinVBlock bus.
+ *
+ * @ret NTSTATUS        The status of the operation.
+ */
+static NTSTATUS AoeBusCreatePdo_(void) {
+    PDEVICE_OBJECT wv_fdo;
+    KEVENT signal;
+    PIRP irp;
+    IO_STATUS_BLOCK io_status = {0};
+    NTSTATUS status;
+
+    wv_fdo = WvBusFdo();
+    if (!wv_fdo)
+      return STATUS_NO_SUCH_DEVICE;
+
+    /* Prepare the request. */
+    KeInitializeEvent(&signal, SynchronizationEvent, FALSE);
+    irp = IoBuildDeviceIoControlRequest(
+        IOCTL_WV_DUMMY,
+        WvBusFdo(),
+        (PVOID) &AoeBusDummyIds_,
+        sizeof AoeBusDummyIds_,
+        NULL,
+        0,
+        FALSE,
+        &signal,
+        &io_status
+      );
+    if (!irp)
+      return STATUS_INSUFFICIENT_RESOURCES;
+
+    status = IoCallDriver(wv_fdo, irp);
+    if (status == STATUS_PENDING) {
+        KeWaitForSingleObject(
+            &signal,
+            Executive,
+            KernelMode,
+            FALSE,
+            NULL
+          );
+        status = io_status.Status;
+      }
+    return status;
+  }
+
+/**
  * Create the AoE bus PDO and FDO.
  *
  * @ret NTSTATUS        The status of the operation.
@@ -309,14 +348,9 @@ NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
         return STATUS_UNSUCCESSFUL;
       }
     /* Create the PDO for the sub-bus on the WinVBlock bus. */
-    status = WvDummyAdd(
-        &AoeBusDummyIds,
-        FILE_DEVICE_CONTROLLER,
-        FILE_DEVICE_SECURE_OPEN,
-        &AoeBusPdo
-      );
+    status = AoeBusCreatePdo_();
     if (!NT_SUCCESS(status)) {
-        DBG("Couldn't add AoE bus to WinVBlock bus!\n");
+        DBG("Couldn't create AoE bus PDO!\n");
         goto err_pdo;
       }
     /* Initialize the bus. */
@@ -362,7 +396,7 @@ NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
     IoDeleteDevice(AoeBusMain.Fdo);
     err_fdo:
 
-    WvDummyRemove(AoeBusPdo);
+    /* TODO: Remove dummy PDO. */
     AoeBusPdo = NULL;
     err_pdo:
 

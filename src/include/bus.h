@@ -31,17 +31,6 @@
 struct WVL_BUS_T;
 
 /**
- * A bus thread routine.
- *
- * @v bus       The bus to be used in the thread routine.
- *
- * If you implement your own bus thread routine, you should call
- * WvlBusProcessWorkItems() within its loop.
- */
-typedef VOID STDCALL WVL_F_BUS_THREAD(IN struct WVL_BUS_T *);
-typedef WVL_F_BUS_THREAD * WVL_FP_BUS_THREAD;
-
-/**
  * A bus PnP routine.
  *
  * @v bus               The bus to receive the PnP IRP.
@@ -68,19 +57,14 @@ typedef struct WVL_BUS_T {
     PDEVICE_OBJECT LowerDeviceObject;
     PDEVICE_OBJECT Pdo;
     PDEVICE_OBJECT Fdo;
-    UINT32 Children;
-    WVL_FP_BUS_THREAD Thread;
-    KEVENT ThreadSignal;
-    BOOLEAN Stop;
     WVL_E_BUS_STATE OldState;
     WVL_E_BUS_STATE State;
     WVL_FP_BUS_PNP QueryDevText;
     struct {
         LIST_ENTRY Nodes;
+        KSPIN_LOCK NodeLock;
+        KIRQL NodeLockIrql;
         USHORT NodeCount;
-        LIST_ENTRY WorkItems;
-        KSPIN_LOCK WorkItemsLock;
-        PETHREAD Thread;
       } BusPrivate_;
   } WVL_S_BUS_T, * WVL_SP_BUS_T;
 
@@ -96,32 +80,11 @@ typedef struct WVL_BUS_NODE {
     BOOLEAN Linked;
   } WVL_S_BUS_NODE, * WVL_SP_BUS_NODE;
 
-/**
- * A custom work-item function.
- *
- * @v context           Function-specific data.
- *
- * If a driver needs to enqueue a work item which should execute in the
- * context of the bus' controlling thread (this is the thread which calls
- * WvlBusProcessWorkItems()), then this is the function prototype to be
- * used.
- */
-typedef VOID STDCALL WVL_F_BUS_WORK_ITEM(PVOID);
-typedef WVL_F_BUS_WORK_ITEM * WVL_FP_BUS_WORK_ITEM;
-
-typedef struct WVL_BUS_CUSTOM_WORK_ITEM {
-    WVL_FP_BUS_WORK_ITEM Func;
-    PVOID Context;
-  } WVL_S_BUS_CUSTOM_WORK_ITEM, * WVL_SP_BUS_CUSTOM_WORK_ITEM;
-
 /* Exports. */
 extern WVL_M_LIB VOID WvlBusInit(WVL_SP_BUS_T);
-extern WVL_M_LIB VOID WvlBusProcessWorkItems(WVL_SP_BUS_T);
-extern WVL_M_LIB VOID WvlBusCancelWorkItems(WVL_SP_BUS_T);
-extern WVL_M_LIB NTSTATUS WvlBusStartThread(
-    IN WVL_SP_BUS_T,
-    OUT PETHREAD *
-  );
+extern WVL_M_LIB VOID STDCALL WvlBusClear(IN WVL_SP_BUS_T);
+extern WVL_M_LIB VOID WvlBusLock(IN WVL_SP_BUS_T);
+extern WVL_M_LIB VOID WvlBusUnlock(IN WVL_SP_BUS_T);
 extern WVL_M_LIB BOOLEAN STDCALL WvlBusInitNode(
     OUT WVL_SP_BUS_NODE,
     IN PDEVICE_OBJECT
@@ -131,25 +94,6 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlBusAddNode(
     WVL_SP_BUS_NODE
   );
 extern WVL_M_LIB NTSTATUS STDCALL WvlBusRemoveNode(WVL_SP_BUS_NODE);
-extern WVL_M_LIB NTSTATUS STDCALL WvlBusEnqueueIrp(WVL_SP_BUS_T, PIRP);
-extern WVL_M_LIB NTSTATUS STDCALL WvlBusEnqueueCustomWorkItem(
-    WVL_SP_BUS_T,
-    WVL_SP_BUS_CUSTOM_WORK_ITEM
-  );
-extern WVL_M_LIB NTSTATUS STDCALL WvlBusSysCtl(
-    IN WVL_SP_BUS_T,
-    IN PIRP
-  );
-extern WVL_M_LIB NTSTATUS STDCALL WvlBusPower(
-    IN WVL_SP_BUS_T,
-    IN PIRP
-  );
-/* IRP_MJ_PNP dispatcher in bus/pnp.c */
-extern WVL_M_LIB NTSTATUS STDCALL WvlBusPnpIrp(
-    IN WVL_SP_BUS_T,
-    IN PIRP,
-    IN UCHAR
-  );
 extern WVL_M_LIB UINT32 STDCALL WvlBusGetNodeNum(
     IN WVL_SP_BUS_NODE
   );
@@ -163,7 +107,19 @@ extern WVL_M_LIB PDEVICE_OBJECT STDCALL WvlBusGetNodePdo(
 extern WVL_M_LIB UINT32 STDCALL WvlBusGetNodeCount(
     WVL_SP_BUS_T
   );
-extern WVL_M_LIB BOOLEAN STDCALL WvlBusRegisterOwnerThread(IN WVL_SP_BUS_T);
-extern WVL_M_LIB BOOLEAN STDCALL WvlBusNotOwned(IN WVL_SP_BUS_T);
+/* IRP-related. */
+extern WVL_M_LIB NTSTATUS STDCALL WvlBusSysCtl(
+    IN WVL_SP_BUS_T,
+    IN PIRP
+  );
+extern WVL_M_LIB NTSTATUS STDCALL WvlBusPower(
+    IN WVL_SP_BUS_T,
+    IN PIRP
+  );
+/* IRP_MJ_PNP dispatcher in libbus/pnp.c */
+extern WVL_M_LIB NTSTATUS STDCALL WvlBusPnp(
+    IN WVL_SP_BUS_T,
+    IN PIRP
+  );
 
 #endif  /* WVL_M_BUS_H_ */

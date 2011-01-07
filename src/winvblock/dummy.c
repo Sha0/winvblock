@@ -42,7 +42,6 @@ extern NTSTATUS STDCALL WvBusRemoveDev(IN WV_SP_DEV_T);
 /* Forward declarations. */
 static NTSTATUS STDCALL WvDummyIds(IN PIRP, IN WV_SP_DUMMY_IDS);
 static WV_F_DEV_PNP WvDummyPnp;
-static WVL_F_BUS_WORK_ITEM WvDummyAdd_;
 
 /* Dummy PnP IRP handler. */
 static NTSTATUS STDCALL WvDummyPnp(
@@ -80,17 +79,18 @@ typedef struct WV_ADD_DUMMY {
   } WV_S_ADD_DUMMY, * WV_SP_ADD_DUMMY;
 
 /**
- * Add a dummy PDO child node in the context of the bus' thread.  Internal.
+ * Produce a dummy PDO node on the main bus.
  *
- * @v context           Points to the WV_S_ADD_DUMMY to process.
+ * @v DummyIds                  The PnP IDs for the dummy.  Also includes
+ *                              the device type and characteristics.
+ * @v Pdo                       Filled with a pointer to the created PDO.
+ *                              This parameter is optional.
+ * @ret NTSTATUS                The status of the operation.
  */
-static VOID STDCALL WvDummyAdd_(PVOID context) {
-    WV_SP_ADD_DUMMY dummy_context = context;
-    NTSTATUS status;
-    PDEVICE_OBJECT pdo = NULL;
-    WV_SP_DEV_T dev;
-    SIZE_T dummy_ids_size;
-    WV_SP_DUMMY_IDS dummy_ids;
+static NTSTATUS STDCALL WvDummyAdd(
+    IN WV_SP_DUMMY_IDS DummyIds,
+    IN PDEVICE_OBJECT * Pdo
+  ) {
     static WV_S_DEV_IRP_MJ irp_mj = {
         (WV_FP_DEV_DISPATCH) 0,
         (WV_FP_DEV_DISPATCH) 0,
@@ -98,55 +98,51 @@ static VOID STDCALL WvDummyAdd_(PVOID context) {
         (WV_FP_DEV_SCSI) 0,
         WvDummyPnp,
       };
+    NTSTATUS status;
+    PDEVICE_OBJECT pdo = NULL;
+    WV_SP_DEV_T dev;
+    WV_SP_DUMMY_IDS new_dummy_ids;
 
     status = IoCreateDevice(
         WvDriverObj,
         sizeof (WV_S_DEV_EXT),
         NULL,
-        dummy_context->DevType,
-        dummy_context->DevCharacteristics,
+        DummyIds->DevType,
+        DummyIds->DevCharacteristics,
         FALSE,
         &pdo
       );
     if (!NT_SUCCESS(status) || !pdo) {
         DBG("Couldn't create dummy device.\n");
-        dummy_context->Status = STATUS_INSUFFICIENT_RESOURCES;
+        status = STATUS_INSUFFICIENT_RESOURCES;
         goto err_create_pdo;
       }
 
     dev = wv_malloc(sizeof *dev);
     if (!dev) {
         DBG("Couldn't allocate dummy device.\n");
-        dummy_context->Status = STATUS_INSUFFICIENT_RESOURCES;
+        status = STATUS_INSUFFICIENT_RESOURCES;
         goto err_dev;
       }
 
-    dummy_ids_size =
-      sizeof *dummy_ids +
-      dummy_context->DummyIds->Len * sizeof dummy_ids->Text[0] -
-      sizeof dummy_ids->Text[0];        /* The struct hack uses a WCHAR[1]. */
-    dummy_ids = wv_malloc(dummy_ids_size);
-    if (!dummy_ids) {
+    new_dummy_ids = wv_malloc(DummyIds->Len);
+    if (!new_dummy_ids) {
         DBG("Couldn't allocate dummy IDs.\n");
-        dummy_context->Status = STATUS_INSUFFICIENT_RESOURCES;
+        status = STATUS_INSUFFICIENT_RESOURCES;
         goto err_dummy_ids;
       }
-    /* Copy the IDs offsets and lengths. */
-    RtlCopyMemory(dummy_ids, dummy_context->DummyIds, sizeof *dummy_ids);
-    /* Copy the text of the IDs. */
-    RtlCopyMemory(
-        &dummy_ids->Text,
-        dummy_context->DummyIds->Ids,
-        dummy_context->DummyIds->Len * sizeof dummy_ids->Text[0]
-      );
-    /* Point to the copy of the text. */
-    dummy_ids->Ids = dummy_ids->Text;
+
+    /* Copy the IDs' offsets and lengths. */
+    RtlCopyMemory(new_dummy_ids, DummyIds, DummyIds->Len);
 
     /* Ok! */
     WvDevInit(dev);
     dev->IrpMj = &irp_mj;
-    dev->ext = dummy_ids;       /* TODO: Implement a dummy free.  Leaking. */
+    dev->ext = new_dummy_ids;   /* TODO: Implement a dummy free.  Leaking. */
     dev->Self = pdo;
+    /* Optionally fill the caller's PDO pointer. */
+    if (Pdo)
+      *Pdo = pdo;
     WvDevForDevObj(pdo, dev);
     WvlBusInitNode(&dev->BusNode, pdo);
     /* Associate the parent bus. */
@@ -156,12 +152,9 @@ static VOID STDCALL WvDummyAdd_(PVOID context) {
     dev->DevNum = WvlBusGetNodeNum(&dev->BusNode);
     pdo->Flags &= ~DO_DEVICE_INITIALIZING;
 
-    dummy_context->Status = STATUS_SUCCESS;
-    dummy_context->Pdo = pdo;
-    KeSetEvent(dummy_context->Event, 0, FALSE);
-    return;
+    return STATUS_SUCCESS;
 
-    wv_free(dummy_ids);
+    wv_free(new_dummy_ids);
     err_dummy_ids:
 
     wv_free(dev);
@@ -170,64 +163,7 @@ static VOID STDCALL WvDummyAdd_(PVOID context) {
     IoDeleteDevice(pdo);
     err_create_pdo:
 
-    KeSetEvent(dummy_context->Event, 0, FALSE);
-    return;
-  }
-
-/**
- * Produce a dummy PDO node on the main bus.
- *
- * @v DummyIds                  The PnP IDs for the dummy.
- * @v DevType                   The type for the dummy device.
- * @v DevCharacteristics        The dummy device characteristics.
- * @v Pdo                       Filled with a pointer to the created PDO.
- * @ret NTSTATUS                The status of the operation.
- */
-WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
-    IN const WV_S_DUMMY_IDS * DummyIds,
-    IN DEVICE_TYPE DevType,
-    IN ULONG DevCharacteristics,
-    OUT PDEVICE_OBJECT * Pdo
-  ) {
-    KEVENT event;
-    WV_S_ADD_DUMMY context = {
-        DummyIds,
-        DevType,
-        DevCharacteristics,
-        &event,
-        STATUS_UNSUCCESSFUL,
-        NULL
-      };
-    WVL_S_BUS_CUSTOM_WORK_ITEM work_item = {
-        WvDummyAdd_,
-        &context
-      };
-    NTSTATUS status;
-
-    if (!DummyIds)
-      return STATUS_INVALID_PARAMETER;
-
-    if (!WvBus.Fdo)
-      return STATUS_NO_SUCH_DEVICE;
-
-    KeInitializeEvent(&event, SynchronizationEvent, FALSE);
-
-    status = WvlBusEnqueueCustomWorkItem(&WvBus, &work_item);
-    if (!NT_SUCCESS(status))
-      return status;
-
-    /* Wait for WvDummyAdd_() to complete. */
-    KeWaitForSingleObject(
-        &event,
-        Executive,
-        KernelMode,
-        FALSE,
-        NULL
-      );
-
-    if (context.Pdo)
-      *Pdo = context.Pdo;
-    return context.Status;
+    return status;
   }
 
 /**
@@ -243,6 +179,28 @@ WVL_M_LIB NTSTATUS STDCALL WvDummyRemove(IN PDEVICE_OBJECT Pdo) {
   }
 
 /**
+ * Handle a dummy IOCTL for creating a dummy PDO.
+ *
+ * @v Irp               An IRP with an associated buffer containing
+ *                      WV_S_DUMMY_IDS data.
+ * @ret NTSTATUS        The status of the operation.
+ */
+NTSTATUS STDCALL WvDummyIoctl(IN PIRP Irp) {
+    WV_SP_DUMMY_IDS dummy_ids = Irp->AssociatedIrp.SystemBuffer;
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(Irp);
+
+    if (
+        io_stack_loc->Parameters.DeviceIoControl.InputBufferLength <
+        sizeof *dummy_ids
+      ) {
+        DBG("Dummy IDs too small in IRP %p.\n", Irp);
+        return WvlIrpComplete(Irp, 0, STATUS_INVALID_PARAMETER);
+      }
+
+    return WvlIrpComplete(Irp, 0, WvDummyAdd(dummy_ids, NULL));
+  }
+
+/**
  * Handle a PnP ID query with a WV_S_DUMMY_IDS object.
  *
  * @v Irp               The PnP ID query IRP to handle.
@@ -255,28 +213,31 @@ static NTSTATUS STDCALL WvDummyIds(
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(Irp);
     BUS_QUERY_ID_TYPE query_type = io_stack_loc->Parameters.QueryId.IdType;
+    const CHAR * start;
     const WCHAR * ids;
     UINT32 len;
     NTSTATUS status;
 
+    start = (const CHAR *) DummyIds + DummyIds->Offset;
+    ids = (const WCHAR *) start;
     switch (query_type) {
         case BusQueryDeviceID:
-          ids = DummyIds->Ids + DummyIds->DevOffset;
+          ids += DummyIds->DevOffset;
           len = DummyIds->DevLen;
           break;
 
         case BusQueryInstanceID:
-          ids = DummyIds->Ids + DummyIds->InstanceOffset;
+          ids += DummyIds->InstanceOffset;
           len = DummyIds->InstanceLen;
           break;
 
         case BusQueryHardwareIDs:
-          ids = DummyIds->Ids + DummyIds->HardwareOffset;
+          ids += DummyIds->HardwareOffset;
           len = DummyIds->HardwareLen;
           break;
 
         case BusQueryCompatibleIDs:
-          ids = DummyIds->Ids + DummyIds->CompatOffset;
+          ids += DummyIds->CompatOffset;
           len = DummyIds->CompatLen;
           break;
 

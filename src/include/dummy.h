@@ -25,6 +25,14 @@
  * Dummy device specifics.
  */
 
+#  define IOCTL_WV_DUMMY    \
+CTL_CODE(                   \
+    FILE_DEVICE_CONTROLLER, \
+    0x806,                  \
+    METHOD_IN_DIRECT,       \
+    FILE_WRITE_DATA         \
+  )
+
 /* PnP IDs for a dummy device. */
 typedef struct WV_DUMMY_IDS {
     UINT32 DevOffset;
@@ -36,72 +44,93 @@ typedef struct WV_DUMMY_IDS {
     UINT32 CompatOffset;
     UINT32 CompatLen;
     UINT32 Len;
-    const WCHAR * Ids;
-    WCHAR Text[1];
+    UINT32 Offset;
+    DEVICE_TYPE DevType;
+    ULONG DevCharacteristics;
   } WV_S_DUMMY_IDS, * WV_SP_DUMMY_IDS;
 
 /* Macro support for dummy ID generation. */
-#define WV_M_DUMMY_IDS_X_ENUM(prefix_, name_, literal_)           \
+#define WV_M_DUMMY_IDS_ENUM(prefix_, name_, literal_)             \
   prefix_ ## name_ ## Offset_,                                    \
   prefix_ ## name_ ## Len_ = sizeof (literal_) / sizeof (WCHAR),  \
   prefix_ ## name_ ## End_ =                                      \
     prefix_ ## name_ ## Offset_ + prefix_ ## name_ ## Len_ - 1,
 
-#define WV_M_DUMMY_IDS_X_LITERALS(prefix_, name_, literal_) \
-  literal_ L"\0"
+#define WV_M_DUMMY_IDS_LITERALS(dev_id_, inst_id_, hard_id_, compat_id_) \
+  dev_id_ L"\0" inst_id_ L"\0" hard_id_ L"\0" compat_id_
 
-#define WV_M_DUMMY_IDS_X_FILL(prefix_, name_, literal_) \
-  prefix_ ## name_ ## Offset_,                          \
+#define WV_M_DUMMY_IDS_FILL(prefix_, name_) \
+  prefix_ ## name_ ## Offset_,              \
   prefix_ ## name_ ## Len_,
 
 /**
  * Generate a static const WV_S_DUMMY_IDS object.
  *
- * @v DummyIds          The name of the desired object.  Also used as prefix.
- * @v XMacro            The x-macro with the ID text.
+ * @v Qualifiers        Such as 'static const', perhaps.
+ * @v Name              The name of the desired object.  Also used as prefix.
+ * @v DevId             The device ID.
+ * @v InstanceId        The instance ID.
+ * @v HardwareId        The hardware ID(s).
+ * @v CompatId          Compatible ID(s).
+ * @v DevType           The device type for the dummy PDO.
+ * @v DevCharacts       The device characteristics for the dummy PDO.
  *
  * This macro will produce the following:
  *   enum values:
- *     [DummyIds]DevOffset_
- *     [DummyIds]DevLen_
- *     [DummyIds]DevEnd_
- *     [DummyIds]InstanceOffset_
- *     [DummyIds]InstanceLen_
- *     [DummyIds]InstanceEnd_
- *     [DummyIds]HardwareOffset_
- *     [DummyIds]HardwareLen_
- *     [DummyIds]HardwareEnd_
- *     [DummyIds]CompatOffset_
- *     [DummyIds]CompatLen_
- *     [DummyIds]CompatEnd_
- *     [DummyIds]Len_
- *   WCHAR[]:
- *     [DummyIds]String_
- *   static const WV_S_DUMMY_IDS:
- *     [DummyIds]
+ *     [Name]DevOffset_
+ *     [Name]DevLen_
+ *     [Name]DevEnd_
+ *     [Name]InstanceOffset_
+ *     [Name]InstanceLen_
+ *     [Name]InstanceEnd_
+ *     [Name]HardwareOffset_
+ *     [Name]HardwareLen_
+ *     [Name]HardwareEnd_
+ *     [Name]CompatOffset_
+ *     [Name]CompatLen_
+ *     [Name]CompatEnd_
+ *     [Name]Len_
+ *   [Qualifiers] WV_S_DUMMY_IDS:
+ *     [Name]
  */
-#define WV_M_DUMMY_ID_GEN(DummyIds, XMacro)     \
-                                                \
-enum {                                          \
-    XMacro(WV_M_DUMMY_IDS_X_ENUM, DummyIds)     \
-    DummyIds ## Len_                            \
-  };                                            \
-                                                \
-static const WCHAR DummyIds ## String_[] =      \
-  XMacro(WV_M_DUMMY_IDS_X_LITERALS, DummyIds);  \
-                                                \
-static const WV_S_DUMMY_IDS DummyIds = {        \
-    XMacro(WV_M_DUMMY_IDS_X_FILL, DummyIds)     \
-    DummyIds ## Len_,                           \
-    DummyIds ## String_                         \
+#define WV_M_DUMMY_ID_GEN(                                            \
+    Qualifiers,                                                       \
+    Name,                                                             \
+    DevId,                                                            \
+    InstanceId,                                                       \
+    HardwareId,                                                       \
+    CompatId,                                                         \
+    DevType,                                                          \
+    DevCharacts                                                       \
+  )                                                                   \
+                                                                      \
+enum {                                                                \
+    WV_M_DUMMY_IDS_ENUM(Name, Dev, DevId)                             \
+    WV_M_DUMMY_IDS_ENUM(Name, Instance, InstanceId)                   \
+    WV_M_DUMMY_IDS_ENUM(Name, Hardware, HardwareId)                   \
+    WV_M_DUMMY_IDS_ENUM(Name, Compat, CompatId)                       \
+    Name ## Len_                                                      \
+  };                                                                  \
+                                                                      \
+struct Name ## Struct_ {                                              \
+    WV_S_DUMMY_IDS DummyIds;                                          \
+    WCHAR Ids[Name ## Len_];                                          \
+  };                                                                  \
+Qualifiers struct Name ## Struct_ Name = {                            \
+    {                                                                 \
+        WV_M_DUMMY_IDS_FILL(Name, Dev)                                \
+        WV_M_DUMMY_IDS_FILL(Name, Instance)                           \
+        WV_M_DUMMY_IDS_FILL(Name, Hardware)                           \
+        WV_M_DUMMY_IDS_FILL(Name, Compat)                             \
+        sizeof (struct Name ## Struct_),                              \
+        FIELD_OFFSET(struct Name ## Struct_, Ids),                    \
+        DevType,                                                      \
+        DevCharacts,                                                  \
+      },                                                              \
+    WV_M_DUMMY_IDS_LITERALS(DevId, InstanceId, HardwareId, CompatId), \
   }
 
-extern WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
-    IN const WV_S_DUMMY_IDS *,
-    IN DEVICE_TYPE,
-    IN ULONG,
-    OUT PDEVICE_OBJECT *
-  );
 extern WVL_M_LIB NTSTATUS STDCALL WvDummyRemove(IN PDEVICE_OBJECT);
+extern NTSTATUS STDCALL WvDummyIoctl(IN PIRP);
 
 #endif	/* WV_M_DUMMY_H_ */
