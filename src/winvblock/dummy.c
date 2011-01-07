@@ -49,8 +49,6 @@ static NTSTATUS STDCALL WvDummyPnp(
     IN PIRP irp,
     IN UCHAR code
   ) {
-    NTSTATUS status;
-
     switch (code) {
         case IRP_MN_QUERY_ID:
           /* The WV_S_DEV_T extension points to the dummy IDs. */
@@ -65,7 +63,12 @@ static NTSTATUS STDCALL WvDummyPnp(
           return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
 
         default:
-          return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+          /* Return whatever upper drivers in the stack yielded. */
+          return WvlIrpComplete(
+              irp,
+              irp->IoStatus.Information,
+              irp->IoStatus.Status
+            );
       }
   }
 
