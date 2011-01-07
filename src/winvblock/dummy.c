@@ -174,8 +174,11 @@ static NTSTATUS STDCALL WvDummyAdd(
  *
  * It might actually be better to handle a PnP remove IOCTL.
  */
-WVL_M_LIB NTSTATUS STDCALL WvDummyRemove(IN PDEVICE_OBJECT Pdo) {    
-    return WvBusRemoveDev(WvDevFromDevObj(Pdo));
+WVL_M_LIB NTSTATUS STDCALL WvDummyRemove(IN PDEVICE_OBJECT Pdo) {
+    /* Sanity check. */
+    if (Pdo->DriverObject == WvDriverObj)
+      return WvBusRemoveDev(WvDevFromDevObj(Pdo));
+    return STATUS_INVALID_PARAMETER;
   }
 
 /**
