@@ -26,6 +26,8 @@
 #include <ntddk.h>
 
 #include "portable.h"
+#include "winvblock.h"
+#include "debug.h"
 
 /** Exports. */
 NTSTATUS STDCALL HttpdiskBusEstablish(void);
@@ -62,6 +64,7 @@ NTSTATUS STDCALL HttpdiskBusEstablish(void) {
     if (!NT_SUCCESS(status))
       goto err_pdo;
 
+    DBG("Bus established.\n");
     return STATUS_SUCCESS;
 
     HttpdiskBusDeleteFdo_();
@@ -70,6 +73,7 @@ NTSTATUS STDCALL HttpdiskBusEstablish(void) {
     /* TODO: Remove the PDO. */
     err_pdo:
 
+    DBG("Bus not established.\n");
     return status;
   }
 
@@ -85,13 +89,16 @@ NTSTATUS HttpdiskBusAttach(
   }
 
 static NTSTATUS STDCALL HttpdiskBusCreateFdo_(void) {
+    DBG("FDO created: %p.\n", NULL);
     return STATUS_SUCCESS;
   }
 
 static NTSTATUS STDCALL HttpdiskBusCreatePdo_(void) {
+    DBG("PDO created.\n");
     return STATUS_SUCCESS;
   }
 
 static VOID HttpdiskBusDeleteFdo_(void) {
+    DBG("FDO deleted.\n");
     return;
   }
