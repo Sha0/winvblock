@@ -148,31 +148,35 @@ static UINT32 STDCALL query_id(
       }
   }
 
+/* Attach a file as a disk, based on an IRP. */
 NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
-    ANSI_STRING file_path1;
-    PUCHAR buf = irp->AssociatedIrp.SystemBuffer;
-    WV_SP_MOUNT_DISK params = (WV_SP_MOUNT_DISK) buf;
-    UNICODE_STRING file_path2;
-    OBJECT_ATTRIBUTES obj_attrs;
+    ANSI_STRING ansi_path;
+    PCHAR buf = irp->AssociatedIrp.SystemBuffer;
+    UNICODE_STRING file_path;
     NTSTATUS status;
+    OBJECT_ATTRIBUTES obj_attrs;
     HANDLE file = NULL;
     IO_STATUS_BLOCK io_status;
+    WV_SP_MOUNT_DISK params = (WV_SP_MOUNT_DISK) buf;
     FILE_STANDARD_INFORMATION info;
-    WV_SP_FILEDISK_T filedisk_ptr;
+    WV_SP_FILEDISK_T filedisk;
+    WVL_E_DISK_MEDIA_TYPE media_type;
+    UINT32 sector_size, hash;
+    ULONGLONG lba_size;
 
-    filedisk_ptr = WvFilediskCreate();
-    if (filedisk_ptr == NULL) {
+    filedisk = WvFilediskCreate();
+    if (filedisk == NULL) {
         DBG("Could not create file-backed disk!\n");
         return STATUS_INSUFFICIENT_RESOURCES;
       }
 
-    RtlInitAnsiString(&file_path1, (char *) (buf + sizeof (WV_S_MOUNT_DISK)));
-    status = RtlAnsiStringToUnicodeString(&file_path2, &file_path1, TRUE);
+    RtlInitAnsiString(&ansi_path, buf + sizeof (WV_S_MOUNT_DISK));
+    status = RtlAnsiStringToUnicodeString(&file_path, &ansi_path, TRUE);
     if (!NT_SUCCESS(status))
       goto err_ansi_to_unicode;
     InitializeObjectAttributes(
         &obj_attrs,
-        &file_path2,
+        &file_path,
         OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE,
         NULL,
         NULL
@@ -193,60 +197,66 @@ NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
         NULL,
         0
       );
-    RtlFreeUnicodeString(&file_path2);
+    RtlFreeUnicodeString(&file_path);
     if (!NT_SUCCESS(status))
       goto err_file_open;
 
-    filedisk_ptr->file = file;
-
     switch (params->type) {
         case 'f':
-          filedisk_ptr->disk->Media = WvlDiskMediaTypeFloppy;
-          filedisk_ptr->disk->SectorSize = 512;
+          media_type = WvlDiskMediaTypeFloppy;
+          sector_size = 512;
           break;
 
         case 'c':
-          filedisk_ptr->disk->Media = WvlDiskMediaTypeOptical;
-          filedisk_ptr->disk->SectorSize = 2048;
+          media_type = WvlDiskMediaTypeOptical;
+          sector_size = 2048;
           break;
 
         default:
-          filedisk_ptr->disk->Media = WvlDiskMediaTypeHard;
-          filedisk_ptr->disk->SectorSize = 512;
+          media_type = WvlDiskMediaTypeHard;
+          sector_size = 512;
           break;
       }
-    DBG("File-backed disk is type: %d\n", filedisk_ptr->disk->Media);
+    DBG("Media type: %d\n", media_type);
+
     /* Determine the disk's size. */
     status = ZwQueryInformationFile(
         file,
         &io_status,
         &info,
-        sizeof (info),
+        sizeof info,
         FileStandardInformation
       );
     if (!NT_SUCCESS(status))
       goto err_query_info;
+    lba_size = info.EndOfFile.QuadPart / sector_size;
 
-    filedisk_ptr->disk->LBADiskSize =
-      info.EndOfFile.QuadPart / filedisk_ptr->disk->SectorSize;
-    filedisk_ptr->disk->Cylinders = params->cylinders;
-    filedisk_ptr->disk->Heads = params->heads;
-    filedisk_ptr->disk->Sectors = params->sectors;
     /*
      * A really stupid "hash".  RtlHashUnicodeString() would have been
      * good, but is only available >= Windows XP.
      */
-    filedisk_ptr->hash = (UINT32) filedisk_ptr->disk->LBADiskSize;
-    {   char * path_iterator = file_path1.Buffer;
+    hash = (UINT32) lba_size;
+    {   PCHAR path_iterator = ansi_path.Buffer;
     
         while (*path_iterator)
-          filedisk_ptr->hash += *path_iterator++;
+          hash += *path_iterator++;
       }
     /* Add the filedisk to the bus. */
-    if (!WvBusAddDev(filedisk_ptr->disk->Dev)) {
+    if (!WvBusAddDev(filedisk->disk->Dev)) {
         status = STATUS_UNSUCCESSFUL;
         goto err_add_child;
       }
+
+    /* Set filedisk parameters. */
+    filedisk->disk->Media = media_type;
+    filedisk->disk->SectorSize = sector_size;
+    filedisk->disk->LBADiskSize = lba_size;
+    filedisk->disk->Cylinders = params->cylinders;
+    filedisk->disk->Heads = params->heads;
+    filedisk->disk->Sectors = params->sectors;
+    filedisk->file = file;
+    filedisk->hash = hash;
+
     return STATUS_SUCCESS;
 
     err_add_child:
@@ -258,7 +268,7 @@ NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
 
     err_ansi_to_unicode:
 
-    free_filedisk(filedisk_ptr->disk->Dev);
+    free_filedisk(filedisk->disk->Dev);
     return status;
   }
 
