@@ -38,14 +38,9 @@
 #include "debug.h"
 
 #ifndef _MSC_VER
-static long long
-__divdi3 (
-  long long u,
-  long long v
- )
-{
-  return u / v;
-}
+static long long __divdi3(long long u, long long v) {
+    return u / v;
+  }
 #endif
 
 /* IRP_MJ_DEVICE_CONTROL dispatcher from disk/dev_ctl.c */
@@ -56,59 +51,67 @@ extern WV_F_DEV_SCSI disk_scsi__dispatch;
 extern WV_F_DEV_PNP disk_pnp__dispatch;
 
 /* Forward declarations. */
-static WV_F_DEV_FREE free_disk;
-static WV_F_DEV_DISPATCH disk__power_;
-static WV_F_DEV_DISPATCH disk__sys_ctl_;
+static WV_F_DEV_FREE WvDiskDevFree_;
+static WV_F_DEV_DISPATCH WvDiskIrpPower_;
+static WV_F_DEV_DISPATCH WvDiskIrpSysCtl_;
 static WV_F_DISK_INIT WvDiskDefaultInit_;
 static WV_F_DISK_CLOSE WvDiskDefaultClose_;
 
 /* Globals. */
-static LIST_ENTRY disk_list;
-static KSPIN_LOCK disk_list_lock;
+static LIST_ENTRY WvDiskList_;
+static KSPIN_LOCK WvDiskListLock_;
 BOOLEAN WvDiskIsRemovable[WvlDiskMediaTypes] = { TRUE, FALSE, TRUE };
 PWCHAR WvDiskCompatIds[WvlDiskMediaTypes] = {
     L"GenSFloppy",
     L"GenDisk",
     L"GenCdRom"
   };
-WV_S_DEV_IRP_MJ disk__irp_mj_ = {
-    disk__power_,
-    disk__sys_ctl_,
+/* Device IRP major function dispatch table. */
+WV_S_DEV_IRP_MJ WvDiskIrpMj_ = {
+    WvDiskIrpPower_,
+    WvDiskIrpSysCtl_,
     disk_dev_ctl__dispatch,
     disk_scsi__dispatch,
     disk_pnp__dispatch,
   };
 
-static UINT32 default_max_xfer_len(IN WV_SP_DISK_T disk_ptr) {
+static UINT32 WvDiskDefaultMaxXferLen_(IN WV_SP_DISK_T disk) {
     return 1024 * 1024;
   }
 
 /* Initialize a disk. */
-static BOOLEAN STDCALL disk__init_(IN WV_SP_DEV_T dev) {
-    WV_SP_DISK_T disk_ptr = disk__get_ptr(dev);
-    return disk_ptr->disk_ops.Init(disk_ptr);
-  }
+static BOOLEAN STDCALL WvDiskDevInit_(IN WV_SP_DEV_T dev) {
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
 
-static BOOLEAN STDCALL WvDiskDefaultInit_(IN WV_SP_DISK_T disk_ptr) {
+    /* Use the disk operation, if there is one. */
+    if (disk->disk_ops.Init)
+      return disk->disk_ops.Init(disk);
     return TRUE;
   }
 
-static VOID STDCALL disk__close_(IN WV_SP_DEV_T dev_ptr) {
-    WV_SP_DISK_T disk_ptr = disk__get_ptr(dev_ptr);
-    disk_ptr->disk_ops.Close(disk_ptr);
+static BOOLEAN STDCALL WvDiskDefaultInit_(IN WV_SP_DISK_T disk) {
+    return TRUE;
+  }
+
+static VOID STDCALL WvDiskDevClose_(IN WV_SP_DEV_T dev) {
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
+
+    /* Use the disk operation, if there is one. */
+    if (disk->disk_ops.Close)
+      disk->disk_ops.Close(disk);
     return;
   }
 
-static VOID STDCALL WvDiskDefaultClose_(IN WV_SP_DISK_T disk_ptr) {
+static VOID STDCALL WvDiskDefaultClose_(IN WV_SP_DISK_T disk) {
     return;
   }
 
-static NTSTATUS STDCALL disk__power_(IN WV_SP_DEV_T dev, IN PIRP irp) {
+static NTSTATUS STDCALL WvDiskIrpPower_(IN WV_SP_DEV_T dev, IN PIRP irp) {
     PoStartNextPowerIrp(irp);
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
-static NTSTATUS STDCALL disk__sys_ctl_(IN WV_SP_DEV_T dev, IN PIRP irp) {
+static NTSTATUS STDCALL WvDiskIrpSysCtl_(IN WV_SP_DEV_T dev, IN PIRP irp) {
     return WvlIrpComplete(irp, 0, irp->IoStatus.Status);
   }
 
@@ -120,28 +123,27 @@ static NTSTATUS STDCALL disk__sys_ctl_(IN WV_SP_DEV_T dev, IN PIRP irp) {
  *
  * Returns a Physical Device Object pointer on success, NULL for failure.
  */
-static PDEVICE_OBJECT STDCALL create_pdo(IN WV_SP_DEV_T dev_ptr) {
-    /**
-     * @v disk_ptr          Used for pointing to disk details
-     * @v status            Status of last operation
-     * @v dev_obj_ptr       The new node's physical device object (PDO)
-     * @v new_ext_size      The extension space size
-     * @v disk_types[]      Floppy, hard disk, optical disc specifics
-     * @v characteristics[] Floppy, hard disk, optical disc specifics
-     */
+static PDEVICE_OBJECT STDCALL WvDiskCreatePdo_(IN WV_SP_DEV_T dev_ptr) {
+    /* Used for pointing to disk details. */
     WV_SP_DISK_T disk_ptr;
+    /* Status of the last operation. */
     NTSTATUS status;
+    /* The new node's physical device object (PDO). */
     PDEVICE_OBJECT dev_obj_ptr;
+    /* Floppy, hard disk, optical disc specifics. */
     static DEVICE_TYPE disk_types[WvlDiskMediaTypes] =
       { FILE_DEVICE_DISK, FILE_DEVICE_DISK, FILE_DEVICE_CD_ROM };
-    static UINT32 characteristics[WvlDiskMediaTypes] =
-      { FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE, 0,
-      FILE_REMOVABLE_MEDIA | FILE_READ_ONLY_DEVICE
-    };
+    static UINT32 characteristics[WvlDiskMediaTypes] = {
+        FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE,
+        0,
+        FILE_REMOVABLE_MEDIA | FILE_READ_ONLY_DEVICE
+      };
   
-    DBG("Entry\n");
+    DBG("Creating PDO...\n");
+
     /* Point to the disk details provided. */
     disk_ptr = disk__get_ptr(dev_ptr);
+
     /* Create the disk PDO. */
     status = IoCreateDevice(
         disk_ptr->DriverObj,
@@ -158,15 +160,18 @@ static PDEVICE_OBJECT STDCALL create_pdo(IN WV_SP_DEV_T dev_ptr) {
         WvlError("IoCreateDevice", status);
         return NULL;
       }
+
     /* Set associations for the PDO, device, disk. */
     WvDevForDevObj(dev_obj_ptr, dev_ptr);
     dev_ptr->Self = dev_obj_ptr;
     KeInitializeEvent(&disk_ptr->SearchEvent, SynchronizationEvent, FALSE);
     KeInitializeSpinLock(&disk_ptr->SpinLock);
+
     /* Some device parameters. */
     dev_obj_ptr->Flags |= DO_DIRECT_IO;         /* FIXME? */
     dev_obj_ptr->Flags |= DO_POWER_INRUSH;      /* FIXME? */
-    DBG("Exit\n");
+
+    DBG("Done.\n");
     return dev_obj_ptr;
   }
 
@@ -351,20 +356,20 @@ WVL_M_LIB WV_SP_DISK_T disk__create(void) {
 
     /* Track the new disk in our global list. */
     ExInterlockedInsertTailList(
-        &disk_list,
+        &WvDiskList_,
         &disk_ptr->tracking,
-        &disk_list_lock
+        &WvDiskListLock_
       );
     /* Populate non-zero device defaults. */
-    disk_ptr->disk_ops.MaxXferLen = default_max_xfer_len;
+    disk_ptr->disk_ops.MaxXferLen = WvDiskDefaultMaxXferLen_;
     disk_ptr->disk_ops.Init = WvDiskDefaultInit_;
     disk_ptr->disk_ops.Close = WvDiskDefaultClose_;
-    dev_ptr->Ops.Close = disk__close_;
-    dev_ptr->Ops.CreatePdo = create_pdo;
-    dev_ptr->Ops.Free = free_disk;
-    dev_ptr->Ops.Init = disk__init_;
+    dev_ptr->Ops.Close = WvDiskDevClose_;
+    dev_ptr->Ops.CreatePdo = WvDiskCreatePdo_;
+    dev_ptr->Ops.Free = WvDiskDevFree_;
+    dev_ptr->Ops.Init = WvDiskDevInit_;
     dev_ptr->ext = disk_ptr;
-    dev_ptr->IrpMj = &disk__irp_mj_;
+    dev_ptr->IrpMj = &WvDiskIrpMj_;
     KeInitializeSpinLock(&disk_ptr->SpinLock);
 
     return disk_ptr;
@@ -381,8 +386,8 @@ WVL_M_LIB WV_SP_DISK_T disk__create(void) {
  */
 NTSTATUS disk__module_init(void) {
     /* Initialize the global list of disks. */
-    InitializeListHead(&disk_list);
-    KeInitializeSpinLock(&disk_list_lock);
+    InitializeListHead(&WvDiskList_);
+    KeInitializeSpinLock(&WvDiskListLock_);
 
     return STATUS_SUCCESS;
   }
@@ -390,46 +395,49 @@ NTSTATUS disk__module_init(void) {
 /**
  * Default disk deletion operation.
  *
- * @v dev_ptr           Points to the disk device to delete.
+ * @v dev               Points to the disk device to delete.
  */
-static VOID STDCALL free_disk(IN WV_SP_DEV_T dev_ptr) {
-    WV_SP_DISK_T disk_ptr = disk__get_ptr(dev_ptr);
+static VOID STDCALL WvDiskDevFree_(IN WV_SP_DEV_T dev) {
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
 
     /*
      * Track the disk deletion in our global list.  Unfortunately,
      * for now we have faith that a disk won't be deleted twice and
      * result in a race condition.  Something to keep in mind...
      */
-    ExInterlockedRemoveHeadList(disk_ptr->tracking.Blink, &disk_list_lock);
+    ExInterlockedRemoveHeadList(disk->tracking.Blink, &WvDiskListLock_);
 
-    wv_free(disk_ptr);
+    wv_free(disk);
   }
 
 /* See header for details. */
 NTSTATUS STDCALL disk__io(
-    IN WV_SP_DEV_T dev_ptr,
+    IN WV_SP_DEV_T dev,
     IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,
     IN PUCHAR buffer,
     IN PIRP irp
   ) {
-    WV_SP_DISK_T disk_ptr;
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
 
-    /* Establish a pointer to the disk. */
-    disk_ptr = disk__get_ptr(dev_ptr);
-
-    return disk_ptr->disk_ops.Io(
-        dev_ptr,
-        mode,
-        start_sector,
-        sector_count,
-        buffer,
-        irp
-      );
+    if (disk->disk_ops.Io) {
+        return disk->disk_ops.Io(
+            dev,
+            mode,
+            start_sector,
+            sector_count,
+            buffer,
+            irp
+          );
+      }
+    return WvlIrpComplete(irp, 0, STATUS_DRIVER_INTERNAL_ERROR);
   }
 
 /* See header for details. */
-UINT32 disk__max_xfer_len(IN WV_SP_DISK_T disk_ptr) {
-    return disk_ptr->disk_ops.MaxXferLen(disk_ptr);
+UINT32 disk__max_xfer_len(IN WV_SP_DISK_T disk) {
+    /* Use the disk operation, if there is one. */
+    if (disk->disk_ops.MaxXferLen)
+      return disk->disk_ops.MaxXferLen(disk);
+    return WvDiskDefaultMaxXferLen_(disk);
   }
