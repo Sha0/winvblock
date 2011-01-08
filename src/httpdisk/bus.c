@@ -28,6 +28,7 @@
 #include "portable.h"
 #include "winvblock.h"
 #include "debug.h"
+#include "dummy.h"
 
 /** Exports. */
 NTSTATUS STDCALL HttpdiskBusEstablish(void);
@@ -94,6 +95,26 @@ static NTSTATUS STDCALL HttpdiskBusCreateFdo_(void) {
   }
 
 static NTSTATUS STDCALL HttpdiskBusCreatePdo_(void) {
+    NTSTATUS status;
+
+    /* Generate dummy IDs for the HTTPDisk bus PDO. */
+    WV_M_DUMMY_ID_GEN(
+        static const,
+        HttpdiskBusDummyIds_,
+        WVL_M_WLIT L"\\HTTPDisk",
+        L"0",
+        WVL_M_WLIT L"\\HTTPDisk\0",
+        WVL_M_WLIT L"\\HTTPDisk\0",
+        FILE_DEVICE_CONTROLLER,
+        FILE_DEVICE_SECURE_OPEN
+      );
+
+    status = WvDummyAdd(&HttpdiskBusDummyIds_.DummyIds);
+    if (!NT_SUCCESS(status)) {
+        DBG("PDO not created.\n");
+        return status;
+      }
+
     DBG("PDO created.\n");
     return STATUS_SUCCESS;
   }
