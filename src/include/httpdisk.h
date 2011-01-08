@@ -30,7 +30,7 @@
 #define _T(x)   __T(x)
 #endif
 
-#define DEVICE_BASE_NAME    _T("\\HttpDisk")
+#define DEVICE_BASE_NAME    _T("\\HttpDisks")
 #define DEVICE_DIR_NAME     _T("\\Device")      DEVICE_BASE_NAME
 #define DEVICE_NAME_PREFIX  DEVICE_DIR_NAME     _T("\\Http")
 
