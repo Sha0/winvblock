@@ -30,6 +30,9 @@
 #include "debug.h"
 #include "dummy.h"
 
+/** From httpdisk.c */
+extern PDRIVER_OBJECT HttpdiskDriverObj;
+
 /** Exports. */
 NTSTATUS STDCALL HttpdiskBusEstablish(void);
 VOID HttpdiskBusCleanup(void);

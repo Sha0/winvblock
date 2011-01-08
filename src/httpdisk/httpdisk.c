@@ -128,6 +128,7 @@ extern DRIVER_ADD_DEVICE HttpdiskBusAttach;
 #define BUFFER_SIZE             (4096 * 4)
 
 HANDLE dir_handle;
+PDRIVER_OBJECT HttpdiskDriverObj = NULL;
 
 typedef struct _HTTP_HEADER {
     LARGE_INTEGER ContentLength;
@@ -263,6 +264,8 @@ DriverEntry (
     OBJECT_ATTRIBUTES           object_attributes;
     ULONG                       n;
     USHORT                      n_created_devices;
+
+    HttpdiskDriverObj = DriverObject;
 
     parameter_path.Length = 0;
 
