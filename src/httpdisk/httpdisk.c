@@ -163,6 +163,9 @@ HttpDiskDeleteDevice (
 );
 
 static
+  DRIVER_DISPATCH HttpdiskIrpNotSupported_;
+
+static
   __drv_dispatchType(IRP_MJ_CREATE)
   __drv_dispatchType(IRP_MJ_CLOSE)
   DRIVER_DISPATCH HttpdiskIrpCreateClose_;
@@ -260,6 +263,7 @@ DriverEntry (
     OBJECT_ATTRIBUTES           object_attributes;
     ULONG                       n;
     USHORT                      n_created_devices;
+    UCHAR                       major;
 
     HttpdiskDriverObj = DriverObject;
 
@@ -349,6 +353,8 @@ DriverEntry (
         return status;
     }
 
+    for (major = 0; major <= IRP_MJ_MAXIMUM_FUNCTION; major++)
+      DriverObject->MajorFunction[major] = HttpdiskIrpNotSupported_;
     DriverObject->MajorFunction[IRP_MJ_PNP] = HttpdiskIrpPnp_;
     DriverObject->MajorFunction[IRP_MJ_POWER] = HttpdiskBusIrp;
     DriverObject->MajorFunction[IRP_MJ_CREATE] = HttpdiskIrpCreateClose_;
@@ -554,6 +560,21 @@ HttpDiskDeleteDevice (
 
     return next_device_object;
 }
+
+static NTSTATUS HttpdiskIrpNotSupported_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+
+    DBG(
+        "IRP major %d:%d not supported for PDO %p.\n",
+        io_stack_loc->MajorFunction,
+        io_stack_loc->MinorFunction,
+        dev_obj
+       );        
+    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+  }
 
 static NTSTATUS HttpdiskIrpCreateClose_(
     IN PDEVICE_OBJECT   DeviceObject,
