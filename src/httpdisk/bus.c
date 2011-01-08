@@ -69,6 +69,7 @@ NTSTATUS STDCALL HttpdiskBusEstablish(void) {
 
     /* Initialize the bus. */
     WvlBusInit(&HttpdiskBus_);
+    HttpdiskBus_.State = WvlBusStateStarted;
 
     status = HttpdiskBusCreateFdo_();
     if (!NT_SUCCESS(status))
