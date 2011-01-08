@@ -157,23 +157,19 @@ HttpDiskDeleteDevice (
     IN PDEVICE_OBJECT   DeviceObject
 );
 
-NTSTATUS
-HttpDiskCreateClose (
-    IN PDEVICE_OBJECT   DeviceObject,
-    IN PIRP             Irp
-);
+static
+  __drv_dispatchType(IRP_MJ_CREATE)
+  __drv_dispatchType(IRP_MJ_CLOSE)
+  DRIVER_DISPATCH HttpdiskIrpCreateClose_;
 
-NTSTATUS
-HttpDiskReadWrite (
-    IN PDEVICE_OBJECT   DeviceObject,
-    IN PIRP             Irp
-);
+static
+  __drv_dispatchType(IRP_MJ_READ)
+  __drv_dispatchType(IRP_MJ_WRITE)
+  DRIVER_DISPATCH HttpdiskIrpReadWrite_;
 
-NTSTATUS
-HttpDiskDeviceControl (
-    IN PDEVICE_OBJECT   DeviceObject,
-    IN PIRP             Irp
-);
+static
+  __drv_dispatchType(IRP_MJ_DEVICE_CONTROL)
+  DRIVER_DISPATCH HttpdiskIrpDevCtl_;
 
 VOID
 HttpDiskThread (
@@ -338,11 +334,11 @@ DriverEntry (
         return status;
     }
 
-    DriverObject->MajorFunction[IRP_MJ_CREATE]         = HttpDiskCreateClose;
-    DriverObject->MajorFunction[IRP_MJ_CLOSE]          = HttpDiskCreateClose;
-    DriverObject->MajorFunction[IRP_MJ_READ]           = HttpDiskReadWrite;
-    DriverObject->MajorFunction[IRP_MJ_WRITE]          = HttpDiskReadWrite;
-    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = HttpDiskDeviceControl;
+    DriverObject->MajorFunction[IRP_MJ_CREATE] = HttpdiskIrpCreateClose_;
+    DriverObject->MajorFunction[IRP_MJ_CLOSE] = HttpdiskIrpCreateClose_;
+    DriverObject->MajorFunction[IRP_MJ_READ] = HttpdiskIrpReadWrite_;
+    DriverObject->MajorFunction[IRP_MJ_WRITE] = HttpdiskIrpReadWrite_;
+    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = HttpdiskIrpDevCtl_;
 
     DriverObject->DriverUnload = HttpDiskUnload;
     DriverObject->DriverExtension->AddDevice = HttpdiskBusAttach;
@@ -535,28 +531,24 @@ HttpDiskDeleteDevice (
     return next_device_object;
 }
 
-NTSTATUS
-HttpDiskCreateClose (
+static NTSTATUS HttpdiskIrpCreateClose_(
     IN PDEVICE_OBJECT   DeviceObject,
     IN PIRP             Irp
-    )
-{
+  ) {
     Irp->IoStatus.Status = STATUS_SUCCESS;
     Irp->IoStatus.Information = FILE_OPENED;
 
     IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
     return STATUS_SUCCESS;
-}
+  }
 
 #pragma code_seg()
 
-NTSTATUS
-HttpDiskReadWrite (
+static NTSTATUS HttpdiskIrpReadWrite_(
     IN PDEVICE_OBJECT   DeviceObject,
     IN PIRP             Irp
-    )
-{
+  ) {
     HTTPDISK_SP_DEV   device_extension;
     PIO_STACK_LOCATION  io_stack;
 
@@ -599,14 +591,12 @@ HttpDiskReadWrite (
         );
 
     return STATUS_PENDING;
-}
+  }
 
-NTSTATUS
-HttpDiskDeviceControl (
+static NTSTATUS HttpdiskIrpDevCtl_(
     IN PDEVICE_OBJECT   DeviceObject,
     IN PIRP             Irp
-    )
-{
+  ) {
     HTTPDISK_SP_DEV   device_extension;
     PIO_STACK_LOCATION  io_stack;
     NTSTATUS            status;
@@ -913,7 +903,7 @@ HttpDiskDeviceControl (
     }
 
     return status;
-}
+  }
 
 #pragma code_seg("PAGE")
 
