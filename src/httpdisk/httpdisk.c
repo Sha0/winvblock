@@ -108,6 +108,8 @@ MmGetSystemAddressForMdlPrettySafe (
 
 #include "portable.h"
 #include "httpdisk.h"
+#include "winvblock.h"
+#include "debug.h"
 
 /* From bus.c */
 extern NTSTATUS STDCALL HttpdiskBusEstablish(void);
@@ -348,6 +350,7 @@ DriverEntry (
     if (!NT_SUCCESS(status))
       HttpDiskUnload(DriverObject);
 
+    DBG("Success.\n");
     return status;
 }
 
