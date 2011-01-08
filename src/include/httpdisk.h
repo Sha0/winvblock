@@ -1,6 +1,7 @@
 /*
     HTTP Virtual Disk.
     Copyright (C) 2006 Bo Brantén.
+    Modified, 2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation; either version 2 of the License, or
@@ -46,5 +47,20 @@ typedef struct _HTTP_DISK_INFORMATION {
     USHORT  FileNameLength;
     UCHAR   FileName[1];
 } HTTP_DISK_INFORMATION, *PHTTP_DISK_INFORMATION;
+
+typedef struct HTTPDISK_DEV {
+    BOOLEAN         media_in_device;
+    ULONG           address;
+    USHORT          port;
+    PUCHAR          host_name;
+    PUCHAR          file_name;
+    LARGE_INTEGER   file_size;
+    int             socket;
+    LIST_ENTRY      list_head;
+    KSPIN_LOCK      list_lock;
+    KEVENT          request_event;
+    PVOID           thread_pointer;
+    BOOLEAN         terminate_thread;
+} HTTPDISK_S_DEV, * HTTPDISK_SP_DEV;
 
 #endif

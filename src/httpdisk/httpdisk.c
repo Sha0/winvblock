@@ -134,21 +134,6 @@ typedef struct _HTTP_HEADER {
     LARGE_INTEGER ContentLength;
 } HTTP_HEADER, *PHTTP_HEADER;
 
-typedef struct _DEVICE_EXTENSION {
-    BOOLEAN         media_in_device;
-    ULONG           address;
-    USHORT          port;
-    PUCHAR          host_name;
-    PUCHAR          file_name;
-    LARGE_INTEGER   file_size;
-    int             socket;
-    LIST_ENTRY      list_head;
-    KSPIN_LOCK      list_lock;
-    KEVENT          request_event;
-    PVOID           thread_pointer;
-    BOOLEAN         terminate_thread;
-} DEVICE_EXTENSION, *PDEVICE_EXTENSION;
-
 NTSTATUS
 DriverEntry (
     IN PDRIVER_OBJECT   DriverObject,
@@ -380,7 +365,7 @@ HttpDiskCreateDevice (
     UNICODE_STRING      device_name;
     NTSTATUS            status;
     PDEVICE_OBJECT      device_object;
-    PDEVICE_EXTENSION   device_extension;
+    HTTPDISK_SP_DEV   device_extension;
     HANDLE              thread_handle;
 
     ASSERT(DriverObject != NULL);
@@ -406,7 +391,7 @@ HttpDiskCreateDevice (
 
     status = IoCreateDevice(
         DriverObject,
-        sizeof(DEVICE_EXTENSION),
+        sizeof (HTTPDISK_S_DEV),
         &device_name,
         DeviceType,
         0,
@@ -421,7 +406,7 @@ HttpDiskCreateDevice (
 
     device_object->Flags |= DO_DIRECT_IO;
 
-    device_extension = (PDEVICE_EXTENSION) device_object->DeviceExtension;
+    device_extension = (HTTPDISK_SP_DEV) device_object->DeviceExtension;
 
     device_extension->media_in_device = FALSE;
 
@@ -518,12 +503,12 @@ HttpDiskDeleteDevice (
     IN PDEVICE_OBJECT DeviceObject
     )
 {
-    PDEVICE_EXTENSION   device_extension;
+    HTTPDISK_SP_DEV   device_extension;
     PDEVICE_OBJECT      next_device_object;
 
     ASSERT(DeviceObject != NULL);
 
-    device_extension = (PDEVICE_EXTENSION) DeviceObject->DeviceExtension;
+    device_extension = (HTTPDISK_SP_DEV) DeviceObject->DeviceExtension;
 
     device_extension->terminate_thread = TRUE;
 
@@ -572,10 +557,10 @@ HttpDiskReadWrite (
     IN PIRP             Irp
     )
 {
-    PDEVICE_EXTENSION   device_extension;
+    HTTPDISK_SP_DEV   device_extension;
     PIO_STACK_LOCATION  io_stack;
 
-    device_extension = (PDEVICE_EXTENSION) DeviceObject->DeviceExtension;
+    device_extension = (HTTPDISK_SP_DEV) DeviceObject->DeviceExtension;
 
     if (!device_extension->media_in_device)
     {
@@ -622,11 +607,11 @@ HttpDiskDeviceControl (
     IN PIRP             Irp
     )
 {
-    PDEVICE_EXTENSION   device_extension;
+    HTTPDISK_SP_DEV   device_extension;
     PIO_STACK_LOCATION  io_stack;
     NTSTATUS            status;
 
-    device_extension = (PDEVICE_EXTENSION) DeviceObject->DeviceExtension;
+    device_extension = (HTTPDISK_SP_DEV) DeviceObject->DeviceExtension;
 
     io_stack = IoGetCurrentIrpStackLocation(Irp);
 
@@ -938,7 +923,7 @@ HttpDiskThread (
     )
 {
     PDEVICE_OBJECT      device_object;
-    PDEVICE_EXTENSION   device_extension;
+    HTTPDISK_SP_DEV   device_extension;
     PLIST_ENTRY         request;
     PIRP                irp;
     PIO_STACK_LOCATION  io_stack;
@@ -947,7 +932,7 @@ HttpDiskThread (
 
     device_object = (PDEVICE_OBJECT) Context;
 
-    device_extension = (PDEVICE_EXTENSION) device_object->DeviceExtension;
+    device_extension = (HTTPDISK_SP_DEV) device_object->DeviceExtension;
 
     KeSetPriorityThread(KeGetCurrentThread(), LOW_REALTIME_PRIORITY);
 
@@ -1045,14 +1030,14 @@ HttpDiskConnect (
     IN PIRP             Irp
     )
 {
-    PDEVICE_EXTENSION       device_extension;
+    HTTPDISK_SP_DEV       device_extension;
     PHTTP_DISK_INFORMATION  http_disk_information;
     HTTP_HEADER             http_header;
 
     ASSERT(DeviceObject != NULL);
     ASSERT(Irp != NULL);
 
-    device_extension = (PDEVICE_EXTENSION) DeviceObject->DeviceExtension;
+    device_extension = (HTTPDISK_SP_DEV) DeviceObject->DeviceExtension;
 
     http_disk_information = (PHTTP_DISK_INFORMATION) Irp->AssociatedIrp.SystemBuffer;
 
@@ -1153,12 +1138,12 @@ HttpDiskDisconnect (
     IN PIRP             Irp
     )
 {
-    PDEVICE_EXTENSION device_extension;
+    HTTPDISK_SP_DEV device_extension;
 
     ASSERT(DeviceObject != NULL);
     ASSERT(Irp != NULL);
 
-    device_extension = (PDEVICE_EXTENSION) DeviceObject->DeviceExtension;
+    device_extension = (HTTPDISK_SP_DEV) DeviceObject->DeviceExtension;
 
     device_extension->media_in_device = FALSE;
 
