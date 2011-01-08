@@ -65,8 +65,8 @@ static WV_F_DISK_CLOSE WvDiskDefaultClose_;
 /* Globals. */
 static LIST_ENTRY disk_list;
 static KSPIN_LOCK disk_list_lock;
-BOOLEAN WvDiskIsRemovable[WvDiskMediaTypes] = { TRUE, FALSE, TRUE };
-PWCHAR WvDiskCompatIds[WvDiskMediaTypes] = {
+BOOLEAN WvDiskIsRemovable[WvlDiskMediaTypes] = { TRUE, FALSE, TRUE };
+PWCHAR WvDiskCompatIds[WvlDiskMediaTypes] = {
     L"GenSFloppy",
     L"GenDisk",
     L"GenCdRom"
@@ -132,9 +132,9 @@ static PDEVICE_OBJECT STDCALL create_pdo(IN WV_SP_DEV_T dev_ptr) {
     WV_SP_DISK_T disk_ptr;
     NTSTATUS status;
     PDEVICE_OBJECT dev_obj_ptr;
-    static DEVICE_TYPE disk_types[WvDiskMediaTypes] =
+    static DEVICE_TYPE disk_types[WvlDiskMediaTypes] =
       { FILE_DEVICE_DISK, FILE_DEVICE_DISK, FILE_DEVICE_CD_ROM };
-    static UINT32 characteristics[WvDiskMediaTypes] =
+    static UINT32 characteristics[WvlDiskMediaTypes] =
       { FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE, 0,
       FILE_REMOVABLE_MEDIA | FILE_READ_ONLY_DEVICE
     };

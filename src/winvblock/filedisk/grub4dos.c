@@ -443,13 +443,13 @@ VOID filedisk_grub4dos__find(void) {
             } /* j scope. */
           /* Possible precision loss. */
           if (Grub4DosDriveMapSlotPtr[i].SourceODD) {
-              filedisk_ptr->disk->Media = WvDiskMediaTypeOptical;
+              filedisk_ptr->disk->Media = WvlDiskMediaTypeOptical;
               filedisk_ptr->disk->SectorSize = 2048;
             } else {
               filedisk_ptr->disk->Media =
                 (Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80) ?
-                WvDiskMediaTypeHard :
-                WvDiskMediaTypeFloppy;
+                WvlDiskMediaTypeHard :
+                WvlDiskMediaTypeFloppy;
               filedisk_ptr->disk->SectorSize = 512;
             }
           DBG(

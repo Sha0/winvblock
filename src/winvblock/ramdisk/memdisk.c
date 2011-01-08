@@ -84,13 +84,13 @@ static BOOLEAN STDCALL WvMemdiskCheckMbft_(
     ramdisk->DiskBuf = mbft->mdi.diskbuf;
     ramdisk->disk->LBADiskSize = ramdisk->DiskSize = mbft->mdi.disksize;
     if (mbft->mdi.driveno == 0xE0) {
-        ramdisk->disk->Media = WvDiskMediaTypeOptical;
+        ramdisk->disk->Media = WvlDiskMediaTypeOptical;
         ramdisk->disk->SectorSize = 2048;
       } else {
         if (mbft->mdi.driveno & 0x80)
-        	ramdisk->disk->Media = WvDiskMediaTypeHard;
+        	ramdisk->disk->Media = WvlDiskMediaTypeHard;
           else
-        	ramdisk->disk->Media = WvDiskMediaTypeFloppy;
+        	ramdisk->disk->Media = WvlDiskMediaTypeFloppy;
         ramdisk->disk->SectorSize = 512;
       }
     DBG("RAM Drive is type: %d\n", ramdisk->disk->Media);

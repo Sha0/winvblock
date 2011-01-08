@@ -126,7 +126,7 @@ static UINT32 STDCALL query_id(
   ) {
     WV_SP_DISK_T disk = disk__get_ptr(dev);
     WV_SP_RAMDISK_T ramdisk = ramdisk_get_ptr(dev);
-    static PWCHAR hw_ids[WvDiskMediaTypes] = {
+    static PWCHAR hw_ids[WvlDiskMediaTypes] = {
         WVL_M_WLIT L"\\RAMFloppyDisk",
         WVL_M_WLIT L"\\RAMHardDisk",
         WVL_M_WLIT L"\\RAMOpticalDisc"

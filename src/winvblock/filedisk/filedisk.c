@@ -119,7 +119,7 @@ static UINT32 STDCALL query_id(
   ) {
     WV_SP_DISK_T disk = disk__get_ptr(dev);
     WV_SP_FILEDISK_T filedisk = filedisk__get_ptr(dev);
-    static PWCHAR hw_ids[WvDiskMediaTypes] = {
+    static PWCHAR hw_ids[WvlDiskMediaTypes] = {
         WVL_M_WLIT L"\\FileFloppyDisk",
         WVL_M_WLIT L"\\FileHardDisk",
         WVL_M_WLIT L"\\FileOpticalDisc"
@@ -201,17 +201,17 @@ NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
 
     switch (params->type) {
         case 'f':
-          filedisk_ptr->disk->Media = WvDiskMediaTypeFloppy;
+          filedisk_ptr->disk->Media = WvlDiskMediaTypeFloppy;
           filedisk_ptr->disk->SectorSize = 512;
           break;
 
         case 'c':
-          filedisk_ptr->disk->Media = WvDiskMediaTypeOptical;
+          filedisk_ptr->disk->Media = WvlDiskMediaTypeOptical;
           filedisk_ptr->disk->SectorSize = 2048;
           break;
 
         default:
-          filedisk_ptr->disk->Media = WvDiskMediaTypeHard;
+          filedisk_ptr->disk->Media = WvlDiskMediaTypeHard;
           filedisk_ptr->disk->SectorSize = 512;
           break;
       }

@@ -1547,7 +1547,7 @@ static VOID AoeProcessAbft_(void) {
     aoe_disk->MaxSectorsPerPacket = 1;
     aoe_disk->Timeout = 200000;          /* 20 ms. */
     aoe_disk->disk->Dev->Boot = TRUE;
-    aoe_disk->disk->Media = WvDiskMediaTypeHard;
+    aoe_disk->disk->Media = WvlDiskMediaTypeHard;
     AoeBusAddDev(aoe_disk->disk->Dev);
     return;
 
@@ -1708,7 +1708,7 @@ NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
     aoe_disk->MaxSectorsPerPacket = 1;
     aoe_disk->Timeout = 200000;             /* 20 ms. */
     aoe_disk->disk->Dev->Boot = FALSE;
-    aoe_disk->disk->Media = WvDiskMediaTypeHard;
+    aoe_disk->disk->Media = WvlDiskMediaTypeHard;
     AoeBusAddDev(aoe_disk->disk->Dev);
 
     return WvlIrpComplete(irp, 0, STATUS_SUCCESS);

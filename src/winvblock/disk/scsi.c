@@ -340,7 +340,7 @@ static NTSTATUS STDCALL disk_scsi__mode_sense_(
     OUT PBOOLEAN completion
   ) {
     PMODE_PARAMETER_HEADER mode_param_header;
-    static MEDIA_TYPE media_types[WvDiskMediaTypes] =
+    static MEDIA_TYPE media_types[WvlDiskMediaTypes] =
       { RemovableMedia, FixedMedia, RemovableMedia };
 
     if (srb->DataTransferLength < sizeof (MODE_PARAMETER_HEADER)) {

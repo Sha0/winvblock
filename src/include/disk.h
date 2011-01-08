@@ -27,18 +27,18 @@
  * Disk device specifics.
  */
 
-typedef enum WV_DISK_MEDIA_TYPE {
-    WvDiskMediaTypeFloppy,
-    WvDiskMediaTypeHard,
-    WvDiskMediaTypeOptical,
-    WvDiskMediaTypes
-  } WV_E_DISK_MEDIA_TYPE, * WV_EP_DISK_MEDIA_TYPE;
+typedef enum WVL_DISK_MEDIA_TYPE {
+    WvlDiskMediaTypeFloppy,
+    WvlDiskMediaTypeHard,
+    WvlDiskMediaTypeOptical,
+    WvlDiskMediaTypes
+  } WVL_E_DISK_MEDIA_TYPE, * WVL_EP_DISK_MEDIA_TYPE;
 
 typedef char WV_A_DISK_BOOT_SECT[512];
 typedef WV_A_DISK_BOOT_SECT * WV_AP_DISK_BOOT_SECT;
 
-extern BOOLEAN WvDiskIsRemovable[WvDiskMediaTypes];
-extern PWCHAR WvDiskCompatIds[WvDiskMediaTypes];
+extern BOOLEAN WvDiskIsRemovable[WvlDiskMediaTypes];
+extern PWCHAR WvDiskCompatIds[WvlDiskMediaTypes];
 
 typedef enum WV_DISK_IO_MODE {
     WvDiskIoModeRead,
@@ -106,7 +106,7 @@ struct WV_DISK_T {
     WV_S_DEV_T Dev[1];
     KEVENT SearchEvent;
     KSPIN_LOCK SpinLock;
-    WV_E_DISK_MEDIA_TYPE Media;
+    WVL_E_DISK_MEDIA_TYPE Media;
     WV_S_DISK_OPS disk_ops;
     ULONGLONG LBADiskSize;
     ULONGLONG Cylinders;

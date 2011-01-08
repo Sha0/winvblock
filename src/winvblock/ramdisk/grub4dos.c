@@ -113,14 +113,14 @@ VOID ramdisk_grub4dos__find(void) {
 	   */
 	  if ( Grub4DosDriveMapSlotPtr[i].SourceODD )
 	    {
-	      ramdisk_ptr->disk->Media = WvDiskMediaTypeOptical;
+	      ramdisk_ptr->disk->Media = WvlDiskMediaTypeOptical;
 	      ramdisk_ptr->disk->SectorSize = 2048;
 	    }
 	  else
 	    {
 	      ramdisk_ptr->disk->Media =
 		Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ?
-		WvDiskMediaTypeHard : WvDiskMediaTypeFloppy;
+		WvlDiskMediaTypeHard : WvlDiskMediaTypeFloppy;
 	      ramdisk_ptr->disk->SectorSize = 512;
 	    }
 	  DBG ( "RAM Drive is type: %d\n", ramdisk_ptr->disk->Media );
