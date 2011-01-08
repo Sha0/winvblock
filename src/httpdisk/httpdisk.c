@@ -544,14 +544,6 @@ static NTSTATUS HttpdiskIrpCreateClose_(
     IN PDEVICE_OBJECT   DeviceObject,
     IN PIRP             Irp
   ) {
-    HTTPDISK_SP_DEV   device_extension;
-
-    device_extension = (HTTPDISK_SP_DEV) DeviceObject->DeviceExtension;
-
-    /* Check for a bus IRP. */
-    if (device_extension->bus)
-      return HttpdiskBusIrp(DeviceObject, Irp);
-
     Irp->IoStatus.Status = STATUS_SUCCESS;
     Irp->IoStatus.Information = FILE_OPENED;
 
