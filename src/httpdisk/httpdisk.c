@@ -111,6 +111,7 @@ MmGetSystemAddressForMdlPrettySafe (
 #include "bus.h"
 #include "httpdisk.h"
 #include "debug.h"
+#include "irp.h"
 
 /* From bus.c */
 extern NTSTATUS STDCALL HttpdiskBusEstablish(void);
@@ -174,6 +175,10 @@ static
 static
   __drv_dispatchType(IRP_MJ_DEVICE_CONTROL)
   DRIVER_DISPATCH HttpdiskIrpDevCtl_;
+
+static
+  __drv_dispatchType(IRP_MJ_PNP)
+  DRIVER_DISPATCH HttpdiskIrpPnp_;
 
 VOID
 HttpDiskThread (
@@ -338,7 +343,7 @@ DriverEntry (
         return status;
     }
 
-    DriverObject->MajorFunction[IRP_MJ_PNP] = HttpdiskBusIrp;
+    DriverObject->MajorFunction[IRP_MJ_PNP] = HttpdiskIrpPnp_;
     DriverObject->MajorFunction[IRP_MJ_POWER] = HttpdiskBusIrp;
     DriverObject->MajorFunction[IRP_MJ_CREATE] = HttpdiskIrpCreateClose_;
     DriverObject->MajorFunction[IRP_MJ_CLOSE] = HttpdiskIrpCreateClose_;
@@ -921,6 +926,28 @@ static NTSTATUS HttpdiskIrpDevCtl_(
     }
 
     return status;
+  }
+
+static NTSTATUS HttpdiskIrpPnp_(IN PDEVICE_OBJECT dev_obj, IN PIRP irp) {
+    HTTPDISK_SP_DEV dev = dev_obj->DeviceExtension;
+    UCHAR minor;
+
+    /* Check for a bus IRP. */
+    if (dev->bus)
+      return HttpdiskBusIrp(dev_obj, irp);
+
+    minor = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
+    switch (minor) {
+        case IRP_MN_QUERY_ID:
+          #if 0
+          return HttpdiskIrpPnpQueryId(dev, irp);
+          #endif
+
+        default:
+          DBG("Unhandled minor: %d\n", minor);
+          break;
+      }
+    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
 #pragma code_seg("PAGE")
