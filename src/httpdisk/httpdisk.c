@@ -107,8 +107,9 @@ MmGetSystemAddressForMdlPrettySafe (
 #endif
 
 #include "portable.h"
-#include "httpdisk.h"
 #include "winvblock.h"
+#include "bus.h"
+#include "httpdisk.h"
 #include "debug.h"
 
 /* From bus.c */

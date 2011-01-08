@@ -62,6 +62,7 @@ typedef struct HTTPDISK_DEV {
     PVOID           thread_pointer;
     BOOLEAN         terminate_thread;
     BOOLEAN         bus;
+    WVL_S_BUS_NODE  BusNode;
 } HTTPDISK_S_DEV, * HTTPDISK_SP_DEV;
 
 #endif

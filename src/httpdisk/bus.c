@@ -66,6 +66,7 @@ static UNICODE_STRING HttpdiskBusDosname_ = {
 
 NTSTATUS STDCALL HttpdiskBusEstablish(void) {
     NTSTATUS status;
+    PDEVICE_OBJECT dev_obj = HttpdiskDriverObj->DeviceObject;
 
     /* Initialize the bus. */
     WvlBusInit(&HttpdiskBus_);
@@ -78,6 +79,15 @@ NTSTATUS STDCALL HttpdiskBusEstablish(void) {
     status = HttpdiskBusCreatePdo_();
     if (!NT_SUCCESS(status))
       goto err_pdo;
+
+    /* Add devices already created.  TODO: This will go away at some point. */
+    while (dev_obj) {
+        HTTPDISK_SP_DEV dev = dev_obj->DeviceExtension;
+
+        WvlBusInitNode(&dev->BusNode, dev_obj);
+        WvlBusAddNode(&HttpdiskBus_, &dev->BusNode);
+        dev_obj = dev_obj->NextDevice;
+      }
 
     DBG("Bus established.\n");
     return STATUS_SUCCESS;
