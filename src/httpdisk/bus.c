@@ -142,6 +142,15 @@ NTSTATUS HttpdiskBusIrp(IN PDEVICE_OBJECT DevObj, IN PIRP Irp) {
     UCHAR major = io_stack_loc->MajorFunction;
 
     switch (major) {
+        case IRP_MJ_PNP:
+          return WvlBusPnp(&HttpdiskBus_, Irp);
+
+        case IRP_MJ_POWER:
+          return WvlBusPower(&HttpdiskBus_, Irp);
+
+        case IRP_MJ_SYSTEM_CONTROL:
+          return WvlBusSysCtl(&HttpdiskBus_, Irp);
+
         default:
           DBG("Unhandled major: %d\n", major);
           break;
