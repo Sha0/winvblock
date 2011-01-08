@@ -337,11 +337,14 @@ DriverEntry (
         return status;
     }
 
+    DriverObject->MajorFunction[IRP_MJ_PNP] = HttpdiskBusIrp;
+    DriverObject->MajorFunction[IRP_MJ_POWER] = HttpdiskBusIrp;
     DriverObject->MajorFunction[IRP_MJ_CREATE] = HttpdiskIrpCreateClose_;
     DriverObject->MajorFunction[IRP_MJ_CLOSE] = HttpdiskIrpCreateClose_;
     DriverObject->MajorFunction[IRP_MJ_READ] = HttpdiskIrpReadWrite_;
     DriverObject->MajorFunction[IRP_MJ_WRITE] = HttpdiskIrpReadWrite_;
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = HttpdiskIrpDevCtl_;
+    DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = HttpdiskBusIrp;
 
     DriverObject->DriverUnload = HttpDiskUnload;
     DriverObject->DriverExtension->AddDevice = HttpdiskBusAttach;
