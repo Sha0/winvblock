@@ -26,7 +26,8 @@
  */
 
 typedef struct WV_FILEDISK_T {
-    WV_SP_DISK_T disk;
+    WV_S_DEV_EXT DevExt;
+    WV_S_DISK_T disk[1];
     HANDLE file;
     UINT32 hash;
     WV_FP_DEV_FREE prev_free;
@@ -37,34 +38,13 @@ typedef struct WV_FILEDISK_T {
     KSPIN_LOCK req_list_lock;
     KEVENT signal;
     WV_FP_DISK_IO sync_io;
-    char *filepath;
+    PCHAR filepath;
     UNICODE_STRING filepath_unicode;
   } WV_S_FILEDISK_T, * WV_SP_FILEDISK_T;
 
 extern NTSTATUS STDCALL WvFilediskAttach(IN PIRP);
-
-extern NTSTATUS WvFilediskModuleInit(void);
-
-/**
- * Create a new file-backed disk.
- *
- * @ret filedisk_ptr    The address of a new filedisk, or NULL for failure.
- *
- * This function should not be confused with a PDO creation routine, which is
- * actually implemented for each device type.  This routine will allocate a
- * WV_S_FILEDISK_T, track it in a global list, as well as populate the disk
- * with default values.
- */
-extern WV_SP_FILEDISK_T WvFilediskCreate(void);
-/**
- * Create a new threaded, file-backed disk.
- *
- * @ret filedisk_ptr    The address of a new filedisk, or NULL for failure.
- *
- * See WvFilediskCreate() above.  This routine uses threaded routines
- * for disk reads/writes, and frees asynchronously, too.
- */
-extern WV_SP_FILEDISK_T WvFilediskCreateThreaded(void);
+extern WV_SP_FILEDISK_T WvFilediskCreatePdo(IN WVL_E_DISK_MEDIA_TYPE);
+extern WV_SP_FILEDISK_T WvFilediskCreatePdoThreaded(IN WVL_E_DISK_MEDIA_TYPE);
 
 /* Yield a pointer to the file-backed disk. */
 #define filedisk__get_ptr(dev_ptr) \

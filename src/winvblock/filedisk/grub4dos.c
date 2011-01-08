@@ -356,6 +356,9 @@ VOID filedisk_grub4dos__find(void) {
       /* Search for sector-mapped (typically file-backed) disks. */
       i = 8;
       while (i--) {
+          WVL_E_DISK_MEDIA_TYPE media_type;
+          UINT32 sector_size;
+
           if (
               (Grub4DosDriveMapSlotPtr[i].SectorCount == 0) ||
               (Grub4DosDriveMapSlotPtr[i].DestDrive == 0xff)
@@ -396,18 +399,31 @@ VOID filedisk_grub4dos__find(void) {
               "GRUB4DOS SectorCount: %d\n",
               Grub4DosDriveMapSlotPtr[i].SectorCount
             );
+          /* Possible precision loss. */
+          if (Grub4DosDriveMapSlotPtr[i].SourceODD) {
+              media_type = WvlDiskMediaTypeOptical;
+              sector_size = 2048;
+            } else {
+              media_type =
+                (Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80) ?
+                WvlDiskMediaTypeHard :
+                WvlDiskMediaTypeFloppy;
+              sector_size = 512;
+            }
           /*
            * Create the threaded, file-backed disk.  Hook the
            * read/write routine so we can accessing the backing disk
            * late(r) during the boot process.
            */
-          filedisk_ptr = WvFilediskCreateThreaded();
+          filedisk_ptr = WvFilediskCreatePdoThreaded(media_type);
           if (filedisk_ptr == NULL) {
               DBG("Could not create GRUB4DOS disk!\n");
               return;
             }
           sync_io = filedisk_ptr->sync_io;
           filedisk_ptr->sync_io = io;
+          filedisk_ptr->disk->Media = media_type;
+          filedisk_ptr->disk->SectorSize = sector_size;
           /* Find an associated filename, if one exists. */
           {   int j = 8;
 
@@ -441,17 +457,6 @@ VOID filedisk_grub4dos__find(void) {
                     );
                 } /* if */
             } /* j scope. */
-          /* Possible precision loss. */
-          if (Grub4DosDriveMapSlotPtr[i].SourceODD) {
-              filedisk_ptr->disk->Media = WvlDiskMediaTypeOptical;
-              filedisk_ptr->disk->SectorSize = 2048;
-            } else {
-              filedisk_ptr->disk->Media =
-                (Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80) ?
-                WvlDiskMediaTypeHard :
-                WvlDiskMediaTypeFloppy;
-              filedisk_ptr->disk->SectorSize = 512;
-            }
           DBG(
               "Sector-mapped disk is type: %d\n",
               filedisk_ptr->disk->Media

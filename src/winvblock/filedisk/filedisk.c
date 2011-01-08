@@ -39,15 +39,11 @@
 #include "filedisk.h"
 #include "debug.h"
 
-/* Globals. */
-static LIST_ENTRY filedisk_list;
-static KSPIN_LOCK filedisk_list_lock;
-
-/* Forward declarations. */
-static WV_F_DEV_FREE free_filedisk;
+/** Private. */
+static WV_F_DEV_FREE WvFilediskFree_;
 static WV_F_DISK_IO io;
 static WV_F_DISK_IO threaded_io;
-static WV_F_DISK_CLOSE close;
+static WV_F_DEV_CLOSE WvFilediskClose_;
 
 static NTSTATUS STDCALL io(
     IN WV_SP_DEV_T dev_ptr,
@@ -164,12 +160,6 @@ NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
     UINT32 sector_size, hash;
     ULONGLONG lba_size;
 
-    filedisk = WvFilediskCreate();
-    if (filedisk == NULL) {
-        DBG("Could not create file-backed disk!\n");
-        return STATUS_INSUFFICIENT_RESOURCES;
-      }
-
     RtlInitAnsiString(&ansi_path, buf + sizeof (WV_S_MOUNT_DISK));
     status = RtlAnsiStringToUnicodeString(&file_path, &ansi_path, TRUE);
     if (!NT_SUCCESS(status))
@@ -181,7 +171,7 @@ NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
         NULL,
         NULL
       );
-    /* Open the file.  The handle is closed by close() */
+    /* Open the file.  The handle is closed by WvFilediskClose_() */
     status = ZwCreateFile(
         &file,
         GENERIC_READ | GENERIC_WRITE,
@@ -241,10 +231,13 @@ NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
         while (*path_iterator)
           hash += *path_iterator++;
       }
-    /* Add the filedisk to the bus. */
-    if (!WvBusAddDev(filedisk->disk->Dev)) {
-        status = STATUS_UNSUCCESSFUL;
-        goto err_add_child;
+
+    /* Create the filedisk PDO. */
+    filedisk = WvFilediskCreatePdo(media_type);
+    if (filedisk == NULL) {
+        DBG("Could not create file-backed disk!\n");
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto err_pdo;
       }
 
     /* Set filedisk parameters. */
@@ -257,9 +250,18 @@ NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
     filedisk->file = file;
     filedisk->hash = hash;
 
+    /* Add the filedisk to the bus. */
+    if (!WvBusAddDev(filedisk->disk->Dev)) {
+        status = STATUS_UNSUCCESSFUL;
+        goto err_add_child;
+      }
+
     return STATUS_SUCCESS;
 
     err_add_child:
+
+    WvFilediskFree_(filedisk->disk->Dev);
+    err_pdo:
 
     err_query_info:
 
@@ -268,100 +270,94 @@ NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
 
     err_ansi_to_unicode:
 
-    free_filedisk(filedisk->disk->Dev);
     return status;
   }
 
-static VOID STDCALL close(IN WV_SP_DISK_T disk_ptr) {
-    WV_SP_FILEDISK_T filedisk_ptr = filedisk__get_ptr(disk_ptr->Dev);
+static VOID STDCALL WvFilediskClose_(IN WV_SP_DEV_T dev) {
+    WV_SP_FILEDISK_T filedisk = CONTAINING_RECORD(
+        dev,
+        WV_S_FILEDISK_T,
+        disk[0].Dev
+      );
 
-    ZwClose(filedisk_ptr->file);
+    ZwClose(filedisk->file);
     return;
   }
 
 /**
- * Create a new file-backed disk.
+ * Create a filedisk PDO filled with the given disk parameters.
  *
- * @ret filedisk_ptr    The address of a new filedisk, or NULL for failure.
+ * @v MediaType                 The media type for the filedisk.
+ * @ret WV_SP_FILEDISK_T        Points to the new filedisk, or NULL.
  *
- * See the header file for additional details.
+ * Returns NULL if the PDO cannot be created.
  */
-WV_SP_FILEDISK_T WvFilediskCreate(void) {
-    WV_SP_DISK_T disk_ptr;
-    WV_SP_FILEDISK_T filedisk_ptr;
+WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
+    IN WVL_E_DISK_MEDIA_TYPE MediaType
+  ) {
+    static WV_S_DEV_IRP_MJ irp_mj = {
+        WvDiskIrpPower,
+        WvDiskIrpSysCtl,
+        disk_dev_ctl__dispatch,
+        disk_scsi__dispatch,
+        disk_pnp__dispatch,
+      };
+    NTSTATUS status;
+    WV_SP_FILEDISK_T filedisk;
+    PDEVICE_OBJECT pdo;
+  
+    DBG("Creating filedisk PDO...\n");
 
-    /* Try to create a disk. */
-    disk_ptr = disk__create();
-    if (disk_ptr == NULL)
-      goto err_nodisk;
-    /*
-     * File-backed disk devices might be used for booting and should
-     * not be allocated from a paged memory pool.
-     */
-    filedisk_ptr = wv_mallocz(sizeof *filedisk_ptr);
-    if (filedisk_ptr == NULL)
-      goto err_nofiledisk;
-    /* Track the new file-backed disk in our global list. */
-    ExInterlockedInsertTailList(
-        &filedisk_list,
-        &filedisk_ptr->tracking,
-        &filedisk_list_lock
+    /* Create the disk PDO. */
+    status = WvlDiskCreatePdo(
+        WvDriverObj,
+        sizeof *filedisk,
+        MediaType,
+        &pdo
       );
-    /* Populate non-zero device defaults. */
-    filedisk_ptr->disk = disk_ptr;
-    filedisk_ptr->prev_free = disk_ptr->Dev->Ops.Free;
-    disk_ptr->Dev->Ops.Free = free_filedisk;
-    disk_ptr->Dev->Ops.PnpId = query_id;
-    disk_ptr->disk_ops.Io = io;
-    disk_ptr->disk_ops.Close = close;
-    disk_ptr->ext = filedisk_ptr;
-    disk_ptr->DriverObj = WvDriverObj;
+    if (!NT_SUCCESS(status)) {
+        WvlError("WvlDiskCreatePdo", status);
+        return NULL;
+      }
 
-    return filedisk_ptr;
+    filedisk = pdo->DeviceExtension;
+    RtlZeroMemory(filedisk, sizeof *filedisk);
+    WvDiskInit(filedisk->disk);
+    WvDevInit(filedisk->disk->Dev);
+    filedisk->disk->Dev->Ops.Free = WvFilediskFree_;
+    filedisk->disk->Dev->Ops.PnpId = query_id;
+    filedisk->disk->Dev->Ops.Close = WvFilediskClose_;
+    filedisk->disk->Dev->ext = filedisk->disk;
+    filedisk->disk->Dev->IrpMj = &irp_mj;
+    filedisk->disk->disk_ops.Io = io;
+    filedisk->disk->ext = filedisk;
+    filedisk->disk->DriverObj = WvDriverObj;
 
-    err_nofiledisk:
+    /* Set associations for the PDO, device, disk. */
+    WvDevForDevObj(pdo, filedisk->disk->Dev);
+    KeInitializeEvent(
+        &filedisk->disk->SearchEvent,
+        SynchronizationEvent,
+        FALSE
+      );
+    KeInitializeSpinLock(&filedisk->disk->SpinLock);
+    filedisk->disk->Dev->Self = pdo;
 
-    WvDevFree(disk_ptr->Dev);
-    err_nodisk:
+    /* Some device parameters. */
+    pdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
+    pdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
 
-    return NULL;
-  }
-
-/**
- * Initialize the global, file-backed disk-common environment.
- *
- * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure.
- */
-NTSTATUS WvFilediskModuleInit(void) {
-    /* Initialize the global list of file-backed disks. */
-    InitializeListHead(&filedisk_list);
-    KeInitializeSpinLock(&filedisk_list_lock);
-
-    return STATUS_SUCCESS;
+    DBG("New PDO: %p\n", pdo);
+    return filedisk;
   }
 
 /**
  * Default file-backed disk deletion operation.
  *
- * @v dev_ptr           Points to the file-backed disk device to delete.
+ * @v dev               Points to the file-backed disk device to delete.
  */
-static VOID STDCALL free_filedisk(IN WV_SP_DEV_T dev_ptr) {
-    WV_SP_DISK_T disk_ptr = disk__get_ptr(dev_ptr);
-    WV_SP_FILEDISK_T filedisk_ptr = filedisk__get_ptr(dev_ptr);
-
-    /* Free the "inherited class". */
-    filedisk_ptr->prev_free(dev_ptr);
-    /*
-     * Track the file-backed disk deletion in our global list.  Unfortunately,
-     * for now we have faith that a file-backed disk won't be deleted twice and
-     * result in a race condition.  Something to keep in mind...
-     */
-    ExInterlockedRemoveHeadList(
-        filedisk_ptr->tracking.Blink,
-        &filedisk_list_lock
-      );
-  
-    wv_free(filedisk_ptr);
+static VOID STDCALL WvFilediskFree_(IN WV_SP_DEV_T dev) {
+    IoDeleteDevice(dev->Self);
   }
 
 /* Threaded read/write request. */
@@ -425,7 +421,7 @@ static VOID STDCALL thread(IN PVOID StartContext) {
           } /* while requests */
       } /* main loop */
     /* Time to tear things down. */
-    free_filedisk(filedisk_ptr->disk->Dev);
+    WvFilediskFree_(filedisk_ptr->disk->Dev);
   }
 
 static NTSTATUS STDCALL threaded_io(
@@ -480,17 +476,21 @@ static VOID STDCALL free_threaded_filedisk(IN WV_SP_DEV_T dev_ptr) {
 /**
  * Create a new threaded, file-backed disk.
  *
+ * @v MediaType         The media type for the filedisk.
  * @ret filedisk_ptr    The address of a new filedisk, or NULL for failure.
  *
- * See the header file for additional details.
+ * See WvFilediskCreatePdo() above.  This routine uses threaded routines
+ * for disk reads/writes, and frees asynchronously, too.
  */
-WV_SP_FILEDISK_T WvFilediskCreateThreaded(void) {
+WV_SP_FILEDISK_T WvFilediskCreatePdoThreaded(
+    IN WVL_E_DISK_MEDIA_TYPE MediaType
+  ) {
     WV_SP_FILEDISK_T filedisk_ptr;
     OBJECT_ATTRIBUTES obj_attrs;
     HANDLE thread_handle;
 
     /* Try to create a filedisk. */
-    filedisk_ptr = WvFilediskCreate();
+    filedisk_ptr = WvFilediskCreatePdo(MediaType);
     if (filedisk_ptr == NULL)
       goto err_nofiledisk;
     /* Use threaded routines. */

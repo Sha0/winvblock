@@ -43,31 +43,23 @@ static long long __divdi3(long long u, long long v) {
   }
 #endif
 
-/* IRP_MJ_DEVICE_CONTROL dispatcher from disk/dev_ctl.c */
-extern WV_F_DEV_CTL disk_dev_ctl__dispatch;
-/* IRP_MJ_SCSI dispatcher from disk/scsi.c */
-extern WV_F_DEV_SCSI disk_scsi__dispatch;
-/* IRP_MJ_PNP dispatcher from disk/pnp.c */
-extern WV_F_DEV_PNP disk_pnp__dispatch;
-
-/* Forward declarations. */
-static WV_F_DEV_FREE WvDiskDevFree_;
-static WV_F_DEV_DISPATCH WvDiskIrpPower_;
-static WV_F_DEV_DISPATCH WvDiskIrpSysCtl_;
-static WV_F_DISK_INIT WvDiskDefaultInit_;
-static WV_F_DISK_CLOSE WvDiskDefaultClose_;
-
-/* Globals. */
+/** Exports. */
 BOOLEAN WvDiskIsRemovable[WvlDiskMediaTypes] = { TRUE, FALSE, TRUE };
 PWCHAR WvDiskCompatIds[WvlDiskMediaTypes] = {
     L"GenSFloppy",
     L"GenDisk",
     L"GenCdRom"
   };
+
+/** Private. */
+static WV_F_DEV_FREE WvDiskDevFree_;
+static WV_F_DISK_INIT WvDiskDefaultInit_;
+static WV_F_DISK_CLOSE WvDiskDefaultClose_;
+
 /* Device IRP major function dispatch table. */
-WV_S_DEV_IRP_MJ WvDiskIrpMj_ = {
-    WvDiskIrpPower_,
-    WvDiskIrpSysCtl_,
+static WV_S_DEV_IRP_MJ WvDiskIrpMj_ = {
+    WvDiskIrpPower,
+    WvDiskIrpSysCtl,
     disk_dev_ctl__dispatch,
     disk_scsi__dispatch,
     disk_pnp__dispatch,
@@ -104,12 +96,12 @@ static VOID STDCALL WvDiskDefaultClose_(IN WV_SP_DISK_T disk) {
     return;
   }
 
-static NTSTATUS STDCALL WvDiskIrpPower_(IN WV_SP_DEV_T dev, IN PIRP irp) {
+NTSTATUS STDCALL WvDiskIrpPower(IN WV_SP_DEV_T dev, IN PIRP irp) {
     PoStartNextPowerIrp(irp);
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
-static NTSTATUS STDCALL WvDiskIrpSysCtl_(IN WV_SP_DEV_T dev, IN PIRP irp) {
+NTSTATUS STDCALL WvDiskIrpSysCtl(IN WV_SP_DEV_T dev, IN PIRP irp) {
     return WvlIrpComplete(irp, 0, irp->IoStatus.Status);
   }
 
