@@ -19,12 +19,19 @@
 :_main
 
 mkdir bin %_%
+
 %@% Extracting WinVBlk.INF...
 %@%
 call :_extract WinVBlk > bin\WinVBlk.INF
+
 %@% Extracting AoE.INF...
 %@%
 call :_extract AoE > bin\AoE.INF
+
+%@% Extracting HTTPDisk.INF...
+%@%
+call :_extract HTTPDisk > bin\HTTPDisk.INF
+
 %Q%
 
 -----EOF-----
@@ -156,6 +163,68 @@ ServiceType=0x00000001
 StartType=0x00000000
 ErrorControl=0x00000001
 ServiceBinary=%12%\aoe64.sys
+-----EOF-----
+
+
+
+-----HTTPDisk-----
+[Version]
+Signature="$Windows NT$"
+Class=SCSIAdapter
+ClassGUID={4D36E97B-E325-11CE-BFC1-08002BE10318}
+Provider=WinVBlock
+CatalogFile=httpdisk.cat
+DriverVer=05/16/2010,0.0.0.8
+ 
+[Manufacturer]
+WinVBlock=HTTPDiskDriver,,NTamd64
+  
+[HTTPDiskDriver]
+"HTTPDisk Driver"=HTTPDisk,WinVBlock\HTTPDisk
+ 
+[HTTPDiskDriver.NTamd64]
+"HTTPDisk Driver"=HTTPDisk.NTamd64,WinVBlock\HTTPDisk
+ 
+[SourceDisksNames]
+0="Install Disk"
+ 
+[SourceDisksFiles]
+wvhttp32.sys=0
+wvhttp64.sys=0
+ 
+[DestinationDirs]
+Files.Driver=12
+Files.Driver.NTamd64=12
+ 
+[Files.Driver]
+wvhttp32.sys
+ 
+[Files.Driver.NTamd64]
+wvhttp64.sys
+ 
+[HTTPDisk]
+CopyFiles=Files.Driver
+ 
+[HTTPDisk.NTamd64]
+CopyFiles=Files.Driver.NTamd64
+ 
+[HTTPDisk.Services]
+AddService=HTTPDisk,0x00000002,Service
+ 
+[HTTPDisk.NTamd64.Services]
+AddService=HTTPDisk,0x00000002,Service.NTamd64
+ 
+[Service]
+ServiceType=0x00000001
+StartType=0x00000000
+ErrorControl=0x00000001
+ServiceBinary=%12%\wvhttp32.sys
+ 
+[Service.NTamd64]
+ServiceType=0x00000001
+StartType=0x00000000
+ErrorControl=0x00000001
+ServiceBinary=%12%\wvhttp64.sys
 -----EOF-----
 
 
