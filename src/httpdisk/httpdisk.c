@@ -180,6 +180,8 @@ static
   __drv_dispatchType(IRP_MJ_PNP)
   DRIVER_DISPATCH HttpdiskIrpPnp_;
 
+static NTSTATUS STDCALL HttpdiskIrpPnpQueryId_(IN HTTPDISK_SP_DEV, IN PIRP);
+
 VOID
 HttpDiskThread (
     IN PVOID            Context
@@ -440,6 +442,8 @@ HttpDiskCreateDevice (
     device_extension->terminate_thread = FALSE;
 
     device_extension->bus = FALSE;
+    device_extension->number = Number;
+    device_extension->dev_type = DeviceType;
 
     status = PsCreateSystemThread(
         &thread_handle,
@@ -939,15 +943,89 @@ static NTSTATUS HttpdiskIrpPnp_(IN PDEVICE_OBJECT dev_obj, IN PIRP irp) {
     minor = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
     switch (minor) {
         case IRP_MN_QUERY_ID:
-          #if 0
-          return HttpdiskIrpPnpQueryId(dev, irp);
-          #endif
+          return HttpdiskIrpPnpQueryId_(dev, irp);
 
         default:
           DBG("Unhandled minor: %d\n", minor);
           break;
       }
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+  }
+
+static NTSTATUS STDCALL HttpdiskIrpPnpQueryId_(
+    IN HTTPDISK_SP_DEV dev,
+    IN PIRP irp
+  ) {
+    WCHAR (*buf)[512];
+    NTSTATUS status;
+    PWCHAR hw_id, compat_id;
+    BUS_QUERY_ID_TYPE query_type;
+
+    /* Allocate a buffer. */
+    buf = HttpDiskPalloc(sizeof *buf);
+    if (!buf) {
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto err_buf;
+      }
+
+    /* Determinate the IDs for the device type. */
+    switch (dev->dev_type) {
+        case FILE_DEVICE_DISK:
+          hw_id = L"HTTPDisk\\HardDisk";
+          compat_id = L"GenDisk";
+          break;
+
+        case FILE_DEVICE_CD_ROM:
+          hw_id = L"HTTPDisk\\OpticalDisc";
+          compat_id = L"GenCdRom";
+          break;
+
+        default:
+          DBG("Unknown device type for %p!\n", dev);
+          status = STATUS_DRIVER_INTERNAL_ERROR;
+          goto err_dev_type;
+      }
+
+    /* Populate the buffer with IDs. */
+    RtlZeroMemory(buf, sizeof *buf);
+    query_type = IoGetCurrentIrpStackLocation(irp)->Parameters.QueryId.IdType;
+    switch (query_type) {
+        case BusQueryDeviceID:
+          swprintf(*buf, hw_id);
+          break;
+
+        case BusQueryInstanceID:
+          swprintf(*buf, L"%08X", dev->number);
+          break;
+
+        case BusQueryHardwareIDs:
+          swprintf(
+              *buf + swprintf(*buf, hw_id) + 1,
+              compat_id
+            );
+          break;
+
+        case BusQueryCompatibleIDs:
+          swprintf(*buf, compat_id);
+          break;
+
+        default:
+          DBG("Unknown query type %d for dev %p!\n", query_type, dev);
+          status = STATUS_INVALID_PARAMETER;
+          goto err_query_type;
+      }
+
+    DBG("IRP_MN_QUERY_ID for dev %p.\n", dev);
+    return WvlIrpComplete(irp, (ULONG_PTR) buf, STATUS_SUCCESS);
+
+    err_query_type:
+
+    err_dev_type:
+
+    ExFreePool(buf);    
+    err_buf:
+
+    return WvlIrpComplete(irp, 0, status);
   }
 
 #pragma code_seg("PAGE")
