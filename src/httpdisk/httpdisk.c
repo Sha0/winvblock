@@ -968,6 +968,10 @@ static NTSTATUS HttpdiskIrpPnp_(IN PDEVICE_OBJECT dev_obj, IN PIRP irp) {
 
     minor = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
     switch (minor) {
+        case IRP_MN_START_DEVICE:
+          DBG("IRP_MN_START_DEVICE for dev %p.\n", dev);
+          return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
+
         case IRP_MN_QUERY_CAPABILITIES:
           DBG("IRP_MN_QUERY_CAPABILITIES for dev %p.\n", dev);
           return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
