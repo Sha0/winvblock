@@ -63,7 +63,7 @@ fast_copy (
 
 static NTSTATUS STDCALL io(
     IN WV_SP_DEV_T dev_ptr,
-    IN WV_E_DISK_IO_MODE mode,
+    IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,
     IN PUCHAR buffer,
@@ -108,7 +108,7 @@ static NTSTATUS STDCALL io(
       IoCompleteRequest ( irp, IO_NO_INCREMENT );
       return STATUS_INSUFFICIENT_RESOURCES;
     }
-  if (mode == WvDiskIoModeWrite)
+  if (mode == WvlDiskIoModeWrite)
     fast_copy ( PhysicalMemory, buffer, sector_count * disk_ptr->SectorSize );
   else
     fast_copy ( buffer, PhysicalMemory, sector_count * disk_ptr->SectorSize );

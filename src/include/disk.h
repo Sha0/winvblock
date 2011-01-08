@@ -40,11 +40,11 @@ typedef WVL_A_DISK_BOOT_SECT * WVL_AP_DISK_BOOT_SECT;
 extern BOOLEAN WvDiskIsRemovable[WvlDiskMediaTypes];
 extern PWCHAR WvDiskCompatIds[WvlDiskMediaTypes];
 
-typedef enum WV_DISK_IO_MODE {
-    WvDiskIoModeRead,
-    WvDiskIoModeWrite,
-    WvDiskIoModes
-  } WV_E_DISK_IO_MODE, * WV_EP_DISK_IO_MODE;
+typedef enum WVL_DISK_IO_MODE {
+    WvlDiskIoModeRead,
+    WvlDiskIoModeWrite,
+    WvlDiskIoModes
+  } WVL_E_DISK_IO_MODE, * WVL_EP_DISK_IO_MODE;
 
 /* Forward declaration. */
 typedef struct WV_DISK_T WV_S_DISK_T, * WV_SP_DISK_T;
@@ -61,7 +61,7 @@ typedef struct WV_DISK_T WV_S_DISK_T, * WV_SP_DISK_T;
  */
 typedef NTSTATUS STDCALL WV_F_DISK_IO(
     IN WV_SP_DEV_T,
-    IN WV_E_DISK_IO_MODE,
+    IN WVL_E_DISK_IO_MODE,
     IN LONGLONG,
     IN UINT32,
     IN PUCHAR,

@@ -127,7 +127,7 @@ static NTSTATUS STDCALL check_disk_match(
  */
 static NTSTATUS STDCALL io(
     IN WV_SP_DEV_T dev_ptr,
-    IN WV_E_DISK_IO_MODE mode,
+    IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,
     IN PUCHAR buffer,

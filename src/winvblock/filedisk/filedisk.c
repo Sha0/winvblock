@@ -51,7 +51,7 @@ static WV_F_DISK_CLOSE close;
 
 static NTSTATUS STDCALL io(
     IN WV_SP_DEV_T dev_ptr,
-    IN WV_E_DISK_IO_MODE mode,
+    IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,
     IN PUCHAR buffer,
@@ -79,7 +79,7 @@ static NTSTATUS STDCALL io(
     offset.QuadPart = start_sector * disk_ptr->SectorSize;
     offset.QuadPart += filedisk_ptr->offset.QuadPart;
 
-    if (mode == WvDiskIoModeWrite) {
+    if (mode == WvlDiskIoModeWrite) {
         status = ZwWriteFile(
             filedisk_ptr->file,
             NULL,
@@ -358,7 +358,7 @@ static VOID STDCALL free_filedisk(IN WV_SP_DEV_T dev_ptr) {
 typedef struct WV_FILEDISK_THREAD_REQ {
     LIST_ENTRY list_entry;
     WV_SP_DEV_T dev_ptr;
-    WV_E_DISK_IO_MODE mode;
+    WVL_E_DISK_IO_MODE mode;
     LONGLONG start_sector;
     UINT32 sector_count;
     PUCHAR buffer;
@@ -420,7 +420,7 @@ static VOID STDCALL thread(IN PVOID StartContext) {
 
 static NTSTATUS STDCALL threaded_io(
     IN WV_SP_DEV_T dev_ptr,
-    IN WV_E_DISK_IO_MODE mode,
+    IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,
     IN PUCHAR buffer,

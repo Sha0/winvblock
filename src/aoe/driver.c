@@ -139,7 +139,7 @@ typedef struct AOE_PACKET_ AOE_S_PACKET_, * AOE_SP_PACKET_;
 
 /** An I/O request. */
 typedef struct AOE_IO_REQ_ {
-    WV_E_DISK_IO_MODE Mode;
+    WVL_E_DISK_IO_MODE Mode;
     UINT32 SectorCount;
     PUCHAR Buffer;
     PIRP Irp;
@@ -786,7 +786,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
 
 static NTSTATUS STDCALL AoeDiskIo_(
     IN WV_SP_DEV_T dev_ptr,
-    IN WV_E_DISK_IO_MODE mode,
+    IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,
     IN PUCHAR buffer,
@@ -874,7 +874,7 @@ static NTSTATUS STDCALL AoeDiskIo_(
 
         /* Allocate and initialize each tag's AoE packet. */
         tag->PacketSize = sizeof (AOE_S_PACKET_);
-        if (mode == WvDiskIoModeWrite)
+        if (mode == WvlDiskIoModeWrite)
           tag->PacketSize += tag->SectorCount * disk_ptr->SectorSize;
         if ((tag->packet_data = wv_mallocz(tag->PacketSize)) == NULL) {
             DBG("Couldn't allocate tag->packet_data; bye!\n");
@@ -902,7 +902,7 @@ static NTSTATUS STDCALL AoeDiskIo_(
         tag->packet_data->Tag = 0;
         tag->packet_data->Command = 0;
         tag->packet_data->ExtendedAFlag = TRUE;
-        if (mode == WvDiskIoModeRead)
+        if (mode == WvlDiskIoModeRead)
           tag->packet_data->Cmd = 0x24;  /* READ SECTOR */
           else {
             tag->packet_data->Cmd = 0x34;  /* WRITE SECTOR */
@@ -917,7 +917,7 @@ static NTSTATUS STDCALL AoeDiskIo_(
         tag->packet_data->Lba5 = (UCHAR) (((start_sector + i) >> 40) & 255);
 
         /* For a write request, copy from the buffer into the AoE packet. */
-        if (mode == WvDiskIoModeWrite) {
+        if (mode == WvlDiskIoModeWrite) {
             RtlCopyMemory(
                 tag->packet_data->Data,
                 buffer + (tag->BufferOffset),
@@ -1208,7 +1208,7 @@ NTSTATUS STDCALL aoe__reply(
 
         case AoeTagTypeIo_:
           /* If the reply is in response to a read request, get our data! */
-          if (tag->request_ptr->Mode == WvDiskIoModeRead) {
+          if (tag->request_ptr->Mode == WvlDiskIoModeRead) {
               RtlCopyMemory(
                   tag->request_ptr->Buffer + (tag->BufferOffset),
                   reply->Data,

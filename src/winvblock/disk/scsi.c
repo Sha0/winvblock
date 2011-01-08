@@ -215,7 +215,7 @@ static NTSTATUS STDCALL disk_scsi__read_write_(
     if (cdb->AsByte[0] == SCSIOP_READ || cdb->AsByte[0] == SCSIOP_READ16) {
         status = disk__io(
             dev,
-            WvDiskIoModeRead,
+            WvlDiskIoModeRead,
             start_sector,
             sector_count,
             ((PUCHAR) srb->DataBuffer -
@@ -229,7 +229,7 @@ static NTSTATUS STDCALL disk_scsi__read_write_(
       } else {
         status = disk__io(
             dev,
-            WvDiskIoModeWrite,
+            WvlDiskIoModeWrite,
             start_sector,
             sector_count,
             ((PUCHAR) srb->DataBuffer -
