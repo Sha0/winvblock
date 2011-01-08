@@ -333,47 +333,64 @@ WVL_M_LIB VOID disk__guess_geometry(
   }
 
 /**
+ * Initialize disk defaults.
+ *
+ * @v disk              The disk to initialize.
+ */
+WVL_M_LIB VOID STDCALL WvDiskInit(IN WV_SP_DISK_T disk) {
+    /* Populate non-zero device defaults. */
+    disk->disk_ops.MaxXferLen = WvDiskDefaultMaxXferLen_;
+    disk->disk_ops.Init = WvDiskDefaultInit_;
+    disk->disk_ops.Close = WvDiskDefaultClose_;
+    KeInitializeSpinLock(&disk->SpinLock);
+
+    return;
+  }
+
+/**
  * Create a new disk.
  *
- * @ret disk_ptr        The address of a new disk, or NULL for failure.
+ * @ret disk            The address of a new disk, or NULL for failure.
  *
- * See the header file for additional details.
+ * This function should not be confused with a PDO creation routine, which is
+ * actually implemented for each device type.  This routine will allocate a
+ * WV_S_DISK_T, track it in a global list, as well as populate the disk
+ * with default values.
  */
 WVL_M_LIB WV_SP_DISK_T disk__create(void) {
-    WV_SP_DEV_T dev_ptr;
-    WV_SP_DISK_T disk_ptr;
+    WV_SP_DISK_T disk;
+    WV_SP_DEV_T dev;
 
     /*
      * Disk devices might be used for booting and should
      * not be allocated from a paged memory pool.
      */
-    disk_ptr = wv_mallocz(sizeof *disk_ptr);
-    if (disk_ptr == NULL)
+    disk = wv_mallocz(sizeof *disk);
+    if (disk == NULL)
       goto err_nodisk;
 
-    dev_ptr = disk_ptr->Dev;
-    WvDevInit(dev_ptr);
+    /* Initialize the device with defaults. */
+    dev = disk->Dev;
+    WvDevInit(dev);
 
     /* Track the new disk in our global list. */
     ExInterlockedInsertTailList(
         &WvDiskList_,
-        &disk_ptr->tracking,
+        &disk->tracking,
         &WvDiskListLock_
       );
-    /* Populate non-zero device defaults. */
-    disk_ptr->disk_ops.MaxXferLen = WvDiskDefaultMaxXferLen_;
-    disk_ptr->disk_ops.Init = WvDiskDefaultInit_;
-    disk_ptr->disk_ops.Close = WvDiskDefaultClose_;
-    dev_ptr->Ops.Close = WvDiskDevClose_;
-    dev_ptr->Ops.CreatePdo = WvDiskCreatePdo_;
-    dev_ptr->Ops.Free = WvDiskDevFree_;
-    dev_ptr->Ops.Init = WvDiskDevInit_;
-    dev_ptr->ext = disk_ptr;
-    dev_ptr->IrpMj = &WvDiskIrpMj_;
-    KeInitializeSpinLock(&disk_ptr->SpinLock);
 
-    return disk_ptr;
+    /* Initialize with defaults. */
+    WvDiskInit(disk);
+    dev->Ops.Close = WvDiskDevClose_;
+    dev->Ops.CreatePdo = WvDiskCreatePdo_;
+    dev->Ops.Free = WvDiskDevFree_;
+    dev->Ops.Init = WvDiskDevInit_;
+    dev->ext = disk;
+    dev->IrpMj = &WvDiskIrpMj_;
+    return disk;
 
+    wv_free(disk);
     err_nodisk:
 
     return NULL;

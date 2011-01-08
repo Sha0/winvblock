@@ -168,16 +168,7 @@ extern WVL_M_LIB VOID disk__guess_geometry(
     IN OUT WV_SP_DISK_T disk_ptr
   );
 
-/**
- * Create a new disk.
- *
- * @ret disk_ptr        The address of a new disk, or NULL for failure.
- *
- * This function should not be confused with a PDO creation routine, which is
- * actually implemented for each device type.  This routine will allocate a
- * WV_S_DISK_T, track it in a global list, as well as populate the disk
- * with default values.
- */
+extern WVL_M_LIB VOID STDCALL WvDiskInit(IN WV_SP_DISK_T);
 extern WVL_M_LIB WV_SP_DISK_T disk__create(void);
 
 extern NTSTATUS disk__module_init(void);
