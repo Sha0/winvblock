@@ -93,7 +93,12 @@ NTSTATUS STDCALL HttpdiskBusEstablish(void) {
   }
 
 VOID HttpdiskBusCleanup(void) {
+    /*
+     * The FDO should be deleted by an IRP_MJ_PNP:IRP_MN_REMOVE_DEVICE,
+     * but just in case it isn't...
+     */
     HttpdiskBusDeleteFdo_();
+    DBG("Cleaned up.\n");
     return;
   }
 
@@ -140,10 +145,15 @@ NTSTATUS HttpdiskBusAttach(
 NTSTATUS HttpdiskBusIrp(IN PDEVICE_OBJECT DevObj, IN PIRP Irp) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(Irp);
     UCHAR major = io_stack_loc->MajorFunction;
+    NTSTATUS status;
 
     switch (major) {
         case IRP_MJ_PNP:
-          return WvlBusPnp(&HttpdiskBus_, Irp);
+          status = WvlBusPnp(&HttpdiskBus_, Irp);
+          /* Is the bus still attached?  If not, it's time to stop. */
+          if (HttpdiskBus_.State == WvlBusStateDeleted)
+            HttpdiskBusDeleteFdo_();
+          return status;
 
         case IRP_MJ_POWER:
           return WvlBusPower(&HttpdiskBus_, Irp);
@@ -213,7 +223,7 @@ static VOID HttpdiskBusDeleteFdo_(void) {
     if (!HttpdiskBus_.Fdo)
       return;
     IoDeleteDevice(HttpdiskBus_.Fdo);
-    HttpdiskBus_.Fdo = NULL;
     DBG("FDO %p deleted.\n", (PVOID) HttpdiskBus_.Fdo);
+    HttpdiskBus_.Fdo = NULL;
     return;
   }
