@@ -281,6 +281,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusAddNode(
     if (
         !Bus ||
         !Node ||
+        !Bus->Fdo ||
         Bus->Fdo->DriverObject != Node->BusPrivate_.Pdo->DriverObject
       )
       return STATUS_INVALID_PARAMETER;
