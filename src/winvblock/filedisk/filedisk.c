@@ -105,7 +105,7 @@ static NTSTATUS STDCALL io(
           );
       }
     if (!start_sector)
-      disk__guess_geometry((WV_AP_DISK_BOOT_SECT) buffer, disk_ptr);
+      disk__guess_geometry((WVL_AP_DISK_BOOT_SECT) buffer, disk_ptr);
     irp->IoStatus.Information = sector_count * disk_ptr->SectorSize;
     irp->IoStatus.Status = status;
     IoCompleteRequest(irp, IO_NO_INCREMENT);

@@ -230,7 +230,7 @@ typedef struct WV_DISK_FAT_SUPER WV_S_DISK_FAT_SUPER, * WV_SP_DISK_FAT_SUPER;
  * @v disk_ptr          The disk to set the geometry for.
  */
 WVL_M_LIB VOID disk__guess_geometry(
-    IN WV_AP_DISK_BOOT_SECT boot_sect_ptr,
+    IN WVL_AP_DISK_BOOT_SECT boot_sect_ptr,
     IN OUT WV_SP_DISK_T disk_ptr
   ) {
     UINT16 heads = 0, sects_per_track = 0, cylinders;
