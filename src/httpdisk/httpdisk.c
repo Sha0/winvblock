@@ -180,6 +180,10 @@ static
   __drv_dispatchType(IRP_MJ_PNP)
   DRIVER_DISPATCH HttpdiskIrpPnp_;
 
+static
+  __drv_dispatchType(IRP_MJ_SCSI)
+  DRIVER_DISPATCH HttpdiskIrpScsi_;
+
 static NTSTATUS STDCALL HttpdiskIrpPnpQueryId_(IN HTTPDISK_SP_DEV, IN PIRP);
 
 VOID
@@ -353,6 +357,7 @@ DriverEntry (
     DriverObject->MajorFunction[IRP_MJ_WRITE] = HttpdiskIrpReadWrite_;
     DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = HttpdiskIrpDevCtl_;
     DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = HttpdiskBusIrp;
+    DriverObject->MajorFunction[IRP_MJ_SCSI] = HttpdiskIrpScsi_;
 
     DriverObject->DriverUnload = HttpDiskUnload;
     DriverObject->DriverExtension->AddDevice = HttpdiskBusAttach;
@@ -965,6 +970,23 @@ static NTSTATUS HttpdiskIrpPnp_(IN PDEVICE_OBJECT dev_obj, IN PIRP irp) {
           DBG("IRP_MN_QUERY_BUS_INFORMATION for dev %p.\n", dev);
           return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
 
+        default:
+          DBG("Unhandled minor: %d\n", minor);
+          break;
+      }
+    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+  }
+
+static NTSTATUS HttpdiskIrpScsi_(IN PDEVICE_OBJECT dev_obj, IN PIRP irp) {
+    HTTPDISK_SP_DEV dev = dev_obj->DeviceExtension;
+    UCHAR minor;
+
+    /* Check for a bus IRP. */
+    if (dev->bus)
+      return HttpdiskBusIrp(dev_obj, irp);
+
+    minor = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
+    switch (minor) {
         default:
           DBG("Unhandled minor: %d\n", minor);
           break;
