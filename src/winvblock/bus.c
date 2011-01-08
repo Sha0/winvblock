@@ -290,7 +290,8 @@ BOOLEAN STDCALL WvBusAddDev(
      * Initialize the device.  For disks, this routine is responsible for
      * determining the disk's geometry appropriately for RAM/file disks.
      */
-    Dev->Ops.Init(Dev);
+    if (Dev->Ops.Init)
+      Dev->Ops.Init(Dev);
     dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
     /* Add the new PDO device to the bus' list of children. */
     WvlBusAddNode(&WvBus, &Dev->BusNode);
