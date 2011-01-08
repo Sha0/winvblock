@@ -241,9 +241,7 @@ NTSTATUS STDCALL AoeBusAttachFdo(
     IN PDRIVER_OBJECT driver_obj,
     IN PDEVICE_OBJECT pdo
   ) {
-    KIRQL irql;
     NTSTATUS status;
-    PLIST_ENTRY walker;
 
     DBG("Entry\n");
     /* Do we already have our main bus? */
@@ -293,7 +291,6 @@ static NTSTATUS AoeBusCreatePdo_(void) {
  */
 NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
     NTSTATUS status;
-    KIRQL irql;
 
     /* Do we already have our main bus? */
     if (AoeBusMain.Fdo) {
