@@ -30,6 +30,7 @@
 #include "debug.h"
 #include "dummy.h"
 #include "bus.h"
+#include "irp.h"
 
 /** From httpdisk.c */
 extern PDRIVER_OBJECT HttpdiskDriverObj;
@@ -38,6 +39,7 @@ extern PDRIVER_OBJECT HttpdiskDriverObj;
 NTSTATUS STDCALL HttpdiskBusEstablish(void);
 VOID HttpdiskBusCleanup(void);
 DRIVER_ADD_DEVICE HttpdiskBusAttach;
+DRIVER_DISPATCH HttpdiskBusIrp;
 
 /** Private. */
 static NTSTATUS STDCALL HttpdiskBusCreateFdo_(void);
@@ -98,6 +100,10 @@ NTSTATUS HttpdiskBusAttach(
     IN PDEVICE_OBJECT Pdo
   ) {
     return STATUS_NOT_SUPPORTED;
+  }
+
+NTSTATUS HttpdiskBusIrp(IN PDEVICE_OBJECT DevObj, IN PIRP Irp) {
+    return WvlIrpComplete(Irp, 0, STATUS_NOT_SUPPORTED);
   }
 
 static NTSTATUS STDCALL HttpdiskBusCreateFdo_(void) {

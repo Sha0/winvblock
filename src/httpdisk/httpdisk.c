@@ -113,6 +113,7 @@ MmGetSystemAddressForMdlPrettySafe (
 extern NTSTATUS STDCALL HttpdiskBusEstablish(void);
 extern VOID HttpdiskBusCleanup(void);
 extern DRIVER_ADD_DEVICE HttpdiskBusAttach;
+extern DRIVER_DISPATCH HttpdiskBusIrp;
 
 /* For this file. */
 #define PARAMETER_KEY           L"\\Parameters"
@@ -426,6 +427,8 @@ HttpDiskCreateDevice (
 
     device_extension->terminate_thread = FALSE;
 
+    device_extension->bus = FALSE;
+
     status = PsCreateSystemThread(
         &thread_handle,
         (ACCESS_MASK) 0L,
@@ -535,6 +538,14 @@ static NTSTATUS HttpdiskIrpCreateClose_(
     IN PDEVICE_OBJECT   DeviceObject,
     IN PIRP             Irp
   ) {
+    HTTPDISK_SP_DEV   device_extension;
+
+    device_extension = (HTTPDISK_SP_DEV) DeviceObject->DeviceExtension;
+
+    /* Check for a bus IRP. */
+    if (device_extension->bus)
+      return HttpdiskBusIrp(DeviceObject, Irp);
+
     Irp->IoStatus.Status = STATUS_SUCCESS;
     Irp->IoStatus.Information = FILE_OPENED;
 
@@ -553,6 +564,10 @@ static NTSTATUS HttpdiskIrpReadWrite_(
     PIO_STACK_LOCATION  io_stack;
 
     device_extension = (HTTPDISK_SP_DEV) DeviceObject->DeviceExtension;
+
+    /* Check for a bus IRP. */
+    if (device_extension->bus)
+      return HttpdiskBusIrp(DeviceObject, Irp);
 
     if (!device_extension->media_in_device)
     {
@@ -602,6 +617,10 @@ static NTSTATUS HttpdiskIrpDevCtl_(
     NTSTATUS            status;
 
     device_extension = (HTTPDISK_SP_DEV) DeviceObject->DeviceExtension;
+
+    /* Check for a bus IRP. */
+    if (device_extension->bus)
+      return HttpdiskBusIrp(DeviceObject, Irp);
 
     io_stack = IoGetCurrentIrpStackLocation(Irp);
 

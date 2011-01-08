@@ -61,6 +61,7 @@ typedef struct HTTPDISK_DEV {
     KEVENT          request_event;
     PVOID           thread_pointer;
     BOOLEAN         terminate_thread;
+    BOOLEAN         bus;
 } HTTPDISK_S_DEV, * HTTPDISK_SP_DEV;
 
 #endif
