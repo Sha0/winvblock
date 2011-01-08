@@ -168,6 +168,12 @@ extern WVL_M_LIB VOID disk__guess_geometry(
     IN OUT WV_SP_DISK_T disk_ptr
   );
 
+extern WVL_M_LIB NTSTATUS STDCALL WvlDiskCreatePdo(
+    IN PDRIVER_OBJECT,
+    IN SIZE_T,
+    IN WVL_E_DISK_MEDIA_TYPE,
+    OUT PDEVICE_OBJECT *
+  );
 extern WVL_M_LIB VOID STDCALL WvDiskInit(IN WV_SP_DISK_T);
 extern WVL_M_LIB WV_SP_DISK_T disk__create(void);
 
