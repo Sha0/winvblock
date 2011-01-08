@@ -402,6 +402,7 @@ WVL_M_LIB VOID disk__guess_geometry(
  * @v disk              The disk to initialize.
  */
 WVL_M_LIB VOID STDCALL WvDiskInit(IN WV_SP_DISK_T disk) {
+    RtlZeroMemory(disk, sizeof *disk);
     /* Populate non-zero device defaults. */
     disk->disk_ops.MaxXferLen = WvDiskDefaultMaxXferLen_;
     disk->disk_ops.Init = WvDiskDefaultInit_;
@@ -429,16 +430,14 @@ WVL_M_LIB WV_SP_DISK_T disk__create(void) {
      * Disk devices might be used for booting and should
      * not be allocated from a paged memory pool.
      */
-    disk = wv_mallocz(sizeof *disk);
+    disk = wv_malloc(sizeof *disk);
     if (disk == NULL)
       goto err_nodisk;
 
-    /* Initialize the device with defaults. */
-    dev = disk->Dev;
-    WvDevInit(dev);
-
     /* Initialize with defaults. */
     WvDiskInit(disk);
+    dev = disk->Dev;
+    WvDevInit(dev);
     dev->Ops.Close = WvDiskDevClose_;
     dev->Ops.CreatePdo = WvDiskCreatePdo_;
     dev->Ops.Free = WvDiskDevFree_;
