@@ -29,6 +29,7 @@
 #include "winvblock.h"
 #include "debug.h"
 #include "dummy.h"
+#include "bus.h"
 
 /** From httpdisk.c */
 extern PDRIVER_OBJECT HttpdiskDriverObj;
@@ -43,8 +44,8 @@ static NTSTATUS STDCALL HttpdiskBusCreateFdo_(void);
 static NTSTATUS STDCALL HttpdiskBusCreatePdo_(void);
 static VOID HttpdiskBusDeleteFdo_(void);
 
-/* The HTTPDisk bus FDO. */
-static PDEVICE_OBJECT HttpdiskBusFdo_ = NULL;
+/* The HTTPDisk bus. */
+static WVL_S_BUS_T HttpdiskBus_ = {0};
 
 /* Names for the HTTPDisk bus. */
 #define HTTPDISK_M_BUS_NAME_ (L"\\Device\\HTTPDisk")
@@ -62,6 +63,9 @@ static UNICODE_STRING HttpdiskBusDosname_ = {
 
 NTSTATUS STDCALL HttpdiskBusEstablish(void) {
     NTSTATUS status;
+
+    /* Initialize the bus. */
+    WvlBusInit(&HttpdiskBus_);
 
     status = HttpdiskBusCreateFdo_();
     if (!NT_SUCCESS(status))
@@ -106,14 +110,14 @@ static NTSTATUS STDCALL HttpdiskBusCreateFdo_(void) {
         FILE_DEVICE_CONTROLLER,
         FILE_DEVICE_SECURE_OPEN,
         FALSE,
-        &HttpdiskBusFdo_
+        &HttpdiskBus_.Fdo
       );
     if (!NT_SUCCESS(status)) {
         DBG("FDO not created.\n");
         return status;
       }
 
-    DBG("FDO created: %p.\n", (PVOID) HttpdiskBusFdo_);
+    DBG("FDO created: %p.\n", (PVOID) HttpdiskBus_.Fdo);
     return STATUS_SUCCESS;
   }
 
@@ -143,10 +147,10 @@ static NTSTATUS STDCALL HttpdiskBusCreatePdo_(void) {
   }
 
 static VOID HttpdiskBusDeleteFdo_(void) {
-    if (!HttpdiskBusFdo_)
+    if (!HttpdiskBus_.Fdo)
       return;
-    IoDeleteDevice(HttpdiskBusFdo_);
-    HttpdiskBusFdo_ = NULL;
-    DBG("FDO %p deleted.\n", (PVOID) HttpdiskBusFdo_);
+    IoDeleteDevice(HttpdiskBus_.Fdo);
+    HttpdiskBus_.Fdo = NULL;
+    DBG("FDO %p deleted.\n", (PVOID) HttpdiskBus_.Fdo);
     return;
   }
