@@ -31,6 +31,7 @@
 #include "dummy.h"
 #include "bus.h"
 #include "irp.h"
+#include "httpdisk.h"
 
 /** From httpdisk.c */
 extern PDRIVER_OBJECT HttpdiskDriverObj;
@@ -108,10 +109,11 @@ NTSTATUS HttpdiskBusIrp(IN PDEVICE_OBJECT DevObj, IN PIRP Irp) {
 
 static NTSTATUS STDCALL HttpdiskBusCreateFdo_(void) {
     NTSTATUS status;
+    HTTPDISK_SP_DEV dev;
 
     status = IoCreateDevice(
         HttpdiskDriverObj,
-        0,
+        sizeof *dev,
         &HttpdiskBusName_,
         FILE_DEVICE_CONTROLLER,
         FILE_DEVICE_SECURE_OPEN,
@@ -122,6 +124,10 @@ static NTSTATUS STDCALL HttpdiskBusCreateFdo_(void) {
         DBG("FDO not created.\n");
         return status;
       }
+
+    /* Initialize device extension. */
+    dev = HttpdiskBus_.Fdo->DeviceExtension;
+    dev->bus = TRUE;
 
     DBG("FDO created: %p.\n", (PVOID) HttpdiskBus_.Fdo);
     return STATUS_SUCCESS;
