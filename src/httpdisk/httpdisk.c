@@ -942,8 +942,28 @@ static NTSTATUS HttpdiskIrpPnp_(IN PDEVICE_OBJECT dev_obj, IN PIRP irp) {
 
     minor = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
     switch (minor) {
+        case IRP_MN_QUERY_CAPABILITIES:
+          DBG("IRP_MN_QUERY_CAPABILITIES for dev %p.\n", dev);
+          return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+
+        case IRP_MN_QUERY_RESOURCES:
+          DBG("IRP_MN_QUERY_RESOURCES for dev %p.\n", dev);
+          return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+
+        case IRP_MN_QUERY_RESOURCE_REQUIREMENTS:
+          DBG("IRP_MN_QUERY_RESOURCE_REQUIREMENTS for dev %p.\n", dev);
+          return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+
+        case IRP_MN_QUERY_DEVICE_TEXT:
+          DBG("IRP_MN_QUERY_DEVICE_TEXT for dev %p.\n", dev);
+          return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+
         case IRP_MN_QUERY_ID:
           return HttpdiskIrpPnpQueryId_(dev, irp);
+
+        case IRP_MN_QUERY_BUS_INFORMATION:
+          DBG("IRP_MN_QUERY_BUS_INFORMATION for dev %p.\n", dev);
+          return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
 
         default:
           DBG("Unhandled minor: %d\n", minor);
