@@ -190,7 +190,6 @@ NTSTATUS STDCALL DriverEntry(
     /* Set the driver AddDevice callback. */
     DriverObject->DriverExtension->AddDevice = WvAttachFdo;
     /* Initialize various modules. */
-    disk__module_init();        /* TODO: Check for error. */
     WvFilediskModuleInit();     /* TODO: Check for error. */
     ramdisk__module_init();     /* TODO: Check for error. */
 

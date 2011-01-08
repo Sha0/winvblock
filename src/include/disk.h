@@ -171,6 +171,4 @@ extern WVL_M_LIB VOID disk__guess_geometry(
 extern WVL_M_LIB VOID STDCALL WvDiskInit(IN WV_SP_DISK_T);
 extern WVL_M_LIB WV_SP_DISK_T disk__create(void);
 
-extern NTSTATUS disk__module_init(void);
-
 #endif  /* WV_M_DISK_H_ */

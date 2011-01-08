@@ -58,8 +58,6 @@ static WV_F_DISK_INIT WvDiskDefaultInit_;
 static WV_F_DISK_CLOSE WvDiskDefaultClose_;
 
 /* Globals. */
-static LIST_ENTRY WvDiskList_;
-static KSPIN_LOCK WvDiskListLock_;
 BOOLEAN WvDiskIsRemovable[WvlDiskMediaTypes] = { TRUE, FALSE, TRUE };
 PWCHAR WvDiskCompatIds[WvlDiskMediaTypes] = {
     L"GenSFloppy",
@@ -373,13 +371,6 @@ WVL_M_LIB WV_SP_DISK_T disk__create(void) {
     dev = disk->Dev;
     WvDevInit(dev);
 
-    /* Track the new disk in our global list. */
-    ExInterlockedInsertTailList(
-        &WvDiskList_,
-        &disk->tracking,
-        &WvDiskListLock_
-      );
-
     /* Initialize with defaults. */
     WvDiskInit(disk);
     dev->Ops.Close = WvDiskDevClose_;
@@ -397,32 +388,12 @@ WVL_M_LIB WV_SP_DISK_T disk__create(void) {
   }
 
 /**
- * Initialize the global, disk-common environment.
- *
- * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure.
- */
-NTSTATUS disk__module_init(void) {
-    /* Initialize the global list of disks. */
-    InitializeListHead(&WvDiskList_);
-    KeInitializeSpinLock(&WvDiskListLock_);
-
-    return STATUS_SUCCESS;
-  }
-
-/**
  * Default disk deletion operation.
  *
  * @v dev               Points to the disk device to delete.
  */
 static VOID STDCALL WvDiskDevFree_(IN WV_SP_DEV_T dev) {
     WV_SP_DISK_T disk = disk__get_ptr(dev);
-
-    /*
-     * Track the disk deletion in our global list.  Unfortunately,
-     * for now we have faith that a disk won't be deleted twice and
-     * result in a race condition.  Something to keep in mind...
-     */
-    ExInterlockedRemoveHeadList(disk->tracking.Blink, &WvDiskListLock_);
 
     wv_free(disk);
   }
