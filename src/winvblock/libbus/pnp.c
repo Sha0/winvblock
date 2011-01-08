@@ -323,7 +323,9 @@ WVL_M_LIB NTSTATUS STDCALL WvlBusPnp(
     switch (code) {
         case IRP_MN_QUERY_DEVICE_TEXT:
           DBG("IRP_MN_QUERY_DEVICE_TEXT\n");
-          return Bus->QueryDevText(Bus, Irp);
+          if (Bus->QueryDevText)
+            return Bus->QueryDevText(Bus, Irp);
+          return WvlIrpComplete(Irp, 0, STATUS_NOT_SUPPORTED);
 
         case IRP_MN_QUERY_BUS_INFORMATION:
           DBG("IRP_MN_QUERY_BUS_INFORMATION\n");
