@@ -100,7 +100,40 @@ NTSTATUS HttpdiskBusAttach(
     IN PDRIVER_OBJECT DriverObj,
     IN PDEVICE_OBJECT Pdo
   ) {
-    return STATUS_NOT_SUPPORTED;
+    NTSTATUS status;
+
+    /* Do we already have our bus? */
+    if (HttpdiskBus_.Pdo) {
+        DBG(
+            "Bus PDO %p already established.  Refusing...\n",
+            HttpdiskBus_.Pdo
+          );
+        status = STATUS_NOT_SUPPORTED;
+        goto err_already_established;
+      }
+    /* Associate the bus with the PDO. */
+    HttpdiskBus_.Pdo = Pdo;
+    /* Attach the FDO to the PDO. */
+    HttpdiskBus_.LowerDeviceObject = IoAttachDeviceToDeviceStack(
+        HttpdiskBus_.Fdo,
+        Pdo
+      );
+    if (HttpdiskBus_.LowerDeviceObject == NULL) {
+        status = STATUS_NO_SUCH_DEVICE;
+        DBG("IoAttachDeviceToDeviceStack() failed!\n");
+        goto err_attach;
+      }
+
+    /* Ok! */
+    DBG("Attached bus to PDO %p.\n", Pdo);
+    return STATUS_SUCCESS;
+
+    err_attach:
+
+    err_already_established:
+
+    DBG("PDO %p not attached.\n", Pdo);
+    return status;
   }
 
 NTSTATUS HttpdiskBusIrp(IN PDEVICE_OBJECT DevObj, IN PIRP Irp) {
