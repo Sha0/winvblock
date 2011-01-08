@@ -274,11 +274,14 @@ BOOLEAN STDCALL WvBusAddDev(
         DBG("No bus or no device!\n");
         return FALSE;
       }
-    /* Create the child device. */
-    dev_obj = WvDevCreatePdo(Dev);
+    /* Create the child device, if needed. */
+    dev_obj = Dev->Self;
     if (!dev_obj) {
-        DBG("PDO creation failed!\n");
-        return FALSE;
+        dev_obj = WvDevCreatePdo(Dev);
+        if (!dev_obj) {
+            DBG("PDO creation failed!\n");
+            return FALSE;
+          }
       }
     WvlBusInitNode(&Dev->BusNode, dev_obj);
     /* Associate the parent bus. */
