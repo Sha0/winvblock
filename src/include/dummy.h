@@ -130,6 +130,7 @@ Qualifiers struct Name ## Struct_ Name = {                            \
     WV_M_DUMMY_IDS_LITERALS(DevId, InstanceId, HardwareId, CompatId), \
   }
 
+extern WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(IN const WV_S_DUMMY_IDS *);
 extern WVL_M_LIB NTSTATUS STDCALL WvDummyRemove(IN PDEVICE_OBJECT);
 extern NTSTATUS STDCALL WvDummyIoctl(IN PIRP);
 

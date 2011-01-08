@@ -283,44 +283,7 @@ NTSTATUS STDCALL AoeBusAttachFdo(
  * @ret NTSTATUS        The status of the operation.
  */
 static NTSTATUS AoeBusCreatePdo_(void) {
-    PDEVICE_OBJECT wv_fdo;
-    KEVENT signal;
-    PIRP irp;
-    IO_STATUS_BLOCK io_status = {0};
-    NTSTATUS status;
-
-    wv_fdo = WvBusFdo();
-    if (!wv_fdo)
-      return STATUS_NO_SUCH_DEVICE;
-
-    /* Prepare the request. */
-    KeInitializeEvent(&signal, SynchronizationEvent, FALSE);
-    irp = IoBuildDeviceIoControlRequest(
-        IOCTL_WV_DUMMY,
-        WvBusFdo(),
-        (PVOID) &AoeBusDummyIds_,
-        sizeof AoeBusDummyIds_,
-        NULL,
-        0,
-        FALSE,
-        &signal,
-        &io_status
-      );
-    if (!irp)
-      return STATUS_INSUFFICIENT_RESOURCES;
-
-    status = IoCallDriver(wv_fdo, irp);
-    if (status == STATUS_PENDING) {
-        KeWaitForSingleObject(
-            &signal,
-            Executive,
-            KernelMode,
-            FALSE,
-            NULL
-          );
-        status = io_status.Status;
-      }
-    return status;
+    return WvDummyAdd(&AoeBusDummyIds_.DummyIds);
   }
 
 /**

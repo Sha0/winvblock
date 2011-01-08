@@ -81,16 +81,8 @@ typedef struct WV_ADD_DUMMY {
     PDEVICE_OBJECT Pdo;
   } WV_S_ADD_DUMMY, * WV_SP_ADD_DUMMY;
 
-/**
- * Produce a dummy PDO node on the main bus.
- *
- * @v DummyIds                  The PnP IDs for the dummy.  Also includes
- *                              the device type and characteristics.
- * @v Pdo                       Filled with a pointer to the created PDO.
- *                              This parameter is optional.
- * @ret NTSTATUS                The status of the operation.
- */
-static NTSTATUS STDCALL WvDummyAdd(
+/* Produce a dummy PDO node on the main bus.  Internal */
+static NTSTATUS STDCALL WvDummyAdd_(
     IN WV_SP_DUMMY_IDS DummyIds,
     IN PDEVICE_OBJECT * Pdo
   ) {
@@ -170,6 +162,59 @@ static NTSTATUS STDCALL WvDummyAdd(
   }
 
 /**
+ * Produce a dummy PDO node on the main bus.
+ *
+ * @v DummyIds                  The PnP IDs for the dummy.  Also includes
+ *                              the device type and characteristics.
+ * @ret NTSTATUS                The status of the operation.
+ */
+WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
+    IN const WV_S_DUMMY_IDS * DummyIds
+  ) {
+    KEVENT signal;
+    PIRP irp;
+    IO_STATUS_BLOCK io_status = {0};
+    NTSTATUS status;
+
+    /*
+     * In this function, we actually send the request through to the
+     * driver via an IRP.  This is a good exercise, since we expect a
+     * user-land utility to be capable of the same.
+     */
+    if (!WvBus.Fdo)
+      return STATUS_NO_SUCH_DEVICE;
+
+    /* Prepare the request. */
+    KeInitializeEvent(&signal, SynchronizationEvent, FALSE);
+    irp = IoBuildDeviceIoControlRequest(
+        IOCTL_WV_DUMMY,
+        WvBus.Fdo,
+        (PVOID) DummyIds,
+        DummyIds->Len,
+        NULL,
+        0,
+        FALSE,
+        &signal,
+        &io_status
+      );
+    if (!irp)
+      return STATUS_INSUFFICIENT_RESOURCES;
+
+    status = IoCallDriver(WvBus.Fdo, irp);
+    if (status == STATUS_PENDING) {
+        KeWaitForSingleObject(
+            &signal,
+            Executive,
+            KernelMode,
+            FALSE,
+            NULL
+          );
+        status = io_status.Status;
+      }
+    return status;
+  }
+
+/**
  * Remove a dummy PDO node on the WinVBlock bus.
  *
  * @v Pdo               The PDO to remove.
@@ -203,7 +248,7 @@ NTSTATUS STDCALL WvDummyIoctl(IN PIRP Irp) {
         return WvlIrpComplete(Irp, 0, STATUS_INVALID_PARAMETER);
       }
 
-    return WvlIrpComplete(Irp, 0, WvDummyAdd(dummy_ids, NULL));
+    return WvlIrpComplete(Irp, 0, WvDummyAdd_(dummy_ids, NULL));
   }
 
 /**
