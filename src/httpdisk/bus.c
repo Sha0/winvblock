@@ -137,6 +137,14 @@ NTSTATUS HttpdiskBusAttach(
   }
 
 NTSTATUS HttpdiskBusIrp(IN PDEVICE_OBJECT DevObj, IN PIRP Irp) {
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(Irp);
+    UCHAR major = io_stack_loc->MajorFunction;
+
+    switch (major) {
+        default:
+          DBG("Unhandled major: %d\n", major);
+          break;
+      }
     return WvlIrpComplete(Irp, 0, STATUS_NOT_SUPPORTED);
   }
 
