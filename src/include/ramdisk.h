@@ -33,8 +33,6 @@ typedef struct WV_RAMDISK_T {
     LIST_ENTRY tracking;
   } WV_S_RAMDISK_T, * WV_SP_RAMDISK_T;
 
-extern NTSTATUS ramdisk__module_init(void);
-
 /**
  * Create a new RAM disk
  *

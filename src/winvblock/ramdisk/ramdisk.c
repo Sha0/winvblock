@@ -42,11 +42,7 @@
 #define ramdisk_get_ptr( dev_ptr ) \
   ( ( WV_SP_RAMDISK_T ) ( disk__get_ptr ( dev_ptr ) )->ext )
 
-/* Globals. */
-static LIST_ENTRY ramdisk_list;
-static KSPIN_LOCK ramdisk_list_lock;
-
-/* Forward declarations. */
+/** Private. */
 static WV_F_DEV_FREE free_ramdisk;
 static WV_F_DISK_IO io;
 
@@ -181,11 +177,6 @@ WV_SP_RAMDISK_T ramdisk__create(void) {
   if ( ramdisk_ptr == NULL )
     goto err_noramdisk;
   /*
-   * Track the new RAM disk in our global list
-   */
-  ExInterlockedInsertTailList ( &ramdisk_list, &ramdisk_ptr->tracking,
-				&ramdisk_list_lock );
-  /*
    * Populate non-zero device defaults
    */
   ramdisk_ptr->disk = disk_ptr;
@@ -207,19 +198,6 @@ err_nodisk:
 }
 
 /**
- * Initialize the global, RAM disk-common environment.
- *
- * @ret ntstatus        STATUS_SUCCESS or the NTSTATUS for a failure.
- */
-NTSTATUS ramdisk__module_init(void) {
-    /* Initialize the global list of RAM disks. */
-    InitializeListHead(&ramdisk_list);
-    KeInitializeSpinLock(&ramdisk_list_lock);
-
-    return STATUS_SUCCESS;
-  }
-
-/**
  * Default RAM disk deletion operation.
  *
  * @v dev_ptr           Points to the RAM disk device to delete.
@@ -229,15 +207,6 @@ static VOID STDCALL free_ramdisk(IN WV_SP_DEV_T dev_ptr) {
     WV_SP_RAMDISK_T ramdisk_ptr = ramdisk_get_ptr(dev_ptr);
     /* Free the "inherited class". */
     ramdisk_ptr->prev_free(dev_ptr);
-    /*
-     * Track the RAM disk deletion in our global list.  Unfortunately,
-     * for now we have faith that a RAM disk won't be deleted twice and
-     * result in a race condition.  Something to keep in mind...
-     */
-    ExInterlockedRemoveHeadList(
-        ramdisk_ptr->tracking.Blink,
-  			&ramdisk_list_lock
-      );
   
     wv_free(ramdisk_ptr);
   }

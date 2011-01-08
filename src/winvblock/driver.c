@@ -189,8 +189,6 @@ NTSTATUS STDCALL DriverEntry(
     DriverObject->DriverUnload = WvUnload;
     /* Set the driver AddDevice callback. */
     DriverObject->DriverExtension->AddDevice = WvAttachFdo;
-    /* Initialize various modules. */
-    ramdisk__module_init();     /* TODO: Check for error. */
 
     /* Establish the bus PDO. */
     status = WvBusEstablish(RegistryPath);
