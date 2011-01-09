@@ -199,7 +199,6 @@ typedef struct AOE_DISK_ {
     UINT32 Timeout;
     KEVENT SearchEvent;
     AOE_E_SEARCH_STATE_ search_state;
-    WV_FP_DEV_FREE prev_free;
   } AOE_S_DISK_, * AOE_SP_DISK_;
 
 typedef struct AOE_TARGET_LIST_ {
