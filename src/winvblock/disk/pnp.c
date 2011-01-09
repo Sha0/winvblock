@@ -40,24 +40,23 @@
 #include "debug.h"
 
 /* Forward declarations. */
-static WV_F_DEV_DISPATCH disk_pnp__query_dev_text_;
-static WV_F_DEV_DISPATCH disk_pnp__query_dev_relations_;
-static WV_F_DEV_DISPATCH disk_pnp__query_bus_info_;
-static WV_F_DEV_DISPATCH disk_pnp__query_capabilities_;
-static WV_F_DEV_PNP disk_pnp__simple_;
-WV_F_DEV_PNP disk_pnp__dispatch;
+static WVL_F_DISK_PNP disk_pnp__query_dev_text_;
+static WVL_F_DISK_PNP WvlDiskPnpQueryDevRelations_;
+static WVL_F_DISK_PNP WvlDiskPnpQueryBusInfo_;
+static WVL_F_DISK_PNP disk_pnp__query_capabilities_;
+static WVL_F_DISK_PNP disk_pnp__simple_;
 
 static NTSTATUS STDCALL disk_pnp__query_dev_text_(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp,
+    WV_SP_DISK_T disk
   ) {
-    WV_SP_DISK_T disk;
+    IN WV_SP_DEV_T dev = disk->Dev;
     WCHAR (*str)[512];
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
     UINT32 str_len;
 
-    disk = disk__get_ptr(dev);
     /* Allocate a string buffer. */
     str = wv_mallocz(sizeof *str);
     if (str == NULL) {
@@ -118,9 +117,10 @@ static NTSTATUS STDCALL disk_pnp__query_dev_text_(
     return WvlIrpComplete(irp, irp->IoStatus.Information, status);
   }
 
-static NTSTATUS STDCALL disk_pnp__query_dev_relations_(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp
+static NTSTATUS STDCALL WvlDiskPnpQueryDevRelations_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp,
+    WV_SP_DISK_T disk
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
@@ -132,15 +132,15 @@ static NTSTATUS STDCALL disk_pnp__query_dev_relations_(
         status = irp->IoStatus.Status;
         goto out;
       }
-    dev_relations = wv_palloc(sizeof *dev_relations + sizeof dev->Self);
+    dev_relations = wv_palloc(sizeof *dev_relations + sizeof dev_obj);
     if (dev_relations == NULL) {
         DBG("wv_palloc IRP_MN_QUERY_DEVICE_RELATIONS\n");
         status = STATUS_INSUFFICIENT_RESOURCES;
         goto alloc_dev_relations;
       }
-    dev_relations->Objects[0] = dev->Self;
+    dev_relations->Objects[0] = dev_obj;
     dev_relations->Count = 1;
-    ObReferenceObject(dev->Self);
+    ObReferenceObject(dev_obj);
     irp->IoStatus.Information = (ULONG_PTR) dev_relations;
     status = STATUS_SUCCESS;
 
@@ -149,9 +149,7 @@ static NTSTATUS STDCALL disk_pnp__query_dev_relations_(
 
     out:
 
-    irp->IoStatus.Status = status;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
-    return status;
+    return WvlIrpComplete(irp, irp->IoStatus.Information, status);
   }
 
 DEFINE_GUID(
@@ -169,9 +167,10 @@ DEFINE_GUID(
     0xb1
   );
 
-static NTSTATUS STDCALL disk_pnp__query_bus_info_(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp
+static NTSTATUS STDCALL WvlDiskPnpQueryBusInfo_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp,
+    WV_SP_DISK_T disk
   ) {
     PPNP_BUS_INFORMATION pnp_bus_info;
     NTSTATUS status;
@@ -191,20 +190,18 @@ static NTSTATUS STDCALL disk_pnp__query_bus_info_(
     /* irp-IoStatus.Information (pnp_bus_info) not freed. */
     alloc_pnp_bus_info:
 
-    irp->IoStatus.Status = status;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
-    return status;
+    return WvlIrpComplete(irp, irp->IoStatus.Information, status);
   }
 
 static NTSTATUS STDCALL disk_pnp__query_capabilities_(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp,
+    WV_SP_DISK_T disk
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     PDEVICE_CAPABILITIES DeviceCapabilities =
       io_stack_loc->Parameters.DeviceCapabilities.Capabilities;
     NTSTATUS status;
-    WV_SP_DISK_T disk;
     DEVICE_CAPABILITIES ParentDeviceCapabilities;
 
     if (DeviceCapabilities->Version != 1 ||
@@ -213,8 +210,10 @@ static NTSTATUS STDCALL disk_pnp__query_capabilities_(
         status = STATUS_UNSUCCESSFUL;
         goto out;
       }
-    disk = disk__get_ptr(dev);
-    status = WvDriverGetDevCapabilities(dev->Parent, &ParentDeviceCapabilities);
+    status = WvDriverGetDevCapabilities(
+        disk->Dev->Parent,
+        &ParentDeviceCapabilities
+      );
     if (!NT_SUCCESS(status))
       goto out;
 
@@ -249,27 +248,25 @@ static NTSTATUS STDCALL disk_pnp__query_capabilities_(
     DeviceCapabilities->UniqueID = FALSE;
     DeviceCapabilities->SilentInstall = FALSE;
     #if 0
-    DeviceCapabilities->Address = dev->Self->SerialNo;
-    DeviceCapabilities->UINumber = dev->Self->SerialNo;
+    DeviceCapabilities->Address = dev_obj->SerialNo;
+    DeviceCapabilities->UINumber = dev_obj->SerialNo;
     #endif
     status = STATUS_SUCCESS;
 
     out:
-    irp->IoStatus.Status = status;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
-    return status;
+    return WvlIrpComplete(irp, irp->IoStatus.Information, status);
   }
 
 static NTSTATUS STDCALL disk_pnp__simple_(
-    IN WV_SP_DEV_T dev,
+    IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
-    IN UCHAR code
+    WV_SP_DISK_T disk
   ) {
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
+    WV_SP_DEV_T dev = disk->Dev;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
 
-    switch (code) {
+    switch (io_stack_loc->MinorFunction) {
         case IRP_MN_DEVICE_USAGE_NOTIFICATION:
           DBG("IRP_MN_DEVICE_USAGE_NOTIFICATION\n");
           if (io_stack_loc->Parameters.UsageNotification.InPath) {
@@ -349,7 +346,7 @@ static NTSTATUS STDCALL disk_pnp__simple_(
           break;
 
         default:
-          DBG("Unhandled IRP_MN_*: %d\n", code);
+          DBG("Unhandled IRP_MN_*: %d\n", io_stack_loc->MinorFunction);
           status = irp->IoStatus.Status;
       }
 
@@ -358,34 +355,43 @@ static NTSTATUS STDCALL disk_pnp__simple_(
     return status;
   }
 
-/* Disk PnP dispatch routine. */
+/**
+ * Disk PnP dispatch routine.
+ *
+ * @v DevObj            The disk PDO to process the IRP with.
+ * @v Irp               The IRP to process.
+ * @v Disk              The disk to process the IRP with.
+ * @ret NTSTATUS        The status of the operation.
+ */
 WVL_M_LIB NTSTATUS STDCALL disk_pnp__dispatch(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp,
-    IN UCHAR code
+    IN PDEVICE_OBJECT DevObj,
+    IN PIRP Irp,
+    WV_SP_DISK_T Disk
   ) {
-    switch (code) {
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(Irp);
+
+    switch (io_stack_loc->MinorFunction) {
         case IRP_MN_QUERY_ID:
           DBG("IRP_MN_QUERY_ID\n");
-          return WvDevPnpQueryId(dev, irp);
+          return WvDevPnpQueryId(Disk->Dev, Irp);
 
         case IRP_MN_QUERY_DEVICE_TEXT:
           DBG("IRP_MN_QUERY_DEVICE_TEXT\n");
-          return disk_pnp__query_dev_text_(dev, irp);
+          return disk_pnp__query_dev_text_(DevObj, Irp, Disk);
 
         case IRP_MN_QUERY_DEVICE_RELATIONS:
           DBG("IRP_MN_QUERY_DEVICE_RELATIONS\n");
-          return disk_pnp__query_dev_relations_(dev, irp);
+          return WvlDiskPnpQueryDevRelations_(DevObj, Irp, Disk);
 
         case IRP_MN_QUERY_BUS_INFORMATION:
           DBG("IRP_MN_QUERY_BUS_INFORMATION\n");
-          return disk_pnp__query_bus_info_(dev, irp);
+          return WvlDiskPnpQueryBusInfo_(DevObj, Irp, Disk);
 
         case IRP_MN_QUERY_CAPABILITIES:
           DBG("IRP_MN_QUERY_CAPABILITIES\n");
-          return disk_pnp__query_capabilities_(dev, irp);
+          return disk_pnp__query_capabilities_(DevObj, Irp, Disk);
 
         default:
-          return disk_pnp__simple_(dev, irp, code);
+          return disk_pnp__simple_(DevObj, Irp, Disk);
       }
   }

@@ -57,6 +57,21 @@ typedef NTSTATUS STDCALL WVL_F_DISK_SCSI(
 typedef WVL_F_DISK_SCSI * WVL_FP_DISK_SCSI;
 
 /**
+ * Prototype for disk PnP functions.
+ *
+ * @v DevObj            The disk PDO to process the IRP with.
+ * @v Irp               The IRP to process.
+ * @v Disk              The disk to process the IRP with.
+ * @ret NTSTATUS        The status of the operation.
+ */
+typedef NTSTATUS STDCALL WVL_F_DISK_PNP(
+    IN PDEVICE_OBJECT,
+    IN PIRP,
+    IN WV_SP_DISK_T
+  );
+typedef WVL_F_DISK_PNP * WVL_FP_DISK_PNP;
+
+/**
  * I/O Request.
  *
  * @v disk              Points to the disk's structure.
@@ -206,7 +221,7 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlDiskDevCtl(
 /* IRP_MJ_SCSI dispatcher from disk/scsi.c */
 extern WVL_M_LIB WVL_F_DISK_SCSI WvlDiskScsi;
 /* IRP_MJ_PNP dispatcher from disk/pnp.c */
-extern WVL_M_LIB WV_F_DEV_PNP disk_pnp__dispatch;
+extern WVL_M_LIB WVL_F_DISK_PNP disk_pnp__dispatch;
 
 
 #endif  /* WV_M_DISK_H_ */

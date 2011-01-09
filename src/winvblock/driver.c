@@ -456,6 +456,14 @@ NTSTATUS STDCALL WvDiskScsi(IN WV_SP_DEV_T dev, IN PIRP irp, IN UCHAR c) {
     return WvlDiskScsi(dev->Self, irp, disk);
   }
 
+NTSTATUS STDCALL WvDiskPnp(
+    IN WV_SP_DEV_T dev,
+    IN PIRP irp,
+    IN UCHAR code
+  ) {
+    return disk_pnp__dispatch(dev->Self, irp, disk__get_ptr(dev));
+  }
+
 /**
  * Miscellaneous: Grouped memory allocation functions.
  */

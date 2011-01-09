@@ -310,7 +310,7 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
         WvDiskIrpSysCtl,
         WvDiskDevCtl,
         WvDiskScsi,
-        disk_pnp__dispatch,
+        WvDiskPnp,
       };
     NTSTATUS status;
     WV_SP_FILEDISK_T filedisk;

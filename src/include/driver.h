@@ -57,6 +57,7 @@ extern NTSTATUS STDCALL WvDiskDevCtl(
     IN ULONG POINTER_ALIGNMENT
   );
 extern NTSTATUS STDCALL WvDiskScsi(IN struct WV_DEV_T *, IN PIRP, IN UCHAR);
+extern NTSTATUS STDCALL WvDiskPnp(IN struct WV_DEV_T *, IN PIRP, IN UCHAR);
 /* From bus.c */
 extern WVL_M_LIB PDEVICE_OBJECT WvBusFdo(void);
 

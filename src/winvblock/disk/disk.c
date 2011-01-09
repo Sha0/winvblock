@@ -62,7 +62,7 @@ static WV_S_DEV_IRP_MJ WvDiskIrpMj_ = {
     WvDiskIrpSysCtl,
     WvDiskDevCtl,
     WvDiskScsi,
-    disk_pnp__dispatch,
+    WvDiskPnp,
   };
 
 WVL_M_LIB UCHAR STDCALL WvlDiskUnitNum(IN WV_SP_DISK_T disk) {
