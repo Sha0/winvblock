@@ -253,6 +253,7 @@ NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
         status = STATUS_UNSUCCESSFUL;
         goto err_add_child;
       }
+    filedisk->disk->ParentBus = filedisk->Dev->Parent;
 
     return STATUS_SUCCESS;
 

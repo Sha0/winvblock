@@ -144,6 +144,7 @@ struct WV_DISK_T {
     UINT32 Sectors;
     UINT32 SectorSize;
     UINT32 SpecialFileCount;
+    PDEVICE_OBJECT ParentBus;
     PVOID ext;
     PDRIVER_OBJECT DriverObj;
   };

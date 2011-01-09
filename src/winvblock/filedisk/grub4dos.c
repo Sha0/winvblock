@@ -504,6 +504,7 @@ VOID filedisk_grub4dos__find(void) {
           /* Add the filedisk to the bus. */
           if (!WvBusAddDev(filedisk_ptr->disk->Dev))
             WvDevFree(filedisk_ptr->disk->Dev);
+          filedisk_ptr->disk->ParentBus = filedisk_ptr->Dev->Parent;
         } /* search for sector-mapped disks. */
       InterruptVector = &SafeMbrHookPtr->PrevHook;
     } /* walk the safe hook chain. */

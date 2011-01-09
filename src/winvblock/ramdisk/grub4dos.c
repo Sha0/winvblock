@@ -151,6 +151,7 @@ VOID WvRamdiskG4dFind(void) {
              /* Add the ramdisk to the bus. */
             if (!WvBusAddDev(ramdisk->disk->Dev))
               WvDevFree(ramdisk->disk->Dev);
+            ramdisk->disk->ParentBus = ramdisk->Dev->Parent;
           } /* while i */
         int_vector = &safe_mbr_hook->PrevHook;
       } /* while safe hook chain. */

@@ -368,7 +368,8 @@ BOOLEAN STDCALL AoeBusAddDev(
       }
     WvlBusInitNode(AoeDisk->BusNode, AoeDisk->Pdo);
     /* Associate the parent bus. */
-    AoeDisk->Dev->Parent = AoeBusMain.Fdo;
+    AoeDisk->Dev->Parent = AoeDisk->disk->ParentBus = AoeBusMain.Fdo;
+
     AoeDisk->Pdo->Flags &= ~DO_DEVICE_INITIALIZING;
     /* Add the new PDO device to the bus' list of children. */
     WvlBusAddNode(&AoeBusMain, AoeDisk->BusNode);

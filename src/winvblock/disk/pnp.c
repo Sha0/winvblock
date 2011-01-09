@@ -43,7 +43,7 @@
 static WVL_F_DISK_PNP disk_pnp__query_dev_text_;
 static WVL_F_DISK_PNP WvlDiskPnpQueryDevRelations_;
 static WVL_F_DISK_PNP WvlDiskPnpQueryBusInfo_;
-static WVL_F_DISK_PNP disk_pnp__query_capabilities_;
+static WVL_F_DISK_PNP WvlDiskPnpQueryCapabilities_;
 static WVL_F_DISK_PNP disk_pnp__simple_;
 
 static NTSTATUS STDCALL disk_pnp__query_dev_text_(
@@ -193,7 +193,13 @@ static NTSTATUS STDCALL WvlDiskPnpQueryBusInfo_(
     return WvlIrpComplete(irp, irp->IoStatus.Information, status);
   }
 
-static NTSTATUS STDCALL disk_pnp__query_capabilities_(
+/* From driver.c */
+extern NTSTATUS STDCALL WvDriverGetDevCapabilities(
+    IN PDEVICE_OBJECT,
+    IN PDEVICE_CAPABILITIES
+  );
+
+static NTSTATUS STDCALL WvlDiskPnpQueryCapabilities_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
     WV_SP_DISK_T disk
@@ -211,7 +217,7 @@ static NTSTATUS STDCALL disk_pnp__query_capabilities_(
         goto out;
       }
     status = WvDriverGetDevCapabilities(
-        disk->Dev->Parent,
+        disk->ParentBus,
         &ParentDeviceCapabilities
       );
     if (!NT_SUCCESS(status))
@@ -389,7 +395,7 @@ WVL_M_LIB NTSTATUS STDCALL disk_pnp__dispatch(
 
         case IRP_MN_QUERY_CAPABILITIES:
           DBG("IRP_MN_QUERY_CAPABILITIES\n");
-          return disk_pnp__query_capabilities_(DevObj, Irp, Disk);
+          return WvlDiskPnpQueryCapabilities_(DevObj, Irp, Disk);
 
         default:
           return disk_pnp__simple_(DevObj, Irp, Disk);

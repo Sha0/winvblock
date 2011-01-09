@@ -108,6 +108,7 @@ static BOOLEAN STDCALL WvMemdiskCheckMbft_(
         WvDevFree(ramdisk->disk->Dev);
         return FALSE;
       }
+    ramdisk->disk->ParentBus = ramdisk->Dev->Parent;
     assoc_hook->Flags = 1;
     return TRUE;
   }
