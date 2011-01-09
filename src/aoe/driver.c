@@ -34,6 +34,7 @@
 #include "wv_stdlib.h"
 #include "wv_string.h"
 #include "irp.h"
+#include "driver.h"
 #include "bus.h"
 #include "device.h"
 #include "dummy.h"
@@ -63,11 +64,11 @@ extern BOOLEAN STDCALL AoeRegSetup(OUT PNTSTATUS);
 struct AOE_DISK_;
 static VOID STDCALL AoeThread_(IN PVOID);
 static VOID AoeProcessAbft_(void);
-static struct AOE_DISK_ * AoeDiskCreate_(void);
+static struct AOE_DISK_ * AoeDiskCreatePdo_(void);
 static WV_F_DEV_FREE AoeDiskFree_;
 static WV_F_DISK_IO AoeDiskIo_;
 static WV_F_DISK_MAX_XFER_LEN AoeDiskMaxXferLen_;
-static WV_F_DISK_INIT AoeDiskInit_;
+static BOOLEAN STDCALL AoeDiskInit_(struct AOE_DISK_ *);
 static WV_F_DISK_CLOSE AoeDiskClose_;
 static DRIVER_DISPATCH AoeIrpNotSupported_;
 static __drv_dispatchType(IRP_MJ_POWER) DRIVER_DISPATCH AoeIrpPower_;
@@ -184,6 +185,7 @@ typedef enum AOE_SEARCH_STATE_ {
 
 /** The AoE disk type. */
 typedef struct AOE_DISK_ {
+    WV_S_DEV_EXT DevExt[1];
     WV_S_DISK_T disk[1];
     UINT32 MTU;
     UCHAR ClientMac[6];
@@ -501,12 +503,12 @@ static VOID STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
 /**
  * Search for disk parameters.
  *
- * @v disk_ptr          The disk to initialize (for AoE, match).
+ * @v aoe_disk          The disk to initialize (for AoE, match).
  * @ret BOOLEAN         See below.
  *
  * Returns TRUE if the disk could be matched, FALSE otherwise.
  */
-static BOOLEAN STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
+static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
     AOE_SP_DISK_SEARCH_
       disk_searcher, disk_search_walker, previous_disk_searcher;
     LARGE_INTEGER Timeout, CurrentTime;
@@ -514,9 +516,8 @@ static BOOLEAN STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
     KIRQL Irql, InnerIrql;
     LARGE_INTEGER MaxSectorsPerPacketSendTime;
     UINT32 MTU;
-    AOE_SP_DISK_ aoe_disk_ptr;
+    WV_SP_DISK_T disk_ptr = aoe_disk->disk;
 
-    aoe_disk_ptr = AoeDiskFromDev_(disk_ptr->Dev);
     /* Allocate our disk search. */
     if ((disk_searcher = wv_malloc(sizeof *disk_searcher)) == NULL) {
         DBG("Couldn't allocate for disk_searcher; bye!\n");
@@ -526,7 +527,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
     /* Initialize the disk search. */
     disk_searcher->device = disk_ptr->Dev;
     disk_searcher->next = NULL;
-    aoe_disk_ptr->search_state = AoeSearchStateSearchNic_;
+    aoe_disk->search_state = AoeSearchStateSearchNic_;
     KeResetEvent(&disk_ptr->SearchEvent);
 
     /* Wait until we have the global spin-lock. */
@@ -568,28 +569,28 @@ static BOOLEAN STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
         /* Wait until we have the device extension's spin-lock. */
         KeAcquireSpinLock(&disk_ptr->SpinLock, &Irql);
 
-        if (aoe_disk_ptr->search_state == AoeSearchStateSearchNic_) {
-            if (!Protocol_SearchNIC(aoe_disk_ptr->ClientMac)) {
+        if (aoe_disk->search_state == AoeSearchStateSearchNic_) {
+            if (!Protocol_SearchNIC(aoe_disk->ClientMac)) {
                 KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
                 continue;
               } else {
                 /* We found the adapter to use, get MTU next. */
-                aoe_disk_ptr->MTU = Protocol_GetMTU(aoe_disk_ptr->ClientMac);
-                aoe_disk_ptr->search_state = AoeSearchStateGetSize_;
+                aoe_disk->MTU = Protocol_GetMTU(aoe_disk->ClientMac);
+                aoe_disk->search_state = AoeSearchStateGetSize_;
               }
           }
 
-        if (aoe_disk_ptr->search_state == AoeSearchStateGettingSize_) {
+        if (aoe_disk->search_state == AoeSearchStateGettingSize_) {
             /* Still getting the disk's size. */
             KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
             continue;
           }
-        if (aoe_disk_ptr->search_state == AoeSearchStateGettingGeometry_) {
+        if (aoe_disk->search_state == AoeSearchStateGettingGeometry_) {
             /* Still getting the disk's geometry. */
             KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
             continue;
           }
-        if (aoe_disk_ptr->search_state ==
+        if (aoe_disk->search_state ==
           AoeSearchStateGettingMaxSectsPerPacket_) {
             KeQuerySystemTime(&CurrentTime);
             /*
@@ -603,10 +604,10 @@ static BOOLEAN STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
                 DBG(
                     "No reply after 250ms for MaxSectorsPerPacket %d, "
                       "giving up\n",
-                    aoe_disk_ptr->MaxSectorsPerPacket
+                    aoe_disk->MaxSectorsPerPacket
                   );
-                aoe_disk_ptr->MaxSectorsPerPacket--;
-                aoe_disk_ptr->search_state = AoeSearchStateDone_;
+                aoe_disk->MaxSectorsPerPacket--;
+                aoe_disk->search_state = AoeSearchStateDone_;
               } else {
                 /* Still getting the maximum sectors per packet count. */
                 KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
@@ -614,7 +615,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
               }
           }
 
-        if (aoe_disk_ptr->search_state == AoeSearchStateDone_) {
+        if (aoe_disk->search_state == AoeSearchStateDone_) {
             /* We've finished the disk search; perform clean-up. */
             KeAcquireSpinLock(&AoeLock_, &InnerIrql);
 
@@ -690,13 +691,13 @@ static BOOLEAN STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
                 disk_ptr->Cylinders,
                 disk_ptr->Heads,
                 disk_ptr->Sectors,
-                aoe_disk_ptr->MaxSectorsPerPacket
+                aoe_disk->MaxSectorsPerPacket
               );
             return TRUE;
           } /* if AoeSearchStateDone */
 
         #if 0
-        if (aoe_disk_ptr->search_state == AoeSearchStateDone_)
+        if (aoe_disk->search_state == AoeSearchStateDone_)
         #endif
         /* Establish our tag. */
         if ((tag = wv_mallocz(sizeof *tag)) == NULL) {
@@ -719,37 +720,37 @@ static BOOLEAN STDCALL AoeDiskInit_(IN WV_SP_DISK_T disk_ptr) {
             continue;
           }
         tag->packet_data->Ver = AOEPROTOCOLVER;
-        tag->packet_data->Major = htons((UINT16) aoe_disk_ptr->Major);
-        tag->packet_data->Minor = (UCHAR) aoe_disk_ptr->Minor;
+        tag->packet_data->Major = htons((UINT16) aoe_disk->Major);
+        tag->packet_data->Minor = (UCHAR) aoe_disk->Minor;
         tag->packet_data->ExtendedAFlag = TRUE;
 
         /* Initialize the packet appropriately based on our current phase. */
-        switch (aoe_disk_ptr->search_state) {
+        switch (aoe_disk->search_state) {
             case AoeSearchStateGetSize_:
               /* TODO: Make the below value into a #defined constant. */
               tag->packet_data->Cmd = 0xec;  /* IDENTIFY DEVICE */
               tag->packet_data->Count = 1;
-              aoe_disk_ptr->search_state = AoeSearchStateGettingSize_;
+              aoe_disk->search_state = AoeSearchStateGettingSize_;
               break;
 
             case AoeSearchStateGetGeometry_:
               /* TODO: Make the below value into a #defined constant. */
               tag->packet_data->Cmd = 0x24;  /* READ SECTOR */
               tag->packet_data->Count = 1;
-              aoe_disk_ptr->search_state = AoeSearchStateGettingGeometry_;
+              aoe_disk->search_state = AoeSearchStateGettingGeometry_;
               break;
 
             case AoeSearchStateGetMaxSectsPerPacket_:
               /* TODO: Make the below value into a #defined constant. */
               tag->packet_data->Cmd = 0x24;  /* READ SECTOR */
               tag->packet_data->Count = (UCHAR) (
-                  ++aoe_disk_ptr->MaxSectorsPerPacket
+                  ++aoe_disk->MaxSectorsPerPacket
                 );
               KeQuerySystemTime(&MaxSectorsPerPacketSendTime);
-              aoe_disk_ptr->search_state =
+              aoe_disk->search_state =
                 AoeSearchStateGettingMaxSectsPerPacket_;
               /* TODO: Make the below value into a #defined constant. */
-              aoe_disk_ptr->Timeout = 200000;
+              aoe_disk->Timeout = 200000;
               break;
 
             default:
@@ -1517,7 +1518,7 @@ static VOID AoeProcessAbft_(void) {
 
     if (!FoundAbft)
       goto out_no_abft;
-    aoe_disk = AoeDiskCreate_();
+    aoe_disk = AoeDiskCreatePdo_();
     if(aoe_disk == NULL) {
         DBG("Could not create AoE disk from aBFT!\n");
         return;
@@ -1541,7 +1542,11 @@ static VOID AoeProcessAbft_(void) {
     aoe_disk->MaxSectorsPerPacket = 1;
     aoe_disk->Timeout = 200000;          /* 20 ms. */
     aoe_disk->disk->Dev->Boot = TRUE;
-    aoe_disk->disk->Media = WvlDiskMediaTypeHard;
+    if (!AoeDiskInit_(aoe_disk)) {
+        DBG("Couldn't find AoE disk!\n");
+        AoeDiskFree_(aoe_disk->disk->Dev);
+        return;
+      }
     AoeBusAddDev(aoe_disk->disk->Dev);
     return;
 
@@ -1686,7 +1691,7 @@ NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
         *(PUINT16) (buffer + 6),
         (UCHAR) buffer[8]
       );
-    aoe_disk = AoeDiskCreate_();
+    aoe_disk = AoeDiskCreatePdo_();
     if (aoe_disk == NULL) {
         DBG("Could not create AoE disk!\n");
         return WvlIrpComplete(
@@ -1702,51 +1707,71 @@ NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
     aoe_disk->MaxSectorsPerPacket = 1;
     aoe_disk->Timeout = 200000;             /* 20 ms. */
     aoe_disk->disk->Dev->Boot = FALSE;
-    aoe_disk->disk->Media = WvlDiskMediaTypeHard;
+    if (!AoeDiskInit_(aoe_disk)) {
+        DBG("Couldn't find AoE disk!\n");
+        AoeDiskFree_(aoe_disk->disk->Dev);
+        return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
+      }
     AoeBusAddDev(aoe_disk->disk->Dev);
 
     return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
   }
 
 /**
- * Create a new AoE disk.
+ * Create an AoE disk PDO.
  *
  * @ret aoe_disk        The address of a new AoE disk, or NULL for failure.
- *
- * This function should not be confused with a PDO creation routine, which is
- * actually implemented for each device type.  This routine will allocate an
- * AOE_S_DISK_, track it in a global list, as well as populate the disk
- * with default values.
  */
-static AOE_SP_DISK_ AoeDiskCreate_(void) {
+static AOE_SP_DISK_ AoeDiskCreatePdo_(void) {
+    NTSTATUS status;
+    PDEVICE_OBJECT pdo;
     AOE_SP_DISK_ aoe_disk;
 
-    /*
-     * AoE disk devices might be used for booting and should
-     * not be allocated from a paged memory pool.
-     */
-    aoe_disk = wv_mallocz(sizeof *aoe_disk);
-    if (aoe_disk == NULL)
-      goto err_noaoedisk;
+    DBG("Creating AoE disk PDO...\n");
 
+    /* Create the disk PDO. */
+    status = WvlDiskCreatePdo(
+        AoeDriverObj_,
+        sizeof *aoe_disk,
+        WvlDiskMediaTypeHard,
+        &pdo
+      );
+    if (!NT_SUCCESS(status)) {
+        WvlError("WvlDiskCreatePdo", status);
+        return NULL;
+      }
+
+    aoe_disk = pdo->DeviceExtension;
+    RtlZeroMemory(aoe_disk, sizeof *aoe_disk);
     /* Populate non-zero device defaults. */
     WvDiskInit(aoe_disk->disk);
+    WvDevInit(aoe_disk->disk->Dev);
     aoe_disk->disk->Dev->Ops.Free = AoeDiskFree_;
     aoe_disk->disk->Dev->Ops.PnpId = query_id;
     aoe_disk->disk->Dev->ext = aoe_disk->disk;
+    aoe_disk->disk->Media = WvlDiskMediaTypeHard;
     aoe_disk->disk->disk_ops.Io = AoeDiskIo_;
     aoe_disk->disk->disk_ops.MaxXferLen = AoeDiskMaxXferLen_;
-    aoe_disk->disk->disk_ops.Init = AoeDiskInit_;
     aoe_disk->disk->disk_ops.Close = AoeDiskClose_;
     aoe_disk->disk->ext = aoe_disk;
     aoe_disk->disk->DriverObj = AoeDriverObj_;
 
+    /* Set associations for the PDO, device, disk. */
+    WvDevForDevObj(pdo, aoe_disk->disk->Dev);
+    KeInitializeEvent(
+        &aoe_disk->disk->SearchEvent,
+        SynchronizationEvent,
+        FALSE
+      );
+    KeInitializeSpinLock(&aoe_disk->disk->SpinLock);
+    aoe_disk->disk->Dev->Self = pdo;
+
+    /* Some device parameters. */
+    pdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
+    pdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
+
+    DBG("New PDO: %p\n", pdo);
     return aoe_disk;
-
-    wv_free(aoe_disk);
-    err_noaoedisk:
-
-    return NULL;
   }
 
 /**
@@ -1755,9 +1780,7 @@ static AOE_SP_DISK_ AoeDiskCreate_(void) {
  * @v dev               Points to the AoE disk device to delete.
  */
 static VOID STDCALL AoeDiskFree_(IN WV_SP_DEV_T dev) {
-    AOE_SP_DISK_ aoe_disk = AoeDiskFromDev_(dev);
-
-    wv_free(aoe_disk);
+    IoDeleteDevice(dev->Self);
   }
 
 static NTSTATUS STDCALL AoeIrpNotSupported_(
