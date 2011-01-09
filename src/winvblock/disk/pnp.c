@@ -327,7 +327,6 @@ static NTSTATUS STDCALL disk_pnp__simple_(
           dev->State = WvDevStateNotStarted;
           if (!dev->BusNode.Linked) {
               WvDevClose(dev);
-              IoDeleteDevice(dev->Self);
               WvDevFree(dev);
               status = STATUS_NO_SUCH_DEVICE;
             } else {
