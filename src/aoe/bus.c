@@ -34,6 +34,7 @@
 #include "bus.h"
 #include "device.h"
 #include "dummy.h"
+#include "disk.h"
 #include "aoe.h"
 #include "mount.h"
 #include "debug.h"

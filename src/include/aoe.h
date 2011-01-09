@@ -73,6 +73,23 @@ typedef enum AOE_SEARCH_STATE {
     AoeSearchStates
   } AOE_E_SEARCH_STATE, * AOE_EP_SEARCH_STATE;
 
+/** The AoE disk type. */
+typedef struct AOE_DISK {
+    WV_S_DEV_EXT DevExt[1];
+    WV_S_DEV_T Dev[1];
+    WV_S_DISK_T disk[1];
+    KSPIN_LOCK SpinLock;
+    UINT32 MTU;
+    UCHAR ClientMac[6];
+    UCHAR ServerMac[6];
+    UINT32 Major;
+    UINT32 Minor;
+    UINT32 MaxSectorsPerPacket;
+    UINT32 Timeout;
+    KEVENT SearchEvent;
+    AOE_E_SEARCH_STATE search_state;
+  } AOE_S_DISK, * AOE_SP_DISK;
+
 typedef struct AOE_MOUNT_TARGET {
     UCHAR ClientMac[6];
     UCHAR ServerMac[6];

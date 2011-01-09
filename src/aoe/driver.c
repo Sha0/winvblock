@@ -61,14 +61,13 @@ extern BOOLEAN STDCALL AoeBusAddDev(IN OUT WV_SP_DEV_T);
 extern BOOLEAN STDCALL AoeRegSetup(OUT PNTSTATUS);
 
 /* Forward declarations. */
-struct AOE_DISK_;
 static VOID STDCALL AoeThread_(IN PVOID);
 static VOID AoeProcessAbft_(void);
-static struct AOE_DISK_ * AoeDiskCreatePdo_(void);
+static AOE_SP_DISK AoeDiskCreatePdo_(void);
 static WV_F_DEV_FREE AoeDiskFree_;
 static WVL_F_DISK_IO AoeDiskIo_;
 static WV_F_DISK_MAX_XFER_LEN AoeDiskMaxXferLen_;
-static BOOLEAN STDCALL AoeDiskInit_(struct AOE_DISK_ *);
+static BOOLEAN STDCALL AoeDiskInit_(AOE_SP_DISK);
 static WV_F_DISK_CLOSE AoeDiskClose_;
 static WVL_F_DISK_UNIT_NUM AoeDiskUnitNum_;
 static DRIVER_DISPATCH AoeIrpNotSupported_;
@@ -152,7 +151,7 @@ typedef struct AOE_IO_REQ_ {
 /** A work item "tag". */
 typedef struct AOE_WORK_TAG_ {
     AOE_E_TAG_TYPE_ type;
-    struct AOE_DISK_ * aoe_disk;
+    AOE_SP_DISK aoe_disk;
     AOE_SP_IO_REQ_ request_ptr;
     UINT32 Id;
     AOE_SP_PACKET_ packet_data;
@@ -167,27 +166,10 @@ typedef struct AOE_WORK_TAG_ {
 
 /** A disk search. */
 typedef struct AOE_DISK_SEARCH_ {
-    struct AOE_DISK_ * aoe_disk;
+    AOE_SP_DISK aoe_disk;
     AOE_SP_WORK_TAG_ tag;
     struct AOE_DISK_SEARCH_ * next;
   } AOE_S_DISK_SEARCH_, * AOE_SP_DISK_SEARCH_;
-
-/** The AoE disk type. */
-typedef struct AOE_DISK_ {
-    WV_S_DEV_EXT DevExt[1];
-    WV_S_DEV_T Dev[1];
-    WV_S_DISK_T disk[1];
-    KSPIN_LOCK SpinLock;
-    UINT32 MTU;
-    UCHAR ClientMac[6];
-    UCHAR ServerMac[6];
-    UINT32 Major;
-    UINT32 Minor;
-    UINT32 MaxSectorsPerPacket;
-    UINT32 Timeout;
-    KEVENT SearchEvent;
-    AOE_E_SEARCH_STATE search_state;
-  } AOE_S_DISK_, * AOE_SP_DISK_;
 
 typedef struct AOE_TARGET_LIST_ {
     AOE_S_MOUNT_TARGET Target;
@@ -211,7 +193,7 @@ static PETHREAD AoeThreadObj_ = NULL;
 static BOOLEAN AoeStarted_ = FALSE;
 
 /* Yield a pointer to the AoE disk. */
-static AOE_SP_DISK_ AoeDiskFromDev_(WV_SP_DEV_T dev_ptr) {
+static AOE_SP_DISK AoeDiskFromDev_(WV_SP_DEV_T dev_ptr) {
     return disk__get_ptr(dev_ptr)->ext;
   }
 
@@ -498,7 +480,7 @@ static VOID STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
  *
  * Returns TRUE if the disk could be matched, FALSE otherwise.
  */
-static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
+static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK aoe_disk) {
     AOE_SP_DISK_SEARCH_
       disk_searcher, disk_search_walker, previous_disk_searcher;
     LARGE_INTEGER Timeout, CurrentTime;
@@ -783,10 +765,10 @@ static NTSTATUS STDCALL AoeDiskIo_(
     UINT32 i;
     PHYSICAL_ADDRESS PhysicalAddress;
     PUCHAR PhysicalMemory;
-    AOE_SP_DISK_ aoe_disk_ptr;
+    AOE_SP_DISK aoe_disk_ptr;
 
     /* Establish pointer to the AoE disk. */
-    aoe_disk_ptr = CONTAINING_RECORD(disk_ptr, AOE_S_DISK_, disk);
+    aoe_disk_ptr = CONTAINING_RECORD(disk_ptr, AOE_S_DISK, disk);
 
     if (AoeStop_) {
         /* Shutting down AoE; we can't service this request. */
@@ -1020,7 +1002,7 @@ NTSTATUS STDCALL aoe__reply(
     BOOLEAN Found = FALSE;
     LARGE_INTEGER CurrentTime;
     WV_SP_DISK_T disk_ptr;
-    AOE_SP_DISK_ aoe_disk_ptr;
+    AOE_SP_DISK aoe_disk_ptr;
 
     /* Discard non-responses. */
     if (!reply->ResponseFlag)
@@ -1239,7 +1221,7 @@ static VOID STDCALL AoeThread_(IN PVOID StartContext) {
     UINT32 Fails = 0;
     UINT32 RequestTimeout = 0;
     WV_SP_DISK_T disk_ptr;
-    AOE_SP_DISK_ aoe_disk_ptr;
+    AOE_SP_DISK aoe_disk_ptr;
 
     DBG("Entry\n");
 
@@ -1382,9 +1364,9 @@ static VOID STDCALL AoeThread_(IN PVOID StartContext) {
   }
 
 static UINT32 AoeDiskMaxXferLen_(IN WV_SP_DISK_T disk) {
-    AOE_SP_DISK_ aoe_disk = CONTAINING_RECORD(
+    AOE_SP_DISK aoe_disk = CONTAINING_RECORD(
         disk,
-        AOE_S_DISK_,
+        AOE_S_DISK,
         disk
       );
 
@@ -1396,7 +1378,7 @@ static UINT32 STDCALL query_id(
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
   ) {
-    AOE_SP_DISK_ aoe_disk = AoeDiskFromDev_(dev);
+    AOE_SP_DISK aoe_disk = AoeDiskFromDev_(dev);
 
     switch (query_type) {
         case BusQueryDeviceID:
@@ -1457,7 +1439,7 @@ static VOID AoeProcessAbft_(void) {
     UINT32 Offset, Checksum, i;
     BOOLEAN FoundAbft = FALSE;
     AOE_S_ABFT AoEBootRecord;
-    AOE_SP_DISK_ aoe_disk;
+    AOE_SP_DISK aoe_disk;
 
     /* Find aBFT. */
     PhysicalAddress.QuadPart = 0LL;
@@ -1634,9 +1616,9 @@ NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
     walker = NULL;
     /* For each node on the bus... */
     while (walker = WvlBusGetNextNode(&AoeBusMain, walker)) {
-        AOE_SP_DISK_ aoe_disk = CONTAINING_RECORD(
+        AOE_SP_DISK aoe_disk = CONTAINING_RECORD(
             walker,
-            AOE_S_DISK_,
+            AOE_S_DISK,
             Dev[0].BusNode
           );
 
@@ -1673,7 +1655,7 @@ NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
 
 NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
     PUCHAR buffer = irp->AssociatedIrp.SystemBuffer;
-    AOE_SP_DISK_ aoe_disk;
+    AOE_SP_DISK aoe_disk;
 
     DBG(
         "Got IOCTL_AOE_MOUNT for client: %02x:%02x:%02x:%02x:%02x:%02x "
@@ -1718,10 +1700,10 @@ NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
  *
  * @ret aoe_disk        The address of a new AoE disk, or NULL for failure.
  */
-static AOE_SP_DISK_ AoeDiskCreatePdo_(void) {
+static AOE_SP_DISK AoeDiskCreatePdo_(void) {
     NTSTATUS status;
     PDEVICE_OBJECT pdo;
-    AOE_SP_DISK_ aoe_disk;
+    AOE_SP_DISK aoe_disk;
 
     DBG("Creating AoE disk PDO...\n");
 
@@ -1793,7 +1775,7 @@ static NTSTATUS AoeIrpPower_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    AOE_SP_DISK_ aoe_disk;
+    AOE_SP_DISK aoe_disk;
 
     WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
@@ -1815,7 +1797,7 @@ static NTSTATUS AoeIrpCreateClose_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    AOE_SP_DISK_ aoe_disk;
+    AOE_SP_DISK aoe_disk;
 
     WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
@@ -1834,7 +1816,7 @@ static NTSTATUS AoeIrpSysCtl_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    AOE_SP_DISK_ aoe_disk;
+    AOE_SP_DISK aoe_disk;
 
     WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
@@ -1853,7 +1835,7 @@ static NTSTATUS AoeIrpDevCtl_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    AOE_SP_DISK_ aoe_disk;
+    AOE_SP_DISK aoe_disk;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     WVL_M_DEBUG_IRP_START(dev_obj, irp);
@@ -1881,7 +1863,7 @@ static NTSTATUS AoeIrpScsi_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    AOE_SP_DISK_ aoe_disk;
+    AOE_SP_DISK aoe_disk;
 
     WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
@@ -1904,7 +1886,7 @@ static NTSTATUS AoeIrpPnp_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    AOE_SP_DISK_ aoe_disk;
+    AOE_SP_DISK aoe_disk;
     UCHAR code = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
 
     WVL_M_DEBUG_IRP_START(dev_obj, irp);
@@ -1945,9 +1927,9 @@ static NTSTATUS AoeIrpPnp_(
   }
 
 static UCHAR STDCALL AoeDiskUnitNum_(IN WV_SP_DISK_T disk) {
-    AOE_SP_DISK_ aoe_disk = CONTAINING_RECORD(
+    AOE_SP_DISK aoe_disk = CONTAINING_RECORD(
         disk,
-        AOE_S_DISK_,
+        AOE_S_DISK,
         disk[0]
       );
 
