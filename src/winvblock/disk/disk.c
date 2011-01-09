@@ -53,7 +53,6 @@ PWCHAR WvDiskCompatIds[WvlDiskMediaTypes] = {
 
 /** Private. */
 static WV_F_DEV_FREE WvDiskDevFree_;
-static WV_F_DISK_INIT WvDiskDefaultInit_;
 static WV_F_DISK_CLOSE WvDiskDefaultClose_;
 
 /* Device IRP major function dispatch table. */
@@ -75,15 +74,6 @@ static UINT32 WvDiskDefaultMaxXferLen_(IN WV_SP_DISK_T disk) {
 
 /* Initialize a disk. */
 static BOOLEAN STDCALL WvDiskDevInit_(IN WV_SP_DEV_T dev) {
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
-
-    /* Use the disk operation, if there is one. */
-    if (disk->disk_ops.Init)
-      return disk->disk_ops.Init(disk);
-    return TRUE;
-  }
-
-static BOOLEAN STDCALL WvDiskDefaultInit_(IN WV_SP_DISK_T disk) {
     return TRUE;
   }
 
@@ -401,7 +391,6 @@ WVL_M_LIB VOID STDCALL WvDiskInit(IN WV_SP_DISK_T disk) {
     RtlZeroMemory(disk, sizeof *disk);
     /* Populate non-zero device defaults. */
     disk->disk_ops.MaxXferLen = WvDiskDefaultMaxXferLen_;
-    disk->disk_ops.Init = WvDiskDefaultInit_;
     disk->disk_ops.Close = WvDiskDefaultClose_;
     KeInitializeSpinLock(&disk->SpinLock);
 

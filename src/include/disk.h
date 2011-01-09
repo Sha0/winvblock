@@ -130,7 +130,6 @@ extern WVL_M_LIB WVL_F_DISK_UNIT_NUM WvlDiskUnitNum;
 typedef struct WV_DISK_OPS {
     WVL_FP_DISK_IO Io;
     WV_FP_DISK_MAX_XFER_LEN MaxXferLen;
-    WV_FP_DISK_INIT Init;
     WV_FP_DISK_CLOSE Close;
     WVL_FP_DISK_UNIT_NUM UnitNum;
   } WV_S_DISK_OPS, * WV_SP_DISK_OPS;
