@@ -198,6 +198,7 @@ WVL_M_LIB NTSTATUS STDCALL disk_dev_ctl__dispatch(
     IN PIRP irp,
     IN ULONG POINTER_ALIGNMENT code
   ) {
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
     NTSTATUS status;
 
     switch (code) {
