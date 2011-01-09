@@ -1392,10 +1392,14 @@ static VOID STDCALL AoeThread_(IN PVOID StartContext) {
     DBG("Exit\n");
   }
 
-static UINT32 AoeDiskMaxXferLen_(IN WV_SP_DISK_T disk_ptr) {
-    AOE_SP_DISK_ aoe_disk_ptr = AoeDiskFromDev_(disk_ptr->Dev);
+static UINT32 AoeDiskMaxXferLen_(IN WV_SP_DISK_T disk) {
+    AOE_SP_DISK_ aoe_disk = CONTAINING_RECORD(
+        disk,
+        AOE_S_DISK_,
+        disk
+      );
 
-    return disk_ptr->SectorSize * aoe_disk_ptr->MaxSectorsPerPacket;
+    return disk->SectorSize * aoe_disk->MaxSectorsPerPacket;
   }
 
 static UINT32 STDCALL query_id(
@@ -1799,22 +1803,21 @@ static NTSTATUS AoeIrpPower_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    WV_SP_DEV_T dev;
+    AOE_SP_DISK_ aoe_disk;
 
     WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)
       return WvlBusPower(&AoeBusMain, irp);
-    /* WvDevFromDevObj() checks for a NULL dev_obj */
-    dev = WvDevFromDevObj(dev_obj);
+    aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (!dev || dev->State == WvDevStateDeleted) {
+    if (aoe_disk->disk->Dev->State == WvDevStateDeleted) {
         /* Even if it doesn't, a power IRP is important! */
         PoStartNextPowerIrp(irp);
         return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
       }
     /* Use the disk routine. */
-    return WvDiskIrpPower(dev, irp);
+    return WvDiskIrpPower(aoe_disk->disk->Dev, irp);
   }
 
 /* Handle an IRP_MJ_CREATE or IRP_MJ_CLOSE IRP. */
@@ -1822,16 +1825,15 @@ static NTSTATUS AoeIrpCreateClose_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    WV_SP_DEV_T dev;
+    AOE_SP_DISK_ aoe_disk;
 
     WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)
       return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
-    /* WvDevFromDevObj() checks for a NULL dev_obj */
-    dev = WvDevFromDevObj(dev_obj);
+    aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (!dev || dev->State == WvDevStateDeleted)
+    if (aoe_disk->disk->Dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Always succeed with nothing to do. */
     return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
@@ -1842,19 +1844,18 @@ static NTSTATUS AoeIrpSysCtl_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    WV_SP_DEV_T dev;
+    AOE_SP_DISK_ aoe_disk;
 
     WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)
       return WvlBusSysCtl(&AoeBusMain, irp);
-    /* WvDevFromDevObj() checks for a NULL dev_obj */
-    dev = WvDevFromDevObj(dev_obj);
+    aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (!dev || dev->State == WvDevStateDeleted)
+    if (aoe_disk->disk->Dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
-    return WvDiskIrpSysCtl(dev, irp);
+    return WvDiskIrpSysCtl(aoe_disk->disk->Dev, irp);
   }
 
 /* Handle an IRP_MJ_DEVICE_CONTROL IRP. */
@@ -1862,7 +1863,7 @@ static NTSTATUS AoeIrpDevCtl_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    WV_SP_DEV_T dev;
+    AOE_SP_DISK_ aoe_disk;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
 
     WVL_M_DEBUG_IRP_START(dev_obj, irp);
@@ -1873,14 +1874,13 @@ static NTSTATUS AoeIrpDevCtl_(
             io_stack_loc->Parameters.DeviceIoControl.IoControlCode
           );
       }
-    /* WvDevFromDevObj() checks for a NULL dev_obj */
-    dev = WvDevFromDevObj(dev_obj);
+    aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (!dev || dev->State == WvDevStateDeleted)
+    if (aoe_disk->disk->Dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
     return WvlDiskDevCtl(
-        AoeDiskFromDev_(dev)->disk,
+        aoe_disk->disk,
         irp,
         io_stack_loc->Parameters.DeviceIoControl.IoControlCode
       );
@@ -1891,22 +1891,21 @@ static NTSTATUS AoeIrpScsi_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    WV_SP_DEV_T dev;
+    AOE_SP_DISK_ aoe_disk;
     PIO_STACK_LOCATION io_stack_loc;
 
     WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)
       return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
-    /* WvDevFromDevObj() checks for a NULL dev_obj */
-    dev = WvDevFromDevObj(dev_obj);
     io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (!dev || dev->State == WvDevStateDeleted)
+    if (aoe_disk->disk->Dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
     return disk_scsi__dispatch(
-        dev,
+        aoe_disk->disk->Dev,
         irp,
         io_stack_loc->Parameters.Scsi.Srb->Function
       );
@@ -1917,7 +1916,7 @@ static NTSTATUS AoeIrpPnp_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    WV_SP_DEV_T dev;
+    AOE_SP_DISK_ aoe_disk;
     UCHAR code = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
 
     WVL_M_DEBUG_IRP_START(dev_obj, irp);
@@ -1949,13 +1948,12 @@ static NTSTATUS AoeIrpPnp_(
           }
         return status;
       }
-    /* WvDevFromDevObj() checks for a NULL dev_obj */
-    dev = WvDevFromDevObj(dev_obj);
+    aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (!dev || dev->State == WvDevStateDeleted)
+    if (aoe_disk->disk->Dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
-    return disk_pnp__dispatch(dev, irp, code);
+    return disk_pnp__dispatch(aoe_disk->disk->Dev, irp, code);
   }
 
 static UCHAR STDCALL AoeDiskUnitNum_(IN WV_SP_DISK_T disk) {
