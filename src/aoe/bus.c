@@ -355,41 +355,28 @@ NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
 /**
  * Add a child node to the AoE bus.
  *
- * @v Dev               Points to the child device to add.
+ * @v AoeDisk           Points to the child AoE disk to add.
  * @ret                 TRUE for success, FALSE for failure.
  */
 BOOLEAN STDCALL AoeBusAddDev(
-    IN OUT WV_SP_DEV_T Dev
+    IN OUT AOE_SP_DISK AoeDisk
   ) {
     /* The new node's device object. */
     PDEVICE_OBJECT dev_obj;
 
     DBG("Entry\n");
-    if (!AoeBusMain.Fdo || !Dev) {
+    if (!AoeBusMain.Fdo || !AoeDisk) {
         DBG("No bus or no device!\n");
         return FALSE;
       }
     /* Create the child device, if needed. */
-    dev_obj = Dev->Self;
-    if (!dev_obj) {
-        dev_obj = WvDevCreatePdo(Dev);
-        if (!dev_obj) {
-            DBG("PDO creation failed!\n");
-            return FALSE;
-          }
-      }
-    WvlBusInitNode(&Dev->BusNode, dev_obj);
+    dev_obj = AoeDisk->Dev->Self;
+    WvlBusInitNode(&AoeDisk->Dev->BusNode, dev_obj);
     /* Associate the parent bus. */
-    Dev->Parent = AoeBusMain.Fdo;
-    /*
-     * Initialize the device.  For disks, this routine is responsible for
-     * determining the disk's geometry appropriately for AoE disks.
-     */
-    if (Dev->Ops.Init)
-      Dev->Ops.Init(Dev);
+    AoeDisk->Dev->Parent = AoeBusMain.Fdo;
     dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
     /* Add the new PDO device to the bus' list of children. */
-    WvlBusAddNode(&AoeBusMain, &Dev->BusNode);
+    WvlBusAddNode(&AoeBusMain, &AoeDisk->Dev->BusNode);
 
     DBG("Exit\n");
     return TRUE;

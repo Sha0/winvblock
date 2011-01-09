@@ -56,7 +56,7 @@ extern NTSTATUS STDCALL AoeBusAttachFdo(
     IN PDRIVER_OBJECT,
     IN PDEVICE_OBJECT
   );
-extern BOOLEAN STDCALL AoeBusAddDev(IN OUT WV_SP_DEV_T);
+extern BOOLEAN STDCALL AoeBusAddDev(IN OUT AOE_SP_DISK);
 /* From aoe/registry.c */
 extern BOOLEAN STDCALL AoeRegSetup(OUT PNTSTATUS);
 
@@ -1521,7 +1521,7 @@ static VOID AoeProcessAbft_(void) {
         AoeDiskFree_(aoe_disk->Dev);
         return;
       }
-    AoeBusAddDev(aoe_disk->Dev);
+    AoeBusAddDev(aoe_disk);
     return;
 
     out_no_abft:
@@ -1690,7 +1690,7 @@ NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
         AoeDiskFree_(aoe_disk->Dev);
         return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
       }
-    AoeBusAddDev(aoe_disk->Dev);
+    AoeBusAddDev(aoe_disk);
 
     return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
   }
