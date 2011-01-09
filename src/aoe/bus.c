@@ -368,11 +368,14 @@ BOOLEAN STDCALL AoeBusAddDev(
         DBG("No bus or no device!\n");
         return FALSE;
       }
-    /* Create the child device. */
-    dev_obj = WvDevCreatePdo(Dev);
+    /* Create the child device, if needed. */
+    dev_obj = Dev->Self;
     if (!dev_obj) {
-        DBG("PDO creation failed!\n");
-        return FALSE;
+        dev_obj = WvDevCreatePdo(Dev);
+        if (!dev_obj) {
+            DBG("PDO creation failed!\n");
+            return FALSE;
+          }
       }
     WvlBusInitNode(&Dev->BusNode, dev_obj);
     /* Associate the parent bus. */
@@ -381,7 +384,8 @@ BOOLEAN STDCALL AoeBusAddDev(
      * Initialize the device.  For disks, this routine is responsible for
      * determining the disk's geometry appropriately for AoE disks.
      */
-    Dev->Ops.Init(Dev);
+    if (Dev->Ops.Init)
+      Dev->Ops.Init(Dev);
     dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
     /* Add the new PDO device to the bus' list of children. */
     WvlBusAddNode(&AoeBusMain, &Dev->BusNode);
