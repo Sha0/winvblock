@@ -186,7 +186,6 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlDiskCreatePdo(
     OUT PDEVICE_OBJECT *
   );
 extern WVL_M_LIB VOID STDCALL WvDiskInit(IN WV_SP_DISK_T);
-extern WVL_M_LIB WV_SP_DISK_T disk__create(void);
 
 /* IRP-related. */
 extern WVL_M_LIB WV_F_DEV_DISPATCH WvDiskIrpPower;

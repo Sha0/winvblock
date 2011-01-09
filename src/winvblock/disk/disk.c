@@ -409,46 +409,6 @@ WVL_M_LIB VOID STDCALL WvDiskInit(IN WV_SP_DISK_T disk) {
   }
 
 /**
- * Create a new disk.
- *
- * @ret disk            The address of a new disk, or NULL for failure.
- *
- * This function should not be confused with a PDO creation routine, which is
- * actually implemented for each device type.  This routine will allocate a
- * WV_S_DISK_T, track it in a global list, as well as populate the disk
- * with default values.
- */
-WVL_M_LIB WV_SP_DISK_T disk__create(void) {
-    WV_SP_DISK_T disk;
-    WV_SP_DEV_T dev;
-
-    /*
-     * Disk devices might be used for booting and should
-     * not be allocated from a paged memory pool.
-     */
-    disk = wv_malloc(sizeof *disk);
-    if (disk == NULL)
-      goto err_nodisk;
-
-    /* Initialize with defaults. */
-    WvDiskInit(disk);
-    dev = disk->Dev;
-    WvDevInit(dev);
-    dev->Ops.Close = WvDiskDevClose_;
-    dev->Ops.CreatePdo = WvDiskCreatePdo_;
-    dev->Ops.Free = WvDiskDevFree_;
-    dev->Ops.Init = WvDiskDevInit_;
-    dev->ext = disk;
-    dev->IrpMj = &WvDiskIrpMj_;
-    return disk;
-
-    wv_free(disk);
-    err_nodisk:
-
-    return NULL;
-  }
-
-/**
  * Default disk deletion operation.
  *
  * @v dev               Points to the disk device to delete.
