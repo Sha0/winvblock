@@ -61,6 +61,18 @@ CTL_CODE(                               \
     FILE_READ_DATA | FILE_WRITE_DATA    \
   )
 
+typedef enum AOE_SEARCH_STATE {
+    AoeSearchStateSearchNic,
+    AoeSearchStateGetSize,
+    AoeSearchStateGettingSize,
+    AoeSearchStateGetGeometry,
+    AoeSearchStateGettingGeometry,
+    AoeSearchStateGetMaxSectsPerPacket,
+    AoeSearchStateGettingMaxSectsPerPacket,
+    AoeSearchStateDone,
+    AoeSearchStates
+  } AOE_E_SEARCH_STATE, * AOE_EP_SEARCH_STATE;
+
 typedef struct AOE_MOUNT_TARGET {
     UCHAR ClientMac[6];
     UCHAR ServerMac[6];
