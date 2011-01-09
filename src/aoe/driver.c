@@ -1641,11 +1641,15 @@ NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
     walker = NULL;
     /* For each node on the bus... */
     while (walker = WvlBusGetNextNode(&AoeBusMain, walker)) {
-        WV_SP_DEV_T dev = WvDevFromDevObj(WvlBusGetNodePdo(walker));
-        WV_SP_DISK_T disk = disk__get_ptr(dev);
-        AOE_SP_DISK_ aoe_disk = AoeDiskFromDev_(dev);
+        AOE_SP_DISK_ aoe_disk = CONTAINING_RECORD(
+            walker,
+            AOE_S_DISK_,
+            disk[0].Dev[0].BusNode
+          );
 
-        disks->Disk[count].Disk = WvlBusGetNodeNum(&dev->BusNode);
+        disks->Disk[count].Disk = WvlBusGetNodeNum(
+            &aoe_disk->disk->Dev->BusNode
+          );
         RtlCopyMemory(
             &disks->Disk[count].ClientMac,
             &aoe_disk->ClientMac,
@@ -1658,7 +1662,7 @@ NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
           );
         disks->Disk[count].Major = aoe_disk->Major;
         disks->Disk[count].Minor = aoe_disk->Minor;
-        disks->Disk[count].LBASize = disk->LBADiskSize;
+        disks->Disk[count].LBASize = aoe_disk->disk->LBADiskSize;
         count++;
       }
     RtlCopyMemory(
