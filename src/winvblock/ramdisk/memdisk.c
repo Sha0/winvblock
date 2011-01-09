@@ -88,7 +88,7 @@ static BOOLEAN STDCALL WvMemdiskCheckMbft_(
         	media_type = WvlDiskMediaTypeFloppy;
         sector_size = 512;
       }
-    ramdisk = ramdisk__create();
+    ramdisk = WvRamdiskCreatePdo(media_type);
     if (ramdisk == NULL) {
         DBG("Could not create MEMDISK disk!\n");
         return FALSE;

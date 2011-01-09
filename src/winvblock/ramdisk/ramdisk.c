@@ -144,47 +144,69 @@ static UINT32 STDCALL WvRamdiskQueryId_(
   }
 
 /**
- * Create a new RAM disk.
+ * Create a RAM disk PDO of the given media type.
  *
- * @ret ramdisk         The address of a new RAM disk, or NULL for failure.
+ * @v MediaType                 The media type for the RAM disk.
+ * @ret WV_SP_RAMDISK_T         Points to the new RAM disk, or NULL.
  *
- * This function should not be confused with a PDO creation routine, which is
- * actually implemented for each device type.  This routine will allocate a
- * WV_S_RAMDISK_T, track it in a global list, as well as populate the disk
- * with default values.
+ * Returns NULL if the PDO cannot be created.
  */
-WV_SP_RAMDISK_T ramdisk__create(void) {
-    WV_SP_DISK_T disk;
+WV_SP_RAMDISK_T STDCALL WvRamdiskCreatePdo(
+    IN WVL_E_DISK_MEDIA_TYPE MediaType
+  ) {
+    static WV_S_DEV_IRP_MJ irp_mj = {
+        WvDiskIrpPower,
+        WvDiskIrpSysCtl,
+        disk_dev_ctl__dispatch,
+        disk_scsi__dispatch,
+        disk_pnp__dispatch,
+      };
+    NTSTATUS status;
     WV_SP_RAMDISK_T ramdisk;
+    PDEVICE_OBJECT pdo;
+  
+    DBG("Creating RAM disk PDO...\n");
 
-    /* Try to create a disk. */
-    disk = disk__create();
-    if (disk == NULL)
-      goto err_nodisk;
-    /*
-     * RAM disk devices might be used for booting and should
-     * not be allocated from a paged memory pool.
-     */
-    ramdisk = wv_mallocz(sizeof *ramdisk);
-    if (ramdisk == NULL)
-      goto err_noramdisk;
-    /* Populate non-zero device defaults. */
-    ramdisk->disk = disk;
-    ramdisk->prev_free = disk->Dev->Ops.Free;
-    disk->Dev->Ops.Free = WvRamdiskFree_;
-    disk->Dev->Ops.PnpId = WvRamdiskQueryId_;
-    disk->disk_ops.Io = WvRamdiskIo_;
-    disk->ext = ramdisk;
-    disk->DriverObj = WvDriverObj;
+    /* Create the disk PDO. */
+    status = WvlDiskCreatePdo(
+        WvDriverObj,
+        sizeof *ramdisk,
+        MediaType,
+        &pdo
+      );
+    if (!NT_SUCCESS(status)) {
+        WvlError("WvlDiskCreatePdo", status);
+        return NULL;
+      }
 
+    ramdisk = pdo->DeviceExtension;
+    RtlZeroMemory(ramdisk, sizeof *ramdisk);
+    WvDiskInit(ramdisk->disk);
+    WvDevInit(ramdisk->disk->Dev);
+    ramdisk->disk->Dev->Ops.Free = WvRamdiskFree_;
+    ramdisk->disk->Dev->Ops.PnpId = WvRamdiskQueryId_;
+    ramdisk->disk->Dev->ext = ramdisk->disk;
+    ramdisk->disk->Dev->IrpMj = &irp_mj;
+    ramdisk->disk->disk_ops.Io = WvRamdiskIo_;
+    ramdisk->disk->ext = ramdisk;
+    ramdisk->disk->DriverObj = WvDriverObj;
+
+    /* Set associations for the PDO, device, disk. */
+    WvDevForDevObj(pdo, ramdisk->disk->Dev);
+    KeInitializeEvent(
+        &ramdisk->disk->SearchEvent,
+        SynchronizationEvent,
+        FALSE
+      );
+    KeInitializeSpinLock(&ramdisk->disk->SpinLock);
+    ramdisk->disk->Dev->Self = pdo;
+
+    /* Some device parameters. */
+    pdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
+    pdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
+
+    DBG("New PDO: %p\n", pdo);
     return ramdisk;
-
-    err_noramdisk:
-
-    WvDevFree(disk->Dev);
-    err_nodisk:
-
-    return NULL;
   }
 
 /**
@@ -193,9 +215,5 @@ WV_SP_RAMDISK_T ramdisk__create(void) {
  * @v dev               Points to the RAM disk device to delete.
  */
 static VOID STDCALL WvRamdiskFree_(IN WV_SP_DEV_T dev) {
-    WV_SP_RAMDISK_T ramdisk = WvRamdiskFromDev_(dev);
-    /* Free the "inherited class". */
-    ramdisk->prev_free(dev);
-  
-    wv_free(ramdisk);
+    IoDeleteDevice(dev->Self);
   }

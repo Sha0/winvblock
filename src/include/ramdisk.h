@@ -26,13 +26,14 @@
  */
 
 typedef struct WV_RAMDISK_T {
-    WV_SP_DISK_T disk;
+    WV_S_DEV_EXT DevExt;
+    WV_S_DISK_T disk[1];
     UINT32 DiskBuf;
     UINT32 DiskSize;
     WV_FP_DEV_FREE prev_free;
     LIST_ENTRY tracking;
   } WV_S_RAMDISK_T, * WV_SP_RAMDISK_T;
 
-extern WV_SP_RAMDISK_T ramdisk__create(void);
+extern WV_SP_RAMDISK_T WvRamdiskCreatePdo(IN WVL_E_DISK_MEDIA_TYPE);
 
 #endif  /* WV_M_RAMDISK_H_ */

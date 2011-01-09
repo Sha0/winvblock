@@ -129,7 +129,7 @@ VOID WvRamdiskG4dFind(void) {
                   WvlDiskMediaTypeFloppy;
                 sector_size = 512;
               }
-            ramdisk = ramdisk__create();
+            ramdisk = WvRamdiskCreatePdo(media_type);
             if (ramdisk == NULL) {
                 DBG("Could not create GRUB4DOS disk!\n");
                 return;
