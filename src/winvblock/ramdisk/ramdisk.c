@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
- * This file is part of WinVBlock, derived from WinAoE.
+ * This file is part of WinVBlock, originally derived from WinAoE.
  *
  * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@
 #include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
+#include "irp.h"
 #include "driver.h"
 #include "bus.h"
 #include "device.h"
@@ -36,104 +37,94 @@
 #include "ramdisk.h"
 #include "debug.h"
 
-/*
- * Yield a pointer to the RAM disk
- */
-#define ramdisk_get_ptr( dev_ptr ) \
-  ( ( WV_SP_RAMDISK_T ) ( disk__get_ptr ( dev_ptr ) )->ext )
+/* Yield a pointer to the RAM disk. */
+#define WvRamdiskFromDev_(dev) \
+  ((WV_SP_RAMDISK_T) (disk__get_ptr(dev))->ext)
 
 /** Private. */
-static WV_F_DEV_FREE free_ramdisk;
-static WV_F_DISK_IO io;
+static WV_F_DEV_FREE WvRamdiskFree_;
+static WV_F_DISK_IO WvRamdiskIo_;
 
-/* With thanks to karyonix, who makes FiraDisk */
-static __inline VOID STDCALL
-fast_copy (
-  PVOID dest,
-  const VOID * src,
-  size_t count
- )
-{
-  __movsd ( dest, src, count >> 2 );
-}
+/* With thanks to karyonix, who makes FiraDisk. */
+static __inline VOID STDCALL WvRamdiskFastCopy_(
+    PVOID dest,
+    const VOID * src,
+    size_t count
+  ) {
+    __movsd(dest, src, count >> 2);
+  }
 
-static NTSTATUS STDCALL io(
-    IN WV_SP_DEV_T dev_ptr,
+/* RAM disk I/O routine. */
+static NTSTATUS STDCALL WvRamdiskIo_(
+    IN WV_SP_DEV_T dev,
     IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,
     IN PUCHAR buffer,
     IN PIRP irp
   ) {
-  PHYSICAL_ADDRESS PhysicalAddress;
-  PUCHAR PhysicalMemory;
-  WV_SP_DISK_T disk_ptr;
-  WV_SP_RAMDISK_T ramdisk_ptr;
+    PHYSICAL_ADDRESS phys_addr;
+    PUCHAR phys_mem;
+    WV_SP_DISK_T disk;
+    WV_SP_RAMDISK_T ramdisk;
 
-  /*
-   * Establish pointers to the disk and RAM disk
-   */
-  disk_ptr = disk__get_ptr ( dev_ptr );
-  ramdisk_ptr = ramdisk_get_ptr ( dev_ptr );
+    /* Establish pointers to the disk and RAM disk. */
+    disk = disk__get_ptr(dev);
+    ramdisk = WvRamdiskFromDev_(dev);
 
-  if ( sector_count < 1 )
-    {
-      /*
-       * A silly request 
-       */
-      DBG ( "sector_count < 1; cancelling\n" );
-      irp->IoStatus.Information = 0;
-      irp->IoStatus.Status = STATUS_CANCELLED;
-      IoCompleteRequest ( irp, IO_NO_INCREMENT );
-      return STATUS_CANCELLED;
-    }
+    if (sector_count < 1) {
+        /* A silly request. */
+        DBG("sector_count < 1; cancelling\n");
+        irp->IoStatus.Information = 0;
+        irp->IoStatus.Status = STATUS_CANCELLED;
+        IoCompleteRequest(irp, IO_NO_INCREMENT);
+        return STATUS_CANCELLED;
+      }
 
-  PhysicalAddress.QuadPart =
-    ramdisk_ptr->DiskBuf + ( start_sector * disk_ptr->SectorSize );
-  /*
-   * Possible precision loss
-   */
-  PhysicalMemory =
-    MmMapIoSpace ( PhysicalAddress, sector_count * disk_ptr->SectorSize,
-		   MmNonCached );
-  if ( !PhysicalMemory )
-    {
-      DBG ( "Could not map memory for RAM disk!\n" );
-      irp->IoStatus.Information = 0;
-      irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-      IoCompleteRequest ( irp, IO_NO_INCREMENT );
-      return STATUS_INSUFFICIENT_RESOURCES;
-    }
-  if (mode == WvlDiskIoModeWrite)
-    fast_copy ( PhysicalMemory, buffer, sector_count * disk_ptr->SectorSize );
-  else
-    fast_copy ( buffer, PhysicalMemory, sector_count * disk_ptr->SectorSize );
-  MmUnmapIoSpace ( PhysicalMemory, sector_count * disk_ptr->SectorSize );
-  irp->IoStatus.Information = sector_count * disk_ptr->SectorSize;
-  irp->IoStatus.Status = STATUS_SUCCESS;
-  IoCompleteRequest ( irp, IO_NO_INCREMENT );
-  return STATUS_SUCCESS;
-}
+    phys_addr.QuadPart =
+      ramdisk->DiskBuf + (start_sector * disk->SectorSize);
+    /* Possible precision loss. */
+    phys_mem = MmMapIoSpace(
+        phys_addr,
+        sector_count * disk->SectorSize,
+  		  MmNonCached
+      );
+    if (!phys_mem) {
+        DBG("Could not map memory for RAM disk!\n");
+        return WvlIrpComplete(irp, 0, STATUS_INSUFFICIENT_RESOURCES);
+      }
+    if (mode == WvlDiskIoModeWrite)
+      WvRamdiskFastCopy_(phys_mem, buffer, sector_count * disk->SectorSize);
+      else
+      WvRamdiskFastCopy_(buffer, phys_mem, sector_count * disk->SectorSize);
+    MmUnmapIoSpace(phys_mem, sector_count * disk->SectorSize);
+    return WvlIrpComplete(
+        irp,
+        sector_count * disk->SectorSize,
+        STATUS_SUCCESS
+      );
+  }
 
-static UINT32 STDCALL query_id(
+/* Copy RAM disk IDs to the provided buffer. */
+static UINT32 STDCALL WvRamdiskQueryId_(
     IN WV_SP_DEV_T dev,
     IN BUS_QUERY_ID_TYPE query_type,
     IN OUT WCHAR (*buf)[512]
   ) {
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
-    WV_SP_RAMDISK_T ramdisk = ramdisk_get_ptr(dev);
-    static PWCHAR hw_ids[WvlDiskMediaTypes] = {
+    static const WCHAR * hw_ids[WvlDiskMediaTypes] = {
         WVL_M_WLIT L"\\RAMFloppyDisk",
         WVL_M_WLIT L"\\RAMHardDisk",
         WVL_M_WLIT L"\\RAMOpticalDisc"
       };
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
+    WV_SP_RAMDISK_T ramdisk = WvRamdiskFromDev_(dev);
 
     switch (query_type) {
         case BusQueryDeviceID:
           return swprintf(*buf, hw_ids[disk->Media]) + 1;
 
         case BusQueryInstanceID:
-        	/* "Location" */
+        	/* "Location". */
           return swprintf(*buf, L"RAM_at_%08X", ramdisk->DiskBuf) + 1;
 
         case BusQueryHardwareIDs: {
@@ -153,60 +144,58 @@ static UINT32 STDCALL query_id(
   }
 
 /**
- * Create a new RAM disk
+ * Create a new RAM disk.
  *
- * @ret ramdisk_ptr     The address of a new RAM disk, or NULL for failure
+ * @ret ramdisk         The address of a new RAM disk, or NULL for failure.
  *
- * See the header file for additional details
+ * This function should not be confused with a PDO creation routine, which is
+ * actually implemented for each device type.  This routine will allocate a
+ * WV_S_RAMDISK_T, track it in a global list, as well as populate the disk
+ * with default values.
  */
 WV_SP_RAMDISK_T ramdisk__create(void) {
-  WV_SP_DISK_T disk_ptr;
-  WV_SP_RAMDISK_T ramdisk_ptr;
+    WV_SP_DISK_T disk;
+    WV_SP_RAMDISK_T ramdisk;
 
-  /*
-   * Try to create a disk
-   */
-  disk_ptr = disk__create (  );
-  if ( disk_ptr == NULL )
-    goto err_nodisk;
-  /*
-   * RAM disk devices might be used for booting and should
-   * not be allocated from a paged memory pool
-   */
-  ramdisk_ptr = wv_mallocz(sizeof *ramdisk_ptr);
-  if ( ramdisk_ptr == NULL )
-    goto err_noramdisk;
-  /*
-   * Populate non-zero device defaults
-   */
-  ramdisk_ptr->disk = disk_ptr;
-  ramdisk_ptr->prev_free = disk_ptr->Dev->Ops.Free;
-  disk_ptr->Dev->Ops.Free = free_ramdisk;
-  disk_ptr->Dev->Ops.PnpId = query_id;
-  disk_ptr->disk_ops.Io = io;
-  disk_ptr->ext = ramdisk_ptr;
-  disk_ptr->DriverObj = WvDriverObj;
+    /* Try to create a disk. */
+    disk = disk__create();
+    if (disk == NULL)
+      goto err_nodisk;
+    /*
+     * RAM disk devices might be used for booting and should
+     * not be allocated from a paged memory pool.
+     */
+    ramdisk = wv_mallocz(sizeof *ramdisk);
+    if (ramdisk == NULL)
+      goto err_noramdisk;
+    /* Populate non-zero device defaults. */
+    ramdisk->disk = disk;
+    ramdisk->prev_free = disk->Dev->Ops.Free;
+    disk->Dev->Ops.Free = WvRamdiskFree_;
+    disk->Dev->Ops.PnpId = WvRamdiskQueryId_;
+    disk->disk_ops.Io = WvRamdiskIo_;
+    disk->ext = ramdisk;
+    disk->DriverObj = WvDriverObj;
 
-  return ramdisk_ptr;
+    return ramdisk;
 
-err_noramdisk:
+    err_noramdisk:
 
-  WvDevFree(disk_ptr->Dev);
-err_nodisk:
+    WvDevFree(disk->Dev);
+    err_nodisk:
 
-  return NULL;
-}
+    return NULL;
+  }
 
 /**
  * Default RAM disk deletion operation.
  *
- * @v dev_ptr           Points to the RAM disk device to delete.
+ * @v dev               Points to the RAM disk device to delete.
  */
-static VOID STDCALL free_ramdisk(IN WV_SP_DEV_T dev_ptr) {
-    WV_SP_DISK_T disk_ptr = disk__get_ptr(dev_ptr);
-    WV_SP_RAMDISK_T ramdisk_ptr = ramdisk_get_ptr(dev_ptr);
+static VOID STDCALL WvRamdiskFree_(IN WV_SP_DEV_T dev) {
+    WV_SP_RAMDISK_T ramdisk = WvRamdiskFromDev_(dev);
     /* Free the "inherited class". */
-    ramdisk_ptr->prev_free(dev_ptr);
+    ramdisk->prev_free(dev);
   
-    wv_free(ramdisk_ptr);
+    wv_free(ramdisk);
   }

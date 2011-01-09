@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
- * This file is part of WinVBlock, derived from WinAoE.
+ * This file is part of WinVBlock, originally derived from WinAoE.
  *
  * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,16 +33,6 @@ typedef struct WV_RAMDISK_T {
     LIST_ENTRY tracking;
   } WV_S_RAMDISK_T, * WV_SP_RAMDISK_T;
 
-/**
- * Create a new RAM disk
- *
- * @ret ramdisk_ptr     The address of a new RAM disk, or NULL for failure
- *
- * This function should not be confused with a PDO creation routine, which is
- * actually implemented for each device type.  This routine will allocate a
- * WV_S_RAMDISK_T, track it in a global list, as well as populate the disk
- * with default values.
- */
 extern WV_SP_RAMDISK_T ramdisk__create(void);
 
 #endif  /* WV_M_RAMDISK_H_ */
