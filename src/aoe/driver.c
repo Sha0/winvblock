@@ -780,8 +780,37 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
       } /* while TRUE */
   }
 
+static NTSTATUS STDCALL AoeDiskIo2_(
+    IN WV_SP_DISK_T,
+    IN WVL_E_DISK_IO_MODE,
+    IN LONGLONG,
+    IN UINT32,
+    IN PUCHAR,
+    IN PIRP
+  );
+
 static NTSTATUS STDCALL AoeDiskIo_(
     IN WV_SP_DEV_T dev_ptr,
+    IN WVL_E_DISK_IO_MODE mode,
+    IN LONGLONG start_sector,
+    IN UINT32 sector_count,
+    IN PUCHAR buffer,
+    IN PIRP irp
+  ) {
+    AOE_SP_DISK_ aoe_disk = AoeDiskFromDev_(dev_ptr);
+
+    return AoeDiskIo2_(
+        aoe_disk->disk,
+        mode,
+        start_sector,
+        sector_count,
+        buffer,
+        irp
+      );
+  }
+
+static NTSTATUS STDCALL AoeDiskIo2_(
+    IN WV_SP_DISK_T disk_ptr,
     IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,
@@ -794,12 +823,10 @@ static NTSTATUS STDCALL AoeDiskIo_(
     UINT32 i;
     PHYSICAL_ADDRESS PhysicalAddress;
     PUCHAR PhysicalMemory;
-    WV_SP_DISK_T disk_ptr;
     AOE_SP_DISK_ aoe_disk_ptr;
 
-    /* Establish pointers to the disk and AoE disk. */
-    disk_ptr = disk__get_ptr(dev_ptr);
-    aoe_disk_ptr = AoeDiskFromDev_(dev_ptr);
+    /* Establish pointer to the AoE disk. */
+    aoe_disk_ptr = CONTAINING_RECORD(disk_ptr, AOE_S_DISK_, disk);
 
     if (AoeStop_) {
         /* Shutting down AoE; we can't service this request. */
