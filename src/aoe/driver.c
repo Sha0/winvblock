@@ -780,14 +780,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
       } /* while TRUE */
   }
 
-static NTSTATUS STDCALL AoeDiskIo2_(
-    IN WV_SP_DISK_T,
-    IN WVL_E_DISK_IO_MODE,
-    IN LONGLONG,
-    IN UINT32,
-    IN PUCHAR,
-    IN PIRP
-  );
+WVL_F_DISK_IO AoeDiskIo2_;
 
 static NTSTATUS STDCALL AoeDiskIo_(
     IN WV_SP_DEV_T dev_ptr,

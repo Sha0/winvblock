@@ -52,6 +52,26 @@ typedef struct WV_DISK_T WV_S_DISK_T, * WV_SP_DISK_T;
 /**
  * I/O Request.
  *
+ * @v disk              Points to the disk's structure.
+ * @v mode              Read/write mode.
+ * @v start_sector      First sector for request.
+ * @v sector_count      Number of sectors to work with.
+ * @v buffer            Buffer to read/write sectors to/from.
+ * @v irp               Interrupt request packet for this request.
+ */
+typedef NTSTATUS STDCALL WVL_F_DISK_IO(
+    IN WV_SP_DISK_T,
+    IN WVL_E_DISK_IO_MODE,
+    IN LONGLONG,
+    IN UINT32,
+    IN PUCHAR,
+    IN PIRP
+  );
+typedef WVL_F_DISK_IO * WVL_FP_DISK_IO;
+
+/**
+ * I/O Request.
+ *
  * @v dev_ptr           Points to the disk's device structure.
  * @v mode              Read / write mode.
  * @v start_sector      First sector for request.
