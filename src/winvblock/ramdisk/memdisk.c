@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
- * This file is part of WinVBlock, derived from WinAoE.
+ * This file is part of WinVBlock, originally derived from WinAoE.
  *
  * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,6 +46,8 @@ static BOOLEAN STDCALL WvMemdiskCheckMbft_(
     UINT32 i;
     UCHAR chksum = 0;
     WV_SP_PROBE_SAFE_MBR_HOOK assoc_hook;
+    WVL_E_DISK_MEDIA_TYPE media_type;
+    UINT32 sector_size;
     WV_SP_RAMDISK_T ramdisk;
 
     if (offset >= 0x100000) {
@@ -76,6 +78,16 @@ static BOOLEAN STDCALL WvMemdiskCheckMbft_(
       }
     DBG("MEMDISK DiskBuf: 0x%08x\n", mbft->mdi.diskbuf);
     DBG("MEMDISK DiskSize: %d sectors\n", mbft->mdi.disksize);
+    if (mbft->mdi.driveno == 0xE0) {
+        media_type = WvlDiskMediaTypeOptical;
+        sector_size = 2048;
+      } else {
+        if (mbft->mdi.driveno & 0x80)
+        	media_type = WvlDiskMediaTypeHard;
+          else
+        	media_type = WvlDiskMediaTypeFloppy;
+        sector_size = 512;
+      }
     ramdisk = ramdisk__create();
     if (ramdisk == NULL) {
         DBG("Could not create MEMDISK disk!\n");
@@ -83,21 +95,13 @@ static BOOLEAN STDCALL WvMemdiskCheckMbft_(
       }
     ramdisk->DiskBuf = mbft->mdi.diskbuf;
     ramdisk->disk->LBADiskSize = ramdisk->DiskSize = mbft->mdi.disksize;
-    if (mbft->mdi.driveno == 0xE0) {
-        ramdisk->disk->Media = WvlDiskMediaTypeOptical;
-        ramdisk->disk->SectorSize = 2048;
-      } else {
-        if (mbft->mdi.driveno & 0x80)
-        	ramdisk->disk->Media = WvlDiskMediaTypeHard;
-          else
-        	ramdisk->disk->Media = WvlDiskMediaTypeFloppy;
-        ramdisk->disk->SectorSize = 512;
-      }
-    DBG("RAM Drive is type: %d\n", ramdisk->disk->Media);
+    DBG("RAM Drive is type: %d\n", media_type);
     ramdisk->disk->Cylinders = mbft->mdi.cylinders;
     ramdisk->disk->Heads = mbft->mdi.heads;
     ramdisk->disk->Sectors = mbft->mdi.sectors;
     ramdisk->disk->Dev->Boot = TRUE;
+    ramdisk->disk->Media = media_type;
+    ramdisk->disk->SectorSize = sector_size;
 
     /* Add the ramdisk to the bus. */
     if (!WvBusAddDev(ramdisk->disk->Dev)) {
