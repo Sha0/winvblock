@@ -136,8 +136,6 @@ typedef struct WV_DISK_OPS {
 
 struct WV_DISK_T {
     WV_SP_DEV_T Dev;
-    KEVENT SearchEvent;
-    KSPIN_LOCK SpinLock;
     WVL_E_DISK_MEDIA_TYPE Media;
     WV_S_DISK_OPS disk_ops;
     ULONGLONG LBADiskSize;

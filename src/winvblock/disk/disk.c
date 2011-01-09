@@ -214,8 +214,6 @@ static PDEVICE_OBJECT STDCALL WvDiskCreatePdo_(IN WV_SP_DEV_T dev_ptr) {
     /* Set associations for the PDO, device, disk. */
     WvDevForDevObj(dev_obj_ptr, dev_ptr);
     dev_ptr->Self = dev_obj_ptr;
-    KeInitializeEvent(&disk_ptr->SearchEvent, SynchronizationEvent, FALSE);
-    KeInitializeSpinLock(&disk_ptr->SpinLock);
 
     /* Some device parameters. */
     dev_obj_ptr->Flags |= DO_DIRECT_IO;         /* FIXME? */
@@ -392,7 +390,6 @@ WVL_M_LIB VOID STDCALL WvDiskInit(IN WV_SP_DISK_T disk) {
     /* Populate non-zero device defaults. */
     disk->disk_ops.MaxXferLen = WvDiskDefaultMaxXferLen_;
     disk->disk_ops.Close = WvDiskDefaultClose_;
-    KeInitializeSpinLock(&disk->SpinLock);
 
     return;
   }

@@ -347,12 +347,6 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
 
     /* Set associations for the PDO, device, disk. */
     WvDevForDevObj(pdo, filedisk->Dev);
-    KeInitializeEvent(
-        &filedisk->disk->SearchEvent,
-        SynchronizationEvent,
-        FALSE
-      );
-    KeInitializeSpinLock(&filedisk->disk->SpinLock);
     filedisk->Dev->Self = pdo;
 
     /* Some device parameters. */

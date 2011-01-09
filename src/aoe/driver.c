@@ -189,6 +189,7 @@ typedef struct AOE_DISK_ {
     WV_S_DEV_EXT DevExt[1];
     WV_S_DEV_T Dev[1];
     WV_S_DISK_T disk[1];
+    KSPIN_LOCK SpinLock;
     UINT32 MTU;
     UCHAR ClientMac[6];
     UCHAR ServerMac[6];
@@ -196,6 +197,7 @@ typedef struct AOE_DISK_ {
     UINT32 Minor;
     UINT32 MaxSectorsPerPacket;
     UINT32 Timeout;
+    KEVENT SearchEvent;
     AOE_E_SEARCH_STATE_ search_state;
     WV_FP_DEV_FREE prev_free;
     LIST_ENTRY tracking;
@@ -465,7 +467,7 @@ static VOID STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
     disk_searcher = AoeDiskSearchList_;
     while (disk_searcher != NULL) {
         KeSetEvent(
-            &disk_searcher->aoe_disk->disk->SearchEvent,
+            &disk_searcher->aoe_disk->SearchEvent,
             0,
             FALSE
           );
@@ -530,7 +532,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
     disk_searcher->aoe_disk = aoe_disk;
     disk_searcher->next = NULL;
     aoe_disk->search_state = AoeSearchStateSearchNic_;
-    KeResetEvent(&disk_ptr->SearchEvent);
+    KeResetEvent(&aoe_disk->SearchEvent);
 
     /* Wait until we have the global spin-lock. */
     KeAcquireSpinLock(&AoeLock_, &Irql);
@@ -557,7 +559,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
          */
         Timeout.QuadPart = -500000LL;
         KeWaitForSingleObject(
-            &disk_ptr->SearchEvent,
+            &aoe_disk->SearchEvent,
             Executive,
             KernelMode,
             FALSE,
@@ -569,11 +571,11 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
           }
 
         /* Wait until we have the device extension's spin-lock. */
-        KeAcquireSpinLock(&disk_ptr->SpinLock, &Irql);
+        KeAcquireSpinLock(&aoe_disk->SpinLock, &Irql);
 
         if (aoe_disk->search_state == AoeSearchStateSearchNic_) {
             if (!Protocol_SearchNIC(aoe_disk->ClientMac)) {
-                KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+                KeReleaseSpinLock(&aoe_disk->SpinLock, Irql);
                 continue;
               } else {
                 /* We found the adapter to use, get MTU next. */
@@ -584,12 +586,12 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
 
         if (aoe_disk->search_state == AoeSearchStateGettingSize_) {
             /* Still getting the disk's size. */
-            KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+            KeReleaseSpinLock(&aoe_disk->SpinLock, Irql);
             continue;
           }
         if (aoe_disk->search_state == AoeSearchStateGettingGeometry_) {
             /* Still getting the disk's geometry. */
-            KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+            KeReleaseSpinLock(&aoe_disk->SpinLock, Irql);
             continue;
           }
         if (aoe_disk->search_state ==
@@ -612,7 +614,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
                 aoe_disk->search_state = AoeSearchStateDone_;
               } else {
                 /* Still getting the maximum sectors per packet count. */
-                KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+                KeReleaseSpinLock(&aoe_disk->SpinLock, Irql);
                 continue;
               }
           }
@@ -684,7 +686,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
 
             /* Release global and device extension spin-locks. */
             KeReleaseSpinLock(&AoeLock_, InnerIrql);
-            KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+            KeReleaseSpinLock(&aoe_disk->SpinLock, Irql);
 
             DBG(
                 "Disk size: %I64uM cylinders: %I64u heads: %u"
@@ -704,7 +706,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
         /* Establish our tag. */
         if ((tag = wv_mallocz(sizeof *tag)) == NULL) {
             DBG("Couldn't allocate tag\n");
-            KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+            KeReleaseSpinLock(&aoe_disk->SpinLock, Irql);
             /* Maybe next time around. */
             continue;
           }
@@ -717,7 +719,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
             DBG("Couldn't allocate tag->packet_data\n");
             wv_free(tag);
             tag = NULL;
-            KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+            KeReleaseSpinLock(&aoe_disk->SpinLock, Irql);
             /* Maybe next time around. */
             continue;
           }
@@ -760,7 +762,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
               wv_free(tag->packet_data);
               wv_free(tag);
               /* TODO: Do we need to nullify tag here? */
-              KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+              KeReleaseSpinLock(&aoe_disk->SpinLock, Irql);
               continue;
               break;
           }
@@ -777,7 +779,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
           }
         AoeTagListLast_ = tag;
         KeReleaseSpinLock(&AoeLock_, InnerIrql);
-        KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
+        KeReleaseSpinLock(&aoe_disk->SpinLock, Irql);
       } /* while TRUE */
   }
 
@@ -1123,7 +1125,7 @@ NTSTATUS STDCALL aoe__reply(
 
     switch (tag->type) {
         case AoeTagTypeSearchDrive_:
-          KeAcquireSpinLock(&disk_ptr->SpinLock, &Irql);
+          KeAcquireSpinLock(&aoe_disk_ptr->SpinLock, &Irql);
           switch (aoe_disk_ptr->search_state) {
               case AoeSearchStateGettingSize_:
                 /* The reply tells us the disk size. */
@@ -1197,8 +1199,8 @@ NTSTATUS STDCALL aoe__reply(
                 DBG("Undefined search_state!\n");
                 break;
             } /* switch search state. */
-          KeReleaseSpinLock(&disk_ptr->SpinLock, Irql);
-          KeSetEvent(&disk_ptr->SearchEvent, 0, FALSE);
+          KeReleaseSpinLock(&aoe_disk_ptr->SpinLock, Irql);
+          KeSetEvent(&aoe_disk_ptr->SearchEvent, 0, FALSE);
           break;
 
         case AoeTagTypeIo_:
@@ -1769,11 +1771,11 @@ static AOE_SP_DISK_ AoeDiskCreatePdo_(void) {
     /* Set associations for the PDO, device, disk. */
     WvDevForDevObj(pdo, aoe_disk->Dev);
     KeInitializeEvent(
-        &aoe_disk->disk->SearchEvent,
+        &aoe_disk->SearchEvent,
         SynchronizationEvent,
         FALSE
       );
-    KeInitializeSpinLock(&aoe_disk->disk->SpinLock);
+    KeInitializeSpinLock(&aoe_disk->SpinLock);
     aoe_disk->Dev->Self = pdo;
 
     /* Some device parameters. */

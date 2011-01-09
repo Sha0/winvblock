@@ -205,12 +205,6 @@ WV_SP_RAMDISK_T STDCALL WvRamdiskCreatePdo(
 
     /* Set associations for the PDO, device, disk. */
     WvDevForDevObj(pdo, ramdisk->Dev);
-    KeInitializeEvent(
-        &ramdisk->disk->SearchEvent,
-        SynchronizationEvent,
-        FALSE
-      );
-    KeInitializeSpinLock(&ramdisk->disk->SpinLock);
     ramdisk->Dev->Self = pdo;
 
     /* Some device parameters. */
