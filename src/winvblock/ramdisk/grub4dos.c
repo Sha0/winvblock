@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
- * This file is part of WinVBlock, derived from WinAoE.
+ * This file is part of WinVBlock, originally derived from WinAoE.
  *
  * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,115 +38,121 @@
 #include "probe.h"
 #include "grub4dos.h"
 
-VOID ramdisk_grub4dos__find(void) {
-  PHYSICAL_ADDRESS PhysicalAddress;
-  PUCHAR PhysicalMemory;
-  WV_SP_PROBE_INT_VECTOR InterruptVector;
-  UINT32 Int13Hook;
-  WV_SP_PROBE_SAFE_MBR_HOOK SafeMbrHookPtr;
-  WV_SP_GRUB4DOS_DRIVE_MAPPING Grub4DosDriveMapSlotPtr;
-  UINT32 i = 8;
-  BOOLEAN FoundGrub4DosMapping = FALSE;
-  WV_SP_RAMDISK_T ramdisk_ptr;
+/* Scan for GRUB4DOS RAM disks and add them to the WinVBlock bus. */
+VOID WvRamdiskG4dFind(void) {
+    PHYSICAL_ADDRESS phys_addr;
+    PUCHAR phys_mem;
+    WV_SP_PROBE_INT_VECTOR int_vector;
+    WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook;
+    WV_SP_GRUB4DOS_DRIVE_MAPPING g4d_drive_mapping;
+    UINT32 i = 8;
+    BOOLEAN found = FALSE;
+    WV_SP_RAMDISK_T ramdisk;
 
-  /*
-   * Find a GRUB4DOS memory-mapped disk.  Start by looking at the
-   * real-mode IDT and following the "SafeMBRHook" INT 0x13 hook
-   */
-  PhysicalAddress.QuadPart = 0LL;
-  PhysicalMemory = MmMapIoSpace ( PhysicalAddress, 0x100000, MmNonCached );
-  if ( !PhysicalMemory )
-    {
-      DBG ( "Could not map low memory\n" );
-      return;
-    }
-  InterruptVector =
-    (WV_SP_PROBE_INT_VECTOR) (PhysicalMemory + 0x13 * sizeof *InterruptVector);
-  /* Walk the "safe hook" chain of INT 13h hooks as far as possible. */
-  while (SafeMbrHookPtr = WvProbeGetSafeHook(PhysicalMemory, InterruptVector)) {
-      if (!wv_memcmpeq(
-          SafeMbrHookPtr->VendorId,
-          "GRUB4DOS",
-          sizeof "GRUB4DOS" - 1
-        )) {
-	  DBG ( "Non-GRUB4DOS INT 0x13 Safe Hook\n" );
-	  InterruptVector = &SafeMbrHookPtr->PrevHook;
-	  continue;
-	}
-      Grub4DosDriveMapSlotPtr = (WV_SP_GRUB4DOS_DRIVE_MAPPING) (
-          PhysicalMemory +
-          (((UINT32) InterruptVector->Segment) << 4) +
-          0x20
-        );
-      while ( i-- )
-	{
-	  DBG ( "GRUB4DOS SourceDrive: 0x%02x\n",
-		Grub4DosDriveMapSlotPtr[i].SourceDrive );
-	  DBG ( "GRUB4DOS DestDrive: 0x%02x\n",
-		Grub4DosDriveMapSlotPtr[i].DestDrive );
-	  DBG ( "GRUB4DOS MaxHead: %d\n", Grub4DosDriveMapSlotPtr[i].MaxHead );
-	  DBG ( "GRUB4DOS MaxSector: %d\n",
-		Grub4DosDriveMapSlotPtr[i].MaxSector );
-	  DBG ( "GRUB4DOS DestMaxCylinder: %d\n",
-		Grub4DosDriveMapSlotPtr[i].DestMaxCylinder );
-	  DBG ( "GRUB4DOS DestMaxHead: %d\n",
-		Grub4DosDriveMapSlotPtr[i].DestMaxHead );
-	  DBG ( "GRUB4DOS DestMaxSector: %d\n",
-		Grub4DosDriveMapSlotPtr[i].DestMaxSector );
-	  DBG ( "GRUB4DOS SectorStart: 0x%08x\n",
-		Grub4DosDriveMapSlotPtr[i].SectorStart );
-	  DBG ( "GRUB4DOS SectorCount: %d\n",
-		Grub4DosDriveMapSlotPtr[i].SectorCount );
-	  if ( !( Grub4DosDriveMapSlotPtr[i].DestDrive == 0xff ) )
-	    {
-	      DBG ( "Skipping non-RAM disk GRUB4DOS mapping\n" );
-	      continue;
-	    }
-	  ramdisk_ptr = ramdisk__create (  );
-	  if ( ramdisk_ptr == NULL )
-	    {
-	      DBG ( "Could not create GRUB4DOS disk!\n" );
-	      return;
-	    }
-	  /*
-	   * Possible precision loss
-	   */
-	  if ( Grub4DosDriveMapSlotPtr[i].SourceODD )
-	    {
-	      ramdisk_ptr->disk->Media = WvlDiskMediaTypeOptical;
-	      ramdisk_ptr->disk->SectorSize = 2048;
-	    }
-	  else
-	    {
-	      ramdisk_ptr->disk->Media =
-		Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80 ?
-		WvlDiskMediaTypeHard : WvlDiskMediaTypeFloppy;
-	      ramdisk_ptr->disk->SectorSize = 512;
-	    }
-	  DBG ( "RAM Drive is type: %d\n", ramdisk_ptr->disk->Media );
-	  ramdisk_ptr->DiskBuf =
-	    ( UINT32 ) ( Grub4DosDriveMapSlotPtr[i].SectorStart *
-				    512 );
-	  ramdisk_ptr->disk->LBADiskSize = ramdisk_ptr->DiskSize =
-	    ( UINT32 ) Grub4DosDriveMapSlotPtr[i].SectorCount;
-	  ramdisk_ptr->disk->Heads = Grub4DosDriveMapSlotPtr[i].MaxHead + 1;
-	  ramdisk_ptr->disk->Sectors =
-	    Grub4DosDriveMapSlotPtr[i].DestMaxSector;
-	  ramdisk_ptr->disk->Cylinders =
-	    ramdisk_ptr->disk->LBADiskSize / ( ramdisk_ptr->disk->Heads *
-					       ramdisk_ptr->disk->Sectors );
-	  ramdisk_ptr->disk->Dev->Boot = TRUE;
-	  FoundGrub4DosMapping = TRUE;
- 	  /* Add the ramdisk to the bus. */
-	  if (!WvBusAddDev(ramdisk_ptr->disk->Dev))
-      WvDevFree(ramdisk_ptr->disk->Dev);
-	}
-      InterruptVector = &SafeMbrHookPtr->PrevHook;
-    }
+    /*
+     * Find a GRUB4DOS memory-mapped disk.  Start by looking at the
+     * real-mode IDT and following the "SafeMBRHook" INT 0x13 hook.
+     */
+    phys_addr.QuadPart = 0LL;
+    phys_mem = MmMapIoSpace(phys_addr, 0x100000, MmNonCached);
+    if (!phys_mem) {
+        DBG("Could not map low memory\n");
+        return;
+      }
+    int_vector =
+      (WV_SP_PROBE_INT_VECTOR) (phys_mem + 0x13 * sizeof *int_vector);
+    /* Walk the "safe hook" chain of INT 13h hooks as far as possible. */
+    while (safe_mbr_hook = WvProbeGetSafeHook(phys_mem, int_vector)) {
+        if (!wv_memcmpeq(
+            safe_mbr_hook->VendorId,
+            "GRUB4DOS",
+            sizeof "GRUB4DOS" - 1
+          )) {
+              DBG("Non-GRUB4DOS INT 0x13 Safe Hook\n");
+              int_vector = &safe_mbr_hook->PrevHook;
+              continue;
+          }
+        g4d_drive_mapping = (WV_SP_GRUB4DOS_DRIVE_MAPPING) (
+            phys_mem +
+            (((UINT32) int_vector->Segment) << 4) +
+            0x20
+          );
+        while (i--) {
+            DBG(
+                "GRUB4DOS SourceDrive: 0x%02x\n",
+                g4d_drive_mapping[i].SourceDrive
+              );
+            DBG(
+                "GRUB4DOS DestDrive: 0x%02x\n",
+                g4d_drive_mapping[i].DestDrive
+              );
+            DBG("GRUB4DOS MaxHead: %d\n", g4d_drive_mapping[i].MaxHead);
+            DBG(
+                "GRUB4DOS MaxSector: %d\n",
+                g4d_drive_mapping[i].MaxSector
+              );
+            DBG(
+                "GRUB4DOS DestMaxCylinder: %d\n",
+                g4d_drive_mapping[i].DestMaxCylinder
+              );
+            DBG(
+                "GRUB4DOS DestMaxHead: %d\n",
+                g4d_drive_mapping[i].DestMaxHead
+              );
+            DBG(
+                "GRUB4DOS DestMaxSector: %d\n",
+                g4d_drive_mapping[i].DestMaxSector
+              );
+            DBG(
+                "GRUB4DOS SectorStart: 0x%08x\n",
+                g4d_drive_mapping[i].SectorStart
+              );
+            DBG(
+                "GRUB4DOS SectorCount: %d\n",
+                g4d_drive_mapping[i].SectorCount
+              );
+            if (!(g4d_drive_mapping[i].DestDrive == 0xff)) {
+                DBG("Skipping non-RAM disk GRUB4DOS mapping\n");
+                continue;
+              }
+            ramdisk = ramdisk__create();
+            if (ramdisk == NULL) {
+                DBG("Could not create GRUB4DOS disk!\n");
+                return;
+              }
+            /* Possible precision loss. */
+            if (g4d_drive_mapping[i].SourceODD) {
+                ramdisk->disk->Media = WvlDiskMediaTypeOptical;
+                ramdisk->disk->SectorSize = 2048;
+              } else {
+                ramdisk->disk->Media =
+                  g4d_drive_mapping[i].SourceDrive & 0x80 ?
+                  WvlDiskMediaTypeHard :
+                  WvlDiskMediaTypeFloppy;
+                ramdisk->disk->SectorSize = 512;
+              }
+            DBG("RAM Drive is type: %d\n", ramdisk->disk->Media);
+            ramdisk->DiskBuf =
+              (UINT32) (g4d_drive_mapping[i].SectorStart * 512);
+            ramdisk->disk->LBADiskSize = ramdisk->DiskSize =
+              (UINT32) g4d_drive_mapping[i].SectorCount;
+            ramdisk->disk->Heads = g4d_drive_mapping[i].MaxHead + 1;
+            ramdisk->disk->Sectors = g4d_drive_mapping[i].DestMaxSector;
+            ramdisk->disk->Cylinders =
+              ramdisk->disk->LBADiskSize /
+              (ramdisk->disk->Heads * ramdisk->disk->Sectors);
+            ramdisk->disk->Dev->Boot = TRUE;
+            found = TRUE;
+             /* Add the ramdisk to the bus. */
+            if (!WvBusAddDev(ramdisk->disk->Dev))
+              WvDevFree(ramdisk->disk->Dev);
+          } /* while i */
+        int_vector = &safe_mbr_hook->PrevHook;
+      } /* while safe hook chain. */
 
-  MmUnmapIoSpace ( PhysicalMemory, 0x100000 );
-  if ( !FoundGrub4DosMapping )
-    {
-      DBG ( "No GRUB4DOS drive mappings found\n" );
-    }
-}
+    MmUnmapIoSpace(phys_mem, 0x100000);
+    if (!found) {
+        DBG("No GRUB4DOS drive mappings found\n");
+      }
+    return;
+  }
