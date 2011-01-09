@@ -69,18 +69,18 @@ static WV_F_DISK_IO AoeDiskIo_;
 static WV_F_DISK_MAX_XFER_LEN AoeDiskMaxXferLen_;
 static WV_F_DISK_INIT AoeDiskInit_;
 static WV_F_DISK_CLOSE AoeDiskClose_;
-static DRIVER_DISPATCH AoeIrpNotSupported;
-static __drv_dispatchType(IRP_MJ_POWER) DRIVER_DISPATCH AoeIrpPower;
+static DRIVER_DISPATCH AoeIrpNotSupported_;
+static __drv_dispatchType(IRP_MJ_POWER) DRIVER_DISPATCH AoeIrpPower_;
 static
   __drv_dispatchType(IRP_MJ_CREATE)
   __drv_dispatchType(IRP_MJ_CLOSE)
-  DRIVER_DISPATCH AoeIrpCreateClose;
+  DRIVER_DISPATCH AoeIrpCreateClose_;
 static __drv_dispatchType(IRP_MJ_SYSTEM_CONTROL)
-  DRIVER_DISPATCH AoeIrpSysCtl;
+  DRIVER_DISPATCH AoeIrpSysCtl_;
 static __drv_dispatchType(IRP_MJ_DEVICE_CONTROL)
-  DRIVER_DISPATCH AoeIrpDevCtl;
-static __drv_dispatchType(IRP_MJ_SCSI) DRIVER_DISPATCH AoeIrpScsi;
-static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH AoeIrpPnp;
+  DRIVER_DISPATCH AoeIrpDevCtl_;
+static __drv_dispatchType(IRP_MJ_SCSI) DRIVER_DISPATCH AoeIrpScsi_;
+static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH AoeIrpPnp_;
 static DRIVER_UNLOAD AoeUnload_;
 
 /** Tag types. */
@@ -407,14 +407,14 @@ NTSTATUS STDCALL DriverEntry(
 
     /* Initialize DriverObject for IRPs. */
     for (i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++)
-      DriverObject->MajorFunction[i] = AoeIrpNotSupported;
-    DriverObject->MajorFunction[IRP_MJ_PNP] = AoeIrpPnp;
-    DriverObject->MajorFunction[IRP_MJ_POWER] = AoeIrpPower;
-    DriverObject->MajorFunction[IRP_MJ_CREATE] = AoeIrpCreateClose;
-    DriverObject->MajorFunction[IRP_MJ_CLOSE] = AoeIrpCreateClose;
-    DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = AoeIrpSysCtl;
-    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = AoeIrpDevCtl;
-    DriverObject->MajorFunction[IRP_MJ_SCSI] = AoeIrpScsi;
+      DriverObject->MajorFunction[i] = AoeIrpNotSupported_;
+    DriverObject->MajorFunction[IRP_MJ_PNP] = AoeIrpPnp_;
+    DriverObject->MajorFunction[IRP_MJ_POWER] = AoeIrpPower_;
+    DriverObject->MajorFunction[IRP_MJ_CREATE] = AoeIrpCreateClose_;
+    DriverObject->MajorFunction[IRP_MJ_CLOSE] = AoeIrpCreateClose_;
+    DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = AoeIrpSysCtl_;
+    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = AoeIrpDevCtl_;
+    DriverObject->MajorFunction[IRP_MJ_SCSI] = AoeIrpScsi_;
     /* Set the driver Unload callback. */
     DriverObject->DriverUnload = AoeUnload_;
     /* Set the driver AddDevice callback. */
@@ -1760,7 +1760,7 @@ static VOID STDCALL AoeDiskFree_(IN WV_SP_DEV_T dev) {
     wv_free(aoe_disk);
   }
 
-static NTSTATUS STDCALL AoeIrpNotSupported(
+static NTSTATUS STDCALL AoeIrpNotSupported_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
@@ -1768,7 +1768,7 @@ static NTSTATUS STDCALL AoeIrpNotSupported(
   }
 
 /* Handle a power IRP. */
-static NTSTATUS AoeIrpPower(
+static NTSTATUS AoeIrpPower_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
@@ -1786,15 +1786,12 @@ static NTSTATUS AoeIrpPower(
         PoStartNextPowerIrp(irp);
         return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
       }
-    /* Call the particular device's power handler. */
-    if (dev->IrpMj && dev->IrpMj->Power)
-      return dev->IrpMj->Power(dev, irp);
-    /* Otherwise, we don't support the IRP. */
-    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+    /* Use the disk routine. */
+    return WvDiskIrpPower(dev, irp);
   }
 
 /* Handle an IRP_MJ_CREATE or IRP_MJ_CLOSE IRP. */
-static NTSTATUS AoeIrpCreateClose(
+static NTSTATUS AoeIrpCreateClose_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
@@ -1814,7 +1811,7 @@ static NTSTATUS AoeIrpCreateClose(
   }
 
 /* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
-static NTSTATUS AoeIrpSysCtl(
+static NTSTATUS AoeIrpSysCtl_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
@@ -1829,15 +1826,12 @@ static NTSTATUS AoeIrpSysCtl(
     /* Check that the device exists. */
     if (!dev || dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
-    /* Call the particular device's power handler. */
-    if (dev->IrpMj && dev->IrpMj->SysCtl)
-      return dev->IrpMj->SysCtl(dev, irp);
-    /* Otherwise, we don't support the IRP. */
-    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+    /* Use the disk routine. */
+    return WvDiskIrpSysCtl(dev, irp);
   }
 
 /* Handle an IRP_MJ_DEVICE_CONTROL IRP. */
-static NTSTATUS AoeIrpDevCtl(
+static NTSTATUS AoeIrpDevCtl_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
@@ -1857,20 +1851,16 @@ static NTSTATUS AoeIrpDevCtl(
     /* Check that the device exists. */
     if (!dev || dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
-    /* Call the particular device's power handler. */
-    if (dev->IrpMj && dev->IrpMj->DevCtl) {
-        return dev->IrpMj->DevCtl(
-            dev,
-            irp,
-            io_stack_loc->Parameters.DeviceIoControl.IoControlCode
-          );
-      }
-    /* Otherwise, we don't support the IRP. */
-    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+    /* Use the disk routine. */
+    return disk_dev_ctl__dispatch(
+        dev,
+        irp,
+        io_stack_loc->Parameters.DeviceIoControl.IoControlCode
+      );
   }
 
 /* Handle an IRP_MJ_SCSI IRP. */
-static NTSTATUS AoeIrpScsi(
+static NTSTATUS AoeIrpScsi_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
@@ -1887,20 +1877,16 @@ static NTSTATUS AoeIrpScsi(
     /* Check that the device exists. */
     if (!dev || dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
-    /* Call the particular device's power handler. */
-    if (dev->IrpMj && dev->IrpMj->Scsi) {
-        return dev->IrpMj->Scsi(
-            dev,
-            irp,
-            io_stack_loc->Parameters.Scsi.Srb->Function
-          );
-      }
-    /* Otherwise, we don't support the IRP. */
-    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+    /* Use the disk routine. */
+    return disk_scsi__dispatch(
+        dev,
+        irp,
+        io_stack_loc->Parameters.Scsi.Srb->Function
+      );
   }
 
 /* Handle an IRP_MJ_PNP IRP. */
-static NTSTATUS AoeIrpPnp(
+static NTSTATUS AoeIrpPnp_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
@@ -1941,14 +1927,6 @@ static NTSTATUS AoeIrpPnp(
     /* Check that the device exists. */
     if (!dev || dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
-    /* Call the particular device's power handler. */
-    if (dev->IrpMj && dev->IrpMj->Pnp) {
-        return dev->IrpMj->Pnp(
-            dev,
-            irp,
-            code
-          );
-      }
-    /* Otherwise, we don't support the IRP. */
-    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+    /* Use the disk routine. */
+    return disk_pnp__dispatch(dev, irp, code);
   }
