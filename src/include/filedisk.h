@@ -27,6 +27,7 @@
 
 typedef struct WV_FILEDISK_T {
     WV_S_DEV_EXT DevExt;
+    WV_S_DEV_T Dev[1];
     WV_S_DISK_T disk[1];
     HANDLE file;
     UINT32 hash;

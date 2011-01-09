@@ -150,7 +150,7 @@ static UCHAR STDCALL WvRamdiskUnitNum_(IN WV_SP_DISK_T disk) {
       );
 
     /* Possible precision loss. */
-    return (UCHAR) WvlBusGetNodeNum(&ramdisk->disk->Dev->BusNode);
+    return (UCHAR) WvlBusGetNodeNum(&ramdisk->Dev->BusNode);
   }
 
 /**
@@ -192,25 +192,26 @@ WV_SP_RAMDISK_T STDCALL WvRamdiskCreatePdo(
     ramdisk = pdo->DeviceExtension;
     RtlZeroMemory(ramdisk, sizeof *ramdisk);
     WvDiskInit(ramdisk->disk);
-    WvDevInit(ramdisk->disk->Dev);
-    ramdisk->disk->Dev->Ops.Free = WvRamdiskFree_;
-    ramdisk->disk->Dev->Ops.PnpId = WvRamdiskQueryId_;
-    ramdisk->disk->Dev->ext = ramdisk->disk;
-    ramdisk->disk->Dev->IrpMj = &irp_mj;
+    WvDevInit(ramdisk->Dev);
+    ramdisk->Dev->Ops.Free = WvRamdiskFree_;
+    ramdisk->Dev->Ops.PnpId = WvRamdiskQueryId_;
+    ramdisk->Dev->ext = ramdisk->disk;
+    ramdisk->Dev->IrpMj = &irp_mj;
+    ramdisk->disk->Dev = ramdisk->Dev;
     ramdisk->disk->disk_ops.Io = WvRamdiskIo_;
     ramdisk->disk->disk_ops.UnitNum = WvRamdiskUnitNum_;
     ramdisk->disk->ext = ramdisk;
     ramdisk->disk->DriverObj = WvDriverObj;
 
     /* Set associations for the PDO, device, disk. */
-    WvDevForDevObj(pdo, ramdisk->disk->Dev);
+    WvDevForDevObj(pdo, ramdisk->Dev);
     KeInitializeEvent(
         &ramdisk->disk->SearchEvent,
         SynchronizationEvent,
         FALSE
       );
     KeInitializeSpinLock(&ramdisk->disk->SpinLock);
-    ramdisk->disk->Dev->Self = pdo;
+    ramdisk->Dev->Self = pdo;
 
     /* Some device parameters. */
     pdo->Flags |= DO_DIRECT_IO;         /* FIXME? */

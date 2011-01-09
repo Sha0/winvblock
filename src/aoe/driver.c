@@ -187,6 +187,7 @@ typedef enum AOE_SEARCH_STATE_ {
 /** The AoE disk type. */
 typedef struct AOE_DISK_ {
     WV_S_DEV_EXT DevExt[1];
+    WV_S_DEV_T Dev[1];
     WV_S_DISK_T disk[1];
     UINT32 MTU;
     UCHAR ClientMac[6];
@@ -1544,13 +1545,13 @@ static VOID AoeProcessAbft_(void) {
     aoe_disk->Minor = AoEBootRecord.Minor;
     aoe_disk->MaxSectorsPerPacket = 1;
     aoe_disk->Timeout = 200000;          /* 20 ms. */
-    aoe_disk->disk->Dev->Boot = TRUE;
+    aoe_disk->Dev->Boot = TRUE;
     if (!AoeDiskInit_(aoe_disk)) {
         DBG("Couldn't find AoE disk!\n");
-        AoeDiskFree_(aoe_disk->disk->Dev);
+        AoeDiskFree_(aoe_disk->Dev);
         return;
       }
-    AoeBusAddDev(aoe_disk->disk->Dev);
+    AoeBusAddDev(aoe_disk->Dev);
     return;
 
     out_no_abft:
@@ -1648,11 +1649,11 @@ NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
         AOE_SP_DISK_ aoe_disk = CONTAINING_RECORD(
             walker,
             AOE_S_DISK_,
-            disk[0].Dev[0].BusNode
+            Dev[0].BusNode
           );
 
         disks->Disk[count].Disk = WvlBusGetNodeNum(
-            &aoe_disk->disk->Dev->BusNode
+            &aoe_disk->Dev->BusNode
           );
         RtlCopyMemory(
             &disks->Disk[count].ClientMac,
@@ -1713,13 +1714,13 @@ NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
     aoe_disk->Minor = (UCHAR) buffer[8];
     aoe_disk->MaxSectorsPerPacket = 1;
     aoe_disk->Timeout = 200000;             /* 20 ms. */
-    aoe_disk->disk->Dev->Boot = FALSE;
+    aoe_disk->Dev->Boot = FALSE;
     if (!AoeDiskInit_(aoe_disk)) {
         DBG("Couldn't find AoE disk!\n");
-        AoeDiskFree_(aoe_disk->disk->Dev);
+        AoeDiskFree_(aoe_disk->Dev);
         return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
       }
-    AoeBusAddDev(aoe_disk->disk->Dev);
+    AoeBusAddDev(aoe_disk->Dev);
 
     return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
   }
@@ -1752,10 +1753,11 @@ static AOE_SP_DISK_ AoeDiskCreatePdo_(void) {
     RtlZeroMemory(aoe_disk, sizeof *aoe_disk);
     /* Populate non-zero device defaults. */
     WvDiskInit(aoe_disk->disk);
-    WvDevInit(aoe_disk->disk->Dev);
-    aoe_disk->disk->Dev->Ops.Free = AoeDiskFree_;
-    aoe_disk->disk->Dev->Ops.PnpId = query_id;
-    aoe_disk->disk->Dev->ext = aoe_disk->disk;
+    WvDevInit(aoe_disk->Dev);
+    aoe_disk->Dev->Ops.Free = AoeDiskFree_;
+    aoe_disk->Dev->Ops.PnpId = query_id;
+    aoe_disk->Dev->ext = aoe_disk->disk;
+    aoe_disk->disk->Dev = aoe_disk->Dev;
     aoe_disk->disk->Media = WvlDiskMediaTypeHard;
     aoe_disk->disk->disk_ops.Io = AoeDiskIo_;
     aoe_disk->disk->disk_ops.MaxXferLen = AoeDiskMaxXferLen_;
@@ -1765,14 +1767,14 @@ static AOE_SP_DISK_ AoeDiskCreatePdo_(void) {
     aoe_disk->disk->DriverObj = AoeDriverObj_;
 
     /* Set associations for the PDO, device, disk. */
-    WvDevForDevObj(pdo, aoe_disk->disk->Dev);
+    WvDevForDevObj(pdo, aoe_disk->Dev);
     KeInitializeEvent(
         &aoe_disk->disk->SearchEvent,
         SynchronizationEvent,
         FALSE
       );
     KeInitializeSpinLock(&aoe_disk->disk->SpinLock);
-    aoe_disk->disk->Dev->Self = pdo;
+    aoe_disk->Dev->Self = pdo;
 
     /* Some device parameters. */
     pdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
@@ -1811,13 +1813,13 @@ static NTSTATUS AoeIrpPower_(
       return WvlBusPower(&AoeBusMain, irp);
     aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (aoe_disk->disk->Dev->State == WvDevStateDeleted) {
+    if (aoe_disk->Dev->State == WvDevStateDeleted) {
         /* Even if it doesn't, a power IRP is important! */
         PoStartNextPowerIrp(irp);
         return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
       }
     /* Use the disk routine. */
-    return WvDiskIrpPower(aoe_disk->disk->Dev, irp);
+    return WvDiskIrpPower(aoe_disk->Dev, irp);
   }
 
 /* Handle an IRP_MJ_CREATE or IRP_MJ_CLOSE IRP. */
@@ -1833,7 +1835,7 @@ static NTSTATUS AoeIrpCreateClose_(
       return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
     aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (aoe_disk->disk->Dev->State == WvDevStateDeleted)
+    if (aoe_disk->Dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Always succeed with nothing to do. */
     return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
@@ -1852,10 +1854,10 @@ static NTSTATUS AoeIrpSysCtl_(
       return WvlBusSysCtl(&AoeBusMain, irp);
     aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (aoe_disk->disk->Dev->State == WvDevStateDeleted)
+    if (aoe_disk->Dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
-    return WvDiskIrpSysCtl(aoe_disk->disk->Dev, irp);
+    return WvDiskIrpSysCtl(aoe_disk->Dev, irp);
   }
 
 /* Handle an IRP_MJ_DEVICE_CONTROL IRP. */
@@ -1876,7 +1878,7 @@ static NTSTATUS AoeIrpDevCtl_(
       }
     aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (aoe_disk->disk->Dev->State == WvDevStateDeleted)
+    if (aoe_disk->Dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
     return WvlDiskDevCtl(
@@ -1899,7 +1901,7 @@ static NTSTATUS AoeIrpScsi_(
       return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
     aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (aoe_disk->disk->Dev->State == WvDevStateDeleted)
+    if (aoe_disk->Dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
     return WvlDiskScsi(
@@ -1948,10 +1950,10 @@ static NTSTATUS AoeIrpPnp_(
       }
     aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (aoe_disk->disk->Dev->State == WvDevStateDeleted)
+    if (aoe_disk->Dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
-    return disk_pnp__dispatch(aoe_disk->disk->Dev->Self, irp, aoe_disk->disk);
+    return disk_pnp__dispatch(aoe_disk->Dev->Self, irp, aoe_disk->disk);
   }
 
 static UCHAR STDCALL AoeDiskUnitNum_(IN WV_SP_DISK_T disk) {
@@ -1962,5 +1964,5 @@ static UCHAR STDCALL AoeDiskUnitNum_(IN WV_SP_DISK_T disk) {
       );
 
     /* Possible precision loss. */
-    return (UCHAR) WvlBusGetNodeNum(&aoe_disk->disk->Dev->BusNode);
+    return (UCHAR) WvlBusGetNodeNum(&aoe_disk->Dev->BusNode);
   }

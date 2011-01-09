@@ -249,7 +249,7 @@ NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
     filedisk->hash = hash;
 
     /* Add the filedisk to the bus. */
-    if (!WvBusAddDev(filedisk->disk->Dev)) {
+    if (!WvBusAddDev(filedisk->Dev)) {
         status = STATUS_UNSUCCESSFUL;
         goto err_add_child;
       }
@@ -258,7 +258,7 @@ NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
 
     err_add_child:
 
-    WvFilediskFree_(filedisk->disk->Dev);
+    WvFilediskFree_(filedisk->Dev);
     err_pdo:
 
     err_query_info:
@@ -291,7 +291,7 @@ static UCHAR STDCALL WvFilediskUnitNum_(IN WV_SP_DISK_T disk) {
       );
 
     /* Possible precision loss. */
-    return (UCHAR) WvlBusGetNodeNum(&filedisk->disk->Dev->BusNode);
+    return (UCHAR) WvlBusGetNodeNum(&filedisk->Dev->BusNode);
   }
 
 /**
@@ -333,26 +333,27 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
     filedisk = pdo->DeviceExtension;
     RtlZeroMemory(filedisk, sizeof *filedisk);
     WvDiskInit(filedisk->disk);
-    WvDevInit(filedisk->disk->Dev);
-    filedisk->disk->Dev->Ops.Free = WvFilediskFree_;
-    filedisk->disk->Dev->Ops.PnpId = query_id;
-    filedisk->disk->Dev->Ops.Close = WvFilediskClose_;
-    filedisk->disk->Dev->ext = filedisk->disk;
-    filedisk->disk->Dev->IrpMj = &irp_mj;
+    WvDevInit(filedisk->Dev);
+    filedisk->Dev->Ops.Free = WvFilediskFree_;
+    filedisk->Dev->Ops.PnpId = query_id;
+    filedisk->Dev->Ops.Close = WvFilediskClose_;
+    filedisk->Dev->ext = filedisk->disk;
+    filedisk->Dev->IrpMj = &irp_mj;
+    filedisk->disk->Dev = filedisk->Dev;
     filedisk->disk->disk_ops.Io = WvFilediskIo_;
     filedisk->disk->disk_ops.UnitNum = WvFilediskUnitNum_;
     filedisk->disk->ext = filedisk;
     filedisk->disk->DriverObj = WvDriverObj;
 
     /* Set associations for the PDO, device, disk. */
-    WvDevForDevObj(pdo, filedisk->disk->Dev);
+    WvDevForDevObj(pdo, filedisk->Dev);
     KeInitializeEvent(
         &filedisk->disk->SearchEvent,
         SynchronizationEvent,
         FALSE
       );
     KeInitializeSpinLock(&filedisk->disk->SpinLock);
-    filedisk->disk->Dev->Self = pdo;
+    filedisk->Dev->Self = pdo;
 
     /* Some device parameters. */
     pdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
@@ -406,7 +407,7 @@ static VOID STDCALL thread(IN PVOID StartContext) {
           );
         KeResetEvent(&filedisk_ptr->signal);
         /* Are we being torn down?  We abuse the device's Free() member. */
-        if (filedisk_ptr->disk->Dev->Ops.Free == NULL)
+        if (filedisk_ptr->Dev->Ops.Free == NULL)
           break;
         /* Process each read/write request in the list. */
         while (walker = ExInterlockedRemoveHeadList(
@@ -432,7 +433,7 @@ static VOID STDCALL thread(IN PVOID StartContext) {
           } /* while requests */
       } /* main loop */
     /* Time to tear things down. */
-    WvFilediskFree_(filedisk_ptr->disk->Dev);
+    WvFilediskFree_(filedisk_ptr->Dev);
   }
 
 static NTSTATUS STDCALL WvFilediskThreadedIo_(
@@ -507,7 +508,7 @@ WV_SP_FILEDISK_T WvFilediskCreatePdoThreaded(
     /* Use threaded routines. */
     filedisk_ptr->sync_io = WvFilediskIo_;
     filedisk_ptr->disk->disk_ops.Io = WvFilediskThreadedIo_;
-    filedisk_ptr->disk->Dev->Ops.Free = free_threaded_filedisk;
+    filedisk_ptr->Dev->Ops.Free = free_threaded_filedisk;
     /* Initialize threading parameters and start the filedisk's thread. */
     InitializeListHead(&filedisk_ptr->req_list);
     KeInitializeSpinLock(&filedisk_ptr->req_list_lock);
