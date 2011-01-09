@@ -361,20 +361,15 @@ NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
 BOOLEAN STDCALL AoeBusAddDev(
     IN OUT AOE_SP_DISK AoeDisk
   ) {
-    /* The new node's device object. */
-    PDEVICE_OBJECT dev_obj;
-
     DBG("Entry\n");
     if (!AoeBusMain.Fdo || !AoeDisk) {
         DBG("No bus or no device!\n");
         return FALSE;
       }
-    /* Create the child device, if needed. */
-    dev_obj = AoeDisk->Dev->Self;
-    WvlBusInitNode(AoeDisk->BusNode, dev_obj);
+    WvlBusInitNode(AoeDisk->BusNode, AoeDisk->Pdo);
     /* Associate the parent bus. */
     AoeDisk->Dev->Parent = AoeBusMain.Fdo;
-    dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
+    AoeDisk->Pdo->Flags &= ~DO_DEVICE_INITIALIZING;
     /* Add the new PDO device to the bus' list of children. */
     WvlBusAddNode(&AoeBusMain, AoeDisk->BusNode);
 
