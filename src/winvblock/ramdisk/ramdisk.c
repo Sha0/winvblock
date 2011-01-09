@@ -168,7 +168,7 @@ WV_SP_RAMDISK_T STDCALL WvRamdiskCreatePdo(
         WvDiskIrpPower,
         WvDiskIrpSysCtl,
         WvDiskDevCtl,
-        disk_scsi__dispatch,
+        WvDiskScsi,
         disk_pnp__dispatch,
       };
     NTSTATUS status;

@@ -49,6 +49,13 @@ typedef enum WVL_DISK_IO_MODE {
 /* Forward declaration. */
 typedef struct WV_DISK_T WV_S_DISK_T, * WV_SP_DISK_T;
 
+typedef NTSTATUS STDCALL WVL_F_DISK_SCSI(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp,
+    IN WV_SP_DISK_T disk
+  );
+typedef WVL_F_DISK_SCSI * WVL_FP_DISK_SCSI;
+
 /**
  * I/O Request.
  *
@@ -197,7 +204,7 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlDiskDevCtl(
     IN ULONG POINTER_ALIGNMENT
   );
 /* IRP_MJ_SCSI dispatcher from disk/scsi.c */
-extern WVL_M_LIB WV_F_DEV_SCSI disk_scsi__dispatch;
+extern WVL_M_LIB WVL_F_DISK_SCSI WvlDiskScsi;
 /* IRP_MJ_PNP dispatcher from disk/pnp.c */
 extern WVL_M_LIB WV_F_DEV_PNP disk_pnp__dispatch;
 

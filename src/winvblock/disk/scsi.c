@@ -376,22 +376,28 @@ static NTSTATUS STDCALL WvlDiskScsiReadToc_(
     return STATUS_SUCCESS;
   }
 
-WVL_M_LIB NTSTATUS STDCALL disk_scsi__dispatch(
-    IN WV_SP_DEV_T dev,
+/**
+ * Handle a disk SCSI IRP.
+ *
+ * @v dev_obj           The device object to process the IRP with.
+ * @v irp               The IRP to process.
+ * @v disk              The disk to process the IRP with.
+ * @ret NTSTATUS        The status of the operation.
+ */
+WVL_M_LIB NTSTATUS STDCALL WvlDiskScsi(
+    IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
-    IN UCHAR code
+    IN WV_SP_DISK_T disk
   ) {
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     PSCSI_REQUEST_BLOCK srb = io_stack_loc->Parameters.Scsi.Srb;
+    PCDB cdb = (PCDB) srb->Cdb;
     NTSTATUS status = STATUS_SUCCESS;
-    PCDB cdb;
+    UCHAR code = srb->Function;
     BOOLEAN completion = FALSE;
 
     srb->SrbStatus = SRB_STATUS_INVALID_REQUEST;
     srb->ScsiStatus = SCSISTAT_GOOD;
-
-    cdb = (PCDB) srb->Cdb;
 
     irp->IoStatus.Information = 0;
     if (srb->Lun != 0) {
@@ -487,11 +493,11 @@ WVL_M_LIB NTSTATUS STDCALL disk_scsi__dispatch(
           break;
 
         case SRB_FUNCTION_CLAIM_DEVICE:
-          srb->DataBuffer = dev->Self;
+          srb->DataBuffer = dev_obj;
           break;
 
         case SRB_FUNCTION_RELEASE_DEVICE:
-          ObDereferenceObject(dev->Self);
+          ObDereferenceObject(dev_obj);
           break;
 
         case SRB_FUNCTION_SHUTDOWN:

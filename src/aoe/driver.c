@@ -1892,22 +1892,20 @@ static NTSTATUS AoeIrpScsi_(
     IN PIRP irp
   ) {
     AOE_SP_DISK_ aoe_disk;
-    PIO_STACK_LOCATION io_stack_loc;
 
     WVL_M_DEBUG_IRP_START(dev_obj, irp);
     /* Check for a bus IRP. */
     if (dev_obj == AoeBusMain.Fdo)
       return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
-    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
     if (aoe_disk->disk->Dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
-    return disk_scsi__dispatch(
-        aoe_disk->disk->Dev,
+    return WvlDiskScsi(
+        dev_obj,
         irp,
-        io_stack_loc->Parameters.Scsi.Srb->Function
+        aoe_disk->disk
       );
   }
 

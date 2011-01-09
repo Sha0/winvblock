@@ -61,7 +61,7 @@ static WV_S_DEV_IRP_MJ WvDiskIrpMj_ = {
     WvDiskIrpPower,
     WvDiskIrpSysCtl,
     WvDiskDevCtl,
-    disk_scsi__dispatch,
+    WvDiskScsi,
     disk_pnp__dispatch,
   };
 

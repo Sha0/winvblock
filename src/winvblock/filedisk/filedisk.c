@@ -309,7 +309,7 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
         WvDiskIrpPower,
         WvDiskIrpSysCtl,
         WvDiskDevCtl,
-        disk_scsi__dispatch,
+        WvDiskScsi,
         disk_pnp__dispatch,
       };
     NTSTATUS status;

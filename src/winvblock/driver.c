@@ -450,6 +450,12 @@ NTSTATUS STDCALL WvDiskDevCtl(
     return WvlDiskDevCtl(disk, irp, code);
   }
 
+NTSTATUS STDCALL WvDiskScsi(IN WV_SP_DEV_T dev, IN PIRP irp, IN UCHAR c) {
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
+
+    return WvlDiskScsi(dev->Self, irp, disk);
+  }
+
 /**
  * Miscellaneous: Grouped memory allocation functions.
  */
