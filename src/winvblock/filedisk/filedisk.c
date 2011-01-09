@@ -41,27 +41,25 @@
 
 /** Private. */
 static WV_F_DEV_FREE WvFilediskFree_;
-static WV_F_DISK_IO io;
-static WV_F_DISK_IO threaded_io;
+static WVL_F_DISK_IO WvFilediskIo_;
+static WVL_F_DISK_IO WvFilediskThreadedIo_;
 static WV_F_DEV_CLOSE WvFilediskClose_;
 
-static NTSTATUS STDCALL io(
-    IN WV_SP_DEV_T dev_ptr,
+static NTSTATUS STDCALL WvFilediskIo_(
+    IN WV_SP_DISK_T disk_ptr,
     IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,
     IN PUCHAR buffer,
     IN PIRP irp
   ) {
-    WV_SP_DISK_T disk_ptr;
     WV_SP_FILEDISK_T filedisk_ptr;
     LARGE_INTEGER offset;
     NTSTATUS status;
     IO_STATUS_BLOCK io_status;
 
-    /* Establish pointers to the disk and filedisk. */
-    disk_ptr = disk__get_ptr(dev_ptr);
-    filedisk_ptr = filedisk__get_ptr(dev_ptr);
+    /* Establish pointer to the filedisk. */
+    filedisk_ptr = CONTAINING_RECORD(disk_ptr, WV_S_FILEDISK_T, disk);
 
     if (sector_count < 1) {
         /* A silly request. */
@@ -341,7 +339,7 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
     filedisk->disk->Dev->Ops.Close = WvFilediskClose_;
     filedisk->disk->Dev->ext = filedisk->disk;
     filedisk->disk->Dev->IrpMj = &irp_mj;
-    filedisk->disk->disk_ops.Io = io;
+    filedisk->disk->disk_ops.Io = WvFilediskIo_;
     filedisk->disk->disk_ops.UnitNum = WvFilediskUnitNum_;
     filedisk->disk->ext = filedisk;
     filedisk->disk->DriverObj = WvDriverObj;
@@ -376,7 +374,7 @@ static VOID STDCALL WvFilediskFree_(IN WV_SP_DEV_T dev) {
 /* Threaded read/write request. */
 typedef struct WV_FILEDISK_THREAD_REQ {
     LIST_ENTRY list_entry;
-    WV_SP_DEV_T dev_ptr;
+    WV_SP_FILEDISK_T filedisk;
     WVL_E_DISK_IO_MODE mode;
     LONGLONG start_sector;
     UINT32 sector_count;
@@ -423,7 +421,7 @@ static VOID STDCALL thread(IN PVOID StartContext) {
                 list_entry
               );
             filedisk_ptr->sync_io(
-                req->dev_ptr,
+                req->filedisk->disk,
                 req->mode,
                 req->start_sector,
                 req->sector_count,
@@ -437,8 +435,8 @@ static VOID STDCALL thread(IN PVOID StartContext) {
     WvFilediskFree_(filedisk_ptr->disk->Dev);
   }
 
-static NTSTATUS STDCALL threaded_io(
-    IN WV_SP_DEV_T dev_ptr,
+static NTSTATUS STDCALL WvFilediskThreadedIo_(
+    IN WV_SP_DISK_T disk,
     IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,
@@ -448,7 +446,7 @@ static NTSTATUS STDCALL threaded_io(
     WV_SP_FILEDISK_T filedisk_ptr;
     WV_SP_FILEDISK_THREAD_REQ req;
 
-    filedisk_ptr = filedisk__get_ptr(dev_ptr);
+    filedisk_ptr = CONTAINING_RECORD(disk, WV_S_FILEDISK_T, disk);
     /* Allocate the request. */
     req = wv_malloc(sizeof *req);
     if (req == NULL) {
@@ -458,7 +456,7 @@ static NTSTATUS STDCALL threaded_io(
         return STATUS_INSUFFICIENT_RESOURCES;
       }
     /* Remember the request. */
-    req->dev_ptr = dev_ptr;
+    req->filedisk = filedisk_ptr;
     req->mode = mode;
     req->start_sector = start_sector;
     req->sector_count = sector_count;
@@ -507,8 +505,8 @@ WV_SP_FILEDISK_T WvFilediskCreatePdoThreaded(
     if (filedisk_ptr == NULL)
       goto err_nofiledisk;
     /* Use threaded routines. */
-    filedisk_ptr->sync_io = io;
-    filedisk_ptr->disk->disk_ops.Io = threaded_io;
+    filedisk_ptr->sync_io = WvFilediskIo_;
+    filedisk_ptr->disk->disk_ops.Io = WvFilediskThreadedIo_;
     filedisk_ptr->disk->Dev->Ops.Free = free_threaded_filedisk;
     /* Initialize threading parameters and start the filedisk's thread. */
     InitializeListHead(&filedisk_ptr->req_list);

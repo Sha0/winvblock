@@ -42,11 +42,9 @@
 #include "byte.h"
 #include "msvhd.h"
 
-/* Globals. */
-static WV_FP_DISK_IO sync_io;
-
-/* Forward declarations. */
-static WV_F_DISK_IO io;
+/** Private. */
+static WVL_FP_DISK_IO WvFilediskG4dSyncIo_;
+static WVL_F_DISK_IO WvFilediskG4dIo_;
 
 /**
  * Check if a disk might be the matching backing disk for
@@ -125,8 +123,8 @@ static NTSTATUS STDCALL check_disk_match(
  * Temporarily used by established disks in order to access the
  * backing disk late(r) during the boot process.
  */
-static NTSTATUS STDCALL io(
-    IN WV_SP_DEV_T dev_ptr,
+static NTSTATUS STDCALL WvFilediskG4dIo_(
+    IN WV_SP_DISK_T disk,
     IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,
@@ -140,7 +138,8 @@ static NTSTATUS STDCALL io(
     PWCHAR pos;
     HANDLE file;
 
-    filedisk_ptr = filedisk__get_ptr(dev_ptr);
+    /* Establish pointer to the filedisk. */
+    filedisk_ptr = CONTAINING_RECORD(disk, WV_S_FILEDISK_T, disk);
     /*
      * Find the backing disk and use it.  We walk a list
      * of unicode disk device names and check each one.
@@ -198,9 +197,16 @@ static NTSTATUS STDCALL io(
       goto dud;
     /* Use the backing disk and restore the original read/write routine. */
     filedisk_ptr->file = file;
-    filedisk_ptr->sync_io = sync_io;
+    filedisk_ptr->sync_io = WvFilediskG4dSyncIo_;
     /* Call the original read/write routine. */
-    return sync_io(dev_ptr, mode, start_sector, sector_count, buffer, irp);
+    return WvFilediskG4dSyncIo_(
+        filedisk_ptr->disk,
+        mode,
+        start_sector,
+        sector_count,
+        buffer,
+        irp
+      );
 
     dud:
     irp->IoStatus.Information = 0;
@@ -420,8 +426,8 @@ VOID filedisk_grub4dos__find(void) {
               DBG("Could not create GRUB4DOS disk!\n");
               return;
             }
-          sync_io = filedisk_ptr->sync_io;
-          filedisk_ptr->sync_io = io;
+          WvFilediskG4dSyncIo_ = filedisk_ptr->sync_io;
+          filedisk_ptr->sync_io = WvFilediskG4dIo_;
           filedisk_ptr->disk->Media = media_type;
           filedisk_ptr->disk->SectorSize = sector_size;
           /* Find an associated filename, if one exists. */

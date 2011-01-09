@@ -37,7 +37,7 @@ typedef struct WV_FILEDISK_T {
     LIST_ENTRY req_list;
     KSPIN_LOCK req_list_lock;
     KEVENT signal;
-    WV_FP_DISK_IO sync_io;
+    WVL_FP_DISK_IO sync_io;
     PCHAR filepath;
     UNICODE_STRING filepath_unicode;
   } WV_S_FILEDISK_T, * WV_SP_FILEDISK_T;

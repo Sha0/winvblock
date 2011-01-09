@@ -70,26 +70,6 @@ typedef NTSTATUS STDCALL WVL_F_DISK_IO(
 typedef WVL_F_DISK_IO * WVL_FP_DISK_IO;
 
 /**
- * I/O Request.
- *
- * @v dev_ptr           Points to the disk's device structure.
- * @v mode              Read / write mode.
- * @v start_sector      First sector for request.
- * @v sector_count      Number of sectors to work with.
- * @v buffer            Buffer to read / write sectors to / from.
- * @v irp               Interrupt request packet for this request.
- */
-typedef NTSTATUS STDCALL WV_F_DISK_IO(
-    IN WV_SP_DEV_T,
-    IN WVL_E_DISK_IO_MODE,
-    IN LONGLONG,
-    IN UINT32,
-    IN PUCHAR,
-    IN PIRP
-  );
-typedef WV_F_DISK_IO * WV_FP_DISK_IO;
-
-/**
  * Maximum transfer length response routine.
  *
  * @v disk_ptr        The disk being queried.
@@ -126,7 +106,7 @@ typedef WVL_F_DISK_UNIT_NUM * WVL_FP_DISK_UNIT_NUM;
 extern WVL_M_LIB WVL_F_DISK_UNIT_NUM WvlDiskUnitNum;
 
 typedef struct WV_DISK_OPS {
-    WV_FP_DISK_IO Io;
+    WVL_FP_DISK_IO Io;
     WV_FP_DISK_MAX_XFER_LEN MaxXferLen;
     WV_FP_DISK_INIT Init;
     WV_FP_DISK_CLOSE Close;
@@ -185,7 +165,7 @@ typedef struct WVL_DISK_MBR WVL_S_DISK_MBR, * WVL_SP_DISK_MBR;
 #  pragma pack()
 #endif
 
-extern WV_F_DISK_IO disk__io;
+extern WVL_M_LIB WVL_F_DISK_IO WvlDiskIo;
 extern WV_F_DISK_MAX_XFER_LEN disk__max_xfer_len;
 
 /**

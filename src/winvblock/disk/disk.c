@@ -420,19 +420,17 @@ static VOID STDCALL WvDiskDevFree_(IN WV_SP_DEV_T dev) {
   }
 
 /* See header for details. */
-NTSTATUS STDCALL disk__io(
-    IN WV_SP_DEV_T dev,
+WVL_M_LIB NTSTATUS STDCALL WvlDiskIo(
+    IN WV_SP_DISK_T disk,
     IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,
     IN PUCHAR buffer,
     IN PIRP irp
   ) {
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
-
     if (disk->disk_ops.Io) {
         return disk->disk_ops.Io(
-            dev,
+            disk,
             mode,
             start_sector,
             sector_count,

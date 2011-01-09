@@ -66,7 +66,7 @@ static VOID STDCALL AoeThread_(IN PVOID);
 static VOID AoeProcessAbft_(void);
 static struct AOE_DISK_ * AoeDiskCreatePdo_(void);
 static WV_F_DEV_FREE AoeDiskFree_;
-static WV_F_DISK_IO AoeDiskIo_;
+static WVL_F_DISK_IO AoeDiskIo_;
 static WV_F_DISK_MAX_XFER_LEN AoeDiskMaxXferLen_;
 static BOOLEAN STDCALL AoeDiskInit_(struct AOE_DISK_ *);
 static WV_F_DISK_CLOSE AoeDiskClose_;
@@ -780,29 +780,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
       } /* while TRUE */
   }
 
-WVL_F_DISK_IO AoeDiskIo2_;
-
 static NTSTATUS STDCALL AoeDiskIo_(
-    IN WV_SP_DEV_T dev_ptr,
-    IN WVL_E_DISK_IO_MODE mode,
-    IN LONGLONG start_sector,
-    IN UINT32 sector_count,
-    IN PUCHAR buffer,
-    IN PIRP irp
-  ) {
-    AOE_SP_DISK_ aoe_disk = AoeDiskFromDev_(dev_ptr);
-
-    return AoeDiskIo2_(
-        aoe_disk->disk,
-        mode,
-        start_sector,
-        sector_count,
-        buffer,
-        irp
-      );
-  }
-
-static NTSTATUS STDCALL AoeDiskIo2_(
     IN WV_SP_DISK_T disk_ptr,
     IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,

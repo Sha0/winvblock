@@ -50,7 +50,7 @@
  *                      been completed or not.
  * @ret NTSTATUS        The status of the SCSI operation.
  */
-typedef NTSTATUS STDCALL disk_scsi__func(
+typedef NTSTATUS STDCALL WV_F_DISK_SCSI(
     IN WV_SP_DEV_T,
     IN PIRP,
     IN WV_SP_DISK_T,
@@ -58,14 +58,15 @@ typedef NTSTATUS STDCALL disk_scsi__func(
     IN PCDB,
     OUT PBOOLEAN
   );
+typedef WV_F_DISK_SCSI * WV_FP_DISK_SCSI;
 
 /* Forward declarations. */
-disk_scsi__func disk_scsi__read_write_;
-disk_scsi__func disk_scsi__verify_;
-disk_scsi__func disk_scsi__read_capacity_;
-disk_scsi__func disk_scsi__read_capacity_16_;
-disk_scsi__func disk_scsi__mode_sense_;
-disk_scsi__func disk_scsi__read_toc_;
+WV_F_DISK_SCSI disk_scsi__read_write_;
+WV_F_DISK_SCSI disk_scsi__verify_;
+WV_F_DISK_SCSI disk_scsi__read_capacity_;
+WV_F_DISK_SCSI disk_scsi__read_capacity_16_;
+WV_F_DISK_SCSI disk_scsi__mode_sense_;
+WV_F_DISK_SCSI disk_scsi__read_toc_;
 WV_F_DEV_SCSI disk_scsi__dispatch;
 
 #if _WIN32_WINNT <= 0x0600
@@ -73,21 +74,20 @@ WV_F_DEV_SCSI disk_scsi__dispatch;
 #    ifdef _MSC_VER
 #      pragma pack(1)
 #    endif
-typedef union _EIGHT_BYTE
-{
-  struct
-  {
-    UCHAR Byte0;
-    UCHAR Byte1;
-    UCHAR Byte2;
-    UCHAR Byte3;
-    UCHAR Byte4;
-    UCHAR Byte5;
-    UCHAR Byte6;
-    UCHAR Byte7;
-  };
-  ULONGLONG AsULongLong;
-} __attribute__ ( ( __packed__ ) ) EIGHT_BYTE, *PEIGHT_BYTE;
+union _EIGHT_BYTE {
+    struct {
+        UCHAR Byte0;
+        UCHAR Byte1;
+        UCHAR Byte2;
+        UCHAR Byte3;
+        UCHAR Byte4;
+        UCHAR Byte5;
+        UCHAR Byte6;
+        UCHAR Byte7;
+      };
+    ULONGLONG AsULongLong;
+  } __attribute__((__packed__));
+typedef union _EIGHT_BYTE EIGHT_BYTE, * PEIGHT_BYTE;
 #    ifdef _MSC_VER
 #      pragma pack()
 #    endif
@@ -98,12 +98,12 @@ typedef union _EIGHT_BYTE
 #      ifdef _MSC_VER
 #        pragma pack(1)
 #      endif
+struct _READ_CAPACITY_DATA_EX {
+    LARGE_INTEGER LogicalBlockAddress;
+    ULONG BytesPerBlock;
+  } __attribute__((__packed__));
 typedef struct _READ_CAPACITY_DATA_EX
-{
-  LARGE_INTEGER LogicalBlockAddress;
-  ULONG BytesPerBlock;
-} __attribute__ ( ( __packed__ ) ) READ_CAPACITY_DATA_EX,
-  *PREAD_CAPACITY_DATA_EX;
+  READ_CAPACITY_DATA_EX, * PREAD_CAPACITY_DATA_EX;
 #      ifdef _MSC_VER
 #        pragma pack()
 #      endif
@@ -113,18 +113,18 @@ typedef struct _READ_CAPACITY_DATA_EX
 #  ifdef _MSC_VER
 #    pragma pack(1)
 #  endif
-typedef struct _DISK_CDB16
-{
-  UCHAR OperationCode;
-  UCHAR Reserved1:3;
-  UCHAR ForceUnitAccess:1;
-  UCHAR DisablePageOut:1;
-  UCHAR Protection:3;
-  UCHAR LogicalBlock[8];
-  UCHAR TransferLength[4];
-  UCHAR Reserved2;
-  UCHAR Control;
-} __attribute__ ( ( __packed__ ) ) DISK_CDB16, *PDISK_CDB16;
+struct _DISK_CDB16 {
+    UCHAR OperationCode;
+    UCHAR Reserved1:3;
+    UCHAR ForceUnitAccess:1;
+    UCHAR DisablePageOut:1;
+    UCHAR Protection:3;
+    UCHAR LogicalBlock[8];
+    UCHAR TransferLength[4];
+    UCHAR Reserved2;
+    UCHAR Control;
+  } __attribute__((__packed__));
+typedef struct _DISK_CDB16 DISK_CDB16, * PDISK_CDB16;
 #  ifdef _MSC_VER
 #    pragma pack()
 #  endif
@@ -141,7 +141,7 @@ typedef struct _DISK_CDB16
   d->Byte1 = s->Byte6;                            \
   d->Byte0 = s->Byte7;                            \
 }
-#endif        /* if _WIN32_WINNT <= 0x0600 */
+#endif          /* if _WIN32_WINNT <= 0x0600 */
 
 static NTSTATUS STDCALL disk_scsi__read_write_(
     IN WV_SP_DEV_T dev,
@@ -213,8 +213,8 @@ static NTSTATUS STDCALL disk_scsi__read_write_(
       }
 
     if (cdb->AsByte[0] == SCSIOP_READ || cdb->AsByte[0] == SCSIOP_READ16) {
-        status = disk__io(
-            dev,
+        status = WvlDiskIo(
+            disk,
             WvlDiskIoModeRead,
             start_sector,
             sector_count,
@@ -227,8 +227,8 @@ static NTSTATUS STDCALL disk_scsi__read_write_(
             irp
           );
       } else {
-        status = disk__io(
-            dev,
+        status = WvlDiskIo(
+            disk,
             WvlDiskIoModeWrite,
             start_sector,
             sector_count,

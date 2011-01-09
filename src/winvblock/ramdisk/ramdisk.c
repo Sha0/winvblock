@@ -43,7 +43,7 @@
 
 /** Private. */
 static WV_F_DEV_FREE WvRamdiskFree_;
-static WV_F_DISK_IO WvRamdiskIo_;
+static WVL_F_DISK_IO WvRamdiskIo_;
 
 /* With thanks to karyonix, who makes FiraDisk. */
 static __inline VOID STDCALL WvRamdiskFastCopy_(
@@ -56,7 +56,7 @@ static __inline VOID STDCALL WvRamdiskFastCopy_(
 
 /* RAM disk I/O routine. */
 static NTSTATUS STDCALL WvRamdiskIo_(
-    IN WV_SP_DEV_T dev,
+    IN WV_SP_DISK_T disk,
     IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,
@@ -65,12 +65,10 @@ static NTSTATUS STDCALL WvRamdiskIo_(
   ) {
     PHYSICAL_ADDRESS phys_addr;
     PUCHAR phys_mem;
-    WV_SP_DISK_T disk;
     WV_SP_RAMDISK_T ramdisk;
 
-    /* Establish pointers to the disk and RAM disk. */
-    disk = disk__get_ptr(dev);
-    ramdisk = WvRamdiskFromDev_(dev);
+    /* Establish pointer to the RAM disk. */
+    ramdisk = CONTAINING_RECORD(disk, WV_S_RAMDISK_T, disk);
 
     if (sector_count < 1) {
         /* A silly request. */
