@@ -43,7 +43,6 @@
 #include "disk.h"
 #include "debug.h"
 
-static WV_F_DEV_DISPATCH disk_dev_ctl__get_geom_;
 static WV_F_DEV_DISPATCH disk_dev_ctl__scsi_get_address_;
 
 static NTSTATUS STDCALL WvlDiskDevCtlStorageQueryProp_(
@@ -131,14 +130,13 @@ static NTSTATUS STDCALL WvlDiskDevCtlStorageQueryProp_(
     return WvlIrpComplete(irp, (ULONG_PTR) copy_size, status);
   }
 
-static NTSTATUS STDCALL disk_dev_ctl__get_geom_(
-    IN WV_SP_DEV_T dev,
+static NTSTATUS STDCALL WvlDiskDevCtlGetGeom_(
+    IN WV_SP_DISK_T disk,
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     UINT32 copy_size;
     DISK_GEOMETRY disk_geom;
-    WV_SP_DISK_T disk;
 
     copy_size = (
         io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength <
@@ -147,7 +145,6 @@ static NTSTATUS STDCALL disk_dev_ctl__get_geom_(
         sizeof (DISK_GEOMETRY)
       );
     disk_geom.MediaType = FixedMedia;
-    disk = disk__get_ptr(dev);
     disk_geom.Cylinders.QuadPart = disk->Cylinders;
     disk_geom.TracksPerCylinder = disk->Heads;
     disk_geom.SectorsPerTrack = disk->Sectors;
@@ -157,8 +154,7 @@ static NTSTATUS STDCALL disk_dev_ctl__get_geom_(
         &disk_geom,
         copy_size
       );
-    irp->IoStatus.Information = (ULONG_PTR) copy_size;
-    return STATUS_SUCCESS;
+    return WvlIrpComplete(irp, (ULONG_PTR) copy_size, STATUS_SUCCESS);
   }
 
 static NTSTATUS STDCALL disk_dev_ctl__scsi_get_address_(
@@ -202,8 +198,7 @@ WVL_M_LIB NTSTATUS STDCALL disk_dev_ctl__dispatch(
           return WvlDiskDevCtlStorageQueryProp_(disk, irp);
 
         case IOCTL_DISK_GET_DRIVE_GEOMETRY:
-          status = disk_dev_ctl__get_geom_(dev, irp);
-          break;
+          return WvlDiskDevCtlGetGeom_(disk, irp);
 
         case IOCTL_SCSI_GET_ADDRESS:
           status = disk_dev_ctl__scsi_get_address_(dev, irp);
