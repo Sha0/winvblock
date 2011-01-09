@@ -88,6 +88,7 @@ typedef struct AOE_DISK {
     UINT32 MaxSectorsPerPacket;
     UINT32 Timeout;
     KEVENT SearchEvent;
+    BOOLEAN Boot;
     AOE_E_SEARCH_STATE search_state;
   } AOE_S_DISK, * AOE_SP_DISK;
 

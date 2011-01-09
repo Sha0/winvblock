@@ -1515,7 +1515,7 @@ static VOID AoeProcessAbft_(void) {
     aoe_disk->Minor = AoEBootRecord.Minor;
     aoe_disk->MaxSectorsPerPacket = 1;
     aoe_disk->Timeout = 200000;          /* 20 ms. */
-    aoe_disk->Dev->Boot = TRUE;
+    aoe_disk->Boot = TRUE;
     if (!AoeDiskInit_(aoe_disk)) {
         DBG("Couldn't find AoE disk!\n");
         AoeDiskFree_(aoe_disk->Dev);
@@ -1682,7 +1682,7 @@ NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
     aoe_disk->Minor = (UCHAR) buffer[8];
     aoe_disk->MaxSectorsPerPacket = 1;
     aoe_disk->Timeout = 200000;             /* 20 ms. */
-    aoe_disk->Dev->Boot = FALSE;
+    aoe_disk->Boot = FALSE;
     if (!AoeDiskInit_(aoe_disk)) {
         DBG("Couldn't find AoE disk!\n");
         AoeDiskFree_(aoe_disk->Dev);

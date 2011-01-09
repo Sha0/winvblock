@@ -83,7 +83,7 @@ static NTSTATUS STDCALL AoeBusDevCtlDetach_(IN PIRP irp) {
         /* If the unit number matches... */
         if (WvlBusGetNodeNum(walker) == unit_num) {
             /* If it's not a boot-time device... */
-            if (aoe_disk->Dev->Boot) {
+            if (aoe_disk->Boot) {
                 DBG("Cannot detach a boot-time device.\n");
                 /* Signal error. */
                 aoe_disk = NULL;
