@@ -43,8 +43,6 @@
 #include "disk.h"
 #include "debug.h"
 
-static WV_F_DEV_DISPATCH disk_dev_ctl__scsi_get_address_;
-
 static NTSTATUS STDCALL WvlDiskDevCtlStorageQueryProp_(
     IN WV_SP_DISK_T disk,
     IN PIRP irp
@@ -157,14 +155,13 @@ static NTSTATUS STDCALL WvlDiskDevCtlGetGeom_(
     return WvlIrpComplete(irp, (ULONG_PTR) copy_size, STATUS_SUCCESS);
   }
 
-static NTSTATUS STDCALL disk_dev_ctl__scsi_get_address_(
-    IN WV_SP_DEV_T dev,
+static NTSTATUS STDCALL WvlDiskDevCtlScsiGetAddr_(
+    IN WV_SP_DISK_T disk,
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc= IoGetCurrentIrpStackLocation(irp);
     UINT32 copy_size;
     SCSI_ADDRESS scsi_address;
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
 
     copy_size = (
         io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength <
@@ -182,8 +179,7 @@ static NTSTATUS STDCALL disk_dev_ctl__scsi_get_address_(
         &scsi_address,
         copy_size
       );
-    irp->IoStatus.Information = (ULONG_PTR) copy_size;
-    return STATUS_SUCCESS;
+    return WvlIrpComplete(irp, (ULONG_PTR) copy_size, STATUS_SUCCESS);
   }
 
 WVL_M_LIB NTSTATUS STDCALL disk_dev_ctl__dispatch(
@@ -202,8 +198,7 @@ WVL_M_LIB NTSTATUS STDCALL disk_dev_ctl__dispatch(
           return WvlDiskDevCtlGetGeom_(disk, irp);
 
         case IOCTL_SCSI_GET_ADDRESS:
-          status = disk_dev_ctl__scsi_get_address_(dev, irp);
-          break;
+          return WvlDiskDevCtlScsiGetAddr_(disk, irp);
 
         /* Some cases that pop up on Windows Server 2003. */
         #if 0
