@@ -70,7 +70,7 @@ static NTSTATUS STDCALL AoeBusDevCtlDetach_(IN PIRP irp) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     UINT32 unit_num;
     WVL_SP_BUS_NODE walker;
-    WV_SP_DEV_T dev = NULL;
+    AOE_SP_DISK aoe_disk = NULL;
 
     unit_num = *((PUINT32) irp->AssociatedIrp.SystemBuffer);
     DBG("Request to detach unit: %d\n", unit_num);
@@ -79,25 +79,25 @@ static NTSTATUS STDCALL AoeBusDevCtlDetach_(IN PIRP irp) {
     /* For each node on the bus... */
     WvlBusLock(&AoeBusMain);
     while (walker = WvlBusGetNextNode(&AoeBusMain, walker)) {
-        dev = WvDevFromDevObj(WvlBusGetNodePdo(walker));
+        aoe_disk = CONTAINING_RECORD(walker, AOE_S_DISK, BusNode[0]);
         /* If the unit number matches... */
         if (WvlBusGetNodeNum(walker) == unit_num) {
             /* If it's not a boot-time device... */
-            if (dev->Boot) {
+            if (aoe_disk->Dev->Boot) {
                 DBG("Cannot detach a boot-time device.\n");
                 /* Signal error. */
-                dev = NULL;
+                aoe_disk = NULL;
                 break;
               }
           }
       }
     WvlBusUnlock(&AoeBusMain);
-    if (!dev) {
+    if (!aoe_disk) {
         DBG("Unit %d not found.\n", unit_num);
         return WvlIrpComplete(irp, 0, STATUS_INVALID_PARAMETER);
       }
     /* Detach the node. */
-    WvlBusRemoveNode(&dev->BusNode);
+    WvlBusRemoveNode(aoe_disk->BusNode);
     DBG("Removed unit %d.\n", unit_num);
     return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
   }
@@ -371,12 +371,12 @@ BOOLEAN STDCALL AoeBusAddDev(
       }
     /* Create the child device, if needed. */
     dev_obj = AoeDisk->Dev->Self;
-    WvlBusInitNode(&AoeDisk->Dev->BusNode, dev_obj);
+    WvlBusInitNode(AoeDisk->BusNode, dev_obj);
     /* Associate the parent bus. */
     AoeDisk->Dev->Parent = AoeBusMain.Fdo;
     dev_obj->Flags &= ~DO_DEVICE_INITIALIZING;
     /* Add the new PDO device to the bus' list of children. */
-    WvlBusAddNode(&AoeBusMain, &AoeDisk->Dev->BusNode);
+    WvlBusAddNode(&AoeBusMain, AoeDisk->BusNode);
 
     DBG("Exit\n");
     return TRUE;

@@ -1619,12 +1619,10 @@ NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
         AOE_SP_DISK aoe_disk = CONTAINING_RECORD(
             walker,
             AOE_S_DISK,
-            Dev[0].BusNode
+            BusNode[0]
           );
 
-        disks->Disk[count].Disk = WvlBusGetNodeNum(
-            &aoe_disk->Dev->BusNode
-          );
+        disks->Disk[count].Disk = WvlBusGetNodeNum(aoe_disk->BusNode);
         RtlCopyMemory(
             &disks->Disk[count].ClientMac,
             &aoe_disk->ClientMac,
@@ -1934,5 +1932,5 @@ static UCHAR STDCALL AoeDiskUnitNum_(IN WV_SP_DISK_T disk) {
       );
 
     /* Possible precision loss. */
-    return (UCHAR) WvlBusGetNodeNum(&aoe_disk->Dev->BusNode);
+    return (UCHAR) WvlBusGetNodeNum(aoe_disk->BusNode);
   }

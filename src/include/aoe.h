@@ -77,6 +77,7 @@ typedef enum AOE_SEARCH_STATE {
 typedef struct AOE_DISK {
     WV_S_DEV_EXT DevExt[1];
     WV_S_DEV_T Dev[1];
+    WVL_S_BUS_NODE BusNode[1];
     WV_S_DISK_T disk[1];
     KSPIN_LOCK SpinLock;
     UINT32 MTU;
