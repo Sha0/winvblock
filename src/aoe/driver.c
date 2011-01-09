@@ -217,8 +217,6 @@ static LONG AoePendingTags_ = 0;
 static HANDLE AoeThreadHandle_;
 static PETHREAD AoeThreadObj_ = NULL;
 static BOOLEAN AoeStarted_ = FALSE;
-static LIST_ENTRY AoeDiskList_;
-static KSPIN_LOCK AoeDiskListLock_;
 
 /* Yield a pointer to the AoE disk. */
 static AOE_SP_DISK_ AoeDiskFromDev_(WV_SP_DEV_T dev_ptr) {
@@ -305,10 +303,6 @@ NTSTATUS STDCALL DriverEntry(
 
     /* Note our driver object. */
     AoeDriverObj_ = DriverObject;
-
-    /* Initialize the global list of AoE disks. */
-    InitializeListHead(&AoeDiskList_);
-    KeInitializeSpinLock(&AoeDiskListLock_);
 
     /* Setup the Registry. */
     AoeRegSetup(&status);
@@ -1734,12 +1728,7 @@ static AOE_SP_DISK_ AoeDiskCreate_(void) {
     aoe_disk = wv_mallocz(sizeof *aoe_disk);
     if (aoe_disk == NULL)
       goto err_noaoedisk;
-    /* Track the new AoE disk in our global list. */
-    ExInterlockedInsertTailList(
-        &AoeDiskList_,
-        &aoe_disk->tracking,
-        &AoeDiskListLock_
-      );
+
     /* Populate non-zero device defaults. */
     WvDiskInit(aoe_disk->disk);
     aoe_disk->disk->Dev->Ops.Free = AoeDiskFree_;
@@ -1767,15 +1756,6 @@ static AOE_SP_DISK_ AoeDiskCreate_(void) {
  */
 static VOID STDCALL AoeDiskFree_(IN WV_SP_DEV_T dev) {
     AOE_SP_DISK_ aoe_disk = AoeDiskFromDev_(dev);
-    /*
-     * Track the AoE disk deletion in our global list.  Unfortunately,
-     * for now we have faith that an AoE disk won't be deleted twice and
-     * result in a race condition.  Something to keep in mind...
-     */
-    ExInterlockedRemoveHeadList(
-        aoe_disk->tracking.Blink,
-        &AoeDiskListLock_
-      );
 
     wv_free(aoe_disk);
   }
