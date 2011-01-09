@@ -41,32 +41,30 @@
 /**
  * The prototype for a disk SCSI function.
  *
- * @v dev               Points to the disk's device for the SCSI request.
- * @v irp               Points to the IRP.
  * @v disk              Points to the disk for the SCSI request.
+ * @v irp               Points to the IRP.
  * @v srb               Points to the SCSI request block.
  * @v cdb               Points to the command descriptor block.
  * @v completion        Points to a boolean for whether the IRP has
  *                      been completed or not.
  * @ret NTSTATUS        The status of the SCSI operation.
  */
-typedef NTSTATUS STDCALL WV_F_DISK_SCSI(
-    IN WV_SP_DEV_T,
-    IN PIRP,
+typedef NTSTATUS STDCALL WVL_F_DISK_SCSI_(
     IN WV_SP_DISK_T,
+    IN PIRP,
     IN PSCSI_REQUEST_BLOCK,
     IN PCDB,
     OUT PBOOLEAN
   );
-typedef WV_F_DISK_SCSI * WV_FP_DISK_SCSI;
+typedef WVL_F_DISK_SCSI_ * WVL_FP_DISK_SCSI_;
 
 /* Forward declarations. */
-WV_F_DISK_SCSI disk_scsi__read_write_;
-WV_F_DISK_SCSI disk_scsi__verify_;
-WV_F_DISK_SCSI disk_scsi__read_capacity_;
-WV_F_DISK_SCSI disk_scsi__read_capacity_16_;
-WV_F_DISK_SCSI disk_scsi__mode_sense_;
-WV_F_DISK_SCSI disk_scsi__read_toc_;
+WVL_F_DISK_SCSI_ WvlDiskScsiReadWrite_;
+WVL_F_DISK_SCSI_ WvlDiskScsiVerify_;
+WVL_F_DISK_SCSI_ WvlDiskScsiReadCapacity_;
+WVL_F_DISK_SCSI_ WvlDiskScsiReadCapacity16_;
+WVL_F_DISK_SCSI_ WvlDiskScsiModeSense_;
+WVL_F_DISK_SCSI_ WvlDiskScsiReadToc_;
 WV_F_DEV_SCSI disk_scsi__dispatch;
 
 #if _WIN32_WINNT <= 0x0600
@@ -143,10 +141,9 @@ typedef struct _DISK_CDB16 DISK_CDB16, * PDISK_CDB16;
 }
 #endif          /* if _WIN32_WINNT <= 0x0600 */
 
-static NTSTATUS STDCALL disk_scsi__read_write_(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp,
+static NTSTATUS STDCALL WvlDiskScsiReadWrite_(
     IN WV_SP_DISK_T disk,
+    IN PIRP irp,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
     OUT PBOOLEAN completion
@@ -246,10 +243,9 @@ static NTSTATUS STDCALL disk_scsi__read_write_(
     return status;
   }
 
-static NTSTATUS STDCALL disk_scsi__verify_(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp,
+static NTSTATUS STDCALL WvlDiskScsiVerify_(
     IN WV_SP_DISK_T disk,
+    IN PIRP irp,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
     OUT PBOOLEAN completion
@@ -281,10 +277,9 @@ static NTSTATUS STDCALL disk_scsi__verify_(
     return STATUS_SUCCESS;
   }
 
-static NTSTATUS STDCALL disk_scsi__read_capacity_(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp,
+static NTSTATUS STDCALL WvlDiskScsiReadCapacity_(
     IN WV_SP_DISK_T disk,
+    IN PIRP irp,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
     OUT PBOOLEAN completion
@@ -304,10 +299,9 @@ static NTSTATUS STDCALL disk_scsi__read_capacity_(
     return STATUS_SUCCESS;
   }
 
-static NTSTATUS STDCALL disk_scsi__read_capacity_16_(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp,
+static NTSTATUS STDCALL WvlDiskScsiReadCapacity16_(
     IN WV_SP_DISK_T disk,
+    IN PIRP irp,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
     OUT PBOOLEAN completion
@@ -331,10 +325,9 @@ static NTSTATUS STDCALL disk_scsi__read_capacity_16_(
     return STATUS_SUCCESS;
   }
 
-static NTSTATUS STDCALL disk_scsi__mode_sense_(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp,
+static NTSTATUS STDCALL WvlDiskScsiModeSense_(
     IN WV_SP_DISK_T disk,
+    IN PIRP irp,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
     OUT PBOOLEAN completion
@@ -358,10 +351,9 @@ static NTSTATUS STDCALL disk_scsi__mode_sense_(
     return STATUS_SUCCESS;
   }
 
-static NTSTATUS STDCALL disk_scsi__read_toc_(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp,
+static NTSTATUS STDCALL WvlDiskScsiReadToc_(
     IN WV_SP_DISK_T disk,
+    IN PIRP irp,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
     OUT PBOOLEAN completion
@@ -417,10 +409,9 @@ WVL_M_LIB NTSTATUS STDCALL disk_scsi__dispatch(
               case SCSIOP_READ16:
               case SCSIOP_WRITE:
               case SCSIOP_WRITE16:
-                status = disk_scsi__read_write_(
-                    dev,
-                    irp,
+                status = WvlDiskScsiReadWrite_(
                     disk,
+                    irp,
                     srb,
                     cdb,
                     &completion
@@ -429,10 +420,9 @@ WVL_M_LIB NTSTATUS STDCALL disk_scsi__dispatch(
 
               case SCSIOP_VERIFY:
               case SCSIOP_VERIFY16:
-                status = disk_scsi__verify_(
-                    dev,
-                    irp,
+                status = WvlDiskScsiVerify_(
                     disk,
+                    irp,
                     srb,
                     cdb,
                     &completion
@@ -440,10 +430,9 @@ WVL_M_LIB NTSTATUS STDCALL disk_scsi__dispatch(
                 break;
 
               case SCSIOP_READ_CAPACITY:
-                status = disk_scsi__read_capacity_(
-                    dev,
-                    irp,
+                status = WvlDiskScsiReadCapacity_(
                     disk,
+                    irp,
                     srb,
                     cdb,
                     &completion
@@ -451,10 +440,9 @@ WVL_M_LIB NTSTATUS STDCALL disk_scsi__dispatch(
                 break;
 
               case SCSIOP_READ_CAPACITY16:
-                status = disk_scsi__read_capacity_16_(
-                    dev,
-                    irp,
+                status = WvlDiskScsiReadCapacity16_(
                     disk,
+                    irp,
                     srb,
                     cdb,
                     &completion
@@ -462,10 +450,9 @@ WVL_M_LIB NTSTATUS STDCALL disk_scsi__dispatch(
                 break;
 
               case SCSIOP_MODE_SENSE:
-                status = disk_scsi__mode_sense_(
-                    dev,
-                    irp,
+                status = WvlDiskScsiModeSense_(
                     disk,
+                    irp,
                     srb,
                     cdb,
                     &completion
@@ -479,10 +466,9 @@ WVL_M_LIB NTSTATUS STDCALL disk_scsi__dispatch(
                 break;
 
               case SCSIOP_READ_TOC:
-                status = disk_scsi__read_toc_(
-                    dev,
-                    irp,
+                status = WvlDiskScsiReadToc_(
                     disk,
+                    irp,
                     srb,
                     cdb,
                     &completion
