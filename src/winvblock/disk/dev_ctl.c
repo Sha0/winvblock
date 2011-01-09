@@ -36,22 +36,20 @@
 
 #include "portable.h"
 #include "winvblock.h"
+#include "irp.h"
 #include "driver.h"
 #include "bus.h"
 #include "device.h"
 #include "disk.h"
 #include "debug.h"
 
-/* Forward declarations. */
-static WV_F_DEV_DISPATCH disk_dev_ctl__storage_query_prop_;
 static WV_F_DEV_DISPATCH disk_dev_ctl__get_geom_;
 static WV_F_DEV_DISPATCH disk_dev_ctl__scsi_get_address_;
 
-static NTSTATUS STDCALL disk_dev_ctl__storage_query_prop_(
-    IN WV_SP_DEV_T dev,
+static NTSTATUS STDCALL WvlDiskDevCtlStorageQueryProp_(
+    IN WV_SP_DISK_T disk,
     IN PIRP irp
   ) {
-    WV_SP_DISK_T disk;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status = STATUS_INVALID_PARAMETER;
     PSTORAGE_PROPERTY_QUERY storage_prop_query = irp->AssociatedIrp.SystemBuffer;
@@ -59,7 +57,6 @@ static NTSTATUS STDCALL disk_dev_ctl__storage_query_prop_(
     STORAGE_ADAPTER_DESCRIPTOR storage_adapter_desc;
     STORAGE_DEVICE_DESCRIPTOR storage_dev_desc;
 
-    disk = disk__get_ptr(dev);
     if (
         storage_prop_query->PropertyId == StorageAdapterProperty &&
         storage_prop_query->QueryType == PropertyStandardQuery
@@ -89,7 +86,6 @@ static NTSTATUS STDCALL disk_dev_ctl__storage_query_prop_(
             &storage_adapter_desc,
             copy_size
           );
-        irp->IoStatus.Information = (ULONG_PTR) copy_size;
         status = STATUS_SUCCESS;
       }
 
@@ -120,7 +116,6 @@ static NTSTATUS STDCALL disk_dev_ctl__storage_query_prop_(
             &storage_dev_desc,
             copy_size
           );
-        irp->IoStatus.Information = (ULONG_PTR) copy_size;
         status = STATUS_SUCCESS;
       }
 
@@ -131,8 +126,9 @@ static NTSTATUS STDCALL disk_dev_ctl__storage_query_prop_(
             storage_prop_query->PropertyId,
             storage_prop_query->QueryType
           );
+        return WvlIrpComplete(irp, 0, status);
       }
-    return status;
+    return WvlIrpComplete(irp, (ULONG_PTR) copy_size, status);
   }
 
 static NTSTATUS STDCALL disk_dev_ctl__get_geom_(
@@ -203,8 +199,7 @@ WVL_M_LIB NTSTATUS STDCALL disk_dev_ctl__dispatch(
 
     switch (code) {
         case IOCTL_STORAGE_QUERY_PROPERTY:
-          status = disk_dev_ctl__storage_query_prop_(dev, irp);
-          break;
+          return WvlDiskDevCtlStorageQueryProp_(disk, irp);
 
         case IOCTL_DISK_GET_DRIVE_GEOMETRY:
           status = disk_dev_ctl__get_geom_(dev, irp);
