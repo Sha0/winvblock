@@ -152,7 +152,7 @@ typedef struct AOE_IO_REQ_ {
 /** A work item "tag". */
 typedef struct AOE_WORK_TAG_ {
     AOE_E_TAG_TYPE_ type;
-    WV_SP_DEV_T device;
+    struct AOE_DISK_ * aoe_disk;
     AOE_SP_IO_REQ_ request_ptr;
     UINT32 Id;
     AOE_SP_PACKET_ packet_data;
@@ -167,7 +167,7 @@ typedef struct AOE_WORK_TAG_ {
 
 /** A disk search. */
 typedef struct AOE_DISK_SEARCH_ {
-    WV_SP_DEV_T device;
+    struct AOE_DISK_ * aoe_disk;
     AOE_SP_WORK_TAG_ tag;
     struct AOE_DISK_SEARCH_ * next;
   } AOE_S_DISK_SEARCH_, * AOE_SP_DISK_SEARCH_;
@@ -464,7 +464,7 @@ static VOID STDCALL AoeUnload_(IN PDRIVER_OBJECT DriverObject) {
     disk_searcher = AoeDiskSearchList_;
     while (disk_searcher != NULL) {
         KeSetEvent(
-            &(disk__get_ptr(disk_searcher->device)->SearchEvent),
+            &disk_searcher->aoe_disk->disk->SearchEvent,
             0,
             FALSE
           );
@@ -526,7 +526,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
       }
 
     /* Initialize the disk search. */
-    disk_searcher->device = disk_ptr->Dev;
+    disk_searcher->aoe_disk = aoe_disk;
     disk_searcher->next = NULL;
     aoe_disk->search_state = AoeSearchStateSearchNic_;
     KeResetEvent(&disk_ptr->SearchEvent);
@@ -659,7 +659,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
                 disk_search_walker = AoeDiskSearchList_;
                 while (
                     disk_search_walker &&
-                    disk_search_walker->device != disk_ptr->Dev
+                    disk_search_walker->aoe_disk != aoe_disk
                   ) {
                     previous_disk_searcher = disk_search_walker;
                     disk_search_walker = disk_search_walker->next;
@@ -708,7 +708,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK_ aoe_disk) {
             continue;
           }
         tag->type = AoeTagTypeSearchDrive_;
-        tag->device = disk_ptr->Dev;
+        tag->aoe_disk = aoe_disk;
 
         /* Establish our tag's AoE packet. */
         tag->PacketSize = sizeof (AOE_S_PACKET_);
@@ -857,7 +857,7 @@ static NTSTATUS STDCALL AoeDiskIo_(
         /* Initialize each tag. */
         tag->type = AoeTagTypeIo_;
         tag->request_ptr = request_ptr;
-        tag->device = dev_ptr;
+        tag->aoe_disk = aoe_disk_ptr;
         request_ptr->TagCount++;
         tag->Id = 0;
         tag->BufferOffset = i * disk_ptr->SectorSize;
@@ -1093,8 +1093,8 @@ NTSTATUS STDCALL aoe__reply(
     KeReleaseSpinLock(&AoeLock_, Irql);
 
     /* Establish pointers to the disk device and AoE disk. */
-    disk_ptr = disk__get_ptr(tag->device);
-    aoe_disk_ptr = AoeDiskFromDev_(tag->device);
+    aoe_disk_ptr = tag->aoe_disk;
+    disk_ptr = aoe_disk_ptr->disk;
 
     /* If our tag was a discovery request, note the server. */
     if (wv_memcmpeq(aoe_disk_ptr->ServerMac, "\xff\xff\xff\xff\xff\xff", 6)) {
@@ -1326,8 +1326,8 @@ static VOID STDCALL AoeThread_(IN PVOID StartContext) {
         tag = AoeTagListFirst_;
         while (tag != NULL) {
             /* Establish pointers to the disk and AoE disk. */
-            disk_ptr = disk__get_ptr(tag->device);
-            aoe_disk_ptr = AoeDiskFromDev_(tag->device);
+            aoe_disk_ptr = tag->aoe_disk;
+            disk_ptr = aoe_disk_ptr->disk;
       
             RequestTimeout = aoe_disk_ptr->Timeout;
             if (tag->Id == 0) {
