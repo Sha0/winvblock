@@ -78,6 +78,9 @@ VOID WvRamdiskG4dFind(void) {
             0x20
           );
         while (i--) {
+            WVL_E_DISK_MEDIA_TYPE media_type;
+            UINT32 sector_size;
+
             DBG(
                 "GRUB4DOS SourceDrive: 0x%02x\n",
                 g4d_drive_mapping[i].SourceDrive
@@ -115,23 +118,23 @@ VOID WvRamdiskG4dFind(void) {
                 DBG("Skipping non-RAM disk GRUB4DOS mapping\n");
                 continue;
               }
+            /* Possible precision loss. */
+            if (g4d_drive_mapping[i].SourceODD) {
+                media_type = WvlDiskMediaTypeOptical;
+                sector_size = 2048;
+              } else {
+                media_type =
+                  g4d_drive_mapping[i].SourceDrive & 0x80 ?
+                  WvlDiskMediaTypeHard :
+                  WvlDiskMediaTypeFloppy;
+                sector_size = 512;
+              }
             ramdisk = ramdisk__create();
             if (ramdisk == NULL) {
                 DBG("Could not create GRUB4DOS disk!\n");
                 return;
               }
-            /* Possible precision loss. */
-            if (g4d_drive_mapping[i].SourceODD) {
-                ramdisk->disk->Media = WvlDiskMediaTypeOptical;
-                ramdisk->disk->SectorSize = 2048;
-              } else {
-                ramdisk->disk->Media =
-                  g4d_drive_mapping[i].SourceDrive & 0x80 ?
-                  WvlDiskMediaTypeHard :
-                  WvlDiskMediaTypeFloppy;
-                ramdisk->disk->SectorSize = 512;
-              }
-            DBG("RAM Drive is type: %d\n", ramdisk->disk->Media);
+            DBG("RAM Drive is type: %d\n", media_type);
             ramdisk->DiskBuf =
               (UINT32) (g4d_drive_mapping[i].SectorStart * 512);
             ramdisk->disk->LBADiskSize = ramdisk->DiskSize =
@@ -143,6 +146,8 @@ VOID WvRamdiskG4dFind(void) {
               (ramdisk->disk->Heads * ramdisk->disk->Sectors);
             ramdisk->disk->Dev->Boot = TRUE;
             found = TRUE;
+            ramdisk->disk->Media = media_type;
+            ramdisk->disk->SectorSize = sector_size;
              /* Add the ramdisk to the bus. */
             if (!WvBusAddDev(ramdisk->disk->Dev))
               WvDevFree(ramdisk->disk->Dev);
