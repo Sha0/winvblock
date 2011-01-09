@@ -60,7 +60,7 @@ static WV_F_DISK_CLOSE WvDiskDefaultClose_;
 static WV_S_DEV_IRP_MJ WvDiskIrpMj_ = {
     WvDiskIrpPower,
     WvDiskIrpSysCtl,
-    disk_dev_ctl__dispatch,
+    WvDiskDevCtl,
     disk_scsi__dispatch,
     disk_pnp__dispatch,
   };

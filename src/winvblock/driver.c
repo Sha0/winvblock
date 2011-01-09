@@ -440,6 +440,16 @@ NTSTATUS STDCALL WvDriverGetDevCapabilities(
     return status;
   }
 
+NTSTATUS STDCALL WvDiskDevCtl(
+    IN WV_SP_DEV_T dev,
+    IN PIRP irp,
+    IN ULONG POINTER_ALIGNMENT code
+  ) {
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
+
+    return WvlDiskDevCtl(disk, irp, code);
+  }
+
 /**
  * Miscellaneous: Grouped memory allocation functions.
  */

@@ -192,7 +192,11 @@ extern WVL_M_LIB WV_SP_DISK_T disk__create(void);
 extern WVL_M_LIB WV_F_DEV_DISPATCH WvDiskIrpPower;
 extern WVL_M_LIB WV_F_DEV_DISPATCH WvDiskIrpSysCtl;
 /* IRP_MJ_DEVICE_CONTROL dispatcher from disk/dev_ctl.c */
-extern WVL_M_LIB WV_F_DEV_CTL disk_dev_ctl__dispatch;
+extern WVL_M_LIB NTSTATUS STDCALL WvlDiskDevCtl(
+    IN WV_SP_DISK_T,
+    IN PIRP,
+    IN ULONG POINTER_ALIGNMENT
+  );
 /* IRP_MJ_SCSI dispatcher from disk/scsi.c */
 extern WVL_M_LIB WV_F_DEV_SCSI disk_scsi__dispatch;
 /* IRP_MJ_PNP dispatcher from disk/pnp.c */

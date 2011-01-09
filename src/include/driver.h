@@ -51,6 +51,11 @@ extern NTSTATUS STDCALL WvDriverGetDevCapabilities(
     IN PDEVICE_OBJECT,
     IN PDEVICE_CAPABILITIES
   );
+extern NTSTATUS STDCALL WvDiskDevCtl(
+    IN struct WV_DEV_T *,
+    IN PIRP,
+    IN ULONG POINTER_ALIGNMENT
+  );
 /* From bus.c */
 extern WVL_M_LIB PDEVICE_OBJECT WvBusFdo(void);
 

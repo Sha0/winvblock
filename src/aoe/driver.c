@@ -1877,8 +1877,8 @@ static NTSTATUS AoeIrpDevCtl_(
     if (!dev || dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
-    return disk_dev_ctl__dispatch(
-        dev,
+    return WvlDiskDevCtl(
+        AoeDiskFromDev_(dev)->disk,
         irp,
         io_stack_loc->Parameters.DeviceIoControl.IoControlCode
       );

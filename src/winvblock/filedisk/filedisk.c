@@ -310,7 +310,7 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
     static WV_S_DEV_IRP_MJ irp_mj = {
         WvDiskIrpPower,
         WvDiskIrpSysCtl,
-        disk_dev_ctl__dispatch,
+        WvDiskDevCtl,
         disk_scsi__dispatch,
         disk_pnp__dispatch,
       };

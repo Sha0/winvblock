@@ -182,23 +182,28 @@ static NTSTATUS STDCALL WvlDiskDevCtlScsiGetAddr_(
     return WvlIrpComplete(irp, (ULONG_PTR) copy_size, STATUS_SUCCESS);
   }
 
-WVL_M_LIB NTSTATUS STDCALL disk_dev_ctl__dispatch(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp,
-    IN ULONG POINTER_ALIGNMENT code
+/**
+ * Handle a disk IRP_MJ_DEVICE_CONTROL IRP.
+ *
+ * @v Disk              The disk to process with the IRP.
+ * @v Irp               The IRP to process with the disk.
+ * @v Code              The device control code.
+ * @ret NTSTATUS        The status of the operation.
+ */
+WVL_M_LIB NTSTATUS STDCALL WvlDiskDevCtl(
+    IN WV_SP_DISK_T Disk,
+    IN PIRP Irp,
+    IN ULONG POINTER_ALIGNMENT Code
   ) {
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
-    NTSTATUS status;
-
-    switch (code) {
+    switch (Code) {
         case IOCTL_STORAGE_QUERY_PROPERTY:
-          return WvlDiskDevCtlStorageQueryProp_(disk, irp);
+          return WvlDiskDevCtlStorageQueryProp_(Disk, Irp);
 
         case IOCTL_DISK_GET_DRIVE_GEOMETRY:
-          return WvlDiskDevCtlGetGeom_(disk, irp);
+          return WvlDiskDevCtlGetGeom_(Disk, Irp);
 
         case IOCTL_SCSI_GET_ADDRESS:
-          return WvlDiskDevCtlScsiGetAddr_(disk, irp);
+          return WvlDiskDevCtlScsiGetAddr_(Disk, Irp);
 
         /* Some cases that pop up on Windows Server 2003. */
         #if 0
@@ -206,17 +211,9 @@ WVL_M_LIB NTSTATUS STDCALL disk_dev_ctl__dispatch(
         case IOCTL_MOUNTDEV_LINK_CREATED:
         case IOCTL_MOUNTDEV_QUERY_STABLE_GUID:
         case IOCTL_VOLUME_ONLINE:
-          irp->IoStatus.Information = 0;
-          status = STATUS_SUCCESS;
-          break;
+          return WvlIrpComplete(Irp, 0, STATUS_SUCCESS);
         #endif
-
-        default:
-          irp->IoStatus.Information = 0;
-          status = STATUS_INVALID_PARAMETER;
       }
 
-    irp->IoStatus.Status = status;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
-    return status;
+    return WvlIrpComplete(Irp, 0, STATUS_INVALID_PARAMETER);
   }
