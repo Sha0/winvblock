@@ -184,7 +184,7 @@ typedef enum AOE_SEARCH_STATE_ {
 
 /** The AoE disk type. */
 typedef struct AOE_DISK_ {
-    WV_SP_DISK_T disk;
+    WV_S_DISK_T disk[1];
     UINT32 MTU;
     UCHAR ClientMac[6];
     UCHAR ServerMac[6];
@@ -1725,13 +1725,8 @@ NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
  * with default values.
  */
 static AOE_SP_DISK_ AoeDiskCreate_(void) {
-    WV_SP_DISK_T disk;
     AOE_SP_DISK_ aoe_disk;
 
-    /* Try to create a disk. */
-    disk = disk__create();
-    if (disk == NULL)
-      goto err_nodisk;
     /*
      * AoE disk devices might be used for booting and should
      * not be allocated from a paged memory pool.
@@ -1746,23 +1741,21 @@ static AOE_SP_DISK_ AoeDiskCreate_(void) {
         &AoeDiskListLock_
       );
     /* Populate non-zero device defaults. */
-    aoe_disk->disk = disk;
-    aoe_disk->prev_free = disk->Dev->Ops.Free;
-    disk->Dev->Ops.Free = AoeDiskFree_;
-    disk->Dev->Ops.PnpId = query_id;
-    disk->disk_ops.Io = AoeDiskIo_;
-    disk->disk_ops.MaxXferLen = AoeDiskMaxXferLen_;
-    disk->disk_ops.Init = AoeDiskInit_;
-    disk->disk_ops.Close = AoeDiskClose_;
-    disk->ext = aoe_disk;
-    disk->DriverObj = AoeDriverObj_;
+    WvDiskInit(aoe_disk->disk);
+    aoe_disk->disk->Dev->Ops.Free = AoeDiskFree_;
+    aoe_disk->disk->Dev->Ops.PnpId = query_id;
+    aoe_disk->disk->Dev->ext = aoe_disk->disk;
+    aoe_disk->disk->disk_ops.Io = AoeDiskIo_;
+    aoe_disk->disk->disk_ops.MaxXferLen = AoeDiskMaxXferLen_;
+    aoe_disk->disk->disk_ops.Init = AoeDiskInit_;
+    aoe_disk->disk->disk_ops.Close = AoeDiskClose_;
+    aoe_disk->disk->ext = aoe_disk;
+    aoe_disk->disk->DriverObj = AoeDriverObj_;
 
     return aoe_disk;
 
+    wv_free(aoe_disk);
     err_noaoedisk:
-
-    WvDevFree(disk->Dev);
-    err_nodisk:
 
     return NULL;
   }
@@ -1774,8 +1767,6 @@ static AOE_SP_DISK_ AoeDiskCreate_(void) {
  */
 static VOID STDCALL AoeDiskFree_(IN WV_SP_DEV_T dev) {
     AOE_SP_DISK_ aoe_disk = AoeDiskFromDev_(dev);
-    /* Free the "inherited class". */
-    aoe_disk->prev_free(dev);
     /*
      * Track the AoE disk deletion in our global list.  Unfortunately,
      * for now we have faith that an AoE disk won't be deleted twice and
