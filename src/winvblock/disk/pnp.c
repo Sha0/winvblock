@@ -360,7 +360,7 @@ static NTSTATUS STDCALL disk_pnp__simple_(
   }
 
 /* Disk PnP dispatch routine. */
-NTSTATUS STDCALL disk_pnp__dispatch(
+WVL_M_LIB NTSTATUS STDCALL disk_pnp__dispatch(
     IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN UCHAR code

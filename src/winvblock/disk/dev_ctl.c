@@ -193,7 +193,7 @@ static NTSTATUS STDCALL disk_dev_ctl__scsi_get_address_(
     return STATUS_SUCCESS;
   }
 
-NTSTATUS STDCALL disk_dev_ctl__dispatch(
+WVL_M_LIB NTSTATUS STDCALL disk_dev_ctl__dispatch(
     IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN ULONG POINTER_ALIGNMENT code

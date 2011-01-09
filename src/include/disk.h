@@ -178,14 +178,14 @@ extern WVL_M_LIB VOID STDCALL WvDiskInit(IN WV_SP_DISK_T);
 extern WVL_M_LIB WV_SP_DISK_T disk__create(void);
 
 /* IRP-related. */
-extern WV_F_DEV_DISPATCH WvDiskIrpPower;
-extern WV_F_DEV_DISPATCH WvDiskIrpSysCtl;
+extern WVL_M_LIB WV_F_DEV_DISPATCH WvDiskIrpPower;
+extern WVL_M_LIB WV_F_DEV_DISPATCH WvDiskIrpSysCtl;
 /* IRP_MJ_DEVICE_CONTROL dispatcher from disk/dev_ctl.c */
-extern WV_F_DEV_CTL disk_dev_ctl__dispatch;
+extern WVL_M_LIB WV_F_DEV_CTL disk_dev_ctl__dispatch;
 /* IRP_MJ_SCSI dispatcher from disk/scsi.c */
-extern WV_F_DEV_SCSI disk_scsi__dispatch;
+extern WVL_M_LIB WV_F_DEV_SCSI disk_scsi__dispatch;
 /* IRP_MJ_PNP dispatcher from disk/pnp.c */
-extern WV_F_DEV_PNP disk_pnp__dispatch;
+extern WVL_M_LIB WV_F_DEV_PNP disk_pnp__dispatch;
 
 
 #endif  /* WV_M_DISK_H_ */

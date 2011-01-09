@@ -384,7 +384,7 @@ static NTSTATUS STDCALL disk_scsi__read_toc_(
     return STATUS_SUCCESS;
   }
 
-NTSTATUS STDCALL disk_scsi__dispatch(
+WVL_M_LIB NTSTATUS STDCALL disk_scsi__dispatch(
     IN WV_SP_DEV_T dev,
     IN PIRP irp,
     IN UCHAR code

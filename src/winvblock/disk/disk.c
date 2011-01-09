@@ -96,12 +96,12 @@ static VOID STDCALL WvDiskDefaultClose_(IN WV_SP_DISK_T disk) {
     return;
   }
 
-NTSTATUS STDCALL WvDiskIrpPower(IN WV_SP_DEV_T dev, IN PIRP irp) {
+WVL_M_LIB NTSTATUS STDCALL WvDiskIrpPower(IN WV_SP_DEV_T dev, IN PIRP irp) {
     PoStartNextPowerIrp(irp);
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
-NTSTATUS STDCALL WvDiskIrpSysCtl(IN WV_SP_DEV_T dev, IN PIRP irp) {
+WVL_M_LIB NTSTATUS STDCALL WvDiskIrpSysCtl(IN WV_SP_DEV_T dev, IN PIRP irp) {
     return WvlIrpComplete(irp, 0, irp->IoStatus.Status);
   }
 
