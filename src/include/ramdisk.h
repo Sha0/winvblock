@@ -32,7 +32,6 @@ typedef struct WV_RAMDISK_T {
     UINT32 DiskBuf;
     UINT32 DiskSize;
     WV_FP_DEV_FREE prev_free;
-    LIST_ENTRY tracking;
   } WV_S_RAMDISK_T, * WV_SP_RAMDISK_T;
 
 extern WV_SP_RAMDISK_T WvRamdiskCreatePdo(IN WVL_E_DISK_MEDIA_TYPE);

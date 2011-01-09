@@ -200,7 +200,6 @@ typedef struct AOE_DISK_ {
     KEVENT SearchEvent;
     AOE_E_SEARCH_STATE_ search_state;
     WV_FP_DEV_FREE prev_free;
-    LIST_ENTRY tracking;
   } AOE_S_DISK_, * AOE_SP_DISK_;
 
 typedef struct AOE_TARGET_LIST_ {

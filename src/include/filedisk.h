@@ -32,7 +32,6 @@ typedef struct WV_FILEDISK_T {
     HANDLE file;
     UINT32 hash;
     WV_FP_DEV_FREE prev_free;
-    LIST_ENTRY tracking;
     LARGE_INTEGER offset;
     /* For threaded instances. */
     LIST_ENTRY req_list;
