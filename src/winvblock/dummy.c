@@ -144,7 +144,6 @@ static NTSTATUS STDCALL WvDummyAdd_(
     dev->Parent = WvBus.Fdo;
     /* Add the new PDO device to the bus' list of children. */
     WvlBusAddNode(&WvBus, &dev->BusNode);
-    dev->DevNum = WvlBusGetNodeNum(&dev->BusNode);
     pdo->Flags &= ~DO_DEVICE_INITIALIZING;
 
     return STATUS_SUCCESS;

@@ -164,6 +164,7 @@ static NTSTATUS STDCALL disk_dev_ctl__scsi_get_address_(
     PIO_STACK_LOCATION io_stack_loc= IoGetCurrentIrpStackLocation(irp);
     UINT32 copy_size;
     SCSI_ADDRESS scsi_address;
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
 
     copy_size = (
         io_stack_loc->Parameters.DeviceIoControl.OutputBufferLength <
@@ -174,7 +175,7 @@ static NTSTATUS STDCALL disk_dev_ctl__scsi_get_address_(
     scsi_address.Length = sizeof (SCSI_ADDRESS);
     scsi_address.PortNumber = 0;
     scsi_address.PathId = 0;
-    scsi_address.TargetId = (UCHAR) dev->DevNum;
+    scsi_address.TargetId = WvlDiskUnitNum(disk);
     scsi_address.Lun = 0;
     RtlCopyMemory(
         irp->AssociatedIrp.SystemBuffer,

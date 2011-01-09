@@ -1647,7 +1647,7 @@ NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP irp) {
         WV_SP_DISK_T disk = disk__get_ptr(dev);
         AOE_SP_DISK_ aoe_disk = AoeDiskFromDev_(dev);
 
-        disks->Disk[count].Disk = dev->DevNum;
+        disks->Disk[count].Disk = WvlBusGetNodeNum(&dev->BusNode);
         RtlCopyMemory(
             &disks->Disk[count].ClientMac,
             &aoe_disk->ClientMac,

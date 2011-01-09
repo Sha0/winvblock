@@ -169,8 +169,6 @@ struct WV_DEV_T {
     PDEVICE_OBJECT Self;
     /* Points to the parent bus' DEVICE_OBJECT */
     PDEVICE_OBJECT Parent;
-    /* The device's child ID relative to the parent bus. */
-    UINT32 DevNum;
     /* Points to the driver. */
     PDRIVER_OBJECT DriverObject;
     /* Current state of the device. */
