@@ -284,6 +284,18 @@ static VOID STDCALL WvFilediskClose_(IN WV_SP_DEV_T dev) {
     return;
   }
 
+static WVL_F_DISK_UNIT_NUM WvFilediskUnitNum_;
+static UCHAR STDCALL WvFilediskUnitNum_(IN WV_SP_DISK_T disk) {
+    WV_SP_FILEDISK_T filedisk = CONTAINING_RECORD(
+        disk,
+        WV_S_FILEDISK_T,
+        disk[0]
+      );
+
+    /* Possible precision loss. */
+    return (UCHAR) WvlBusGetNodeNum(&filedisk->disk->Dev->BusNode);
+  }
+
 /**
  * Create a filedisk PDO filled with the given disk parameters.
  *
@@ -330,6 +342,7 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
     filedisk->disk->Dev->ext = filedisk->disk;
     filedisk->disk->Dev->IrpMj = &irp_mj;
     filedisk->disk->disk_ops.Io = io;
+    filedisk->disk->disk_ops.UnitNum = WvFilediskUnitNum_;
     filedisk->disk->ext = filedisk;
     filedisk->disk->DriverObj = WvDriverObj;
 

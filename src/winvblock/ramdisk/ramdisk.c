@@ -143,6 +143,18 @@ static UINT32 STDCALL WvRamdiskQueryId_(
       }
   }
 
+static WVL_F_DISK_UNIT_NUM WvRamdiskUnitNum_;
+static UCHAR STDCALL WvRamdiskUnitNum_(IN WV_SP_DISK_T disk) {
+    WV_SP_RAMDISK_T ramdisk = CONTAINING_RECORD(
+        disk,
+        WV_S_RAMDISK_T,
+        disk[0]
+      );
+
+    /* Possible precision loss. */
+    return (UCHAR) WvlBusGetNodeNum(&ramdisk->disk->Dev->BusNode);
+  }
+
 /**
  * Create a RAM disk PDO of the given media type.
  *
@@ -188,6 +200,7 @@ WV_SP_RAMDISK_T STDCALL WvRamdiskCreatePdo(
     ramdisk->disk->Dev->ext = ramdisk->disk;
     ramdisk->disk->Dev->IrpMj = &irp_mj;
     ramdisk->disk->disk_ops.Io = WvRamdiskIo_;
+    ramdisk->disk->disk_ops.UnitNum = WvRamdiskUnitNum_;
     ramdisk->disk->ext = ramdisk;
     ramdisk->disk->DriverObj = WvDriverObj;
 

@@ -70,6 +70,7 @@ static WV_F_DISK_IO AoeDiskIo_;
 static WV_F_DISK_MAX_XFER_LEN AoeDiskMaxXferLen_;
 static BOOLEAN STDCALL AoeDiskInit_(struct AOE_DISK_ *);
 static WV_F_DISK_CLOSE AoeDiskClose_;
+static WVL_F_DISK_UNIT_NUM AoeDiskUnitNum_;
 static DRIVER_DISPATCH AoeIrpNotSupported_;
 static __drv_dispatchType(IRP_MJ_POWER) DRIVER_DISPATCH AoeIrpPower_;
 static
@@ -1753,6 +1754,7 @@ static AOE_SP_DISK_ AoeDiskCreatePdo_(void) {
     aoe_disk->disk->disk_ops.Io = AoeDiskIo_;
     aoe_disk->disk->disk_ops.MaxXferLen = AoeDiskMaxXferLen_;
     aoe_disk->disk->disk_ops.Close = AoeDiskClose_;
+    aoe_disk->disk->disk_ops.UnitNum = AoeDiskUnitNum_;
     aoe_disk->disk->ext = aoe_disk;
     aoe_disk->disk->DriverObj = AoeDriverObj_;
 
@@ -1952,4 +1954,15 @@ static NTSTATUS AoeIrpPnp_(
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
     return disk_pnp__dispatch(dev, irp, code);
+  }
+
+static UCHAR STDCALL AoeDiskUnitNum_(IN WV_SP_DISK_T disk) {
+    AOE_SP_DISK_ aoe_disk = CONTAINING_RECORD(
+        disk,
+        AOE_S_DISK_,
+        disk[0]
+      );
+
+    /* Possible precision loss. */
+    return (UCHAR) WvlBusGetNodeNum(&aoe_disk->disk->Dev->BusNode);
   }

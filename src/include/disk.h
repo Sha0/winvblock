@@ -95,11 +95,22 @@ typedef WV_F_DISK_INIT * WV_FP_DISK_INIT;
 typedef VOID STDCALL WV_F_DISK_CLOSE(IN WV_SP_DISK_T);
 typedef WV_F_DISK_CLOSE * WV_FP_DISK_CLOSE;
 
+/**
+ * Fetch disk unit number routine.
+ *
+ * @v disk              The disk whose unit number is fetched.
+ * @ret UCHAR           The disk's unit number.
+ */
+typedef UCHAR STDCALL WVL_F_DISK_UNIT_NUM(IN WV_SP_DISK_T);
+typedef WVL_F_DISK_UNIT_NUM * WVL_FP_DISK_UNIT_NUM;
+extern WVL_M_LIB WVL_F_DISK_UNIT_NUM WvlDiskUnitNum;
+
 typedef struct WV_DISK_OPS {
     WV_FP_DISK_IO Io;
     WV_FP_DISK_MAX_XFER_LEN MaxXferLen;
     WV_FP_DISK_INIT Init;
     WV_FP_DISK_CLOSE Close;
+    WVL_FP_DISK_UNIT_NUM UnitNum;
   } WV_S_DISK_OPS, * WV_SP_DISK_OPS;
 
 struct WV_DISK_T {
