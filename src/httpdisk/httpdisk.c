@@ -190,6 +190,8 @@ static
 
 static WVL_F_DISK_PNP HttpdiskPnpQueryId_;
 
+static WVL_F_DISK_IO HttpdiskIo_;
+
 VOID
 HttpDiskThread (
     IN PVOID            Context
@@ -457,7 +459,12 @@ HttpDiskCreateDevice (
     device_extension->number = Number;
     device_extension->dev_type = DeviceType;
     WvlDiskInit(device_extension->Disk);
+    device_extension->Disk->Media =
+      (DeviceType == FILE_DEVICE_CD_ROM) ?
+      WvlDiskMediaTypeOptical :
+      WvlDiskMediaTypeHard;
     device_extension->Disk->disk_ops.PnpQueryId = HttpdiskPnpQueryId_;
+    device_extension->Disk->disk_ops.Io = HttpdiskIo_;
 
     status = PsCreateSystemThread(
         &thread_handle,
@@ -980,13 +987,22 @@ static NTSTATUS HttpdiskIrpScsi_(IN PDEVICE_OBJECT dev_obj, IN PIRP irp) {
     if (dev->bus)
       return HttpdiskBusIrp(dev_obj, irp);
 
-    minor = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
-    switch (minor) {
-        default:
-          DBG("Unhandled minor: %d\n", minor);
-          break;
-      }
-    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+    if (!dev->media_in_device)
+      return WvlIrpComplete(irp, 0, STATUS_NO_MEDIA_IN_DEVICE);
+
+    /* Enqueue the IRP on the HTTPDisk. */
+    IoMarkIrpPending(irp);
+    ExInterlockedInsertTailList(
+        &dev->list_head,
+        &irp->Tail.Overlay.ListEntry,
+        &dev->list_lock
+      );
+    KeSetEvent(
+        &dev->request_event,
+        (KPRIORITY) 0,
+        FALSE
+      );
+    return STATUS_PENDING;
   }
 
 static NTSTATUS STDCALL HttpdiskPnpQueryId_(
@@ -1065,6 +1081,43 @@ static NTSTATUS STDCALL HttpdiskPnpQueryId_(
     err_buf:
 
     return WvlIrpComplete(irp, 0, status);
+  }
+
+static NTSTATUS STDCALL HttpdiskIo_(
+    IN WVL_SP_DISK_T disk,
+    IN WVL_E_DISK_IO_MODE mode,
+    IN LONGLONG start_sector,
+    IN UINT32 sector_count,
+    IN PUCHAR buffer,
+    IN PIRP irp
+  ) {
+    UCHAR tries;
+    HTTPDISK_SP_DEV dev = CONTAINING_RECORD(disk, HTTPDISK_S_DEV, Disk[0]);
+
+    if (mode == WvlDiskIoModeWrite)
+      return WvlIrpComplete(irp, 0, STATUS_MEDIA_WRITE_PROTECTED);
+
+    tries = 2;
+    while (tries--) {
+        HttpDiskGetBlock(
+            &dev->socket,
+            dev->address,
+            dev->port,
+            dev->host_name,
+            dev->file_name,
+            start_sector * disk->SectorSize,
+            sector_count * disk->SectorSize,
+            &irp->IoStatus,
+            buffer
+          );
+        if (NT_SUCCESS(irp->IoStatus.Status))
+          return WvlIrpComplete(
+              irp,
+              sector_count * disk->SectorSize,
+              STATUS_SUCCESS
+            );
+      }
+    return WvlIrpComplete(irp, 0, irp->IoStatus.Status);
   }
 
 #pragma code_seg("PAGE")
@@ -1162,6 +1215,14 @@ HttpDiskThread (
                     irp->IoStatus.Status = STATUS_DRIVER_INTERNAL_ERROR;
                 }
                 break;
+
+            case IRP_MJ_SCSI:
+                WvlDiskScsi(
+                    device_object,
+                    irp,
+                    device_extension->Disk
+                  );
+                return;
 
             default:
                 irp->IoStatus.Status = STATUS_DRIVER_INTERNAL_ERROR;
