@@ -107,9 +107,9 @@ extern WVL_M_LIB WVL_F_DISK_IO WvlDiskIo;
  * @v disk            The disk being queried.
  * @ret UINT32        The maximum transfer length.
  */
-typedef UINT32 WV_F_DISK_MAX_XFER_LEN(IN WVL_SP_DISK_T);
-typedef WV_F_DISK_MAX_XFER_LEN * WV_FP_DISK_MAX_XFER_LEN;
-extern WVL_M_LIB WV_F_DISK_MAX_XFER_LEN WvlDiskMaxXferLen;
+typedef UINT32 WVL_F_DISK_MAX_XFER_LEN(IN WVL_SP_DISK_T);
+typedef WVL_F_DISK_MAX_XFER_LEN * WVL_FP_DISK_MAX_XFER_LEN;
+extern WVL_M_LIB WVL_F_DISK_MAX_XFER_LEN WvlDiskMaxXferLen;
 
 /**
  * Disk close routine.
@@ -131,7 +131,7 @@ extern WVL_M_LIB WVL_F_DISK_UNIT_NUM WvlDiskUnitNum;
 
 typedef struct WV_DISK_OPS {
     WVL_FP_DISK_IO Io;
-    WV_FP_DISK_MAX_XFER_LEN MaxXferLen;
+    WVL_FP_DISK_MAX_XFER_LEN MaxXferLen;
     WV_FP_DISK_CLOSE Close;
     WVL_FP_DISK_UNIT_NUM UnitNum;
     WVL_FP_DISK_PNP PnpQueryId;

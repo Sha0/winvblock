@@ -66,7 +66,7 @@ static VOID AoeProcessAbft_(void);
 static AOE_SP_DISK AoeDiskCreatePdo_(void);
 static WV_F_DEV_FREE AoeDiskFree_;
 static WVL_F_DISK_IO AoeDiskIo_;
-static WV_F_DISK_MAX_XFER_LEN AoeDiskMaxXferLen_;
+static WVL_F_DISK_MAX_XFER_LEN AoeDiskMaxXferLen_;
 static BOOLEAN STDCALL AoeDiskInit_(AOE_SP_DISK);
 static WV_F_DISK_CLOSE AoeDiskClose_;
 static WVL_F_DISK_UNIT_NUM AoeDiskUnitNum_;
