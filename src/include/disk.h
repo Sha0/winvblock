@@ -132,6 +132,7 @@ typedef struct WV_DISK_OPS {
     WV_FP_DISK_MAX_XFER_LEN MaxXferLen;
     WV_FP_DISK_CLOSE Close;
     WVL_FP_DISK_UNIT_NUM UnitNum;
+    WVL_FP_DISK_PNP PnpQueryId;
   } WV_S_DISK_OPS, * WV_SP_DISK_OPS;
 
 struct WV_DISK_T {

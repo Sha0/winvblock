@@ -31,6 +31,7 @@
 #include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
+#include "irp.h"
 #include "driver.h"
 #include "bus.h"
 #include "device.h"
@@ -106,40 +107,65 @@ static NTSTATUS STDCALL WvFilediskIo_(
     return status;
   }
 
-static UINT32 STDCALL query_id(
-    IN WV_SP_DEV_T dev,
-    IN BUS_QUERY_ID_TYPE query_type,
-    IN OUT WCHAR (*buf)[512]
+static NTSTATUS STDCALL WvFilediskPnpQueryId_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp,
+    IN WV_SP_DISK_T disk
   ) {
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
-    WV_SP_FILEDISK_T filedisk = filedisk__get_ptr(dev);
-    static PWCHAR hw_ids[WvlDiskMediaTypes] = {
+    static const WCHAR * hw_ids[WvlDiskMediaTypes] = {
         WVL_M_WLIT L"\\FileFloppyDisk",
         WVL_M_WLIT L"\\FileHardDisk",
         WVL_M_WLIT L"\\FileOpticalDisc"
       };
+    WCHAR (*buf)[512];
+    NTSTATUS status;
+    WV_SP_FILEDISK_T filedisk = CONTAINING_RECORD(disk, WV_S_FILEDISK_T, disk);
+    BUS_QUERY_ID_TYPE query_type;
 
+    /* Allocate a buffer. */
+    buf = wv_mallocz(sizeof *buf);
+    if (!buf) {
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto err_buf;
+      }
+
+    /* Populate the buffer with IDs. */
+    query_type = IoGetCurrentIrpStackLocation(irp)->Parameters.QueryId.IdType;
     switch (query_type) {
         case BusQueryDeviceID:
-          return swprintf(*buf, hw_ids[disk->Media]) + 1;
+          swprintf(*buf, hw_ids[disk->Media]);
+          break;
 
         case BusQueryInstanceID:
-          return swprintf(*buf, L"Hash_%08X", filedisk->hash) + 1;
+          /* "Location". */
+          swprintf(*buf, L"Hash_%08X", filedisk->hash);
+          break;
 
-        case BusQueryHardwareIDs: {
-            UINT32 tmp;
-
-            tmp = swprintf(*buf, hw_ids[disk->Media]) + 1;
-            tmp += swprintf(*buf + tmp, WvDiskCompatIds[disk->Media]) + 4;
-            return tmp;
-          }
+        case BusQueryHardwareIDs:
+          swprintf(
+              *buf + swprintf(*buf, hw_ids[disk->Media]) + 1,
+              WvDiskCompatIds[disk->Media]
+            );
+          break;
 
         case BusQueryCompatibleIDs:
-          return swprintf(*buf, WvDiskCompatIds[disk->Media]) + 4;
+          swprintf(*buf, WvDiskCompatIds[disk->Media]);
 
         default:
-          return 0;
+          DBG("Unknown query type %d for %p!\n", query_type, filedisk);
+          status = STATUS_INVALID_PARAMETER;
+          goto err_query_type;
       }
+
+    DBG("IRP_MN_QUERY_ID for file-backed disk %p.\n", filedisk);
+    return WvlIrpComplete(irp, (ULONG_PTR) buf, STATUS_SUCCESS);
+
+    err_query_type:
+
+    wv_free(buf);
+    err_buf:
+
+    return WvlIrpComplete(irp, 0, status);
   }
 
 /* Attach a file as a disk, based on an IRP. */
@@ -336,13 +362,13 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
     WvDiskInit(filedisk->disk);
     WvDevInit(filedisk->Dev);
     filedisk->Dev->Ops.Free = WvFilediskFree_;
-    filedisk->Dev->Ops.PnpId = query_id;
     filedisk->Dev->Ops.Close = WvFilediskClose_;
     filedisk->Dev->ext = filedisk->disk;
     filedisk->Dev->IrpMj = &irp_mj;
     filedisk->disk->Dev = filedisk->Dev;
     filedisk->disk->disk_ops.Io = WvFilediskIo_;
     filedisk->disk->disk_ops.UnitNum = WvFilediskUnitNum_;
+    filedisk->disk->disk_ops.PnpQueryId = WvFilediskPnpQueryId_;
     filedisk->disk->ext = filedisk;
     filedisk->disk->DriverObj = WvDriverObj;
 

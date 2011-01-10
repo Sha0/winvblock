@@ -379,7 +379,9 @@ WVL_M_LIB NTSTATUS STDCALL disk_pnp__dispatch(
     switch (io_stack_loc->MinorFunction) {
         case IRP_MN_QUERY_ID:
           DBG("IRP_MN_QUERY_ID\n");
-          return WvDevPnpQueryId(Disk->Dev, Irp);
+          if (Disk->disk_ops.PnpQueryId)
+            return Disk->disk_ops.PnpQueryId(DevObj, Irp, Disk);
+          return WvlIrpComplete(Irp, 0, STATUS_NOT_SUPPORTED);
 
         case IRP_MN_QUERY_DEVICE_TEXT:
           DBG("IRP_MN_QUERY_DEVICE_TEXT\n");

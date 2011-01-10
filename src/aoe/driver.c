@@ -1373,39 +1373,65 @@ static UINT32 AoeDiskMaxXferLen_(IN WV_SP_DISK_T disk) {
     return disk->SectorSize * aoe_disk->MaxSectorsPerPacket;
   }
 
-static UINT32 STDCALL query_id(
-    IN WV_SP_DEV_T dev,
-    IN BUS_QUERY_ID_TYPE query_type,
-    IN OUT WCHAR (*buf)[512]
+static NTSTATUS STDCALL AoeDiskPnpQueryId_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp,
+    IN WV_SP_DISK_T disk
   ) {
-    AOE_SP_DISK aoe_disk = AoeDiskFromDev_(dev);
+    WCHAR (*buf)[512];
+    NTSTATUS status;
+    BUS_QUERY_ID_TYPE query_type;
+    AOE_SP_DISK aoe_disk = dev_obj->DeviceExtension;
 
+    /* Allocate a buffer. */
+    buf = wv_mallocz(sizeof *buf);
+    if (!buf) {
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto err_buf;
+      }
+
+    /* Populate the buffer with IDs. */
+    query_type = IoGetCurrentIrpStackLocation(irp)->Parameters.QueryId.IdType;
     switch (query_type) {
         case BusQueryDeviceID:
-          return swprintf(*buf, WVL_M_WLIT L"\\AoEHardDisk") + 1;
+          swprintf(*buf, WVL_M_WLIT L"\\AoEHardDisk");
+          break;
 
         case BusQueryInstanceID:
-          return swprintf(
+          swprintf(
               *buf,
               L"AoE_at_Shelf_%d.Slot_%d",
               aoe_disk->Major,
               aoe_disk->Minor
-            ) + 1;
+            );
+          break;
 
-        case BusQueryHardwareIDs: {
-            UINT32 tmp;
-
-            tmp = swprintf(*buf, WVL_M_WLIT L"\\AoEHardDisk") + 1;
-            tmp += swprintf(*buf + tmp, L"GenDisk") + 4;
-            return tmp;
-          }
+        case BusQueryHardwareIDs:
+          swprintf(
+              *buf + swprintf(*buf, WVL_M_WLIT L"\\AoEHardDisk") + 1,
+              L"GenDisk"
+            );
+          break;
 
         case BusQueryCompatibleIDs:
-          return swprintf(*buf, L"GenDisk") + 4;
+          swprintf(*buf, L"GenDisk");
+          break;
 
         default:
-          return 0;
+          DBG("Unknown query type %d for %p!\n", query_type, aoe_disk);
+          status = STATUS_INVALID_PARAMETER;
+          goto err_query_type;
       }
+
+    DBG("IRP_MN_QUERY_ID for AoE disk %p.\n", aoe_disk);
+    return WvlIrpComplete(irp, (ULONG_PTR) buf, STATUS_SUCCESS);
+
+    err_query_type:
+
+    wv_free(buf);
+    err_buf:
+
+    return WvlIrpComplete(irp, 0, status);
   }
 
 #ifdef _MSC_VER
@@ -1723,7 +1749,6 @@ static AOE_SP_DISK AoeDiskCreatePdo_(void) {
     WvDiskInit(aoe_disk->disk);
     WvDevInit(aoe_disk->Dev);
     aoe_disk->Dev->Ops.Free = AoeDiskFree_;
-    aoe_disk->Dev->Ops.PnpId = query_id;
     aoe_disk->Dev->ext = aoe_disk->disk;
     aoe_disk->disk->Dev = aoe_disk->Dev;
     aoe_disk->disk->Media = WvlDiskMediaTypeHard;
@@ -1731,6 +1756,7 @@ static AOE_SP_DISK AoeDiskCreatePdo_(void) {
     aoe_disk->disk->disk_ops.MaxXferLen = AoeDiskMaxXferLen_;
     aoe_disk->disk->disk_ops.Close = AoeDiskClose_;
     aoe_disk->disk->disk_ops.UnitNum = AoeDiskUnitNum_;
+    aoe_disk->disk->disk_ops.PnpQueryId = AoeDiskPnpQueryId_;
     aoe_disk->disk->ext = aoe_disk;
     aoe_disk->disk->DriverObj = AoeDriverObj_;
 

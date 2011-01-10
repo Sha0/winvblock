@@ -104,41 +104,67 @@ static NTSTATUS STDCALL WvRamdiskIo_(
   }
 
 /* Copy RAM disk IDs to the provided buffer. */
-static UINT32 STDCALL WvRamdiskQueryId_(
-    IN WV_SP_DEV_T dev,
-    IN BUS_QUERY_ID_TYPE query_type,
-    IN OUT WCHAR (*buf)[512]
+static NTSTATUS STDCALL WvRamdiskPnpQueryId_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp,
+    IN WV_SP_DISK_T disk
   ) {
     static const WCHAR * hw_ids[WvlDiskMediaTypes] = {
         WVL_M_WLIT L"\\RAMFloppyDisk",
         WVL_M_WLIT L"\\RAMHardDisk",
         WVL_M_WLIT L"\\RAMOpticalDisc"
       };
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
-    WV_SP_RAMDISK_T ramdisk = WvRamdiskFromDev_(dev);
+    WCHAR (*buf)[512];
+    NTSTATUS status;
+    WV_SP_RAMDISK_T ramdisk = CONTAINING_RECORD(disk, WV_S_RAMDISK_T, disk);
+    PWCHAR hw_id;
+    BUS_QUERY_ID_TYPE query_type;
 
+    /* Allocate a buffer. */
+    buf = wv_mallocz(sizeof *buf);
+    if (!buf) {
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto err_buf;
+      }
+
+    /* Populate the buffer with IDs. */
+    query_type = IoGetCurrentIrpStackLocation(irp)->Parameters.QueryId.IdType;
     switch (query_type) {
         case BusQueryDeviceID:
-          return swprintf(*buf, hw_ids[disk->Media]) + 1;
+          swprintf(*buf, hw_ids[disk->Media]);
+          break;
 
         case BusQueryInstanceID:
         	/* "Location". */
-          return swprintf(*buf, L"RAM_at_%08X", ramdisk->DiskBuf) + 1;
+          swprintf(*buf, L"RAM_at_%08X", ramdisk->DiskBuf);
+          break;
 
-        case BusQueryHardwareIDs: {
-            UINT32 tmp;
-
-            tmp = swprintf(*buf, hw_ids[disk->Media]) + 1;
-            tmp += swprintf(*buf + tmp, WvDiskCompatIds[disk->Media]) + 4;
-            return tmp;
-          }
+        case BusQueryHardwareIDs:
+          swprintf(
+              *buf + swprintf(*buf, hw_ids[disk->Media]) + 1,
+              WvDiskCompatIds[disk->Media]
+            );
+          break;
 
         case BusQueryCompatibleIDs:
-          return swprintf(*buf, WvDiskCompatIds[disk->Media]) + 4;
+          swprintf(*buf, WvDiskCompatIds[disk->Media]);
+          break;
 
         default:
-          return 0;
+          DBG("Unknown query type %d for %p!\n", query_type, ramdisk);
+          status = STATUS_INVALID_PARAMETER;
+          goto err_query_type;
       }
+
+    DBG("IRP_MN_QUERY_ID for RAM disk %p.\n", ramdisk);
+    return WvlIrpComplete(irp, (ULONG_PTR) buf, STATUS_SUCCESS);
+
+    err_query_type:
+
+    wv_free(buf);
+    err_buf:
+
+    return WvlIrpComplete(irp, 0, status);
   }
 
 static WVL_F_DISK_UNIT_NUM WvRamdiskUnitNum_;
@@ -194,12 +220,12 @@ WV_SP_RAMDISK_T STDCALL WvRamdiskCreatePdo(
     WvDiskInit(ramdisk->disk);
     WvDevInit(ramdisk->Dev);
     ramdisk->Dev->Ops.Free = WvRamdiskFree_;
-    ramdisk->Dev->Ops.PnpId = WvRamdiskQueryId_;
     ramdisk->Dev->ext = ramdisk->disk;
     ramdisk->Dev->IrpMj = &irp_mj;
     ramdisk->disk->Dev = ramdisk->Dev;
     ramdisk->disk->disk_ops.Io = WvRamdiskIo_;
     ramdisk->disk->disk_ops.UnitNum = WvRamdiskUnitNum_;
+    ramdisk->disk->disk_ops.PnpQueryId = WvRamdiskPnpQueryId_;
     ramdisk->disk->ext = ramdisk;
     ramdisk->disk->DriverObj = WvDriverObj;
 
