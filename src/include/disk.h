@@ -116,8 +116,8 @@ extern WVL_M_LIB WVL_F_DISK_MAX_XFER_LEN WvlDiskMaxXferLen;
  *
  * @v disk_ptr        The disk device being closed.
  */
-typedef VOID STDCALL WV_F_DISK_CLOSE(IN WVL_SP_DISK_T);
-typedef WV_F_DISK_CLOSE * WV_FP_DISK_CLOSE;
+typedef VOID STDCALL WVL_F_DISK_CLOSE(IN WVL_SP_DISK_T);
+typedef WVL_F_DISK_CLOSE * WVL_FP_DISK_CLOSE;
 
 /**
  * Fetch disk unit number routine.
@@ -132,7 +132,7 @@ extern WVL_M_LIB WVL_F_DISK_UNIT_NUM WvlDiskUnitNum;
 typedef struct WV_DISK_OPS {
     WVL_FP_DISK_IO Io;
     WVL_FP_DISK_MAX_XFER_LEN MaxXferLen;
-    WV_FP_DISK_CLOSE Close;
+    WVL_FP_DISK_CLOSE Close;
     WVL_FP_DISK_UNIT_NUM UnitNum;
     WVL_FP_DISK_PNP PnpQueryId;
     WVL_FP_DISK_PNP PnpQueryDevText;

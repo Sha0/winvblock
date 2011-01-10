@@ -68,7 +68,7 @@ static WV_F_DEV_FREE AoeDiskFree_;
 static WVL_F_DISK_IO AoeDiskIo_;
 static WVL_F_DISK_MAX_XFER_LEN AoeDiskMaxXferLen_;
 static BOOLEAN STDCALL AoeDiskInit_(AOE_SP_DISK);
-static WV_F_DISK_CLOSE AoeDiskClose_;
+static WVL_F_DISK_CLOSE AoeDiskClose_;
 static WVL_F_DISK_UNIT_NUM AoeDiskUnitNum_;
 static DRIVER_DISPATCH AoeIrpNotSupported_;
 static __drv_dispatchType(IRP_MJ_POWER) DRIVER_DISPATCH AoeIrpPower_;
