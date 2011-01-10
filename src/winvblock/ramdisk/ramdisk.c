@@ -226,6 +226,7 @@ WV_SP_RAMDISK_T STDCALL WvRamdiskCreatePdo(
     ramdisk->disk->disk_ops.Io = WvRamdiskIo_;
     ramdisk->disk->disk_ops.UnitNum = WvRamdiskUnitNum_;
     ramdisk->disk->disk_ops.PnpQueryId = WvRamdiskPnpQueryId_;
+    ramdisk->disk->disk_ops.PnpQueryDevText = WvDiskPnpQueryDevText;
     ramdisk->disk->ext = ramdisk;
     ramdisk->disk->DriverObj = WvDriverObj;
 

@@ -40,82 +40,10 @@
 #include "debug.h"
 
 /* Forward declarations. */
-static WVL_F_DISK_PNP disk_pnp__query_dev_text_;
 static WVL_F_DISK_PNP WvlDiskPnpQueryDevRelations_;
 static WVL_F_DISK_PNP WvlDiskPnpQueryBusInfo_;
 static WVL_F_DISK_PNP WvlDiskPnpQueryCapabilities_;
 static WVL_F_DISK_PNP disk_pnp__simple_;
-
-static NTSTATUS STDCALL disk_pnp__query_dev_text_(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp,
-    WV_SP_DISK_T disk
-  ) {
-    IN WV_SP_DEV_T dev = disk->Dev;
-    WCHAR (*str)[512];
-    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-    NTSTATUS status;
-    UINT32 str_len;
-
-    /* Allocate a string buffer. */
-    str = wv_mallocz(sizeof *str);
-    if (str == NULL) {
-        DBG("wv_malloc IRP_MN_QUERY_DEVICE_TEXT\n");
-        status = STATUS_INSUFFICIENT_RESOURCES;
-        goto alloc_str;
-      }
-    /* Determine the query type. */
-    switch (io_stack_loc->Parameters.QueryDeviceText.DeviceTextType) {
-        case DeviceTextDescription:
-          str_len = swprintf(*str, WVL_M_WLIT L" Disk") + 1;
-          irp->IoStatus.Information =
-            (ULONG_PTR) wv_palloc(str_len * sizeof *str);
-          if (irp->IoStatus.Information == 0) {
-              DBG("wv_palloc DeviceTextDescription\n");
-              status = STATUS_INSUFFICIENT_RESOURCES;
-              goto alloc_info;
-            }
-          RtlCopyMemory(
-              (PWCHAR) irp->IoStatus.Information,
-              str,
-              str_len * sizeof (WCHAR)
-            );
-          status = STATUS_SUCCESS;
-          goto alloc_info;
-
-        case DeviceTextLocationInformation:
-          str_len = WvDevPnpId(
-              dev,
-              BusQueryInstanceID,
-              str
-            );
-          irp->IoStatus.Information =
-            (ULONG_PTR) wv_palloc(str_len * sizeof *str);
-          if (irp->IoStatus.Information == 0) {
-              DBG("wv_palloc DeviceTextLocationInformation\n");
-              status = STATUS_INSUFFICIENT_RESOURCES;
-              goto alloc_info;
-            }
-          RtlCopyMemory(
-              (PWCHAR) irp->IoStatus.Information,
-              str,
-              str_len * sizeof (WCHAR)
-            );
-          status = STATUS_SUCCESS;
-          goto alloc_info;
-
-        default:
-          irp->IoStatus.Information = 0;
-          status = STATUS_NOT_SUPPORTED;
-      }
-    /* irp->IoStatus.Information not freed. */
-    alloc_info:
-
-    wv_free(str);
-    alloc_str:
-
-    return WvlIrpComplete(irp, irp->IoStatus.Information, status);
-  }
 
 static NTSTATUS STDCALL WvlDiskPnpQueryDevRelations_(
     IN PDEVICE_OBJECT dev_obj,
@@ -385,7 +313,9 @@ WVL_M_LIB NTSTATUS STDCALL disk_pnp__dispatch(
 
         case IRP_MN_QUERY_DEVICE_TEXT:
           DBG("IRP_MN_QUERY_DEVICE_TEXT\n");
-          return disk_pnp__query_dev_text_(DevObj, Irp, Disk);
+          if (Disk->disk_ops.PnpQueryDevText)
+            return Disk->disk_ops.PnpQueryDevText(DevObj, Irp, Disk);
+          return WvlIrpComplete(Irp, 0, STATUS_NOT_SUPPORTED);
 
         case IRP_MN_QUERY_DEVICE_RELATIONS:
           DBG("IRP_MN_QUERY_DEVICE_RELATIONS\n");

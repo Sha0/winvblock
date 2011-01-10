@@ -369,6 +369,7 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
     filedisk->disk->disk_ops.Io = WvFilediskIo_;
     filedisk->disk->disk_ops.UnitNum = WvFilediskUnitNum_;
     filedisk->disk->disk_ops.PnpQueryId = WvFilediskPnpQueryId_;
+    filedisk->disk->disk_ops.PnpQueryDevText = WvDiskPnpQueryDevText;
     filedisk->disk->ext = filedisk;
     filedisk->disk->DriverObj = WvDriverObj;
 
