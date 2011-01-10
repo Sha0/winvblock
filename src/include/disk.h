@@ -129,18 +129,18 @@ typedef UCHAR STDCALL WVL_F_DISK_UNIT_NUM(IN WVL_SP_DISK_T);
 typedef WVL_F_DISK_UNIT_NUM * WVL_FP_DISK_UNIT_NUM;
 extern WVL_M_LIB WVL_F_DISK_UNIT_NUM WvlDiskUnitNum;
 
-typedef struct WV_DISK_OPS {
+typedef struct WVL_DISK_OPS {
     WVL_FP_DISK_IO Io;
     WVL_FP_DISK_MAX_XFER_LEN MaxXferLen;
     WVL_FP_DISK_CLOSE Close;
     WVL_FP_DISK_UNIT_NUM UnitNum;
     WVL_FP_DISK_PNP PnpQueryId;
     WVL_FP_DISK_PNP PnpQueryDevText;
-  } WV_S_DISK_OPS, * WV_SP_DISK_OPS;
+  } WVL_S_DISK_OPS, * WVL_SP_DISK_OPS;
 
 struct WVL_DISK_T {
     WVL_E_DISK_MEDIA_TYPE Media;
-    WV_S_DISK_OPS disk_ops;
+    WVL_S_DISK_OPS disk_ops;
     ULONGLONG LBADiskSize;
     ULONGLONG Cylinders;
     UINT32 Heads;
