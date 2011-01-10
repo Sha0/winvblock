@@ -37,10 +37,6 @@
 #include "ramdisk.h"
 #include "debug.h"
 
-/* Yield a pointer to the RAM disk. */
-#define WvRamdiskFromDev_(dev) \
-  ((WV_SP_RAMDISK_T) (disk__get_ptr(dev))->ext)
-
 /** Private. */
 static WV_F_DEV_FREE WvRamdiskFree_;
 static WVL_F_DISK_IO WvRamdiskIo_;

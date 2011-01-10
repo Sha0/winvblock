@@ -46,10 +46,6 @@ extern NTSTATUS STDCALL WvFilediskAttach(IN PIRP);
 extern WV_SP_FILEDISK_T WvFilediskCreatePdo(IN WVL_E_DISK_MEDIA_TYPE);
 extern WV_SP_FILEDISK_T WvFilediskCreatePdoThreaded(IN WVL_E_DISK_MEDIA_TYPE);
 
-/* Yield a pointer to the file-backed disk. */
-#define filedisk__get_ptr(dev_ptr) \
-  ((WV_SP_FILEDISK_T) (disk__get_ptr(dev_ptr))->ext)
-
 extern VOID STDCALL WvFilediskHotSwapThread(IN PVOID);
 
 #endif  /* WV_M_FILEDISK_H_ */
