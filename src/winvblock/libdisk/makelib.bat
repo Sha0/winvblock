@@ -1,8 +1,8 @@
 @echo off
 
-set libname=disk
+set libname=libdisk
 
-set c=disk.c dev_ctl.c scsi.c pnp.c
+set c=libdisk.c dev_ctl.c scsi.c pnp.c
 
 echo !INCLUDE $(NTMAKEENV)\makefile.def	> makefile
 
