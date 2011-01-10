@@ -461,7 +461,14 @@ NTSTATUS STDCALL WvDiskPnp(
     IN PIRP irp,
     IN UCHAR code
   ) {
-    return disk_pnp__dispatch(dev->Self, irp, disk__get_ptr(dev));
+    NTSTATUS status;
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
+
+    status = WvlDiskPnp(dev->Self, irp, disk);
+    /* Note any state change. */
+    dev->OldState = disk->OldState;
+    dev->State = disk->State;
+    return status;
   }
 
 NTSTATUS STDCALL WvDiskPnpQueryDevText(

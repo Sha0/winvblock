@@ -34,6 +34,17 @@ typedef enum WVL_DISK_MEDIA_TYPE {
     WvlDiskMediaTypes
   } WVL_E_DISK_MEDIA_TYPE, * WVL_EP_DISK_MEDIA_TYPE;
 
+typedef enum WVL_DISK_STATE {
+    WvlDiskStateNotStarted,
+    WvlDiskStateStarted,
+    WvlDiskStateStopPending,
+    WvlDiskStateStopped,
+    WvlDiskStateRemovePending,
+    WvlDiskStateSurpriseRemovePending,
+    WvlDiskStateDeleted,
+    WvlDiskStates
+  } WVL_E_DISK_STATE, * WVL_EP_DISK_STATE;
+
 typedef char WVL_A_DISK_BOOT_SECT[512];
 typedef WVL_A_DISK_BOOT_SECT * WVL_AP_DISK_BOOT_SECT;
 
@@ -149,6 +160,8 @@ struct WV_DISK_T {
     PDEVICE_OBJECT ParentBus;
     PVOID ext;
     PDRIVER_OBJECT DriverObj;
+    WVL_E_DISK_STATE OldState;
+    WVL_E_DISK_STATE State;
   };
 
 /* Yield a pointer to the disk. */
@@ -220,7 +233,7 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlDiskDevCtl(
 /* IRP_MJ_SCSI dispatcher from disk/scsi.c */
 extern WVL_M_LIB WVL_F_DISK_SCSI WvlDiskScsi;
 /* IRP_MJ_PNP dispatcher from disk/pnp.c */
-extern WVL_M_LIB WVL_F_DISK_PNP disk_pnp__dispatch;
+extern WVL_M_LIB WVL_F_DISK_PNP WvlDiskPnp;
 
 
 #endif  /* WV_M_DISK_H_ */

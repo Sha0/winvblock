@@ -43,7 +43,7 @@
 static WVL_F_DISK_PNP WvlDiskPnpQueryDevRelations_;
 static WVL_F_DISK_PNP WvlDiskPnpQueryBusInfo_;
 static WVL_F_DISK_PNP WvlDiskPnpQueryCapabilities_;
-static WVL_F_DISK_PNP disk_pnp__simple_;
+static WVL_F_DISK_PNP WvlDiskPnpSimple_;
 
 static NTSTATUS STDCALL WvlDiskPnpQueryDevRelations_(
     IN PDEVICE_OBJECT dev_obj,
@@ -191,12 +191,11 @@ static NTSTATUS STDCALL WvlDiskPnpQueryCapabilities_(
     return WvlIrpComplete(irp, irp->IoStatus.Information, status);
   }
 
-static NTSTATUS STDCALL disk_pnp__simple_(
+static NTSTATUS STDCALL WvlDiskPnpSimple_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
     WV_SP_DISK_T disk
   ) {
-    WV_SP_DEV_T dev = disk->Dev;
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
 
@@ -220,62 +219,55 @@ static NTSTATUS STDCALL disk_pnp__simple_(
 
         case IRP_MN_START_DEVICE:
           DBG("IRP_MN_START_DEVICE\n");
-          dev->OldState = dev->State;
-          dev->State = WvDevStateStarted;
+          disk->OldState = disk->State;
+          disk->State = WvlDiskStateStarted;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_QUERY_STOP_DEVICE:
           DBG("IRP_MN_QUERY_STOP_DEVICE\n");
-          dev->OldState = dev->State;
-          dev->State = WvDevStateStopPending;
+          disk->OldState = disk->State;
+          disk->State = WvlDiskStateStopPending;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_CANCEL_STOP_DEVICE:
           DBG("IRP_MN_CANCEL_STOP_DEVICE\n");
-          dev->State = dev->OldState;
+          disk->State = disk->OldState;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_STOP_DEVICE:
           DBG("IRP_MN_STOP_DEVICE\n");
-          dev->OldState = dev->State;
-          dev->State = WvDevStateStopped;
+          disk->OldState = disk->State;
+          disk->State = WvlDiskStateStopped;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_QUERY_REMOVE_DEVICE:
           DBG("IRP_MN_QUERY_REMOVE_DEVICE\n");
-          dev->OldState = dev->State;
-          dev->State = WvDevStateRemovePending;
+          disk->OldState = disk->State;
+          disk->State = WvlDiskStateRemovePending;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_REMOVE_DEVICE:
           DBG("IRP_MN_REMOVE_DEVICE\n");
-          dev->OldState = dev->State;
-          dev->State = WvDevStateNotStarted;
-          if (!dev->BusNode.Linked) {
-              WvDevClose(dev);
-              WvDevFree(dev);
-              status = STATUS_NO_SUCH_DEVICE;
-            } else {
-              WvlBusRemoveNode(&dev->BusNode);
-              status = STATUS_SUCCESS;
-            }
+          disk->OldState = disk->State;
+          disk->State = WvlDiskStateNotStarted;
+          status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_CANCEL_REMOVE_DEVICE:
           DBG("IRP_MN_CANCEL_REMOVE_DEVICE\n");
-          dev->State = dev->OldState;
+          disk->State = disk->OldState;
           status = STATUS_SUCCESS;
           break;
 
         case IRP_MN_SURPRISE_REMOVAL:
           DBG("IRP_MN_SURPRISE_REMOVAL\n");
-          dev->OldState = dev->State;
-          dev->State = WvDevStateSurpriseRemovePending;
+          disk->OldState = disk->State;
+          disk->State = WvlDiskStateSurpriseRemovePending;
           status = STATUS_SUCCESS;
           break;
 
@@ -284,9 +276,7 @@ static NTSTATUS STDCALL disk_pnp__simple_(
           status = irp->IoStatus.Status;
       }
 
-    irp->IoStatus.Status = status;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
-    return status;
+    return WvlIrpComplete(irp, irp->IoStatus.Information, status);
   }
 
 /**
@@ -297,7 +287,7 @@ static NTSTATUS STDCALL disk_pnp__simple_(
  * @v Disk              The disk to process the IRP with.
  * @ret NTSTATUS        The status of the operation.
  */
-WVL_M_LIB NTSTATUS STDCALL disk_pnp__dispatch(
+WVL_M_LIB NTSTATUS STDCALL WvlDiskPnp(
     IN PDEVICE_OBJECT DevObj,
     IN PIRP Irp,
     WV_SP_DISK_T Disk
@@ -330,6 +320,6 @@ WVL_M_LIB NTSTATUS STDCALL disk_pnp__dispatch(
           return WvlDiskPnpQueryCapabilities_(DevObj, Irp, Disk);
 
         default:
-          return disk_pnp__simple_(DevObj, Irp, Disk);
+          return WvlDiskPnpSimple_(DevObj, Irp, Disk);
       }
   }

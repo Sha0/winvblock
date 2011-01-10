@@ -2006,7 +2006,7 @@ static NTSTATUS AoeIrpPnp_(
     if (aoe_disk->Dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
-    return disk_pnp__dispatch(dev_obj, irp, aoe_disk->disk);
+    return WvlDiskPnp(dev_obj, irp, aoe_disk->disk);
   }
 
 static UCHAR STDCALL AoeDiskUnitNum_(IN WV_SP_DISK_T disk) {
