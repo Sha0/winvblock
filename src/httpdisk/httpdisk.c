@@ -109,6 +109,7 @@ MmGetSystemAddressForMdlPrettySafe (
 #include "portable.h"
 #include "winvblock.h"
 #include "bus.h"
+#include "disk.h"
 #include "httpdisk.h"
 #include "debug.h"
 #include "irp.h"
@@ -187,7 +188,7 @@ static
   __drv_dispatchType(IRP_MJ_SCSI)
   DRIVER_DISPATCH HttpdiskIrpScsi_;
 
-static NTSTATUS STDCALL HttpdiskIrpPnpQueryId_(IN HTTPDISK_SP_DEV, IN PIRP);
+static WVL_F_DISK_PNP HttpdiskPnpQueryId_;
 
 VOID
 HttpDiskThread (
@@ -455,6 +456,8 @@ HttpDiskCreateDevice (
     device_extension->bus = FALSE;
     device_extension->number = Number;
     device_extension->dev_type = DeviceType;
+    WvlDiskInit(device_extension->Disk);
+    device_extension->Disk->disk_ops.PnpQueryId = HttpdiskPnpQueryId_;
 
     status = PsCreateSystemThread(
         &thread_handle,
@@ -960,46 +963,13 @@ static NTSTATUS HttpdiskIrpDevCtl_(
 
 static NTSTATUS HttpdiskIrpPnp_(IN PDEVICE_OBJECT dev_obj, IN PIRP irp) {
     HTTPDISK_SP_DEV dev = dev_obj->DeviceExtension;
-    UCHAR minor;
 
     /* Check for a bus IRP. */
     if (dev->bus)
       return HttpdiskBusIrp(dev_obj, irp);
 
-    minor = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
-    switch (minor) {
-        case IRP_MN_START_DEVICE:
-          DBG("IRP_MN_START_DEVICE for dev %p.\n", dev);
-          return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
-
-        case IRP_MN_QUERY_CAPABILITIES:
-          DBG("IRP_MN_QUERY_CAPABILITIES for dev %p.\n", dev);
-          return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
-
-        case IRP_MN_QUERY_RESOURCES:
-          DBG("IRP_MN_QUERY_RESOURCES for dev %p.\n", dev);
-          return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
-
-        case IRP_MN_QUERY_RESOURCE_REQUIREMENTS:
-          DBG("IRP_MN_QUERY_RESOURCE_REQUIREMENTS for dev %p.\n", dev);
-          return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
-
-        case IRP_MN_QUERY_DEVICE_TEXT:
-          DBG("IRP_MN_QUERY_DEVICE_TEXT for dev %p.\n", dev);
-          return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
-
-        case IRP_MN_QUERY_ID:
-          return HttpdiskIrpPnpQueryId_(dev, irp);
-
-        case IRP_MN_QUERY_BUS_INFORMATION:
-          DBG("IRP_MN_QUERY_BUS_INFORMATION for dev %p.\n", dev);
-          return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
-
-        default:
-          DBG("Unhandled minor: %d\n", minor);
-          break;
-      }
-    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+    /* Otherwise, use the WinVBlock disk library to handle it. */
+    return WvlDiskPnp(dev_obj, irp, dev->Disk);
   }
 
 static NTSTATUS HttpdiskIrpScsi_(IN PDEVICE_OBJECT dev_obj, IN PIRP irp) {
@@ -1019,12 +989,14 @@ static NTSTATUS HttpdiskIrpScsi_(IN PDEVICE_OBJECT dev_obj, IN PIRP irp) {
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
-static NTSTATUS STDCALL HttpdiskIrpPnpQueryId_(
-    IN HTTPDISK_SP_DEV dev,
-    IN PIRP irp
+static NTSTATUS STDCALL HttpdiskPnpQueryId_(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp,
+    IN WVL_SP_DISK_T disk
   ) {
     WCHAR (*buf)[512];
     NTSTATUS status;
+    HTTPDISK_SP_DEV dev = CONTAINING_RECORD(disk, HTTPDISK_S_DEV, Disk[0]);
     PWCHAR hw_id, compat_id;
     BUS_QUERY_ID_TYPE query_type;
 

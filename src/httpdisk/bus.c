@@ -31,6 +31,7 @@
 #include "dummy.h"
 #include "bus.h"
 #include "irp.h"
+#include "disk.h"
 #include "httpdisk.h"
 
 /** From httpdisk.c */
@@ -85,6 +86,7 @@ NTSTATUS STDCALL HttpdiskBusEstablish(void) {
         HTTPDISK_SP_DEV dev = dev_obj->DeviceExtension;
 
         WvlBusInitNode(&dev->BusNode, dev_obj);
+        dev->Disk->ParentBus = HttpdiskBus_.Fdo;
         WvlBusAddNode(&HttpdiskBus_, &dev->BusNode);
         dev_obj = dev_obj->NextDevice;
       }

@@ -65,6 +65,7 @@ typedef struct HTTPDISK_DEV {
     WVL_S_BUS_NODE  BusNode;
     ULONG           number;
     DEVICE_TYPE     dev_type;
+    WVL_S_DISK_T    Disk[1];
 } HTTPDISK_S_DEV, * HTTPDISK_SP_DEV;
 
 #endif
