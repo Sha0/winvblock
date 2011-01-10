@@ -302,7 +302,7 @@ static VOID STDCALL WvFilediskClose_(IN WV_SP_DEV_T dev) {
     WV_SP_FILEDISK_T filedisk = CONTAINING_RECORD(
         dev,
         WV_S_FILEDISK_T,
-        disk[0].Dev
+        Dev
       );
 
     ZwClose(filedisk->file);
@@ -365,7 +365,6 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
     filedisk->Dev->Ops.Close = WvFilediskClose_;
     filedisk->Dev->ext = filedisk->disk;
     filedisk->Dev->IrpMj = &irp_mj;
-    filedisk->disk->Dev = filedisk->Dev;
     filedisk->disk->disk_ops.Io = WvFilediskIo_;
     filedisk->disk->disk_ops.UnitNum = WvFilediskUnitNum_;
     filedisk->disk->disk_ops.PnpQueryId = WvFilediskPnpQueryId_;

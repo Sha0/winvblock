@@ -144,13 +144,13 @@ VOID WvRamdiskG4dFind(void) {
             ramdisk->disk->Cylinders =
               ramdisk->disk->LBADiskSize /
               (ramdisk->disk->Heads * ramdisk->disk->Sectors);
-            ramdisk->disk->Dev->Boot = TRUE;
             found = TRUE;
             ramdisk->disk->Media = media_type;
             ramdisk->disk->SectorSize = sector_size;
+            ramdisk->Dev->Boot = TRUE;
              /* Add the ramdisk to the bus. */
-            if (!WvBusAddDev(ramdisk->disk->Dev))
-              WvDevFree(ramdisk->disk->Dev);
+            if (!WvBusAddDev(ramdisk->Dev))
+              WvDevFree(ramdisk->Dev);
             ramdisk->disk->ParentBus = ramdisk->Dev->Parent;
           } /* while i */
         int_vector = &safe_mbr_hook->PrevHook;

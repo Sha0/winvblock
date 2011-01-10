@@ -99,13 +99,13 @@ static BOOLEAN STDCALL WvMemdiskCheckMbft_(
     ramdisk->disk->Cylinders = mbft->mdi.cylinders;
     ramdisk->disk->Heads = mbft->mdi.heads;
     ramdisk->disk->Sectors = mbft->mdi.sectors;
-    ramdisk->disk->Dev->Boot = TRUE;
     ramdisk->disk->Media = media_type;
     ramdisk->disk->SectorSize = sector_size;
+    ramdisk->Dev->Boot = TRUE;
 
     /* Add the ramdisk to the bus. */
-    if (!WvBusAddDev(ramdisk->disk->Dev)) {
-        WvDevFree(ramdisk->disk->Dev);
+    if (!WvBusAddDev(ramdisk->Dev)) {
+        WvDevFree(ramdisk->Dev);
         return FALSE;
       }
     ramdisk->disk->ParentBus = ramdisk->Dev->Parent;

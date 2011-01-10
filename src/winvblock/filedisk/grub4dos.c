@@ -499,11 +499,11 @@ VOID filedisk_grub4dos__find(void) {
           filedisk_ptr->hash = 'G4DX';
           ((PUCHAR) &filedisk_ptr->hash)[0] =
             Grub4DosDriveMapSlotPtr[i].SourceDrive;
-          filedisk_ptr->disk->Dev->Boot = TRUE;
           FoundGrub4DosMapping = TRUE;
+          filedisk_ptr->Dev->Boot = TRUE;
           /* Add the filedisk to the bus. */
-          if (!WvBusAddDev(filedisk_ptr->disk->Dev))
-            WvDevFree(filedisk_ptr->disk->Dev);
+          if (!WvBusAddDev(filedisk_ptr->Dev))
+            WvDevFree(filedisk_ptr->Dev);
           filedisk_ptr->disk->ParentBus = filedisk_ptr->Dev->Parent;
         } /* search for sector-mapped disks. */
       InterruptVector = &SafeMbrHookPtr->PrevHook;

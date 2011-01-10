@@ -218,7 +218,6 @@ WV_SP_RAMDISK_T STDCALL WvRamdiskCreatePdo(
     ramdisk->Dev->Ops.Free = WvRamdiskFree_;
     ramdisk->Dev->ext = ramdisk->disk;
     ramdisk->Dev->IrpMj = &irp_mj;
-    ramdisk->disk->Dev = ramdisk->Dev;
     ramdisk->disk->disk_ops.Io = WvRamdiskIo_;
     ramdisk->disk->disk_ops.UnitNum = WvRamdiskUnitNum_;
     ramdisk->disk->disk_ops.PnpQueryId = WvRamdiskPnpQueryId_;

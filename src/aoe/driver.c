@@ -1808,7 +1808,6 @@ static AOE_SP_DISK AoeDiskCreatePdo_(void) {
     WvDevInit(aoe_disk->Dev);
     aoe_disk->Dev->Ops.Free = AoeDiskFree_;
     aoe_disk->Dev->ext = aoe_disk->disk;
-    aoe_disk->disk->Dev = aoe_disk->Dev;
     aoe_disk->disk->Media = WvlDiskMediaTypeHard;
     aoe_disk->disk->disk_ops.Io = AoeDiskIo_;
     aoe_disk->disk->disk_ops.MaxXferLen = AoeDiskMaxXferLen_;
