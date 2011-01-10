@@ -52,13 +52,13 @@ static WV_S_DEV_IRP_MJ WvDiskIrpMj_ = {
 
 /** Exports. */
 NTSTATUS STDCALL WvDiskPower(IN WV_SP_DEV_T dev, IN PIRP irp) {
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
+    WVL_SP_DISK_T disk = disk__get_ptr(dev);
 
     return WvlDiskPower(dev->Self, irp, disk);
   }
 
 NTSTATUS STDCALL WvDiskSysCtl(IN WV_SP_DEV_T dev, IN PIRP irp) {
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
+    WVL_SP_DISK_T disk = disk__get_ptr(dev);
 
     return WvlDiskSysCtl(dev->Self, irp, disk);
   }
@@ -68,13 +68,13 @@ NTSTATUS STDCALL WvDiskDevCtl(
     IN PIRP irp,
     IN ULONG POINTER_ALIGNMENT code
   ) {
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
+    WVL_SP_DISK_T disk = disk__get_ptr(dev);
 
     return WvlDiskDevCtl(disk, irp, code);
   }
 
 NTSTATUS STDCALL WvDiskScsi(IN WV_SP_DEV_T dev, IN PIRP irp, IN UCHAR c) {
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
+    WVL_SP_DISK_T disk = disk__get_ptr(dev);
 
     return WvlDiskScsi(dev->Self, irp, disk);
   }
@@ -85,7 +85,7 @@ NTSTATUS STDCALL WvDiskPnp(
     IN UCHAR code
   ) {
     NTSTATUS status;
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
+    WVL_SP_DISK_T disk = disk__get_ptr(dev);
 
     status = WvlDiskPnp(dev->Self, irp, disk);
     /* Note any state change. */
@@ -97,7 +97,7 @@ NTSTATUS STDCALL WvDiskPnp(
 NTSTATUS STDCALL WvDiskPnpQueryDevText(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
-    IN WV_SP_DISK_T disk
+    IN WVL_SP_DISK_T disk
   ) {
     IN WV_SP_DEV_T dev = WvDevFromDevObj(dev_obj);
     WCHAR (*str)[512];
@@ -160,7 +160,7 @@ NTSTATUS STDCALL WvDiskPnpQueryDevText(
  * @v dev               Points to the disk device to delete.
  */
 static VOID STDCALL WvDiskDevFree_(IN WV_SP_DEV_T dev) {
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
+    WVL_SP_DISK_T disk = disk__get_ptr(dev);
 
     wv_free(disk);
   }

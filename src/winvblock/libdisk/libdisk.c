@@ -52,7 +52,7 @@ WVL_M_LIB PWCHAR WvlDiskCompatIds[WvlDiskMediaTypes] = {
   };
 
 /* Fetch a disk's unit number.  Defaults to 0. */
-WVL_M_LIB UCHAR STDCALL WvlDiskUnitNum(IN WV_SP_DISK_T Disk) {
+WVL_M_LIB UCHAR STDCALL WvlDiskUnitNum(IN WVL_SP_DISK_T Disk) {
     return Disk->disk_ops.UnitNum ? Disk->disk_ops.UnitNum(Disk) : 0;
   }
 
@@ -60,7 +60,7 @@ WVL_M_LIB UCHAR STDCALL WvlDiskUnitNum(IN WV_SP_DISK_T Disk) {
 WVL_M_LIB NTSTATUS STDCALL WvlDiskPower(
     IN PDEVICE_OBJECT DevObj,
     IN PIRP Irp,
-    IN WV_SP_DISK_T Disk
+    IN WVL_SP_DISK_T Disk
   ) {
     PoStartNextPowerIrp(Irp);
     return WvlIrpComplete(Irp, 0, STATUS_NOT_SUPPORTED);
@@ -70,7 +70,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlDiskPower(
 WVL_M_LIB NTSTATUS STDCALL WvlDiskSysCtl(
     IN PDEVICE_OBJECT DevObj,
     IN PIRP Irp,
-    IN WV_SP_DISK_T Disk
+    IN WVL_SP_DISK_T Disk
   ) {
     return WvlIrpComplete(Irp, 0, Irp->IoStatus.Status);
   }
@@ -219,7 +219,7 @@ typedef struct WVL_DISK_FAT_SUPER_
  */
 WVL_M_LIB VOID WvlDiskGuessGeometry(
     IN WVL_AP_DISK_BOOT_SECT BootSect,
-    IN OUT WV_SP_DISK_T Disk
+    IN OUT WVL_SP_DISK_T Disk
   ) {
     UINT16 heads = 0, sects_per_track = 0, cylinders;
     WVL_SP_DISK_MBR as_mbr;
@@ -320,14 +320,14 @@ WVL_M_LIB VOID WvlDiskGuessGeometry(
  *
  * @v Disk              The disk to initialize.
  */
-WVL_M_LIB VOID STDCALL WvlDiskInit(IN OUT WV_SP_DISK_T Disk) {
+WVL_M_LIB VOID STDCALL WvlDiskInit(IN OUT WVL_SP_DISK_T Disk) {
     RtlZeroMemory(Disk, sizeof *Disk);
     return;
   }
 
 /* See WVL_F_DISK_IO in the header for details. */
 WVL_M_LIB NTSTATUS STDCALL WvlDiskIo(
-    IN WV_SP_DISK_T Disk,
+    IN WVL_SP_DISK_T Disk,
     IN WVL_E_DISK_IO_MODE Mode,
     IN LONGLONG StartSector,
     IN UINT32 SectorCount,
@@ -348,7 +348,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlDiskIo(
   }
 
 /* See WVL_F_DISK_MAX_XFER_LEN in the header for details. */
-WVL_M_LIB UINT32 WvlDiskMaxXferLen(IN WV_SP_DISK_T Disk) {
+WVL_M_LIB UINT32 WvlDiskMaxXferLen(IN WVL_SP_DISK_T Disk) {
     /* Use the disk operation, if there is one. */
     if (Disk->disk_ops.MaxXferLen)
       return Disk->disk_ops.MaxXferLen(Disk);

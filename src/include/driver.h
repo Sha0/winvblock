@@ -68,7 +68,7 @@ extern NTSTATUS STDCALL WvDiskPnp(IN struct WV_DEV_T *, IN PIRP, IN UCHAR);
 extern NTSTATUS STDCALL WvDiskPnpQueryDevText(
     IN PDEVICE_OBJECT,
     IN PIRP,
-    IN struct WV_DISK_T *
+    IN struct WVL_DISK_T *
   );
 
 /**

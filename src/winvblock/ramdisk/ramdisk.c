@@ -52,7 +52,7 @@ static __inline VOID STDCALL WvRamdiskFastCopy_(
 
 /* RAM disk I/O routine. */
 static NTSTATUS STDCALL WvRamdiskIo_(
-    IN WV_SP_DISK_T disk,
+    IN WVL_SP_DISK_T disk,
     IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,
@@ -103,7 +103,7 @@ static NTSTATUS STDCALL WvRamdiskIo_(
 static NTSTATUS STDCALL WvRamdiskPnpQueryId_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
-    IN WV_SP_DISK_T disk
+    IN WVL_SP_DISK_T disk
   ) {
     static const WCHAR * hw_ids[WvlDiskMediaTypes] = {
         WVL_M_WLIT L"\\RAMFloppyDisk",
@@ -164,7 +164,7 @@ static NTSTATUS STDCALL WvRamdiskPnpQueryId_(
   }
 
 static WVL_F_DISK_UNIT_NUM WvRamdiskUnitNum_;
-static UCHAR STDCALL WvRamdiskUnitNum_(IN WV_SP_DISK_T disk) {
+static UCHAR STDCALL WvRamdiskUnitNum_(IN WVL_SP_DISK_T disk) {
     WV_SP_RAMDISK_T ramdisk = CONTAINING_RECORD(
         disk,
         WV_S_RAMDISK_T,

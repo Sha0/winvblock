@@ -79,7 +79,7 @@ typedef struct AOE_DISK {
     WV_S_DEV_T Dev[1];
     PDEVICE_OBJECT Pdo;
     WVL_S_BUS_NODE BusNode[1];
-    WV_S_DISK_T disk[1];
+    WVL_S_DISK_T disk[1];
     KSPIN_LOCK SpinLock;
     UINT32 MTU;
     UCHAR ClientMac[6];

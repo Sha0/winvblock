@@ -50,7 +50,7 @@
  * @ret NTSTATUS        The status of the SCSI operation.
  */
 typedef NTSTATUS STDCALL WVL_F_DISK_SCSI_(
-    IN WV_SP_DISK_T,
+    IN WVL_SP_DISK_T,
     IN PIRP,
     IN PSCSI_REQUEST_BLOCK,
     IN PCDB,
@@ -142,7 +142,7 @@ typedef struct _DISK_CDB16 DISK_CDB16, * PDISK_CDB16;
 #endif          /* if _WIN32_WINNT <= 0x0600 */
 
 static NTSTATUS STDCALL WvlDiskScsiReadWrite_(
-    IN WV_SP_DISK_T disk,
+    IN WVL_SP_DISK_T disk,
     IN PIRP irp,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
@@ -244,7 +244,7 @@ static NTSTATUS STDCALL WvlDiskScsiReadWrite_(
   }
 
 static NTSTATUS STDCALL WvlDiskScsiVerify_(
-    IN WV_SP_DISK_T disk,
+    IN WVL_SP_DISK_T disk,
     IN PIRP irp,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
@@ -278,7 +278,7 @@ static NTSTATUS STDCALL WvlDiskScsiVerify_(
   }
 
 static NTSTATUS STDCALL WvlDiskScsiReadCapacity_(
-    IN WV_SP_DISK_T disk,
+    IN WVL_SP_DISK_T disk,
     IN PIRP irp,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
@@ -300,7 +300,7 @@ static NTSTATUS STDCALL WvlDiskScsiReadCapacity_(
   }
 
 static NTSTATUS STDCALL WvlDiskScsiReadCapacity16_(
-    IN WV_SP_DISK_T disk,
+    IN WVL_SP_DISK_T disk,
     IN PIRP irp,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
@@ -326,7 +326,7 @@ static NTSTATUS STDCALL WvlDiskScsiReadCapacity16_(
   }
 
 static NTSTATUS STDCALL WvlDiskScsiModeSense_(
-    IN WV_SP_DISK_T disk,
+    IN WVL_SP_DISK_T disk,
     IN PIRP irp,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
@@ -352,7 +352,7 @@ static NTSTATUS STDCALL WvlDiskScsiModeSense_(
   }
 
 static NTSTATUS STDCALL WvlDiskScsiReadToc_(
-    IN WV_SP_DISK_T disk,
+    IN WVL_SP_DISK_T disk,
     IN PIRP irp,
     IN PSCSI_REQUEST_BLOCK srb,
     IN PCDB cdb,
@@ -387,7 +387,7 @@ static NTSTATUS STDCALL WvlDiskScsiReadToc_(
 WVL_M_LIB NTSTATUS STDCALL WvlDiskScsi(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
-    IN WV_SP_DISK_T disk
+    IN WVL_SP_DISK_T disk
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     PSCSI_REQUEST_BLOCK srb = io_stack_loc->Parameters.Scsi.Srb;

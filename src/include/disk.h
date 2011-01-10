@@ -55,12 +55,12 @@ typedef enum WVL_DISK_IO_MODE {
   } WVL_E_DISK_IO_MODE, * WVL_EP_DISK_IO_MODE;
 
 /* Forward declaration. */
-typedef struct WV_DISK_T WV_S_DISK_T, * WV_SP_DISK_T;
+typedef struct WVL_DISK_T WVL_S_DISK_T, * WVL_SP_DISK_T;
 
 typedef NTSTATUS STDCALL WVL_F_DISK_SCSI(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
-    IN WV_SP_DISK_T disk
+    IN WVL_SP_DISK_T disk
   );
 typedef WVL_F_DISK_SCSI * WVL_FP_DISK_SCSI;
 
@@ -75,7 +75,7 @@ typedef WVL_F_DISK_SCSI * WVL_FP_DISK_SCSI;
 typedef NTSTATUS STDCALL WVL_F_DISK_PNP(
     IN PDEVICE_OBJECT,
     IN PIRP,
-    IN WV_SP_DISK_T
+    IN WVL_SP_DISK_T
   );
 typedef WVL_F_DISK_PNP * WVL_FP_DISK_PNP;
 
@@ -91,7 +91,7 @@ typedef WVL_F_DISK_PNP * WVL_FP_DISK_PNP;
  * @ret NTSTATUS        The status of the operation.
  */
 typedef NTSTATUS STDCALL WVL_F_DISK_IO(
-    IN WV_SP_DISK_T,
+    IN WVL_SP_DISK_T,
     IN WVL_E_DISK_IO_MODE,
     IN LONGLONG,
     IN UINT32,
@@ -107,7 +107,7 @@ extern WVL_M_LIB WVL_F_DISK_IO WvlDiskIo;
  * @v disk            The disk being queried.
  * @ret UINT32        The maximum transfer length.
  */
-typedef UINT32 WV_F_DISK_MAX_XFER_LEN(IN WV_SP_DISK_T);
+typedef UINT32 WV_F_DISK_MAX_XFER_LEN(IN WVL_SP_DISK_T);
 typedef WV_F_DISK_MAX_XFER_LEN * WV_FP_DISK_MAX_XFER_LEN;
 extern WVL_M_LIB WV_F_DISK_MAX_XFER_LEN WvlDiskMaxXferLen;
 
@@ -116,7 +116,7 @@ extern WVL_M_LIB WV_F_DISK_MAX_XFER_LEN WvlDiskMaxXferLen;
  *
  * @v disk_ptr        The disk device being closed.
  */
-typedef VOID STDCALL WV_F_DISK_CLOSE(IN WV_SP_DISK_T);
+typedef VOID STDCALL WV_F_DISK_CLOSE(IN WVL_SP_DISK_T);
 typedef WV_F_DISK_CLOSE * WV_FP_DISK_CLOSE;
 
 /**
@@ -125,7 +125,7 @@ typedef WV_F_DISK_CLOSE * WV_FP_DISK_CLOSE;
  * @v disk              The disk whose unit number is fetched.
  * @ret UCHAR           The disk's unit number.
  */
-typedef UCHAR STDCALL WVL_F_DISK_UNIT_NUM(IN WV_SP_DISK_T);
+typedef UCHAR STDCALL WVL_F_DISK_UNIT_NUM(IN WVL_SP_DISK_T);
 typedef WVL_F_DISK_UNIT_NUM * WVL_FP_DISK_UNIT_NUM;
 extern WVL_M_LIB WVL_F_DISK_UNIT_NUM WvlDiskUnitNum;
 
@@ -138,7 +138,7 @@ typedef struct WV_DISK_OPS {
     WVL_FP_DISK_PNP PnpQueryDevText;
   } WV_S_DISK_OPS, * WV_SP_DISK_OPS;
 
-struct WV_DISK_T {
+struct WVL_DISK_T {
     WVL_E_DISK_MEDIA_TYPE Media;
     WV_S_DISK_OPS disk_ops;
     ULONGLONG LBADiskSize;
@@ -155,7 +155,7 @@ struct WV_DISK_T {
   };
 
 /* Yield a pointer to the disk. */
-#define disk__get_ptr(dev_ptr) ((WV_SP_DISK_T) dev_ptr->ext)
+#define disk__get_ptr(dev_ptr) ((WVL_SP_DISK_T) dev_ptr->ext)
 
 /* An MBR C/H/S address and ways to access its components. */
 typedef UCHAR chs[3];
@@ -193,16 +193,16 @@ typedef struct WVL_DISK_MBR WVL_S_DISK_MBR, * WVL_SP_DISK_MBR;
 extern WVL_M_LIB NTSTATUS STDCALL WvlDiskPower(
     IN PDEVICE_OBJECT,
     IN PIRP,
-    IN WV_SP_DISK_T
+    IN WVL_SP_DISK_T
   );
 extern WVL_M_LIB NTSTATUS STDCALL WvlDiskSysCtl(
     IN PDEVICE_OBJECT,
     IN PIRP,
-    IN WV_SP_DISK_T
+    IN WVL_SP_DISK_T
   );
 /* IRP_MJ_DEVICE_CONTROL dispatcher from libdisk/dev_ctl.c */
 extern WVL_M_LIB NTSTATUS STDCALL WvlDiskDevCtl(
-    IN WV_SP_DISK_T,
+    IN WVL_SP_DISK_T,
     IN PIRP,
     IN ULONG POINTER_ALIGNMENT
   );
@@ -220,9 +220,9 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlDiskCreatePdo(
   );
 extern WVL_M_LIB VOID WvlDiskGuessGeometry(
     IN WVL_AP_DISK_BOOT_SECT,
-    IN OUT WV_SP_DISK_T
+    IN OUT WVL_SP_DISK_T
   );
-extern WVL_M_LIB VOID STDCALL WvlDiskInit(IN OUT WV_SP_DISK_T);
+extern WVL_M_LIB VOID STDCALL WvlDiskInit(IN OUT WVL_SP_DISK_T);
 /* Objects. */
 extern WVL_M_LIB BOOLEAN WvlDiskIsRemovable[WvlDiskMediaTypes];
 extern WVL_M_LIB PWCHAR WvlDiskCompatIds[WvlDiskMediaTypes];

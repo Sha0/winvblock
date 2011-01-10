@@ -47,7 +47,7 @@ static WVL_F_DISK_IO WvFilediskThreadedIo_;
 static WV_F_DEV_CLOSE WvFilediskClose_;
 
 static NTSTATUS STDCALL WvFilediskIo_(
-    IN WV_SP_DISK_T disk_ptr,
+    IN WVL_SP_DISK_T disk_ptr,
     IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,
@@ -110,7 +110,7 @@ static NTSTATUS STDCALL WvFilediskIo_(
 static NTSTATUS STDCALL WvFilediskPnpQueryId_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
-    IN WV_SP_DISK_T disk
+    IN WVL_SP_DISK_T disk
   ) {
     static const WCHAR * hw_ids[WvlDiskMediaTypes] = {
         WVL_M_WLIT L"\\FileFloppyDisk",
@@ -310,7 +310,7 @@ static VOID STDCALL WvFilediskClose_(IN WV_SP_DEV_T dev) {
   }
 
 static WVL_F_DISK_UNIT_NUM WvFilediskUnitNum_;
-static UCHAR STDCALL WvFilediskUnitNum_(IN WV_SP_DISK_T disk) {
+static UCHAR STDCALL WvFilediskUnitNum_(IN WVL_SP_DISK_T disk) {
     WV_SP_FILEDISK_T filedisk = CONTAINING_RECORD(
         disk,
         WV_S_FILEDISK_T,
@@ -458,7 +458,7 @@ static VOID STDCALL thread(IN PVOID StartContext) {
   }
 
 static NTSTATUS STDCALL WvFilediskThreadedIo_(
-    IN WV_SP_DISK_T disk,
+    IN WVL_SP_DISK_T disk,
     IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,

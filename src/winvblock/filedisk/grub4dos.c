@@ -124,7 +124,7 @@ static NTSTATUS STDCALL check_disk_match(
  * backing disk late(r) during the boot process.
  */
 static NTSTATUS STDCALL WvFilediskG4dIo_(
-    IN WV_SP_DISK_T disk,
+    IN WVL_SP_DISK_T disk,
     IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,

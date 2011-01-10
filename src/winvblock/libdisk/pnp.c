@@ -48,7 +48,7 @@ static WVL_F_DISK_PNP WvlDiskPnpSimple_;
 static NTSTATUS STDCALL WvlDiskPnpQueryDevRelations_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
-    WV_SP_DISK_T disk
+    WVL_SP_DISK_T disk
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
@@ -98,7 +98,7 @@ DEFINE_GUID(
 static NTSTATUS STDCALL WvlDiskPnpQueryBusInfo_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
-    WV_SP_DISK_T disk
+    WVL_SP_DISK_T disk
   ) {
     PPNP_BUS_INFORMATION pnp_bus_info;
     NTSTATUS status;
@@ -130,7 +130,7 @@ extern NTSTATUS STDCALL WvDriverGetDevCapabilities(
 static NTSTATUS STDCALL WvlDiskPnpQueryCapabilities_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
-    WV_SP_DISK_T disk
+    WVL_SP_DISK_T disk
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     PDEVICE_CAPABILITIES DeviceCapabilities =
@@ -194,7 +194,7 @@ static NTSTATUS STDCALL WvlDiskPnpQueryCapabilities_(
 static NTSTATUS STDCALL WvlDiskPnpSimple_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
-    WV_SP_DISK_T disk
+    WVL_SP_DISK_T disk
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
@@ -290,7 +290,7 @@ static NTSTATUS STDCALL WvlDiskPnpSimple_(
 WVL_M_LIB NTSTATUS STDCALL WvlDiskPnp(
     IN PDEVICE_OBJECT DevObj,
     IN PIRP Irp,
-    WV_SP_DISK_T Disk
+    WVL_SP_DISK_T Disk
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(Irp);
 

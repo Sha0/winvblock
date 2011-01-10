@@ -488,7 +488,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK aoe_disk) {
     KIRQL Irql, InnerIrql;
     LARGE_INTEGER MaxSectorsPerPacketSendTime;
     UINT32 MTU;
-    WV_SP_DISK_T disk_ptr = aoe_disk->disk;
+    WVL_SP_DISK_T disk_ptr = aoe_disk->disk;
 
     /* Allocate our disk search. */
     if ((disk_searcher = wv_malloc(sizeof *disk_searcher)) == NULL) {
@@ -752,7 +752,7 @@ static BOOLEAN STDCALL AoeDiskInit_(IN AOE_SP_DISK aoe_disk) {
   }
 
 static NTSTATUS STDCALL AoeDiskIo_(
-    IN WV_SP_DISK_T disk_ptr,
+    IN WVL_SP_DISK_T disk_ptr,
     IN WVL_E_DISK_IO_MODE mode,
     IN LONGLONG start_sector,
     IN UINT32 sector_count,
@@ -1001,7 +1001,7 @@ NTSTATUS STDCALL aoe__reply(
     KIRQL Irql;
     BOOLEAN Found = FALSE;
     LARGE_INTEGER CurrentTime;
-    WV_SP_DISK_T disk_ptr;
+    WVL_SP_DISK_T disk_ptr;
     AOE_SP_DISK aoe_disk_ptr;
 
     /* Discard non-responses. */
@@ -1220,7 +1220,7 @@ static VOID STDCALL AoeThread_(IN PVOID StartContext) {
     UINT32 ResendFails = 0;
     UINT32 Fails = 0;
     UINT32 RequestTimeout = 0;
-    WV_SP_DISK_T disk_ptr;
+    WVL_SP_DISK_T disk_ptr;
     AOE_SP_DISK aoe_disk_ptr;
 
     DBG("Entry\n");
@@ -1363,7 +1363,7 @@ static VOID STDCALL AoeThread_(IN PVOID StartContext) {
     DBG("Exit\n");
   }
 
-static UINT32 AoeDiskMaxXferLen_(IN WV_SP_DISK_T disk) {
+static UINT32 AoeDiskMaxXferLen_(IN WVL_SP_DISK_T disk) {
     AOE_SP_DISK aoe_disk = CONTAINING_RECORD(
         disk,
         AOE_S_DISK,
@@ -1376,7 +1376,7 @@ static UINT32 AoeDiskMaxXferLen_(IN WV_SP_DISK_T disk) {
 static NTSTATUS STDCALL AoeDiskPnpQueryId_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
-    IN WV_SP_DISK_T disk
+    IN WVL_SP_DISK_T disk
   ) {
     WCHAR (*buf)[512];
     NTSTATUS status;
@@ -1437,7 +1437,7 @@ static NTSTATUS STDCALL AoeDiskPnpQueryId_(
 NTSTATUS STDCALL AoeDiskPnpQueryDevText_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
-    IN WV_SP_DISK_T disk
+    IN WVL_SP_DISK_T disk
   ) {
     IN WV_SP_DEV_T dev = WvDevFromDevObj(dev_obj);
     WCHAR (*str)[512];
@@ -1513,7 +1513,7 @@ typedef struct AOE_ABFT AOE_S_ABFT, * AOE_SP_ABFT;
 #  pragma pack()
 #endif
 
-static VOID STDCALL AoeDiskClose_(IN WV_SP_DISK_T disk_ptr) {
+static VOID STDCALL AoeDiskClose_(IN WVL_SP_DISK_T disk_ptr) {
     return;
   }
 
@@ -2008,7 +2008,7 @@ static NTSTATUS AoeIrpPnp_(
     return WvlDiskPnp(dev_obj, irp, aoe_disk->disk);
   }
 
-static UCHAR STDCALL AoeDiskUnitNum_(IN WV_SP_DISK_T disk) {
+static UCHAR STDCALL AoeDiskUnitNum_(IN WVL_SP_DISK_T disk) {
     AOE_SP_DISK aoe_disk = CONTAINING_RECORD(
         disk,
         AOE_S_DISK,

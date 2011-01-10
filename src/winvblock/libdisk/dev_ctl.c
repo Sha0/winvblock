@@ -44,7 +44,7 @@
 #include "debug.h"
 
 static NTSTATUS STDCALL WvlDiskDevCtlStorageQueryProp_(
-    IN WV_SP_DISK_T disk,
+    IN WVL_SP_DISK_T disk,
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
@@ -129,7 +129,7 @@ static NTSTATUS STDCALL WvlDiskDevCtlStorageQueryProp_(
   }
 
 static NTSTATUS STDCALL WvlDiskDevCtlGetGeom_(
-    IN WV_SP_DISK_T disk,
+    IN WVL_SP_DISK_T disk,
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
@@ -156,7 +156,7 @@ static NTSTATUS STDCALL WvlDiskDevCtlGetGeom_(
   }
 
 static NTSTATUS STDCALL WvlDiskDevCtlScsiGetAddr_(
-    IN WV_SP_DISK_T disk,
+    IN WVL_SP_DISK_T disk,
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc= IoGetCurrentIrpStackLocation(irp);
@@ -191,7 +191,7 @@ static NTSTATUS STDCALL WvlDiskDevCtlScsiGetAddr_(
  * @ret NTSTATUS        The status of the operation.
  */
 WVL_M_LIB NTSTATUS STDCALL WvlDiskDevCtl(
-    IN WV_SP_DISK_T Disk,
+    IN WVL_SP_DISK_T Disk,
     IN PIRP Irp,
     IN ULONG POINTER_ALIGNMENT Code
   ) {
