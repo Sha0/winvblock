@@ -32,10 +32,36 @@
 #include "winvblock.h"
 #include "wv_stdlib.h"
 #include "irp.h"
+#include "driver.h"
 #include "bus.h"
 #include "device.h"
 #include "disk.h"
 #include "debug.h"
+
+/** Private declarations. */
+static WV_F_DEV_FREE WvDiskDevFree_;
+
+/* Device IRP major function dispatch table. */
+static WV_S_DEV_IRP_MJ WvDiskIrpMj_ = {
+    WvDiskPower,
+    WvDiskSysCtl,
+    WvDiskDevCtl,
+    WvDiskScsi,
+    WvDiskPnp,
+  };
+
+/** Exports. */
+NTSTATUS STDCALL WvDiskPower(IN WV_SP_DEV_T dev, IN PIRP irp) {
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
+
+    return WvlDiskPower(dev->Self, irp, disk);
+  }
+
+NTSTATUS STDCALL WvDiskSysCtl(IN WV_SP_DEV_T dev, IN PIRP irp) {
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
+
+    return WvlDiskSysCtl(dev->Self, irp, disk);
+  }
 
 NTSTATUS STDCALL WvDiskDevCtl(
     IN WV_SP_DEV_T dev,
@@ -124,4 +150,17 @@ NTSTATUS STDCALL WvDiskPnpQueryDevText(
     alloc_str:
 
     return WvlIrpComplete(irp, irp->IoStatus.Information, status);
+  }
+
+/** Private. */
+
+/**
+ * Default disk deletion operation.
+ *
+ * @v dev               Points to the disk device to delete.
+ */
+static VOID STDCALL WvDiskDevFree_(IN WV_SP_DEV_T dev) {
+    WV_SP_DISK_T disk = disk__get_ptr(dev);
+
+    wv_free(disk);
   }

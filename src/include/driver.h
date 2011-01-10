@@ -46,13 +46,18 @@ typedef struct WV_DEV_EXT {
     struct WV_DEV_T * device;
   } WV_S_DEV_EXT, * WV_SP_DEV_EXT;
 
-extern BOOLEAN STDCALL WvBusAddDev(IN WV_SP_DEV_T);
+/* Haven't found a better place for this, yet. */
 extern NTSTATUS STDCALL WvDriverGetDevCapabilities(
     IN PDEVICE_OBJECT,
     IN PDEVICE_CAPABILITIES
   );
 
+/* From bus.c */
+extern WVL_M_LIB PDEVICE_OBJECT WvBusFdo(void);
+extern BOOLEAN STDCALL WvBusAddDev(IN WV_SP_DEV_T);
 /* From disk.c */
+extern NTSTATUS STDCALL WvDiskPower(IN struct WV_DEV_T *, IN PIRP);
+extern NTSTATUS STDCALL WvDiskSysCtl(IN struct WV_DEV_T *, IN PIRP);
 extern NTSTATUS STDCALL WvDiskDevCtl(
     IN struct WV_DEV_T *,
     IN PIRP,
@@ -65,9 +70,6 @@ extern NTSTATUS STDCALL WvDiskPnpQueryDevText(
     IN PIRP,
     IN struct WV_DISK_T *
   );
-
-/* From bus.c */
-extern WVL_M_LIB PDEVICE_OBJECT WvBusFdo(void);
 
 /**
  * Miscellaneous: Grouped memory allocation functions.

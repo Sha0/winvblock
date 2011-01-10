@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef WV_M_DISK_H_
-#  define WV_M_DISK_H_
+#ifndef WVL_M_DISK_H_
+#  define WVL_M_DISK_H_
 
 /**
  * @file
@@ -47,9 +47,6 @@ typedef enum WVL_DISK_STATE {
 
 typedef char WVL_A_DISK_BOOT_SECT[512];
 typedef WVL_A_DISK_BOOT_SECT * WVL_AP_DISK_BOOT_SECT;
-
-extern BOOLEAN WvDiskIsRemovable[WvlDiskMediaTypes];
-extern PWCHAR WvDiskCompatIds[WvlDiskMediaTypes];
 
 typedef enum WVL_DISK_IO_MODE {
     WvlDiskIoModeRead,
@@ -83,7 +80,7 @@ typedef NTSTATUS STDCALL WVL_F_DISK_PNP(
 typedef WVL_F_DISK_PNP * WVL_FP_DISK_PNP;
 
 /**
- * I/O Request.
+ * Disk I/O routine.
  *
  * @v disk              Points to the disk's structure.
  * @v mode              Read/write mode.
@@ -91,6 +88,7 @@ typedef WVL_F_DISK_PNP * WVL_FP_DISK_PNP;
  * @v sector_count      Number of sectors to work with.
  * @v buffer            Buffer to read/write sectors to/from.
  * @v irp               Interrupt request packet for this request.
+ * @ret NTSTATUS        The status of the operation.
  */
 typedef NTSTATUS STDCALL WVL_F_DISK_IO(
     IN WV_SP_DISK_T,
@@ -101,24 +99,17 @@ typedef NTSTATUS STDCALL WVL_F_DISK_IO(
     IN PIRP
   );
 typedef WVL_F_DISK_IO * WVL_FP_DISK_IO;
+extern WVL_M_LIB WVL_F_DISK_IO WvlDiskIo;
 
 /**
  * Maximum transfer length response routine.
  *
- * @v disk_ptr        The disk being queried.
+ * @v disk            The disk being queried.
  * @ret UINT32        The maximum transfer length.
  */
 typedef UINT32 WV_F_DISK_MAX_XFER_LEN(IN WV_SP_DISK_T);
 typedef WV_F_DISK_MAX_XFER_LEN * WV_FP_DISK_MAX_XFER_LEN;
-
-/**
- * Disk initialization routine.
- *
- * @v disk_ptr        The disk device being initialized.
- * @ret BOOLEAN       FALSE if initialization failed, otherwise TRUE
- */
-typedef BOOLEAN STDCALL WV_F_DISK_INIT(IN WV_SP_DISK_T);
-typedef WV_F_DISK_INIT * WV_FP_DISK_INIT;
+extern WVL_M_LIB WV_F_DISK_MAX_XFER_LEN WvlDiskMaxXferLen;
 
 /**
  * Disk close routine.
@@ -199,41 +190,42 @@ typedef struct WVL_DISK_MBR WVL_S_DISK_MBR, * WVL_SP_DISK_MBR;
 #  pragma pack()
 #endif
 
-extern WVL_M_LIB WVL_F_DISK_IO WvlDiskIo;
-extern WV_F_DISK_MAX_XFER_LEN disk__max_xfer_len;
-
-/**
- * Attempt to guess a disk's geometry.
- *
- * @v boot_sect_ptr     The MBR or VBR with possible geometry clues.
- * @v disk_ptr          The disk to set the geometry for.
- */
-extern WVL_M_LIB VOID disk__guess_geometry(
-    IN WVL_AP_DISK_BOOT_SECT,
-    IN OUT WV_SP_DISK_T disk_ptr
+/** IRP-related. */
+extern WVL_M_LIB NTSTATUS STDCALL WvlDiskPower(
+    IN PDEVICE_OBJECT,
+    IN PIRP,
+    IN WV_SP_DISK_T
   );
+extern WVL_M_LIB NTSTATUS STDCALL WvlDiskSysCtl(
+    IN PDEVICE_OBJECT,
+    IN PIRP,
+    IN WV_SP_DISK_T
+  );
+/* IRP_MJ_DEVICE_CONTROL dispatcher from libdisk/dev_ctl.c */
+extern WVL_M_LIB NTSTATUS STDCALL WvlDiskDevCtl(
+    IN WV_SP_DISK_T,
+    IN PIRP,
+    IN ULONG POINTER_ALIGNMENT
+  );
+/* IRP_MJ_SCSI dispatcher from libdisk/scsi.c */
+extern WVL_M_LIB WVL_F_DISK_SCSI WvlDiskScsi;
+/* IRP_MJ_PNP dispatcher from libdisk/pnp.c */
+extern WVL_M_LIB WVL_F_DISK_PNP WvlDiskPnp;
 
+/** General. */
 extern WVL_M_LIB NTSTATUS STDCALL WvlDiskCreatePdo(
     IN PDRIVER_OBJECT,
     IN SIZE_T,
     IN WVL_E_DISK_MEDIA_TYPE,
     OUT PDEVICE_OBJECT *
   );
-extern WVL_M_LIB VOID STDCALL WvDiskInit(IN WV_SP_DISK_T);
-
-/* IRP-related. */
-extern WVL_M_LIB WV_F_DEV_DISPATCH WvDiskIrpPower;
-extern WVL_M_LIB WV_F_DEV_DISPATCH WvDiskIrpSysCtl;
-/* IRP_MJ_DEVICE_CONTROL dispatcher from disk/dev_ctl.c */
-extern WVL_M_LIB NTSTATUS STDCALL WvlDiskDevCtl(
-    IN WV_SP_DISK_T,
-    IN PIRP,
-    IN ULONG POINTER_ALIGNMENT
+extern WVL_M_LIB VOID WvlDiskGuessGeometry(
+    IN WVL_AP_DISK_BOOT_SECT,
+    IN OUT WV_SP_DISK_T
   );
-/* IRP_MJ_SCSI dispatcher from disk/scsi.c */
-extern WVL_M_LIB WVL_F_DISK_SCSI WvlDiskScsi;
-/* IRP_MJ_PNP dispatcher from disk/pnp.c */
-extern WVL_M_LIB WVL_F_DISK_PNP WvlDiskPnp;
+extern WVL_M_LIB VOID STDCALL WvlDiskInit(IN OUT WV_SP_DISK_T);
+/* Objects. */
+extern WVL_M_LIB BOOLEAN WvlDiskIsRemovable[WvlDiskMediaTypes];
+extern WVL_M_LIB PWCHAR WvlDiskCompatIds[WvlDiskMediaTypes];
 
-
-#endif  /* WV_M_DISK_H_ */
+#endif  /* WVL_M_DISK_H_ */

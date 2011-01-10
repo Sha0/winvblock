@@ -177,7 +177,7 @@ static NTSTATUS STDCALL WvlDiskPnpQueryCapabilities_(
     DeviceCapabilities->D3Latency = 0;
     DeviceCapabilities->EjectSupported = FALSE;
     DeviceCapabilities->HardwareDisabled = FALSE;
-    DeviceCapabilities->Removable = WvDiskIsRemovable[disk->Media];
+    DeviceCapabilities->Removable = WvlDiskIsRemovable[disk->Media];
     DeviceCapabilities->SurpriseRemovalOK = FALSE;
     DeviceCapabilities->UniqueID = FALSE;
     DeviceCapabilities->SilentInstall = FALSE;

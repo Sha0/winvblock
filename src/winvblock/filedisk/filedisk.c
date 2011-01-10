@@ -100,7 +100,7 @@ static NTSTATUS STDCALL WvFilediskIo_(
           );
       }
     if (!start_sector)
-      disk__guess_geometry((WVL_AP_DISK_BOOT_SECT) buffer, disk_ptr);
+      WvlDiskGuessGeometry((WVL_AP_DISK_BOOT_SECT) buffer, disk_ptr);
     irp->IoStatus.Information = sector_count * disk_ptr->SectorSize;
     irp->IoStatus.Status = status;
     IoCompleteRequest(irp, IO_NO_INCREMENT);
@@ -144,12 +144,12 @@ static NTSTATUS STDCALL WvFilediskPnpQueryId_(
         case BusQueryHardwareIDs:
           swprintf(
               *buf + swprintf(*buf, hw_ids[disk->Media]) + 1,
-              WvDiskCompatIds[disk->Media]
+              WvlDiskCompatIds[disk->Media]
             );
           break;
 
         case BusQueryCompatibleIDs:
-          swprintf(*buf, WvDiskCompatIds[disk->Media]);
+          swprintf(*buf, WvlDiskCompatIds[disk->Media]);
 
         default:
           DBG("Unknown query type %d for %p!\n", query_type, filedisk);
@@ -333,8 +333,8 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
     IN WVL_E_DISK_MEDIA_TYPE MediaType
   ) {
     static WV_S_DEV_IRP_MJ irp_mj = {
-        WvDiskIrpPower,
-        WvDiskIrpSysCtl,
+        WvDiskPower,
+        WvDiskSysCtl,
         WvDiskDevCtl,
         WvDiskScsi,
         WvDiskPnp,
@@ -359,7 +359,7 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
 
     filedisk = pdo->DeviceExtension;
     RtlZeroMemory(filedisk, sizeof *filedisk);
-    WvDiskInit(filedisk->disk);
+    WvlDiskInit(filedisk->disk);
     WvDevInit(filedisk->Dev);
     filedisk->Dev->Ops.Free = WvFilediskFree_;
     filedisk->Dev->Ops.Close = WvFilediskClose_;

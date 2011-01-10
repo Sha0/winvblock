@@ -138,12 +138,12 @@ static NTSTATUS STDCALL WvRamdiskPnpQueryId_(
         case BusQueryHardwareIDs:
           swprintf(
               *buf + swprintf(*buf, hw_ids[disk->Media]) + 1,
-              WvDiskCompatIds[disk->Media]
+              WvlDiskCompatIds[disk->Media]
             );
           break;
 
         case BusQueryCompatibleIDs:
-          swprintf(*buf, WvDiskCompatIds[disk->Media]);
+          swprintf(*buf, WvlDiskCompatIds[disk->Media]);
           break;
 
         default:
@@ -187,8 +187,8 @@ WV_SP_RAMDISK_T STDCALL WvRamdiskCreatePdo(
     IN WVL_E_DISK_MEDIA_TYPE MediaType
   ) {
     static WV_S_DEV_IRP_MJ irp_mj = {
-        WvDiskIrpPower,
-        WvDiskIrpSysCtl,
+        WvDiskPower,
+        WvDiskSysCtl,
         WvDiskDevCtl,
         WvDiskScsi,
         WvDiskPnp,
@@ -213,7 +213,7 @@ WV_SP_RAMDISK_T STDCALL WvRamdiskCreatePdo(
 
     ramdisk = pdo->DeviceExtension;
     RtlZeroMemory(ramdisk, sizeof *ramdisk);
-    WvDiskInit(ramdisk->disk);
+    WvlDiskInit(ramdisk->disk);
     WvDevInit(ramdisk->Dev);
     ramdisk->Dev->Ops.Free = WvRamdiskFree_;
     ramdisk->Dev->ext = ramdisk->disk;

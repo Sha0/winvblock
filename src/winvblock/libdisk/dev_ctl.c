@@ -67,7 +67,7 @@ static NTSTATUS STDCALL WvlDiskDevCtlStorageQueryProp_(
         storage_adapter_desc.Version = sizeof (STORAGE_ADAPTER_DESCRIPTOR);
         storage_adapter_desc.Size = sizeof (STORAGE_ADAPTER_DESCRIPTOR);
         storage_adapter_desc.MaximumTransferLength =
-          disk__max_xfer_len(disk);
+          WvlDiskMaxXferLen(disk);
         #if 0
         storage_adapter_desc.MaximumTransferLength = SECTORSIZE * POOLSIZE;
         #endif
@@ -100,7 +100,7 @@ static NTSTATUS STDCALL WvlDiskDevCtlStorageQueryProp_(
         storage_dev_desc.Size = sizeof (STORAGE_DEVICE_DESCRIPTOR);
         storage_dev_desc.DeviceType = DIRECT_ACCESS_DEVICE;
         storage_dev_desc.DeviceTypeModifier = 0;
-        storage_dev_desc.RemovableMedia = WvDiskIsRemovable[disk->Media];
+        storage_dev_desc.RemovableMedia = WvlDiskIsRemovable[disk->Media];
         storage_dev_desc.CommandQueueing = FALSE;
         storage_dev_desc.VendorIdOffset = 0;
         storage_dev_desc.ProductIdOffset = 0;

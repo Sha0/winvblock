@@ -44,61 +44,36 @@ static long long __divdi3(long long u, long long v) {
 #endif
 
 /** Exports. */
-BOOLEAN WvDiskIsRemovable[WvlDiskMediaTypes] = { TRUE, FALSE, TRUE };
-PWCHAR WvDiskCompatIds[WvlDiskMediaTypes] = {
+WVL_M_LIB BOOLEAN WvlDiskIsRemovable[WvlDiskMediaTypes] = {TRUE, FALSE, TRUE};
+WVL_M_LIB PWCHAR WvlDiskCompatIds[WvlDiskMediaTypes] = {
     L"GenSFloppy",
     L"GenDisk",
     L"GenCdRom"
   };
 
-/** Private. */
-static WV_F_DEV_FREE WvDiskDevFree_;
-static WV_F_DISK_CLOSE WvDiskDefaultClose_;
-
-/* Device IRP major function dispatch table. */
-static WV_S_DEV_IRP_MJ WvDiskIrpMj_ = {
-    WvDiskIrpPower,
-    WvDiskIrpSysCtl,
-    WvDiskDevCtl,
-    WvDiskScsi,
-    WvDiskPnp,
-  };
-
-WVL_M_LIB UCHAR STDCALL WvlDiskUnitNum(IN WV_SP_DISK_T disk) {
-    return disk->disk_ops.UnitNum ? disk->disk_ops.UnitNum(disk) : 0;
+/* Fetch a disk's unit number.  Defaults to 0. */
+WVL_M_LIB UCHAR STDCALL WvlDiskUnitNum(IN WV_SP_DISK_T Disk) {
+    return Disk->disk_ops.UnitNum ? Disk->disk_ops.UnitNum(Disk) : 0;
   }
 
-static UINT32 WvDiskDefaultMaxXferLen_(IN WV_SP_DISK_T disk) {
-    return 1024 * 1024;
+/* Handle an IRP_MJ_POWER IRP. */
+WVL_M_LIB NTSTATUS STDCALL WvlDiskPower(
+    IN PDEVICE_OBJECT DevObj,
+    IN PIRP Irp,
+    IN WV_SP_DISK_T Disk
+  ) {
+    PoStartNextPowerIrp(Irp);
+    return WvlIrpComplete(Irp, 0, STATUS_NOT_SUPPORTED);
   }
 
-/* Initialize a disk. */
-static BOOLEAN STDCALL WvDiskDevInit_(IN WV_SP_DEV_T dev) {
-    return TRUE;
+/* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
+WVL_M_LIB NTSTATUS STDCALL WvlDiskSysCtl(
+    IN PDEVICE_OBJECT DevObj,
+    IN PIRP Irp,
+    IN WV_SP_DISK_T Disk
+  ) {
+    return WvlIrpComplete(Irp, 0, Irp->IoStatus.Status);
   }
-
-static VOID STDCALL WvDiskDevClose_(IN WV_SP_DEV_T dev) {
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
-
-    /* Use the disk operation, if there is one. */
-    if (disk->disk_ops.Close)
-      disk->disk_ops.Close(disk);
-    return;
-  }
-
-static VOID STDCALL WvDiskDefaultClose_(IN WV_SP_DISK_T disk) {
-    return;
-  }
-
-WVL_M_LIB NTSTATUS STDCALL WvDiskIrpPower(IN WV_SP_DEV_T dev, IN PIRP irp) {
-    PoStartNextPowerIrp(irp);
-    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
-  }
-
-WVL_M_LIB NTSTATUS STDCALL WvDiskIrpSysCtl(IN WV_SP_DEV_T dev, IN PIRP irp) {
-    return WvlIrpComplete(irp, 0, irp->IoStatus.Status);
-  }
-
 
 /**
  * Create a disk PDO.
@@ -115,8 +90,11 @@ WVL_M_LIB NTSTATUS STDCALL WvlDiskCreatePdo(
     OUT PDEVICE_OBJECT * Pdo
   ) {
     /* Floppy, hard disk, optical disc specifics. */
-    static const DEVICE_TYPE disk_types[WvlDiskMediaTypes] =
-      { FILE_DEVICE_DISK, FILE_DEVICE_DISK, FILE_DEVICE_CD_ROM };
+    static const DEVICE_TYPE disk_types[WvlDiskMediaTypes] = {
+        FILE_DEVICE_DISK,
+        FILE_DEVICE_DISK,
+        FILE_DEVICE_CD_ROM
+      };
     static const UINT32 characteristics[WvlDiskMediaTypes] = {
         FILE_REMOVABLE_MEDIA | FILE_FLOPPY_DISKETTE,
         0,
@@ -178,60 +156,15 @@ WVL_M_LIB NTSTATUS STDCALL WvlDiskCreatePdo(
     return status;
   }
 
-/**
- * Create a disk PDO filled with the given disk parameters.
- *
- * @v dev_ptr           Populate PDO dev. ext. space from these details.
- * @ret dev_obj_ptr     Points to the new PDO, or is NULL upon failure.
- *
- * Returns a Physical Device Object pointer on success, NULL for failure.
- */
-static PDEVICE_OBJECT STDCALL WvDiskCreatePdo_(IN WV_SP_DEV_T dev_ptr) {
-    /* Used for pointing to disk details. */
-    WV_SP_DISK_T disk_ptr;
-    /* Status of the last operation. */
-    NTSTATUS status;
-    /* The new node's physical device object (PDO). */
-    PDEVICE_OBJECT dev_obj_ptr;
-  
-    DBG("Creating PDO for dev %p...\n", dev_ptr);
-
-    /* Point to the disk details provided. */
-    disk_ptr = disk__get_ptr(dev_ptr);
-
-    /* Create the disk PDO. */
-    status = WvlDiskCreatePdo(
-        disk_ptr->DriverObj,
-        sizeof (WV_S_DEV_EXT),
-        disk_ptr->Media,
-        &dev_obj_ptr
-      );
-    if (!NT_SUCCESS(status)) {
-        WvlError("WvlDiskCreatePdo", status);
-        return NULL;
-      }
-
-    /* Set associations for the PDO, device, disk. */
-    WvDevForDevObj(dev_obj_ptr, dev_ptr);
-    dev_ptr->Self = dev_obj_ptr;
-
-    /* Some device parameters. */
-    dev_obj_ptr->Flags |= DO_DIRECT_IO;         /* FIXME? */
-    dev_obj_ptr->Flags |= DO_POWER_INRUSH;      /* FIXME? */
-
-    DBG("Done.\n");
-    return dev_obj_ptr;
-  }
-
 /*
- * WV_S_DISK_FAT_EXTRA and WV_S_DISK_FAT_SUPER taken from
+ * WVL_S_DISK_FAT_EXTRA and WVL_S_DISK_FAT_SUPER taken from
  * syslinux/memdisk/setup.c by H. Peter Anvin.  Licensed under the terms
  * of the GNU General Public License version 2 or later.
  */
 #ifdef _MSC_VER
 #  pragma pack(1)
 #endif
-struct WV_DISK_FAT_EXTRA {
+struct WVL_DISK_FAT_EXTRA_ {
     UCHAR bs_drvnum;
     UCHAR bs_resv1;
     UCHAR bs_bootsig;
@@ -239,9 +172,10 @@ struct WV_DISK_FAT_EXTRA {
     char bs_vollab[11];
     char bs_filsystype[8];
   } __attribute__((packed));
-typedef struct WV_DISK_FAT_EXTRA WV_S_DISK_FAT_EXTRA, * WV_SP_DISK_FAT_EXTRA;
+typedef struct WVL_DISK_FAT_EXTRA_
+  WVL_S_DISK_FAT_EXTRA_, * WVL_SP_DISK_FAT_EXTRA_;
 
-struct WV_DISK_FAT_SUPER {
+struct WVL_DISK_FAT_SUPER_ {
     UCHAR bs_jmpboot[3];
     char bs_oemname[8];
     UINT16 bpb_bytspersec;
@@ -257,7 +191,7 @@ struct WV_DISK_FAT_SUPER {
     UINT32 bpb_hiddsec;
     UINT32 bpb_totsec32;
     union {
-        struct { WV_S_DISK_FAT_EXTRA extra; } fat16;
+        struct { WVL_S_DISK_FAT_EXTRA_ extra; } fat16;
         struct {
             UINT32 bpb_fatsz32;
             UINT16 bpb_extflags;
@@ -267,11 +201,12 @@ struct WV_DISK_FAT_SUPER {
             UINT16 bpb_bkbootsec;
             char bpb_reserved[12];
             /* Clever, eh?  Same fields, different offset... */
-            WV_S_DISK_FAT_EXTRA extra;
+            WVL_S_DISK_FAT_EXTRA_ extra;
           } fat32 __attribute__((packed));
       } x;
   } __attribute__((__packed__));
-typedef struct WV_DISK_FAT_SUPER WV_S_DISK_FAT_SUPER, * WV_SP_DISK_FAT_SUPER;
+typedef struct WVL_DISK_FAT_SUPER_
+  WVL_S_DISK_FAT_SUPER_, * WVL_SP_DISK_FAT_SUPER_;
 #ifdef _MSC_VER
 #  pragma pack()
 #endif
@@ -279,17 +214,17 @@ typedef struct WV_DISK_FAT_SUPER WV_S_DISK_FAT_SUPER, * WV_SP_DISK_FAT_SUPER;
 /**
  * Attempt to guess a disk's geometry.
  *
- * @v boot_sect_ptr     The MBR or VBR with possible geometry clues.
- * @v disk_ptr          The disk to set the geometry for.
+ * @v BootSect          The MBR or VBR with possible geometry clues.
+ * @v Disk              The disk to set the geometry for.
  */
-WVL_M_LIB VOID disk__guess_geometry(
-    IN WVL_AP_DISK_BOOT_SECT boot_sect_ptr,
-    IN OUT WV_SP_DISK_T disk_ptr
+WVL_M_LIB VOID WvlDiskGuessGeometry(
+    IN WVL_AP_DISK_BOOT_SECT BootSect,
+    IN OUT WV_SP_DISK_T Disk
   ) {
     UINT16 heads = 0, sects_per_track = 0, cylinders;
     WVL_SP_DISK_MBR as_mbr;
 
-    if ((boot_sect_ptr == NULL) || (disk_ptr == NULL))
+    if ((BootSect == NULL) || (Disk == NULL))
       return;
 
     /*
@@ -303,8 +238,8 @@ WVL_M_LIB VOID disk__guess_geometry(
          * enough like one, use geometry from that.  This takes care of
          * megafloppy images and unpartitioned hard disks. 
          */
-        WV_SP_DISK_FAT_EXTRA extra = NULL;
-        WV_SP_DISK_FAT_SUPER fs = (WV_SP_DISK_FAT_SUPER) boot_sect_ptr;
+        WVL_SP_DISK_FAT_EXTRA_ extra = NULL;
+        WVL_SP_DISK_FAT_SUPER_ fs = (WVL_SP_DISK_FAT_SUPER_) BootSect;
   
         if (
             (fs->bpb_media == 0xf0 || fs->bpb_media >= 0xf8) &&
@@ -333,7 +268,7 @@ WVL_M_LIB VOID disk__guess_geometry(
      * If we couldn't parse a FAT superblock, try checking MBR params.
      * Logic derived from syslinux/memdisk/setup.c by H. Peter Anvin.
      */
-    as_mbr = (WVL_SP_DISK_MBR) boot_sect_ptr;
+    as_mbr = (WVL_SP_DISK_MBR) BootSect;
     if (
         (heads == 0 ) &&
         (sects_per_track == 0) &&
@@ -372,65 +307,50 @@ WVL_M_LIB VOID disk__guess_geometry(
     if (!sects_per_track)
       sects_per_track = 63;
     /* Set params that are not already filled. */
-    if (!disk_ptr->Heads)
-      disk_ptr->Heads = heads;
-    if (!disk_ptr->Sectors)
-      disk_ptr->Sectors = sects_per_track;
-    if (!disk_ptr->Cylinders)
-      disk_ptr->Cylinders = disk_ptr->LBADiskSize / (heads * sects_per_track);
+    if (!Disk->Heads)
+      Disk->Heads = heads;
+    if (!Disk->Sectors)
+      Disk->Sectors = sects_per_track;
+    if (!Disk->Cylinders)
+      Disk->Cylinders = Disk->LBADiskSize / (heads * sects_per_track);
   }
 
 /**
  * Initialize disk defaults.
  *
- * @v disk              The disk to initialize.
+ * @v Disk              The disk to initialize.
  */
-WVL_M_LIB VOID STDCALL WvDiskInit(IN WV_SP_DISK_T disk) {
-    RtlZeroMemory(disk, sizeof *disk);
-    /* Populate non-zero device defaults. */
-    disk->disk_ops.MaxXferLen = WvDiskDefaultMaxXferLen_;
-    disk->disk_ops.Close = WvDiskDefaultClose_;
-
+WVL_M_LIB VOID STDCALL WvlDiskInit(IN OUT WV_SP_DISK_T Disk) {
+    RtlZeroMemory(Disk, sizeof *Disk);
     return;
   }
 
-/**
- * Default disk deletion operation.
- *
- * @v dev               Points to the disk device to delete.
- */
-static VOID STDCALL WvDiskDevFree_(IN WV_SP_DEV_T dev) {
-    WV_SP_DISK_T disk = disk__get_ptr(dev);
-
-    wv_free(disk);
-  }
-
-/* See header for details. */
+/* See WVL_F_DISK_IO in the header for details. */
 WVL_M_LIB NTSTATUS STDCALL WvlDiskIo(
-    IN WV_SP_DISK_T disk,
-    IN WVL_E_DISK_IO_MODE mode,
-    IN LONGLONG start_sector,
-    IN UINT32 sector_count,
-    IN PUCHAR buffer,
-    IN PIRP irp
+    IN WV_SP_DISK_T Disk,
+    IN WVL_E_DISK_IO_MODE Mode,
+    IN LONGLONG StartSector,
+    IN UINT32 SectorCount,
+    IN PUCHAR Buffer,
+    IN PIRP Irp
   ) {
-    if (disk->disk_ops.Io) {
-        return disk->disk_ops.Io(
-            disk,
-            mode,
-            start_sector,
-            sector_count,
-            buffer,
-            irp
+    if (Disk->disk_ops.Io) {
+        return Disk->disk_ops.Io(
+            Disk,
+            Mode,
+            StartSector,
+            SectorCount,
+            Buffer,
+            Irp
           );
       }
-    return WvlIrpComplete(irp, 0, STATUS_DRIVER_INTERNAL_ERROR);
+    return WvlIrpComplete(Irp, 0, STATUS_DRIVER_INTERNAL_ERROR);
   }
 
-/* See header for details. */
-UINT32 disk__max_xfer_len(IN WV_SP_DISK_T disk) {
+/* See WVL_F_DISK_MAX_XFER_LEN in the header for details. */
+WVL_M_LIB UINT32 WvlDiskMaxXferLen(IN WV_SP_DISK_T Disk) {
     /* Use the disk operation, if there is one. */
-    if (disk->disk_ops.MaxXferLen)
-      return disk->disk_ops.MaxXferLen(disk);
-    return WvDiskDefaultMaxXferLen_(disk);
+    if (Disk->disk_ops.MaxXferLen)
+      return Disk->disk_ops.MaxXferLen(Disk);
+    return 1024 * 1024;
   }

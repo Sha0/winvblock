@@ -1804,7 +1804,7 @@ static AOE_SP_DISK AoeDiskCreatePdo_(void) {
     aoe_disk = pdo->DeviceExtension;
     RtlZeroMemory(aoe_disk, sizeof *aoe_disk);
     /* Populate non-zero device defaults. */
-    WvDiskInit(aoe_disk->disk);
+    WvlDiskInit(aoe_disk->disk);
     WvDevInit(aoe_disk->Dev);
     aoe_disk->Dev->Ops.Free = AoeDiskFree_;
     aoe_disk->Dev->ext = aoe_disk->disk;
@@ -1872,7 +1872,7 @@ static NTSTATUS AoeIrpPower_(
         return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
       }
     /* Use the disk routine. */
-    return WvDiskIrpPower(aoe_disk->Dev, irp);
+    return WvlDiskPower(dev_obj, irp, aoe_disk->disk);
   }
 
 /* Handle an IRP_MJ_CREATE or IRP_MJ_CLOSE IRP. */
@@ -1910,7 +1910,7 @@ static NTSTATUS AoeIrpSysCtl_(
     if (aoe_disk->Dev->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
-    return WvDiskIrpSysCtl(aoe_disk->Dev, irp);
+    return WvlDiskSysCtl(dev_obj, irp, aoe_disk->disk);
   }
 
 /* Handle an IRP_MJ_DEVICE_CONTROL IRP. */
