@@ -1222,7 +1222,7 @@ HttpDiskThread (
                     irp,
                     device_extension->Disk
                   );
-                return;
+                break;
 
             default:
                 irp->IoStatus.Status = STATUS_DRIVER_INTERNAL_ERROR;
