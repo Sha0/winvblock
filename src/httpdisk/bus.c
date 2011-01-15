@@ -36,7 +36,12 @@
 
 /** From httpdisk.c */
 extern PDRIVER_OBJECT HttpdiskDriverObj;
-
+extern NTSTATUS STDCALL HttpdiskCreateDevice(
+    IN WVL_E_DISK_MEDIA_TYPE,
+    IN PDEVICE_OBJECT *
+  );
+extern NTSTATUS HttpDiskConnect(IN PDEVICE_OBJECT, IN PIRP);
+extern NTSTATUS HttpDiskDisconnect(IN PDEVICE_OBJECT, IN PIRP);
 /** Exports. */
 NTSTATUS STDCALL HttpdiskBusEstablish(void);
 VOID HttpdiskBusCleanup(void);
@@ -47,6 +52,8 @@ DRIVER_DISPATCH HttpdiskBusIrp;
 static NTSTATUS STDCALL HttpdiskBusCreateFdo_(void);
 static NTSTATUS STDCALL HttpdiskBusCreatePdo_(void);
 static VOID HttpdiskBusDeleteFdo_(void);
+static NTSTATUS STDCALL HttpdiskBusDevCtl_(IN PIRP);
+static NTSTATUS STDCALL HttpdiskBusAdd_(IN PIRP);
 
 /* The HTTPDisk bus. */
 static WVL_S_BUS_T HttpdiskBus_ = {0};
@@ -64,6 +71,7 @@ static UNICODE_STRING HttpdiskBusDosname_ = {
     sizeof HTTPDISK_M_BUS_DOSNAME_ - sizeof (WCHAR),
     HTTPDISK_M_BUS_DOSNAME_
   };
+static BOOLEAN HttpdiskBusSymlinkDone_ = FALSE;
 
 NTSTATUS STDCALL HttpdiskBusEstablish(void) {
     NTSTATUS status;
@@ -80,16 +88,6 @@ NTSTATUS STDCALL HttpdiskBusEstablish(void) {
     status = HttpdiskBusCreatePdo_();
     if (!NT_SUCCESS(status))
       goto err_pdo;
-
-    /* Add devices already created.  TODO: This will go away at some point. */
-    while (dev_obj) {
-        HTTPDISK_SP_DEV dev = dev_obj->DeviceExtension;
-
-        WvlBusInitNode(&dev->BusNode, dev_obj);
-        dev->Disk->ParentBus = HttpdiskBus_.Fdo;
-        WvlBusAddNode(&HttpdiskBus_, &dev->BusNode);
-        dev_obj = dev_obj->NextDevice;
-      }
 
     DBG("Bus established.\n");
     return STATUS_SUCCESS;
@@ -160,6 +158,9 @@ NTSTATUS HttpdiskBusIrp(IN PDEVICE_OBJECT DevObj, IN PIRP Irp) {
     NTSTATUS status;
 
     switch (major) {
+        case IRP_MJ_DEVICE_CONTROL:
+            return HttpdiskBusDevCtl_(Irp);
+
         case IRP_MJ_PNP:
           status = WvlBusPnp(&HttpdiskBus_, Irp);
           /* Is the bus still attached?  If not, it's time to stop. */
@@ -195,8 +196,19 @@ static NTSTATUS STDCALL HttpdiskBusCreateFdo_(void) {
       );
     if (!NT_SUCCESS(status)) {
         DBG("FDO not created.\n");
-        return status;
+        goto err_fdo;
       }
+
+    /* DosDevice symlink. */
+    status = IoCreateSymbolicLink(
+        &HttpdiskBusDosname_,
+        &HttpdiskBusName_
+      );
+    if (!NT_SUCCESS(status)) {
+        DBG("IoCreateSymbolicLink() failed!\n");
+        goto err_symlink;
+      }
+    HttpdiskBusSymlinkDone_ = TRUE;
 
     /* Initialize device extension. */
     dev = HttpdiskBus_.Fdo->DeviceExtension;
@@ -204,6 +216,14 @@ static NTSTATUS STDCALL HttpdiskBusCreateFdo_(void) {
 
     DBG("FDO created: %p.\n", (PVOID) HttpdiskBus_.Fdo);
     return STATUS_SUCCESS;
+
+    IoDeleteSymbolicLink(&HttpdiskBusDosname_);
+    err_symlink:
+
+    IoDeleteDevice(HttpdiskBus_.Fdo);
+    err_fdo:
+
+    return status;
   }
 
 static NTSTATUS STDCALL HttpdiskBusCreatePdo_(void) {
@@ -234,8 +254,88 @@ static NTSTATUS STDCALL HttpdiskBusCreatePdo_(void) {
 static VOID HttpdiskBusDeleteFdo_(void) {
     if (!HttpdiskBus_.Fdo)
       return;
+    if (HttpdiskBusSymlinkDone_)
+      IoDeleteSymbolicLink(&HttpdiskBusDosname_);
     IoDeleteDevice(HttpdiskBus_.Fdo);
     DBG("FDO %p deleted.\n", (PVOID) HttpdiskBus_.Fdo);
     HttpdiskBus_.Fdo = NULL;
     return;
+  }
+
+static NTSTATUS STDCALL HttpdiskBusDevCtl_(IN PIRP irp) {
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+
+    switch (io_stack_loc->Parameters.DeviceIoControl.IoControlCode) {
+        case IOCTL_HTTP_DISK_CONNECT:
+          return HttpdiskBusAdd_(irp);
+
+        case IOCTL_HTTP_DISK_DISCONNECT:
+          break;
+      }
+    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+  }
+
+static NTSTATUS STDCALL HttpdiskBusAdd_(IN PIRP irp) {
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    PHTTP_DISK_INFORMATION info = irp->AssociatedIrp.SystemBuffer;
+    NTSTATUS status;
+    PDEVICE_OBJECT pdo = NULL;
+    HTTPDISK_SP_DEV dev;
+
+    /* Validate buffer size. */
+    if (
+        (io_stack_loc->Parameters.DeviceIoControl.InputBufferLength <
+          sizeof *info) ||
+        (io_stack_loc->Parameters.DeviceIoControl.InputBufferLength <
+          sizeof *info + info->FileNameLength - sizeof info->FileName[0])
+      ) {
+        DBG("Buffer too small.\n");
+        status = STATUS_INVALID_PARAMETER;
+        goto err_buf;
+      }
+
+    /* Create a new disk.  TODO: Disk media type. */
+    status = HttpdiskCreateDevice(
+        info->Optical ? WvlDiskMediaTypeOptical : WvlDiskMediaTypeHard,
+        &pdo
+      );
+    if (!pdo) {
+        DBG("Could not create PDO!\n");
+        goto err_pdo;
+      }
+    dev = pdo->DeviceExtension;
+
+    /* Connect the HTTPDisk. */
+    status = HttpDiskConnect(pdo, irp);
+    if (!NT_SUCCESS(status)) {
+        DBG("Connection failed!\n");
+        goto err_connect;
+      }
+    dev->Disk->LBADiskSize = dev->file_size.QuadPart / dev->Disk->SectorSize;
+
+    /* Add it to the bus. */
+    dev->Disk->ParentBus = HttpdiskBus_.Fdo;
+    WvlBusInitNode(&dev->BusNode, pdo);
+    status = WvlBusAddNode(&HttpdiskBus_, &dev->BusNode);
+    if (!NT_SUCCESS(status)) {
+        DBG("Couldn't add node to bus!\n");
+        goto err_add_node;
+      }
+
+    /* All done. */
+    DBG("Created and added HTTPDisk PDO: %p\n", (PVOID) pdo);
+    return WvlIrpComplete(irp, 0, status);
+
+    WvlBusRemoveNode(&dev->BusNode);
+    err_add_node:
+
+    HttpDiskDisconnect(pdo, irp);
+    err_connect:
+
+    IoDeleteDevice(pdo);
+    err_pdo:
+
+    err_buf:
+
+    return WvlIrpComplete(irp, 0, status);
   }

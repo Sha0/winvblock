@@ -133,7 +133,6 @@ extern DRIVER_DISPATCH HttpdiskBusIrp;
 
 #define BUFFER_SIZE             (4096 * 4)
 
-HANDLE dir_handle;
 PDRIVER_OBJECT HttpdiskDriverObj = NULL;
 
 typedef struct _HTTP_HEADER {
@@ -146,12 +145,10 @@ DriverEntry (
     IN PUNICODE_STRING  RegistryPath
 );
 
-NTSTATUS
-HttpDiskCreateDevice (
-    IN PDRIVER_OBJECT   DriverObject,
-    IN ULONG            Number,
-    IN DEVICE_TYPE      DeviceType
-);
+NTSTATUS STDCALL HttpdiskCreateDevice(
+    IN WVL_E_DISK_MEDIA_TYPE,
+    IN PDEVICE_OBJECT *
+  );
 
 VOID
 HttpDiskUnload (
@@ -191,6 +188,8 @@ static
 static WVL_F_DISK_PNP HttpdiskPnpQueryId_;
 
 static WVL_F_DISK_IO HttpdiskIo_;
+
+static WVL_F_DISK_UNIT_NUM HttpdiskUnitNum_;
 
 VOID
 HttpDiskThread (
@@ -262,8 +261,6 @@ DriverEntry (
     RTL_QUERY_REGISTRY_TABLE    query_table[2];
     ULONG                       n_devices;
     NTSTATUS                    status;
-    UNICODE_STRING              device_dir_name;
-    OBJECT_ATTRIBUTES           object_attributes;
     ULONG                       n;
     USHORT                      n_created_devices;
     UCHAR                       major;
@@ -307,55 +304,6 @@ DriverEntry (
         n_devices = DEFAULT_NUMBEROFDEVICES;
     }
 
-    RtlInitUnicodeString(&device_dir_name, DEVICE_DIR_NAME);
-
-    InitializeObjectAttributes(
-        &object_attributes,
-        &device_dir_name,
-        OBJ_PERMANENT,
-        NULL,
-        NULL
-        );
-
-    status = ZwCreateDirectoryObject(
-        &dir_handle,
-        DIRECTORY_ALL_ACCESS,
-        &object_attributes
-        );
-
-    if (!NT_SUCCESS(status))
-    {
-        return status;
-    }
-
-    ZwMakeTemporaryObject(dir_handle);
-
-    for (n = 0, n_created_devices = 0; n < n_devices; n++)
-    {
-        status = HttpDiskCreateDevice(DriverObject, n, FILE_DEVICE_DISK);
-
-        if (NT_SUCCESS(status))
-        {
-            n_created_devices++;
-        }
-    }
-
-    for (n = 0; n < n_devices; n++)
-    {
-        status = HttpDiskCreateDevice(DriverObject, n, FILE_DEVICE_CD_ROM);
-
-        if (NT_SUCCESS(status))
-        {
-            n_created_devices++;
-        }
-    }
-
-    if (n_created_devices == 0)
-    {
-        ZwClose(dir_handle);
-        return status;
-    }
-
     for (major = 0; major <= IRP_MJ_MAXIMUM_FUNCTION; major++)
       DriverObject->MajorFunction[major] = HttpdiskIrpNotSupported_;
     DriverObject->MajorFunction[IRP_MJ_PNP] = HttpdiskIrpPnp_;
@@ -379,48 +327,21 @@ DriverEntry (
     return status;
 }
 
-NTSTATUS
-HttpDiskCreateDevice (
-    IN PDRIVER_OBJECT   DriverObject,
-    IN ULONG            Number,
-    IN DEVICE_TYPE      DeviceType
-    )
-{
-    WCHAR               device_name_buffer[MAXIMUM_FILENAME_LENGTH];
-    UNICODE_STRING      device_name;
+NTSTATUS STDCALL HttpdiskCreateDevice(
+    IN WVL_E_DISK_MEDIA_TYPE Type,
+    IN PDEVICE_OBJECT * Pdo
+  ) {
     NTSTATUS            status;
     PDEVICE_OBJECT      device_object;
     HTTPDISK_SP_DEV   device_extension;
     HANDLE              thread_handle;
 
-    ASSERT(DriverObject != NULL);
+    ASSERT(Pdo != NULL);
 
-    if (DeviceType == FILE_DEVICE_CD_ROM)
-    {
-        swprintf(
-            device_name_buffer,
-            DEVICE_NAME_PREFIX L"Cd" L"%u",
-            Number
-            );
-    }
-    else
-    {
-        swprintf(
-            device_name_buffer,
-            DEVICE_NAME_PREFIX L"Disk" L"%u",
-            Number
-            );
-    }
-
-    RtlInitUnicodeString(&device_name, device_name_buffer);
-
-    status = IoCreateDevice(
-        DriverObject,
-        sizeof (HTTPDISK_S_DEV),
-        &device_name,
-        DeviceType,
-        0,
-        FALSE,
+    status = WvlDiskCreatePdo(
+        HttpdiskDriverObj,
+        sizeof *device_extension,
+        Type,
         &device_object
         );
 
@@ -456,15 +377,16 @@ HttpDiskCreateDevice (
     device_extension->terminate_thread = FALSE;
 
     device_extension->bus = FALSE;
-    device_extension->number = Number;
-    device_extension->dev_type = DeviceType;
     WvlDiskInit(device_extension->Disk);
-    device_extension->Disk->Media =
-      (DeviceType == FILE_DEVICE_CD_ROM) ?
-      WvlDiskMediaTypeOptical :
-      WvlDiskMediaTypeHard;
+    device_extension->Disk->Media = Type;
+    device_extension->Disk->SectorSize =
+      (Type == WvlDiskMediaTypeOptical) ?
+      2048 :
+      512;
+    device_extension->Disk->DriverObj = HttpdiskDriverObj;
     device_extension->Disk->disk_ops.PnpQueryId = HttpdiskPnpQueryId_;
     device_extension->Disk->disk_ops.Io = HttpdiskIo_;
+    device_extension->Disk->disk_ops.UnitNum = HttpdiskUnitNum_;
 
     status = PsCreateSystemThread(
         &thread_handle,
@@ -510,8 +432,9 @@ HttpDiskCreateDevice (
 
     ZwClose(thread_handle);
 
+    *Pdo = device_object;
     return STATUS_SUCCESS;
-}
+  }
 
 #pragma code_seg("PAGE")
 
@@ -530,8 +453,7 @@ HttpDiskUnload (
     {
         device_object = HttpDiskDeleteDevice(device_object);
     }
-
-    ZwClose(dir_handle);
+    return;
 }
 
 PDEVICE_OBJECT
@@ -668,9 +590,7 @@ static NTSTATUS HttpdiskIrpDevCtl_(
 
     io_stack = IoGetCurrentIrpStackLocation(Irp);
 
-    if (!device_extension->media_in_device &&
-        io_stack->Parameters.DeviceIoControl.IoControlCode !=
-        IOCTL_HTTP_DISK_CONNECT)
+    if (!device_extension->media_in_device)
     {
         Irp->IoStatus.Status = STATUS_NO_MEDIA_IN_DEVICE;
         Irp->IoStatus.Information = 0;
@@ -682,54 +602,6 @@ static NTSTATUS HttpdiskIrpDevCtl_(
 
     switch (io_stack->Parameters.DeviceIoControl.IoControlCode)
     {
-    case IOCTL_HTTP_DISK_CONNECT:
-        {
-            if (device_extension->media_in_device)
-            {
-                DbgPrint("HttpDisk: IOCTL_HTTP_DISK_CONNECT: Media already opened.\n");
-
-                status = STATUS_INVALID_DEVICE_REQUEST;
-                Irp->IoStatus.Information = 0;
-                break;
-            }
-
-            if (io_stack->Parameters.DeviceIoControl.InputBufferLength <
-                sizeof(HTTP_DISK_INFORMATION))
-            {
-                status = STATUS_INVALID_PARAMETER;
-                Irp->IoStatus.Information = 0;
-                break;
-            }
-
-            if (io_stack->Parameters.DeviceIoControl.InputBufferLength <
-                sizeof(HTTP_DISK_INFORMATION) +
-                ((PHTTP_DISK_INFORMATION)Irp->AssociatedIrp.SystemBuffer)->FileNameLength -
-                sizeof(UCHAR))
-            {
-                status = STATUS_INVALID_PARAMETER;
-                Irp->IoStatus.Information = 0;
-                break;
-            }
-
-            IoMarkIrpPending(Irp);
-
-            ExInterlockedInsertTailList(
-                &device_extension->list_head,
-                &Irp->Tail.Overlay.ListEntry,
-                &device_extension->list_lock
-                );
-
-            KeSetEvent(
-                &device_extension->request_event,
-                (KPRIORITY) 0,
-                FALSE
-                );
-
-            status = STATUS_PENDING;
-
-            break;
-        }
-
     case IOCTL_HTTP_DISK_DISCONNECT:
         {
             IoMarkIrpPending(Irp);
@@ -947,15 +819,12 @@ static NTSTATUS HttpdiskIrpDevCtl_(
         }
 
     default:
-        {
-            KdPrint((
-                "HttpDisk: Unknown IoControlCode: %#x\n",
-                io_stack->Parameters.DeviceIoControl.IoControlCode
-                ));
-
-            status = STATUS_INVALID_DEVICE_REQUEST;
-            Irp->IoStatus.Information = 0;
-        }
+      /* Pass it on to the WinVBlock disk library. */
+      return WvlDiskDevCtl(
+          device_extension->Disk,
+          Irp,
+          io_stack->Parameters.DeviceIoControl.IoControlCode
+        );
     }
 
     if (status != STATUS_PENDING)
@@ -1024,7 +893,7 @@ static NTSTATUS STDCALL HttpdiskPnpQueryId_(
       }
 
     /* Determinate the IDs for the device type. */
-    switch (dev->dev_type) {
+    switch (dev->Disk->Media) {
         case FILE_DEVICE_DISK:
           hw_id = L"HTTPDisk\\HardDisk";
           compat_id = L"GenDisk";
@@ -1050,7 +919,7 @@ static NTSTATUS STDCALL HttpdiskPnpQueryId_(
           break;
 
         case BusQueryInstanceID:
-          swprintf(*buf, L"%08X", dev->number);
+          swprintf(*buf, L"%08X", HttpdiskUnitNum_(dev->Disk));
           break;
 
         case BusQueryHardwareIDs:
@@ -1093,10 +962,12 @@ static NTSTATUS STDCALL HttpdiskIo_(
   ) {
     UCHAR tries;
     HTTPDISK_SP_DEV dev = CONTAINING_RECORD(disk, HTTPDISK_S_DEV, Disk[0]);
+    LARGE_INTEGER offset;
 
     if (mode == WvlDiskIoModeWrite)
       return WvlIrpComplete(irp, 0, STATUS_MEDIA_WRITE_PROTECTED);
 
+    offset.QuadPart = start_sector * disk->SectorSize;
     tries = 2;
     while (tries--) {
         HttpDiskGetBlock(
@@ -1105,7 +976,7 @@ static NTSTATUS STDCALL HttpdiskIo_(
             dev->port,
             dev->host_name,
             dev->file_name,
-            start_sector * disk->SectorSize,
+            &offset,
             sector_count * disk->SectorSize,
             &irp->IoStatus,
             buffer
@@ -1118,6 +989,17 @@ static NTSTATUS STDCALL HttpdiskIo_(
             );
       }
     return WvlIrpComplete(irp, 0, irp->IoStatus.Status);
+  }
+
+static UCHAR STDCALL HttpdiskUnitNum_(IN WVL_SP_DISK_T disk) {
+    HTTPDISK_SP_DEV dev = CONTAINING_RECORD(
+        disk,
+        HTTPDISK_S_DEV,
+        Disk[0]
+      );
+
+    /* Possible precision loss. */
+    return (UCHAR) WvlBusGetNodeNum(&dev->BusNode);
   }
 
 #pragma code_seg("PAGE")
@@ -1203,10 +1085,6 @@ HttpDiskThread (
             case IRP_MJ_DEVICE_CONTROL:
                 switch (io_stack->Parameters.DeviceIoControl.IoControlCode)
                 {
-                case IOCTL_HTTP_DISK_CONNECT:
-                    irp->IoStatus.Status = HttpDiskConnect(device_object, irp);
-                    break;
-
                 case IOCTL_HTTP_DISK_DISCONNECT:
                     irp->IoStatus.Status = HttpDiskDisconnect(device_object, irp);
                     break;
@@ -1222,7 +1100,7 @@ HttpDiskThread (
                     irp,
                     device_extension->Disk
                   );
-                break;
+                continue;
 
             default:
                 irp->IoStatus.Status = STATUS_DRIVER_INTERNAL_ERROR;

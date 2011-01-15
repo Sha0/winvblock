@@ -30,16 +30,13 @@
 #define _T(x)   __T(x)
 #endif
 
-#define DEVICE_BASE_NAME    _T("\\HttpDisks")
-#define DEVICE_DIR_NAME     _T("\\Device")      DEVICE_BASE_NAME
-#define DEVICE_NAME_PREFIX  DEVICE_DIR_NAME     _T("\\Http")
-
 #define FILE_DEVICE_HTTP_DISK       0x8000
 
 #define IOCTL_HTTP_DISK_CONNECT     CTL_CODE(FILE_DEVICE_HTTP_DISK, 0x800, METHOD_BUFFERED, FILE_READ_ACCESS | FILE_WRITE_ACCESS)
 #define IOCTL_HTTP_DISK_DISCONNECT  CTL_CODE(FILE_DEVICE_HTTP_DISK, 0x801, METHOD_BUFFERED, FILE_READ_ACCESS | FILE_WRITE_ACCESS)
 
 typedef struct _HTTP_DISK_INFORMATION {
+    BOOLEAN Optical;
     ULONG   Address;
     USHORT  Port;
     USHORT  HostNameLength;
@@ -63,8 +60,6 @@ typedef struct HTTPDISK_DEV {
     BOOLEAN         terminate_thread;
     BOOLEAN         bus;
     WVL_S_BUS_NODE  BusNode;
-    ULONG           number;
-    DEVICE_TYPE     dev_type;
     WVL_S_DISK_T    Disk[1];
 } HTTPDISK_S_DEV, * HTTPDISK_SP_DEV;
 
