@@ -18,6 +18,12 @@ del winvblk.obj
 popd
 
 pushd .
+cd httpdisk_util
+build
+copy /y obj%obj%\%arch%\httpdisk.exe ..\..\bin
+popd
+
+pushd .
 cd loader
 cl /I%CRT_INC_PATH% /I..\include /DWIN32_LEAN_AND_MEAN loader.c /Fe..\..\bin\loader32.exe /link /LIBPATH:%DDK_LIB_DEST%\i386 /LIBPATH:%Lib%\crt\i386 setupapi.lib bufferoverflowU.lib
 del loader.obj
