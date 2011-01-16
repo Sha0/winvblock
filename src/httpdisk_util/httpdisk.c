@@ -19,20 +19,23 @@
 #include <winsock2.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+/* Spoof these types for the #include to succeed. */
+typedef char KEVENT, WVL_S_BUS_NODE, WVL_S_DISK_T;
 #include "httpdisk.h"
 
 int HttpDiskSyntax(void)
 {
     fprintf(stderr, "syntax:\n");
-    fprintf(stderr, "httpdisk /mount  <devicenumber> <url> [/cd] <drive:>\n");
-    fprintf(stderr, "httpdisk /umount <drive:>\n");
+    fprintf(stderr, "httpdisk /mount  <url> [/cd]\n");
+    fprintf(stderr, "httpdisk /umount <unit_num>\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "example:\n");
-    fprintf(stderr, "httpdisk /mount  0 http://server.domain.com/path/diskimage.img d:\n");
-    fprintf(stderr, "httpdisk /mount  1 http://server.domain.com/path/cdimage.iso /cd e:\n");
+    fprintf(stderr, "httpdisk /mount  http://server.domain.com/path/diskimage.img\n");
+    fprintf(stderr, "httpdisk /mount  http://server.domain.com/path/cdimage.iso /cd\n");
     fprintf(stderr, "...\n");
-    fprintf(stderr, "httpdisk /umount d:\n");
-    fprintf(stderr, "httpdisk /umount e:\n");
+    fprintf(stderr, "httpdisk /umount 0\n");
+    fprintf(stderr, "httpdisk /umount 1\n");
 
     return -1;
 }
@@ -58,59 +61,19 @@ void PrintLastError(char* Prefix)
     LocalFree(lpMsgBuf);
 }
 
+static char HTTPDiskBus[] = "\\\\.\\HTTPDisk";
+
 int
 HttpDiskMount(
-    int                     DeviceNumber,
-    PHTTP_DISK_INFORMATION  HttpDiskInformation,
-    char                    DriveLetter,
-    BOOLEAN                 CdImage
+    PHTTP_DISK_INFORMATION  HttpDiskInformation
 )
 {
-    char    VolumeName[] = "\\\\.\\ :";
-    char    DeviceName[255];
     HANDLE  Device;
     DWORD   BytesReturned;
 
-    VolumeName[4] = DriveLetter;
-
+    printf("Trying to connect...\n");
     Device = CreateFile(
-        VolumeName,
-        GENERIC_READ | GENERIC_WRITE,
-        FILE_SHARE_READ | FILE_SHARE_WRITE,
-        NULL,
-        OPEN_EXISTING,
-        FILE_FLAG_NO_BUFFERING,
-        NULL
-        );
-
-    if (Device != INVALID_HANDLE_VALUE)
-    {
-        SetLastError(ERROR_BUSY);
-        PrintLastError(&VolumeName[4]);
-        return -1;
-    }
-
-    if (CdImage)
-    {
-        sprintf(DeviceName, DEVICE_NAME_PREFIX "Cd" "%u", DeviceNumber);
-    }
-    else
-    {
-        sprintf(DeviceName, DEVICE_NAME_PREFIX "Disk" "%u", DeviceNumber);
-    }
-
-    if (!DefineDosDevice(
-        DDD_RAW_TARGET_PATH,
-        &VolumeName[4],
-        DeviceName
-        ))
-    {
-        PrintLastError(&VolumeName[4]);
-        return -1;
-    }
-
-    Device = CreateFile(
-        VolumeName,
+        HTTPDiskBus,
         GENERIC_READ | GENERIC_WRITE,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
         NULL,
@@ -121,8 +84,7 @@ HttpDiskMount(
 
     if (Device == INVALID_HANDLE_VALUE)
     {
-        PrintLastError(&VolumeName[4]);
-        DefineDosDevice(DDD_REMOVE_DEFINITION, &VolumeName[4], NULL);
+        PrintLastError("CreateFile()");
         return -1;
     }
 
@@ -130,7 +92,7 @@ HttpDiskMount(
         Device,
         IOCTL_HTTP_DISK_CONNECT,
         HttpDiskInformation,
-        sizeof(HTTP_DISK_INFORMATION) + HttpDiskInformation->FileNameLength - 1,
+        sizeof *HttpDiskInformation + HttpDiskInformation->FileNameLength - 1,
         NULL,
         0,
         &BytesReturned,
@@ -138,23 +100,19 @@ HttpDiskMount(
         ))
     {
         PrintLastError("HttpDisk");
-        DefineDosDevice(DDD_REMOVE_DEFINITION, &VolumeName[4], NULL);
         return -1;
     }
 
     return 0;
 }
 
-int HttpDiskUmount(char DriveLetter)
+int HttpDiskUmount(int DeviceNumber)
 {
-    char    VolumeName[] = "\\\\.\\ :";
     HANDLE  Device;
     DWORD   BytesReturned;
 
-    VolumeName[4] = DriveLetter;
-
     Device = CreateFile(
-        VolumeName,
+        HTTPDiskBus,
         GENERIC_READ | GENERIC_WRITE,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
         NULL,
@@ -165,30 +123,15 @@ int HttpDiskUmount(char DriveLetter)
 
     if (Device == INVALID_HANDLE_VALUE)
     {
-        PrintLastError(&VolumeName[4]);
-        return -1;
-    }
-
-    if (!DeviceIoControl(
-        Device,
-        FSCTL_LOCK_VOLUME,
-        NULL,
-        0,
-        NULL,
-        0,
-        &BytesReturned,
-        NULL
-        ))
-    {
-        PrintLastError(&VolumeName[4]);
+        PrintLastError("CreateFile()");
         return -1;
     }
 
     if (!DeviceIoControl(
         Device,
         IOCTL_HTTP_DISK_DISCONNECT,
-        NULL,
-        0,
+        &DeviceNumber,
+        sizeof DeviceNumber,
         NULL,
         0,
         &BytesReturned,
@@ -199,47 +142,7 @@ int HttpDiskUmount(char DriveLetter)
         return -1;
     }
 
-    if (!DeviceIoControl(
-        Device,
-        FSCTL_DISMOUNT_VOLUME,
-        NULL,
-        0,
-        NULL,
-        0,
-        &BytesReturned,
-        NULL
-        ))
-    {
-        PrintLastError(&VolumeName[4]);
-        return -1;
-    }
-
-    if (!DeviceIoControl(
-        Device,
-        FSCTL_UNLOCK_VOLUME,
-        NULL,
-        0,
-        NULL,
-        0,
-        &BytesReturned,
-        NULL
-        ))
-    {
-        PrintLastError(&VolumeName[4]);
-        return -1;
-    }
-
     CloseHandle(Device);
-
-    if (!DefineDosDevice(
-        DDD_REMOVE_DEFINITION,
-        &VolumeName[4],
-        NULL
-        ))
-    {
-        PrintLastError(&VolumeName[4]);
-        return -1;
-    }
 
     return 0;
 }
@@ -250,49 +153,46 @@ int __cdecl main(int argc, char* argv[])
     int                     DeviceNumber;
     char*                   Url;
     char*                   Option;
-    char                    DriveLetter;
-    BOOLEAN                 CdImage;
     PHTTP_DISK_INFORMATION  HttpDiskInformation;
     char*                   FileName;
     char*                   PortStr;
     struct hostent*         HostEnt;
     WSADATA                 wsaData;
+    int                     rc;
 
     Command = argv[1];
 
-    if ((argc == 5 || argc == 6) && !strcmp(Command, "/mount"))
+    if ((argc == 3 || argc == 4) && !strcmp(Command, "/mount"))
     {
-        DeviceNumber = atoi(argv[2]);
-        Url = argv[3];
+        Url = argv[2];
 
-        if (argc > 5)
+        HttpDiskInformation = malloc(sizeof *HttpDiskInformation + strlen(Url));
+
+        memset(
+            HttpDiskInformation,
+            0,
+            sizeof *HttpDiskInformation + strlen(Url)
+          );
+
+        if (argc > 3)
         {
-            Option = argv[4];
-            DriveLetter = argv[5][0];
+            Option = argv[3];
 
             if (!strcmp(Option, "/cd"))
             {
-                CdImage = TRUE;
+                HttpDiskInformation->Optical = TRUE;
             }
             else
             {
+                free(HttpDiskInformation);
                 return HttpDiskSyntax();
             }
         }
         else
         {
             Option = NULL;
-            DriveLetter = argv[4][0];
-            CdImage = FALSE;
+            HttpDiskInformation->Optical = FALSE;
         }
-
-        HttpDiskInformation = malloc(sizeof(HTTP_DISK_INFORMATION) + strlen(Url));
-
-        memset(
-            HttpDiskInformation,
-            0,
-            sizeof(HTTP_DISK_INFORMATION) + strlen(Url)
-            );
 
         if (strstr(Url, "//"))
         {
@@ -303,6 +203,7 @@ int __cdecl main(int argc, char* argv[])
             else
             {
                 fprintf(stderr, "Invalid protocol.\n");
+                free(HttpDiskInformation);
                 return -1;
             }
         }
@@ -312,6 +213,7 @@ int __cdecl main(int argc, char* argv[])
         if (!FileName)
         {
             fprintf(stderr, "%s: Invalid url.\n", Url);
+            free(HttpDiskInformation);
             return -1;
         }
 
@@ -330,6 +232,7 @@ int __cdecl main(int argc, char* argv[])
             if (HttpDiskInformation->Port == 0)
             {
                 fprintf(stderr, "%s: Invalid port.\n", PortStr + 1);
+                free(HttpDiskInformation);
                 return -1;
             }
 
@@ -345,6 +248,7 @@ int __cdecl main(int argc, char* argv[])
         if (HttpDiskInformation->HostNameLength > 255)
         {
             fprintf(stderr, "%s: Host name to long.\n", Url);
+            free(HttpDiskInformation);
             return -1;
         }
 
@@ -357,6 +261,7 @@ int __cdecl main(int argc, char* argv[])
             if (WSAStartup(MAKEWORD(1, 1), &wsaData) != 0)
             {
                 PrintLastError("HttpDisk");
+                free(HttpDiskInformation);
                 return -1;
             }
 
@@ -365,18 +270,21 @@ int __cdecl main(int argc, char* argv[])
             if (!HostEnt)
             {
                 PrintLastError(Url);
+                free(HttpDiskInformation);
                 return -1;
             }
 
             HttpDiskInformation->Address = ((struct in_addr*) HostEnt->h_addr)->s_addr;
         }
 
-        return HttpDiskMount(DeviceNumber, HttpDiskInformation, DriveLetter, CdImage);
+        rc = HttpDiskMount(HttpDiskInformation);
+        free(HttpDiskInformation);
+        return rc;
     }
     else if (argc == 3 && !strcmp(Command, "/umount"))
     {
-        DriveLetter = argv[2][0];
-        return HttpDiskUmount(DriveLetter);
+        DeviceNumber = atoi(argv[2]);
+        return HttpDiskUmount(DeviceNumber);
     }
     else
     {
