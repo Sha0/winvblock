@@ -327,6 +327,8 @@ DriverEntry (
     return status;
 }
 
+#pragma code_seg("PAGE")
+
 NTSTATUS STDCALL HttpdiskCreateDevice(
     IN WVL_E_DISK_MEDIA_TYPE Type,
     IN PDEVICE_OBJECT * Pdo
@@ -435,8 +437,6 @@ NTSTATUS STDCALL HttpdiskCreateDevice(
     *Pdo = device_object;
     return STATUS_SUCCESS;
   }
-
-#pragma code_seg("PAGE")
 
 VOID
 HttpDiskUnload (
@@ -602,27 +602,6 @@ static NTSTATUS HttpdiskIrpDevCtl_(
 
     switch (io_stack->Parameters.DeviceIoControl.IoControlCode)
     {
-    case IOCTL_HTTP_DISK_DISCONNECT:
-        {
-            IoMarkIrpPending(Irp);
-
-            ExInterlockedInsertTailList(
-                &device_extension->list_head,
-                &Irp->Tail.Overlay.ListEntry,
-                &device_extension->list_lock
-                );
-
-            KeSetEvent(
-                &device_extension->request_event,
-                (KPRIORITY) 0,
-                FALSE
-                );
-
-            status = STATUS_PENDING;
-
-            break;
-        }
-
     case IOCTL_DISK_CHECK_VERIFY:
     case IOCTL_CDROM_CHECK_VERIFY:
     case IOCTL_STORAGE_CHECK_VERIFY:
@@ -1035,6 +1014,12 @@ HttpDiskThread (
 
         if (device_extension->terminate_thread)
         {
+            /* Do we need to disconnect? */
+            if (device_extension->media_in_device) {
+                IRP dummy;
+
+                HttpDiskDisconnect(device_object, &dummy);
+              }
             PsTerminateSystemThread(STATUS_SUCCESS);
         }
 
@@ -1083,15 +1068,7 @@ HttpDiskThread (
                 break;
 
             case IRP_MJ_DEVICE_CONTROL:
-                switch (io_stack->Parameters.DeviceIoControl.IoControlCode)
-                {
-                case IOCTL_HTTP_DISK_DISCONNECT:
-                    irp->IoStatus.Status = HttpDiskDisconnect(device_object, irp);
-                    break;
-
-                default:
-                    irp->IoStatus.Status = STATUS_DRIVER_INTERNAL_ERROR;
-                }
+                irp->IoStatus.Status = STATUS_DRIVER_INTERNAL_ERROR;
                 break;
 
             case IRP_MJ_SCSI:

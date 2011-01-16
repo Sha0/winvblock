@@ -41,7 +41,8 @@ extern NTSTATUS STDCALL HttpdiskCreateDevice(
     IN PDEVICE_OBJECT *
   );
 extern NTSTATUS HttpDiskConnect(IN PDEVICE_OBJECT, IN PIRP);
-extern NTSTATUS HttpDiskDisconnect(IN PDEVICE_OBJECT, IN PIRP);
+extern PDEVICE_OBJECT HttpDiskDeleteDevice(IN PDEVICE_OBJECT);
+
 /** Exports. */
 NTSTATUS STDCALL HttpdiskBusEstablish(void);
 VOID HttpdiskBusCleanup(void);
@@ -54,6 +55,7 @@ static NTSTATUS STDCALL HttpdiskBusCreatePdo_(void);
 static VOID HttpdiskBusDeleteFdo_(void);
 static NTSTATUS STDCALL HttpdiskBusDevCtl_(IN PIRP);
 static NTSTATUS STDCALL HttpdiskBusAdd_(IN PIRP);
+static NTSTATUS STDCALL HttpdiskBusRemove_(IN PIRP);
 
 /* The HTTPDisk bus. */
 static WVL_S_BUS_T HttpdiskBus_ = {0};
@@ -270,7 +272,7 @@ static NTSTATUS STDCALL HttpdiskBusDevCtl_(IN PIRP irp) {
           return HttpdiskBusAdd_(irp);
 
         case IOCTL_HTTP_DISK_DISCONNECT:
-          break;
+          return HttpdiskBusRemove_(irp);
       }
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
@@ -329,11 +331,60 @@ static NTSTATUS STDCALL HttpdiskBusAdd_(IN PIRP irp) {
     WvlBusRemoveNode(&dev->BusNode);
     err_add_node:
 
-    HttpDiskDisconnect(pdo, irp);
     err_connect:
 
-    IoDeleteDevice(pdo);
+    HttpDiskDeleteDevice(pdo);
     err_pdo:
+
+    err_buf:
+
+    return WvlIrpComplete(irp, 0, status);
+  }
+
+static NTSTATUS STDCALL HttpdiskBusRemove_(IN PIRP irp) {
+    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    PUINT32 unit_num;
+    NTSTATUS status;
+    WVL_SP_BUS_NODE walker;
+    PDEVICE_OBJECT pdo = NULL;
+
+    /* Validate buffer size. */
+    if (
+        io_stack_loc->Parameters.DeviceIoControl.InputBufferLength <
+        sizeof *unit_num
+      ) {
+        DBG("Buffer too small.\n");
+        status = STATUS_INVALID_PARAMETER;
+        goto err_buf;
+      }
+    unit_num = irp->AssociatedIrp.SystemBuffer;
+
+    DBG("Request to detach unit %d...\n", *unit_num);
+
+    walker = NULL;
+    /* For each node on the bus... */
+    WvlBusLock(&HttpdiskBus_);
+    while (walker = WvlBusGetNextNode(&HttpdiskBus_, walker)) {
+        /* If the unit number matches... */
+        if (WvlBusGetNodeNum(walker) == *unit_num) {
+            pdo = WvlBusGetNodePdo(walker);
+            break;
+          }
+      }
+    WvlBusUnlock(&HttpdiskBus_);
+    if (!pdo) {
+        DBG("Unit %d not found.\n", *unit_num);
+        status = STATUS_INVALID_PARAMETER;
+        goto err_unit;
+      }
+    /* Detach and destroy the node. */
+    WvlBusRemoveNode(walker);
+    HttpDiskDeleteDevice(pdo);
+    DBG("Removed unit %d.\n", *unit_num);
+
+    return WvlIrpComplete(irp, 0, irp->IoStatus.Status);
+
+    err_unit:
 
     err_buf:
 
