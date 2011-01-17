@@ -38,6 +38,9 @@
 #include "mdi.h"
 #include "probe.h"
 
+/* From bus.c */
+extern WVL_S_BUS_T WvBus;
+
 static BOOLEAN STDCALL WvMemdiskCheckMbft_(
     PUCHAR phys_mem,
     UINT32 offset
@@ -104,11 +107,11 @@ static BOOLEAN STDCALL WvMemdiskCheckMbft_(
     ramdisk->Dev->Boot = TRUE;
 
     /* Add the ramdisk to the bus. */
+    ramdisk->disk->ParentBus = WvBus.Fdo;
     if (!WvBusAddDev(ramdisk->Dev)) {
         WvDevFree(ramdisk->Dev);
         return FALSE;
       }
-    ramdisk->disk->ParentBus = ramdisk->Dev->Parent;
     assoc_hook->Flags = 1;
     return TRUE;
   }

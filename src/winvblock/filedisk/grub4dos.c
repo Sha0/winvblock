@@ -42,6 +42,9 @@
 #include "byte.h"
 #include "msvhd.h"
 
+/* From bus.c */
+extern WVL_S_BUS_T WvBus;
+
 /** Private. */
 static WVL_FP_DISK_IO WvFilediskG4dSyncIo_;
 static WVL_F_DISK_IO WvFilediskG4dIo_;
@@ -502,9 +505,9 @@ VOID filedisk_grub4dos__find(void) {
           FoundGrub4DosMapping = TRUE;
           filedisk_ptr->Dev->Boot = TRUE;
           /* Add the filedisk to the bus. */
+          filedisk_ptr->disk->ParentBus = WvBus.Fdo;
           if (!WvBusAddDev(filedisk_ptr->Dev))
             WvDevFree(filedisk_ptr->Dev);
-          filedisk_ptr->disk->ParentBus = filedisk_ptr->Dev->Parent;
         } /* search for sector-mapped disks. */
       InterruptVector = &SafeMbrHookPtr->PrevHook;
     } /* walk the safe hook chain. */

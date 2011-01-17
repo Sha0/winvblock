@@ -38,6 +38,9 @@
 #include "probe.h"
 #include "grub4dos.h"
 
+/* From bus.c */
+extern WVL_S_BUS_T WvBus;
+
 /* Scan for GRUB4DOS RAM disks and add them to the WinVBlock bus. */
 VOID WvRamdiskG4dFind(void) {
     PHYSICAL_ADDRESS phys_addr;
@@ -149,9 +152,9 @@ VOID WvRamdiskG4dFind(void) {
             ramdisk->disk->SectorSize = sector_size;
             ramdisk->Dev->Boot = TRUE;
              /* Add the ramdisk to the bus. */
+            ramdisk->disk->ParentBus = WvBus.Fdo;
             if (!WvBusAddDev(ramdisk->Dev))
               WvDevFree(ramdisk->Dev);
-            ramdisk->disk->ParentBus = ramdisk->Dev->Parent;
           } /* while i */
         int_vector = &safe_mbr_hook->PrevHook;
       } /* while safe hook chain. */

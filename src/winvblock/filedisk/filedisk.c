@@ -40,6 +40,9 @@
 #include "filedisk.h"
 #include "debug.h"
 
+/* From bus.c */
+extern WVL_S_BUS_T WvBus;
+
 /** Private. */
 static WV_F_DEV_FREE WvFilediskFree_;
 static WVL_F_DISK_IO WvFilediskIo_;
@@ -275,11 +278,11 @@ NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
     filedisk->hash = hash;
 
     /* Add the filedisk to the bus. */
+    filedisk->disk->ParentBus = WvBus.Fdo;
     if (!WvBusAddDev(filedisk->Dev)) {
         status = STATUS_UNSUCCESSFUL;
         goto err_add_child;
       }
-    filedisk->disk->ParentBus = filedisk->Dev->Parent;
 
     return STATUS_SUCCESS;
 
