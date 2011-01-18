@@ -40,6 +40,7 @@
 #include "ramdisk.h"
 #include "memdisk.h"
 #include "grub4dos.h"
+#include "libthread.h"
 #include "filedisk.h"
 #include "probe.h"
 

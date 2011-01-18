@@ -37,18 +37,21 @@
 #include "device.h"
 #include "disk.h"
 #include "mount.h"
+#include "libthread.h"
 #include "filedisk.h"
 #include "debug.h"
 
 /* From bus.c */
 extern WVL_S_BUS_T WvBus;
 
-/** Private. */
-static WV_F_DEV_FREE WvFilediskFree_;
+/** Private function declarations. */
 static WVL_F_DISK_IO WvFilediskIo_;
-static WVL_F_DISK_IO WvFilediskThreadedIo_;
 static WV_F_DEV_CLOSE WvFilediskClose_;
+static WVL_F_DISK_UNIT_NUM WvFilediskUnitNum_;
+static WVL_F_THREAD_ITEM WvFilediskThread_;
+static WV_F_DEV_FREE WvFilediskFree_;
 
+/** Private function definitions. */
 static NTSTATUS STDCALL WvFilediskIo_(
     IN WVL_SP_DISK_T disk_ptr,
     IN WVL_E_DISK_IO_MODE mode,
@@ -62,21 +65,36 @@ static NTSTATUS STDCALL WvFilediskIo_(
     NTSTATUS status;
     IO_STATUS_BLOCK io_status;
 
-    /* Establish pointer to the filedisk. */
-    filedisk_ptr = CONTAINING_RECORD(disk_ptr, WV_S_FILEDISK_T, disk);
-
     if (sector_count < 1) {
         /* A silly request. */
         DBG("sector_count < 1; cancelling\n");
-        irp->IoStatus.Information = 0;
-        irp->IoStatus.Status = STATUS_CANCELLED;
-        IoCompleteRequest(irp, IO_NO_INCREMENT);
-        return STATUS_CANCELLED;
+        return WvlIrpComplete(irp, 0, STATUS_CANCELLED);
       }
+
+    /* Establish pointer to the filedisk. */
+    filedisk_ptr = CONTAINING_RECORD(disk_ptr, WV_S_FILEDISK_T, disk);
+
+    /*
+     * These SCSI read/write IRPs should be completed in the thread context.
+     * Check if the IRP was already marked pending.
+     */
+    if (!(IoGetCurrentIrpStackLocation(irp)->Control & SL_PENDING_RETURNED)) {
+        /* Enqueue and signal work. */
+        IoMarkIrpPending(irp);
+        ExInterlockedInsertTailList(
+            filedisk_ptr->Irps,
+            &irp->Tail.Overlay.ListEntry,
+            filedisk_ptr->IrpsLock
+          );
+        KeSetEvent(&filedisk_ptr->Thread->Signal, 0, FALSE);
+        return STATUS_PENDING;
+      }
+
     /* Calculate the offset. */
     offset.QuadPart = start_sector * disk_ptr->SectorSize;
     offset.QuadPart += filedisk_ptr->offset.QuadPart;
 
+    /* Perform the read/write. */
     if (mode == WvlDiskIoModeWrite) {
         status = ZwWriteFile(
             filedisk_ptr->file,
@@ -101,13 +119,11 @@ static NTSTATUS STDCALL WvFilediskIo_(
             &offset,
             NULL
           );
+        /* When the MBR is read, re-determine the disk geometry. */
+        if (!start_sector)
+          WvlDiskGuessGeometry((WVL_AP_DISK_BOOT_SECT) buffer, disk_ptr);
       }
-    if (!start_sector)
-      WvlDiskGuessGeometry((WVL_AP_DISK_BOOT_SECT) buffer, disk_ptr);
-    irp->IoStatus.Information = sector_count * disk_ptr->SectorSize;
-    irp->IoStatus.Status = status;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
-    return status;
+    return WvlIrpComplete(irp, sector_count * disk_ptr->SectorSize, status);
   }
 
 static NTSTATUS STDCALL WvFilediskPnpQueryId_(
@@ -312,7 +328,6 @@ static VOID STDCALL WvFilediskClose_(IN WV_SP_DEV_T dev) {
     return;
   }
 
-static WVL_F_DISK_UNIT_NUM WvFilediskUnitNum_;
 static UCHAR STDCALL WvFilediskUnitNum_(IN WVL_SP_DISK_T disk) {
     WV_SP_FILEDISK_T filedisk = CONTAINING_RECORD(
         disk,
@@ -322,6 +337,62 @@ static UCHAR STDCALL WvFilediskUnitNum_(IN WVL_SP_DISK_T disk) {
 
     /* Possible precision loss. */
     return (UCHAR) WvlBusGetNodeNum(&filedisk->Dev->BusNode);
+  }
+
+static VOID STDCALL WvFilediskThread_(IN OUT WVL_SP_THREAD_ITEM item) {
+    WV_SP_FILEDISK_T filedisk = CONTAINING_RECORD(
+        item,
+        WV_S_FILEDISK_T,
+        Thread[0].Main
+      );
+    LARGE_INTEGER timeout;
+    WVL_SP_THREAD_ITEM work_item;
+    PLIST_ENTRY irp_item;
+
+    /* Wake up at least every 30 seconds. */
+    timeout.QuadPart = -300000000LL;
+
+    while (
+        (filedisk->Thread->State == WvlThreadStateStarted) ||
+        (filedisk->Thread->State == WvlThreadStateStopping)
+      ) {
+        /* Wait for the work signal or the timeout. */
+        KeWaitForSingleObject(
+            &filedisk->Thread->Signal,
+            Executive,
+            KernelMode,
+            FALSE,
+            &timeout
+          );
+        /* Reset the work signal. */
+        KeResetEvent(&filedisk->Thread->Signal);
+
+        /* Process work items.  One of these might be a stopper. */
+        while (work_item = WvlThreadGetItem(filedisk->Thread))
+          work_item->Func(work_item);
+
+        /* Process SCSI IRPs. */
+        while (irp_item = ExInterlockedRemoveHeadList(
+            filedisk->Irps,
+            filedisk->IrpsLock
+          )) {
+            PIRP irp;
+            PIO_STACK_LOCATION io_stack_loc;
+
+            irp = CONTAINING_RECORD(irp_item, IRP, Tail.Overlay.ListEntry);
+            io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+            if (io_stack_loc->MajorFunction != IRP_MJ_SCSI) {
+                DBG("Non-SCSI IRP!\n");
+                continue;
+              }
+            WvlDiskScsi(filedisk->Dev->Self, irp, filedisk->disk);
+          }
+
+        /* Are we finished? */
+        if (filedisk->Thread->State == WvlThreadStateStopping)
+          filedisk->Thread->State = WvlThreadStateStopped;
+      } /* while thread started or stopping. */
+    return;
   }
 
 /**
@@ -357,9 +428,10 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
       );
     if (!NT_SUCCESS(status)) {
         WvlError("WvlDiskCreatePdo", status);
-        return NULL;
+        goto err_pdo;
       }
 
+    /* Initialize. */
     filedisk = pdo->DeviceExtension;
     RtlZeroMemory(filedisk, sizeof *filedisk);
     WvlDiskInit(filedisk->disk);
@@ -374,6 +446,16 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
     filedisk->disk->disk_ops.PnpQueryDevText = WvDiskPnpQueryDevText;
     filedisk->disk->ext = filedisk;
     filedisk->disk->DriverObj = WvDriverObj;
+    InitializeListHead(filedisk->Irps);
+    KeInitializeSpinLock(filedisk->IrpsLock);
+
+    /* Start the thread. */
+    filedisk->Thread->Main.Func = WvFilediskThread_;
+    status = WvlThreadStart(filedisk->Thread);
+    if (!NT_SUCCESS(status)) {
+        DBG("Couldn't create thread!\n");
+        goto err_thread;
+      }
 
     /* Set associations for the PDO, device, disk. */
     WvDevForDevObj(pdo, filedisk->Dev);
@@ -385,6 +467,14 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
 
     DBG("New PDO: %p\n", pdo);
     return filedisk;
+
+    WvlThreadSendStopAndWait(filedisk->Thread);
+    err_thread:
+
+    IoDeleteDevice(pdo);
+    err_pdo:
+
+    return NULL;
   }
 
 /**
@@ -393,193 +483,39 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
  * @v dev               Points to the file-backed disk device to delete.
  */
 static VOID STDCALL WvFilediskFree_(IN WV_SP_DEV_T dev) {
+    WV_SP_FILEDISK_T filedisk = CONTAINING_RECORD(
+        dev,
+        WV_S_FILEDISK_T,
+        Dev[0]
+      );
+
+    WvlThreadSendStopAndWait(filedisk->Thread);
     IoDeleteDevice(dev->Self);
   }
 
-/* Threaded read/write request. */
-typedef struct WV_FILEDISK_THREAD_REQ {
-    LIST_ENTRY list_entry;
-    WV_SP_FILEDISK_T filedisk;
-    WVL_E_DISK_IO_MODE mode;
-    LONGLONG start_sector;
-    UINT32 sector_count;
-    PUCHAR buffer;
-    PIRP irp;
-  } WV_S_FILEDISK_THREAD_REQ, * WV_SP_FILEDISK_THREAD_REQ;
-
 /**
- * A threaded, file-backed disk's worker thread.
- *
- * @v StartContext      Points to a file-backed disk.
- */
-static VOID STDCALL thread(IN PVOID StartContext) {
-    WV_SP_FILEDISK_T filedisk_ptr = StartContext;
-    LARGE_INTEGER timeout;
-    PLIST_ENTRY walker;
-
-    /* Wake up at least every second. */
-    timeout.QuadPart = -10000000LL;
-    /* The read/write request processing loop. */
-    while (TRUE) {
-        /* Wait for work-to-do signal or the timeout. */
-        KeWaitForSingleObject(
-            &filedisk_ptr->signal,
-            Executive,
-            KernelMode,
-            FALSE,
-            &timeout
-          );
-        KeResetEvent(&filedisk_ptr->signal);
-        /* Are we being torn down?  We abuse the device's Free() member. */
-        if (filedisk_ptr->Dev->Ops.Free == NULL)
-          break;
-        /* Process each read/write request in the list. */
-        while (walker = ExInterlockedRemoveHeadList(
-            &filedisk_ptr->req_list,
-            &filedisk_ptr->req_list_lock
-          )) {
-            WV_SP_FILEDISK_THREAD_REQ req;
-  
-            req = CONTAINING_RECORD(
-                walker,
-                WV_S_FILEDISK_THREAD_REQ,
-                list_entry
-              );
-            filedisk_ptr->sync_io(
-                req->filedisk->disk,
-                req->mode,
-                req->start_sector,
-                req->sector_count,
-                req->buffer,
-                req->irp
-              );
-            wv_free(req);
-          } /* while requests */
-      } /* main loop */
-    /* Time to tear things down. */
-    WvFilediskFree_(filedisk_ptr->Dev);
-  }
-
-static NTSTATUS STDCALL WvFilediskThreadedIo_(
-    IN WVL_SP_DISK_T disk,
-    IN WVL_E_DISK_IO_MODE mode,
-    IN LONGLONG start_sector,
-    IN UINT32 sector_count,
-    IN PUCHAR buffer,
-    IN PIRP irp
-  ) {
-    WV_SP_FILEDISK_T filedisk_ptr;
-    WV_SP_FILEDISK_THREAD_REQ req;
-
-    filedisk_ptr = CONTAINING_RECORD(disk, WV_S_FILEDISK_T, disk);
-    /* Allocate the request. */
-    req = wv_malloc(sizeof *req);
-    if (req == NULL) {
-        irp->IoStatus.Information = 0;
-        irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-        IoCompleteRequest(irp, IO_NO_INCREMENT);
-        return STATUS_INSUFFICIENT_RESOURCES;
-      }
-    /* Remember the request. */
-    req->filedisk = filedisk_ptr;
-    req->mode = mode;
-    req->start_sector = start_sector;
-    req->sector_count = sector_count;
-    req->buffer = buffer;
-    req->irp = irp;
-    ExInterlockedInsertTailList(
-        &filedisk_ptr->req_list,
-        &req->list_entry,
-        &filedisk_ptr->req_list_lock
-      );
-    /* Signal worker thread and return. */
-    KeSetEvent(&filedisk_ptr->signal, 0, FALSE);
-    return STATUS_PENDING;
-  }
-
-/**
- * Threaded, file-backed disk deletion operation.
- *
- * @v dev_ptr           Points to the file-backed disk device to delete.
- */
-static VOID STDCALL free_threaded_filedisk(IN WV_SP_DEV_T dev_ptr) {
-    /*
-     * Queue the tear-down and return.  The thread will catch this on timeout.
-     */
-    dev_ptr->Ops.Free = NULL;
-  }
-
-/**
- * Create a new threaded, file-backed disk.
- *
- * @v MediaType         The media type for the filedisk.
- * @ret filedisk_ptr    The address of a new filedisk, or NULL for failure.
- *
- * See WvFilediskCreatePdo() above.  This routine uses threaded routines
- * for disk reads/writes, and frees asynchronously, too.
- */
-WV_SP_FILEDISK_T WvFilediskCreatePdoThreaded(
-    IN WVL_E_DISK_MEDIA_TYPE MediaType
-  ) {
-    WV_SP_FILEDISK_T filedisk_ptr;
-    OBJECT_ATTRIBUTES obj_attrs;
-    HANDLE thread_handle;
-
-    /* Try to create a filedisk. */
-    filedisk_ptr = WvFilediskCreatePdo(MediaType);
-    if (filedisk_ptr == NULL)
-      goto err_nofiledisk;
-    /* Use threaded routines. */
-    filedisk_ptr->sync_io = WvFilediskIo_;
-    filedisk_ptr->disk->disk_ops.Io = WvFilediskThreadedIo_;
-    filedisk_ptr->Dev->Ops.Free = free_threaded_filedisk;
-    /* Initialize threading parameters and start the filedisk's thread. */
-    InitializeListHead(&filedisk_ptr->req_list);
-    KeInitializeSpinLock(&filedisk_ptr->req_list_lock);
-    KeInitializeEvent(&filedisk_ptr->signal, SynchronizationEvent, FALSE);
-    InitializeObjectAttributes(
-        &obj_attrs,
-        NULL,
-        OBJ_KERNEL_HANDLE,
-        NULL,
-        NULL
-      );
-    PsCreateSystemThread(
-        &thread_handle,
-        THREAD_ALL_ACCESS,
-        &obj_attrs,
-        NULL,
-        NULL,
-        thread,
-        filedisk_ptr
-      );
-
-    return filedisk_ptr;
-
-    err_nofiledisk:
-
-    return NULL;
-  }
-
-/**
- * Find and hot-swap to a backing file.
- *
- * @v filedisk_ptr      Points to the filedisk needing to hot-swap.
- * @ret                 TRUE once the new file has been established, or FALSE
+ * Find and hot-swap to a backing file.  This is a thread work item.
  *
  * We search all filesystems for a particular filename, then swap
  * to using it as the backing store.  This is currently useful for
  * sector-mapped disks which should really have a file-in-use lock
  * for the file they represent.  Once the backing file is established,
- * we return TRUE.  Otherwise, we return FALSE and the hot-swap thread
- * will keep trying.
+ * we free the work item.  Otherwise, we re-enqueue the thread item
+ * and the thread will keep trying.
  */
-static BOOLEAN STDCALL hot_swap(WV_SP_FILEDISK_T filedisk_ptr) {
+static BOOLEAN STDCALL WvFilediskHotSwap_(
+    IN WV_SP_FILEDISK_T filedisk,
+    IN PUNICODE_STRING filename
+  ) {
     NTSTATUS status;
     GUID vol_guid = GUID_DEVINTERFACE_VOLUME;
     PWSTR sym_links;
     PWCHAR pos;
+    KIRQL irql;
 
+    /* Do we currently have a backing disk?  If not, re-enqueue for later. */
+    if (filedisk->file == NULL)
+      return FALSE;
     /*
      * Find the backing volume and use it.  We walk a list
      * of unicode volume device names and check each one for the file.
@@ -626,13 +562,13 @@ static BOOLEAN STDCALL hot_swap(WV_SP_FILEDISK_T filedisk_ptr) {
           sizeof UNICODE_NULL +
           vol_dos_name.Length +
           sizeof path_sep +
-          filedisk_ptr->filepath_unicode.Length;
+          filename->Length;
         filepath.Buffer = wv_malloc(filepath.Length);
         if (filepath.Buffer == NULL) {
             status = STATUS_UNSUCCESSFUL;
             goto err_alloc_buf;
           }
-        {   char *buf = (char *) filepath.Buffer;
+        {   PCHAR buf = (PCHAR) filepath.Buffer;
 
             RtlCopyMemory(
                 buf,
@@ -644,11 +580,7 @@ static BOOLEAN STDCALL hot_swap(WV_SP_FILEDISK_T filedisk_ptr) {
             buf += vol_dos_name.Length;
             RtlCopyMemory(buf, &path_sep, sizeof path_sep);
             buf += sizeof path_sep;
-            RtlCopyMemory(
-                buf,
-                filedisk_ptr->filepath_unicode.Buffer,
-                filedisk_ptr->filepath_unicode.Length
-              );
+            RtlCopyMemory(buf, filename->Buffer, filename->Length);
           } /* buf scope */
         InitializeObjectAttributes(
             &obj_attrs,
@@ -676,15 +608,13 @@ static BOOLEAN STDCALL hot_swap(WV_SP_FILEDISK_T filedisk_ptr) {
         if (!NT_SUCCESS(status))
           goto err_open;
         /* We could open it.  Do the hot-swap. */
-        {   HANDLE old = filedisk_ptr->file;
+        {   HANDLE old = filedisk->file;
   
-            filedisk_ptr->file = 0;
-            filedisk_ptr->offset.QuadPart = 0;
-            filedisk_ptr->file = file;
+            filedisk->file = 0;
+            filedisk->offset.QuadPart = 0;
+            filedisk->file = file;
             ZwClose(old);
           } /* old scope */
-        RtlFreeUnicodeString(&filedisk_ptr->filepath_unicode);
-        filedisk_ptr->filepath_unicode.Length = 0;
   
         err_open:
   
@@ -704,48 +634,116 @@ static BOOLEAN STDCALL hot_swap(WV_SP_FILEDISK_T filedisk_ptr) {
           pos++;
       } /* while */
     wv_free(sym_links);
-    return NT_SUCCESS(status) ? TRUE : FALSE;
+    /* Success? */
+    if (NT_SUCCESS(status)) {
+        DBG("Finished hot-swapping.\n");
+        return TRUE;
+      }
+    return FALSE;
   }
 
-VOID STDCALL WvFilediskHotSwapThread(IN PVOID StartContext) {
-    WV_SP_FILEDISK_T filedisk_ptr = StartContext;
-    KEVENT signal;
-    LARGE_INTEGER timeout;
+typedef struct WV_FILEDISK_HOT_SWAPPER_ {
+    WVL_S_THREAD_ITEM item[1];
+    WV_SP_FILEDISK_T filedisk;
+    UNICODE_STRING filename[1];
+  } WV_S_FILEDISK_HOT_SWAPPER_, * WV_SP_FILEDISK_HOT_SWAPPER_;
 
-    KeInitializeEvent(&signal, SynchronizationEvent, FALSE);
-    /* Wake up at least every second. */
-    timeout.QuadPart = -10000000LL;
-    /* The hot-swap loop. */
-    while (TRUE) {
-        /* Wait for work-to-do signal or the timeout. */
+static VOID STDCALL WvFilediskHotSwapThread_(IN OUT WVL_SP_THREAD_ITEM item) {
+    LARGE_INTEGER timeout;
+    WVL_SP_THREAD thread = CONTAINING_RECORD(item, WVL_S_THREAD, Main);
+    WVL_SP_THREAD_ITEM work_item;
+    WV_SP_FILEDISK_HOT_SWAPPER_ info;
+
+    /* Wake up at least every 10 seconds. */
+    timeout.QuadPart = -100000000LL;
+
+    while (
+        (thread->State == WvlThreadStateStarted) ||
+        (thread->State == WvlThreadStateStopping)
+      ) {
+        /* Wait for the work signal or the timeout. */
         KeWaitForSingleObject(
-            &signal,
+            &thread->Signal,
             Executive,
             KernelMode,
             FALSE,
             &timeout
           );
-        if (filedisk_ptr->file == NULL)
-          continue;
-        /* Are we supposed to hot-swap to a file?  Check ANSI filepath. */
-        if (filedisk_ptr->filepath != NULL) {
-            ANSI_STRING tmp;
-            NTSTATUS status;
 
-            RtlInitAnsiString(&tmp, filedisk_ptr->filepath);
-            filedisk_ptr->filepath_unicode.Buffer = NULL;
-            status = RtlAnsiStringToUnicodeString(
-                &filedisk_ptr->filepath_unicode,
-                &tmp,
-                TRUE
-              );
-            if (NT_SUCCESS(status)) {
-                wv_free(filedisk_ptr->filepath);
-                filedisk_ptr->filepath = NULL;
-              }
+        work_item = WvlThreadGetItem(thread);
+        if (!work_item)
+          continue;
+
+        if (work_item->Func != WvFilediskHotSwapThread_) {
+            DBG("Unknown work item.\n");
+            continue;
           }
-        /* Are we supposed to hot-swap to a file?  Check unicode filepath. */
-        if (filedisk_ptr->filepath_unicode.Length && hot_swap(filedisk_ptr))
-          break;
-      } /* while */
+        info = CONTAINING_RECORD(
+            work_item,
+            WV_S_FILEDISK_HOT_SWAPPER_,
+            item[0]
+          );
+        /* Attempt a hot swap. */
+        if (WvFilediskHotSwap_(info->filedisk, info->filename)) {
+            /* Success. */
+            RtlFreeUnicodeString(info->filename);
+            wv_free(info);
+          } else {
+            /* Re-enqueue. */
+            WvlThreadAddItem(thread, info->item);
+          }
+
+        /* Reset the work signal. */
+        KeResetEvent(&thread->Signal);
+      } /* while thread is running. */
+    return;
+  }
+
+VOID STDCALL WvFilediskHotSwap(IN WV_SP_FILEDISK_T filedisk, IN PCHAR file) {
+    static WVL_S_THREAD thread = {
+        /* Main */
+        {
+            /* Link */
+            {0},
+            /* Func */
+            WvFilediskHotSwapThread_,
+          },
+        /* State */
+        WvlThreadStateNotStarted,
+      };
+    WV_SP_FILEDISK_HOT_SWAPPER_ hot_swapper;
+    ANSI_STRING file_ansi;
+    NTSTATUS status;
+
+    hot_swapper = wv_malloc(sizeof *hot_swapper);
+    if (!hot_swapper) {
+        DBG("Non-critical: Couldn't allocate work item.\n");
+        return;
+      }
+    /* Build the Unicode string. */
+    RtlInitAnsiString(&file_ansi, file);
+    hot_swapper->filename->Buffer = NULL;
+    status = RtlAnsiStringToUnicodeString(
+        hot_swapper->filename,
+        &file_ansi,
+        TRUE
+      );
+    if (!NT_SUCCESS(status)) {
+        DBG("Non-critical: Couldn't allocate unicode string.\n");
+        wv_free(hot_swapper);
+        return;
+      }
+    /* Build the rest of the work item. */
+    hot_swapper->item->Func = WvFilediskHotSwapThread_;
+    hot_swapper->filedisk = filedisk;
+    /* Start the thread.  If it's already been started, no matter. */
+    WvlThreadStart(&thread);
+    /* Add the hot-swapper work item. */
+    if (!WvlThreadAddItem(&thread, hot_swapper->item)) {
+        DBG("Non-critical: Couldn't add work item.\n");
+        RtlFreeUnicodeString(hot_swapper->filename);
+        wv_free(hot_swapper);
+      }
+    /* The thread is responsible for freeing the work item and file path. */
+    return;
   }

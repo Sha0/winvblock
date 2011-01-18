@@ -31,21 +31,14 @@ typedef struct WV_FILEDISK_T {
     WVL_S_DISK_T disk[1];
     HANDLE file;
     UINT32 hash;
-    WV_FP_DEV_FREE prev_free;
     LARGE_INTEGER offset;
-    /* For threaded instances. */
-    LIST_ENTRY req_list;
-    KSPIN_LOCK req_list_lock;
-    KEVENT signal;
-    WVL_FP_DISK_IO sync_io;
-    PCHAR filepath;
-    UNICODE_STRING filepath_unicode;
+    WVL_S_THREAD Thread[1];
+    LIST_ENTRY Irps[1];
+    KSPIN_LOCK IrpsLock[1];
   } WV_S_FILEDISK_T, * WV_SP_FILEDISK_T;
 
 extern NTSTATUS STDCALL WvFilediskAttach(IN PIRP);
-extern WV_SP_FILEDISK_T WvFilediskCreatePdo(IN WVL_E_DISK_MEDIA_TYPE);
-extern WV_SP_FILEDISK_T WvFilediskCreatePdoThreaded(IN WVL_E_DISK_MEDIA_TYPE);
-
-extern VOID STDCALL WvFilediskHotSwapThread(IN PVOID);
+extern WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(IN WVL_E_DISK_MEDIA_TYPE);
+extern VOID STDCALL WvFilediskHotSwap(IN WV_SP_FILEDISK_T, IN PCHAR);
 
 #endif  /* WV_M_FILEDISK_H_ */

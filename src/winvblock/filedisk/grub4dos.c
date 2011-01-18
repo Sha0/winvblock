@@ -35,6 +35,7 @@
 #include "bus.h"
 #include "device.h"
 #include "disk.h"
+#include "libthread.h"
 #include "filedisk.h"
 #include "debug.h"
 #include "probe.h"
@@ -46,7 +47,7 @@
 extern WVL_S_BUS_T WvBus;
 
 /** Private. */
-static WVL_FP_DISK_IO WvFilediskG4dSyncIo_;
+static WVL_FP_DISK_IO WvFilediskG4dPrevIo_;
 static WVL_F_DISK_IO WvFilediskG4dIo_;
 
 /**
@@ -200,9 +201,9 @@ static NTSTATUS STDCALL WvFilediskG4dIo_(
       goto dud;
     /* Use the backing disk and restore the original read/write routine. */
     filedisk_ptr->file = file;
-    filedisk_ptr->sync_io = WvFilediskG4dSyncIo_;
+    filedisk_ptr->disk->disk_ops.Io = WvFilediskG4dPrevIo_;
     /* Call the original read/write routine. */
-    return WvFilediskG4dSyncIo_(
+    return WvFilediskG4dPrevIo_(
         filedisk_ptr->disk,
         mode,
         start_sector,
@@ -424,13 +425,16 @@ VOID filedisk_grub4dos__find(void) {
            * read/write routine so we can accessing the backing disk
            * late(r) during the boot process.
            */
-          filedisk_ptr = WvFilediskCreatePdoThreaded(media_type);
+          filedisk_ptr = WvFilediskCreatePdo(media_type);
           if (filedisk_ptr == NULL) {
               DBG("Could not create GRUB4DOS disk!\n");
               return;
             }
-          WvFilediskG4dSyncIo_ = filedisk_ptr->sync_io;
-          filedisk_ptr->sync_io = WvFilediskG4dIo_;
+          /* Record the usual filedisk I/O function for later. */
+          WvFilediskG4dPrevIo_ = filedisk_ptr->disk->disk_ops.Io;
+          /* Hook the first I/O request. */
+          filedisk_ptr->disk->disk_ops.Io = WvFilediskG4dIo_;
+          /* Other parameters we know. */
           filedisk_ptr->disk->Media = media_type;
           filedisk_ptr->disk->SectorSize = sector_size;
           /* Find an associated filename, if one exists. */
@@ -442,34 +446,10 @@ VOID filedisk_grub4dos__find(void) {
                         Grub4DosDriveMapSlotPtr[i].SourceDrive) &&
                       (sets[j].filepath != NULL)
                     )
-                    filedisk_ptr->filepath = sets[j].filepath;
+                    WvFilediskHotSwap(filedisk_ptr, sets[j].filepath);
                 }
-              if (filedisk_ptr->filepath != NULL) {
-                  OBJECT_ATTRIBUTES obj_attrs;
-                  HANDLE thread_handle;
-
-                  InitializeObjectAttributes(
-                      &obj_attrs,
-                      NULL,
-                      OBJ_KERNEL_HANDLE,
-                      NULL,
-                      NULL
-                    );
-                  PsCreateSystemThread(
-                      &thread_handle,
-                      THREAD_ALL_ACCESS,
-                      &obj_attrs,
-                      NULL,
-                      NULL,
-                      WvFilediskHotSwapThread,
-                      filedisk_ptr
-                    );
-                } /* if */
             } /* j scope. */
-          DBG(
-              "Sector-mapped disk is type: %d\n",
-              filedisk_ptr->disk->Media
-            );
+          DBG("Sector-mapped disk is type: %d\n", media_type);
           /* Note the offset of the disk image from the backing disk's start. */
           filedisk_ptr->offset.QuadPart =
             Grub4DosDriveMapSlotPtr[i].SectorStart *
