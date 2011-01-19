@@ -71,11 +71,14 @@ static VOID WvlThreadWrapper(IN PVOID context) {
     InsertTailList(&WvlThreads, &node.Link);
     KeReleaseSpinLock(&WvlThreadLock, irql);
 
-    /* Initialize the thread. */
+    /* Initialize the thread for work. */
     thread->Thread = PsGetCurrentThread();
     InitializeListHead(&thread->Main.Link);
     KeInitializeSpinLock(&thread->Lock);
-    KeInitializeEvent(&thread->Signal, SynchronizationEvent, FALSE);
+
+    /* Signal that we're ready for work. */
+    thread->State = WvlThreadStateStarted;
+    KeSetEvent(&thread->Signal, 0, FALSE);
 
     /* Launch the thread. */
     thread->Main.Func(&thread->Main);
@@ -125,6 +128,8 @@ WVL_M_LIB NTSTATUS WvlThreadStart(IN OUT WVL_SP_THREAD Thread) {
     KeReleaseSpinLock(&WvlThreadLock, irql);
     if (abort)
       return STATUS_UNSUCCESSFUL;
+    /* Start the thread. */
+    KeInitializeEvent(&Thread->Signal, SynchronizationEvent, FALSE);
     InitializeObjectAttributes(
         &obj_attrs,
         NULL,
@@ -141,9 +146,20 @@ WVL_M_LIB NTSTATUS WvlThreadStart(IN OUT WVL_SP_THREAD Thread) {
         WvlThreadWrapper,
         Thread
       );
-    if (!NT_SUCCESS(status))
-      /* Allow for a retry. */
-      Thread->State = WvlThreadStateNotStarted;
+    if (!NT_SUCCESS(status)) {
+        /* Allow for a retry. */
+        Thread->State = WvlThreadStateNotStarted;
+        return status;
+      }
+    /* Wait for the thread to signal that it's been initialized for work. */
+    KeWaitForSingleObject(
+        &Thread->Signal,
+        Executive,
+        KernelMode,
+        FALSE,
+        NULL
+      );
+    KeResetEvent(&Thread->Signal);
     return status;
   }
 
@@ -369,9 +385,7 @@ WVL_M_LIB VOID STDCALL WvlThreadTest(IN OUT WVL_SP_THREAD_ITEM Item) {
             case WvlThreadStateStarting:
               /* Were we passed this_ ? */
               if (Item == &this_.Main) {
-                  /* We are to be the main thread!  Initialize. */
-                  this_.State = WvlThreadStateStarted;
-                  /* Begin the thread loop. */
+                  /* We are to be the main thread!  Begin the thread loop. */
                   not_thread = FALSE;
                   break;
                 }
