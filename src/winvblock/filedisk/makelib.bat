@@ -2,7 +2,7 @@
 
 set libname=filedisk
 
-set c=filedisk.c grub4dos.c
+set c=filedisk.c grub4dos.c security.c
 
 echo !INCLUDE $(NTMAKEENV)\makefile.def	> makefile
 

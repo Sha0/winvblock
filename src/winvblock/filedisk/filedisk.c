@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
- * This file is part of WinVBlock, derived from WinAoE.
+ * This file is part of WinVBlock, originally derived from WinAoE.
  *
  * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,15 +43,252 @@
 
 /* From bus.c */
 extern WVL_S_BUS_T WvBus;
+extern NTSTATUS STDCALL WvBusRemoveDev(IN WV_SP_DEV_T);
+
+/* From filedisk/security.c */
+extern NTSTATUS STDCALL WvFilediskImpersonate(IN PVOID);
+extern VOID WvFilediskStopImpersonating(void);
+extern NTSTATUS STDCALL WvFilediskCreateClientSecurity(OUT PVOID *);
+extern VOID STDCALL WvFilediskDeleteClientSecurity(IN OUT PVOID *);
 
 /** Private function declarations. */
 static WVL_F_DISK_IO WvFilediskIo_;
-static WV_F_DEV_CLOSE WvFilediskClose_;
+static NTSTATUS STDCALL WvFilediskPnpQueryId_(
+    IN PDEVICE_OBJECT,
+    IN PIRP,
+    IN WVL_SP_DISK_T
+  );
+static WVL_F_THREAD_ITEM WvFiledikOpenInThread_;
+static NTSTATUS STDCALL WvFilediskOpen_(IN WV_SP_FILEDISK_T, IN PANSI_STRING);
 static WVL_F_DISK_UNIT_NUM WvFilediskUnitNum_;
 static WVL_F_THREAD_ITEM WvFilediskThread_;
 static WV_F_DEV_FREE WvFilediskFree_;
+static BOOLEAN STDCALL WvFilediskHotSwap_(
+    IN WV_SP_FILEDISK_T,
+    IN PUNICODE_STRING
+  );
+static WVL_F_THREAD_ITEM WvFilediskHotSwapThread_;
+
+/** Exported function definitions. */
+
+/* Attach a file as a disk, based on an IRP. */
+NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
+    PCHAR buf = irp->AssociatedIrp.SystemBuffer;
+    WV_SP_MOUNT_DISK params = (WV_SP_MOUNT_DISK) buf;
+    WVL_E_DISK_MEDIA_TYPE media_type;
+    UINT32 sector_size;
+    WV_SP_FILEDISK_T filedisk;
+    NTSTATUS status;
+    ANSI_STRING ansi_path;
+
+    switch (params->type) {
+        case 'f':
+          media_type = WvlDiskMediaTypeFloppy;
+          sector_size = 512;
+          break;
+
+        case 'c':
+          media_type = WvlDiskMediaTypeOptical;
+          sector_size = 2048;
+          break;
+
+        default:
+          media_type = WvlDiskMediaTypeHard;
+          sector_size = 512;
+          break;
+      }
+    DBG("Media type: %d\n", media_type);
+
+    /* Create the filedisk PDO. */
+    filedisk = WvFilediskCreatePdo(media_type);
+    if (filedisk == NULL) {
+        DBG("Could not create file-backed disk!\n");
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto err_pdo;
+      }
+
+    /* Set filedisk parameters. */
+    filedisk->disk->Media = media_type;
+    filedisk->disk->SectorSize = sector_size;
+    filedisk->disk->Cylinders = params->cylinders;
+    filedisk->disk->Heads = params->heads;
+    filedisk->disk->Sectors = params->sectors;
+
+    /* Populate the file path into a counted ANSI string. */
+    RtlInitAnsiString(&ansi_path, buf + sizeof *params);
+
+    /* Attempt to open the file from within the filedisk's thread. */
+    status = WvFilediskOpen_(filedisk, &ansi_path);
+    if (!NT_SUCCESS(status))
+      goto err_file_open;
+
+    /* Add the filedisk to the bus. */
+    filedisk->disk->ParentBus = WvBus.Fdo;
+    if (!WvBusAddDev(filedisk->Dev)) {
+        status = STATUS_UNSUCCESSFUL;
+        goto err_add_child;
+      }
+
+    return STATUS_SUCCESS;
+
+    WvBusRemoveDev(filedisk->Dev);
+    err_add_child:
+
+    /* Any open file handle will be closed upon thread exit. */
+    err_file_open:
+
+    WvFilediskFree_(filedisk->Dev);
+    err_pdo:
+
+    return status;
+  }
+
+/**
+ * Create a filedisk PDO filled with the given disk parameters.
+ *
+ * @v MediaType                 The media type for the filedisk.
+ * @ret WV_SP_FILEDISK_T        Points to the new filedisk, or NULL.
+ *
+ * Returns NULL if the PDO cannot be created.
+ */
+WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
+    IN WVL_E_DISK_MEDIA_TYPE MediaType
+  ) {
+    static WV_S_DEV_IRP_MJ irp_mj = {
+        WvDiskPower,
+        WvDiskSysCtl,
+        WvDiskDevCtl,
+        WvDiskScsi,
+        WvDiskPnp,
+      };
+    NTSTATUS status;
+    WV_SP_FILEDISK_T filedisk;
+    PDEVICE_OBJECT pdo;
+  
+    DBG("Creating filedisk PDO...\n");
+
+    /* Create the disk PDO. */
+    status = WvlDiskCreatePdo(
+        WvDriverObj,
+        sizeof *filedisk,
+        MediaType,
+        &pdo
+      );
+    if (!NT_SUCCESS(status)) {
+        WvlError("WvlDiskCreatePdo", status);
+        goto err_pdo;
+      }
+
+    /* Initialize. */
+    filedisk = pdo->DeviceExtension;
+    RtlZeroMemory(filedisk, sizeof *filedisk);
+    WvlDiskInit(filedisk->disk);
+    WvDevInit(filedisk->Dev);
+    filedisk->Dev->Ops.Free = WvFilediskFree_;
+    filedisk->Dev->ext = filedisk->disk;
+    filedisk->Dev->IrpMj = &irp_mj;
+    filedisk->disk->disk_ops.Io = WvFilediskIo_;
+    filedisk->disk->disk_ops.UnitNum = WvFilediskUnitNum_;
+    filedisk->disk->disk_ops.PnpQueryId = WvFilediskPnpQueryId_;
+    filedisk->disk->disk_ops.PnpQueryDevText = WvDiskPnpQueryDevText;
+    filedisk->disk->ext = filedisk;
+    filedisk->disk->DriverObj = WvDriverObj;
+    InitializeListHead(filedisk->Irps);
+    KeInitializeSpinLock(filedisk->IrpsLock);
+
+    /* Start the thread. */
+    filedisk->Thread->Main.Func = WvFilediskThread_;
+    status = WvlThreadStart(filedisk->Thread);
+    if (!NT_SUCCESS(status)) {
+        DBG("Couldn't create thread!\n");
+        goto err_thread;
+      }
+
+    /* Set associations for the PDO, device, disk. */
+    WvDevForDevObj(pdo, filedisk->Dev);
+    filedisk->Dev->Self = pdo;
+
+    /* Some device parameters. */
+    pdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
+    pdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
+
+    DBG("New PDO: %p\n", pdo);
+    return filedisk;
+
+    WvlThreadSendStopAndWait(filedisk->Thread);
+    err_thread:
+
+    IoDeleteDevice(pdo);
+    err_pdo:
+
+    return NULL;
+  }
+
+/* A work item for a filedisk thread to hot-swap to a file. */
+typedef struct WV_FILEDISK_HOT_SWAPPER_ {
+    WVL_S_THREAD_ITEM item[1];
+    WV_SP_FILEDISK_T filedisk;
+    UNICODE_STRING filename[1];
+  } WV_S_FILEDISK_HOT_SWAPPER_, * WV_SP_FILEDISK_HOT_SWAPPER_;
+
+/**
+ * Initiate a filedisk hot-swap to another file.
+ *
+ * @v filedisk          The filedisk to be hot-swapped.
+ * @v file              The ANSI filename for swapping to.
+ */
+VOID STDCALL WvFilediskHotSwap(IN WV_SP_FILEDISK_T filedisk, IN PCHAR file) {
+    static WVL_S_THREAD thread = {
+        /* Main */
+        {
+            /* Link */
+            {0},
+            /* Func */
+            WvFilediskHotSwapThread_,
+          },
+        /* State */
+        WvlThreadStateNotStarted,
+      };
+    WV_SP_FILEDISK_HOT_SWAPPER_ hot_swapper;
+    ANSI_STRING file_ansi;
+    NTSTATUS status;
+
+    hot_swapper = wv_malloc(sizeof *hot_swapper);
+    if (!hot_swapper) {
+        DBG("Non-critical: Couldn't allocate work item.\n");
+        return;
+      }
+    /* Build the Unicode string. */
+    RtlInitAnsiString(&file_ansi, file);
+    hot_swapper->filename->Buffer = NULL;
+    status = RtlAnsiStringToUnicodeString(
+        hot_swapper->filename,
+        &file_ansi,
+        TRUE
+      );
+    if (!NT_SUCCESS(status)) {
+        DBG("Non-critical: Couldn't allocate unicode string.\n");
+        wv_free(hot_swapper);
+        return;
+      }
+    /* Build the rest of the work item. */
+    hot_swapper->item->Func = WvFilediskHotSwapThread_;
+    hot_swapper->filedisk = filedisk;
+    /* Start the thread.  If it's already been started, no matter. */
+    WvlThreadStart(&thread);
+    /* Add the hot-swapper work item. */
+    if (!WvlThreadAddItem(&thread, hot_swapper->item)) {
+        DBG("Non-critical: Couldn't add work item.\n");
+        RtlFreeUnicodeString(hot_swapper->filename);
+        wv_free(hot_swapper);
+      }
+    /* The thread is responsible for freeing the work item and file path. */
+    return;
+  }
 
 /** Private function definitions. */
+
+/* Filedisk I/O routine. */
 static NTSTATUS STDCALL WvFilediskIo_(
     IN WVL_SP_DISK_T disk_ptr,
     IN WVL_E_DISK_IO_MODE mode,
@@ -126,6 +363,7 @@ static NTSTATUS STDCALL WvFilediskIo_(
     return WvlIrpComplete(irp, sector_count * disk_ptr->SectorSize, status);
   }
 
+/* Filedisk PnP ID query-response routine. */
 static NTSTATUS STDCALL WvFilediskPnpQueryId_(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
@@ -187,35 +425,44 @@ static NTSTATUS STDCALL WvFilediskPnpQueryId_(
     return WvlIrpComplete(irp, 0, status);
   }
 
-/* Attach a file as a disk, based on an IRP. */
-NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
-    ANSI_STRING ansi_path;
-    PCHAR buf = irp->AssociatedIrp.SystemBuffer;
-    UNICODE_STRING file_path;
+/* A filedisk thread file-opening work item. */
+typedef struct WV_FILEDISK_OPENER_ {
+    WVL_S_THREAD_ITEM item[1];
+    WV_SP_FILEDISK_T filedisk;
+    UNICODE_STRING file_path[1];
     NTSTATUS status;
+    KEVENT completion[1];
+  } WV_S_FILEDISK_OPENER_, * WV_SP_FILEDISK_OPENER_;
+
+/* Attempt to impersonate a client and open a file for the filedisk. */
+static VOID STDCALL WvFilediskOpenInThread_(IN OUT WVL_SP_THREAD_ITEM item) {
+    WV_SP_FILEDISK_OPENER_ opener = CONTAINING_RECORD(
+        item,
+        WV_S_FILEDISK_OPENER_,
+        item[0]
+      );
     OBJECT_ATTRIBUTES obj_attrs;
     HANDLE file = NULL;
     IO_STATUS_BLOCK io_status;
-    WV_SP_MOUNT_DISK params = (WV_SP_MOUNT_DISK) buf;
-    FILE_STANDARD_INFORMATION info;
-    WV_SP_FILEDISK_T filedisk;
-    WVL_E_DISK_MEDIA_TYPE media_type;
-    UINT32 sector_size, hash;
-    ULONGLONG lba_size;
+    FILE_STANDARD_INFORMATION file_info;
 
-    RtlInitAnsiString(&ansi_path, buf + sizeof (WV_S_MOUNT_DISK));
-    status = RtlAnsiStringToUnicodeString(&file_path, &ansi_path, TRUE);
-    if (!NT_SUCCESS(status))
-      goto err_ansi_to_unicode;
+    /* Impersonate the user creating the filedisk. */
+    opener->status = WvFilediskImpersonate(opener->filedisk->impersonation);
+    if (!NT_SUCCESS(opener->status)) {
+        DBG("Couldn't impersonate!\n");
+        goto err_impersonate;
+      }
+
+    /* Open the file. */
     InitializeObjectAttributes(
         &obj_attrs,
-        &file_path,
+        opener->file_path,
         OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE,
         NULL,
         NULL
       );
-    /* Open the file.  The handle is closed by WvFilediskClose_() */
-    status = ZwCreateFile(
+    /* Open the file.  The handle is closed when the thread finishes. */
+    opener->status = ZwCreateFile(
         &file,
         GENERIC_READ | GENERIC_WRITE,
         &obj_attrs,
@@ -230,104 +477,110 @@ NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
         NULL,
         0
       );
-    RtlFreeUnicodeString(&file_path);
-    if (!NT_SUCCESS(status))
-      goto err_file_open;
-
-    switch (params->type) {
-        case 'f':
-          media_type = WvlDiskMediaTypeFloppy;
-          sector_size = 512;
-          break;
-
-        case 'c':
-          media_type = WvlDiskMediaTypeOptical;
-          sector_size = 2048;
-          break;
-
-        default:
-          media_type = WvlDiskMediaTypeHard;
-          sector_size = 512;
-          break;
+    if (!NT_SUCCESS(opener->status)) {
+        DBG("Couldn't open file!\n");
+        goto err_open;
       }
-    DBG("Media type: %d\n", media_type);
 
     /* Determine the disk's size. */
-    status = ZwQueryInformationFile(
+    opener->status = ZwQueryInformationFile(
         file,
         &io_status,
-        &info,
-        sizeof info,
+        &file_info,
+        sizeof file_info,
         FileStandardInformation
       );
-    if (!NT_SUCCESS(status))
-      goto err_query_info;
-    lba_size = info.EndOfFile.QuadPart / sector_size;
+    if (!NT_SUCCESS(opener->status)) {
+        DBG("Couldn't query file size!\n");
+        goto err_query_info;
+      }
+    opener->filedisk->disk->LBADiskSize =
+      file_info.EndOfFile.QuadPart / opener->filedisk->disk->SectorSize;
 
     /*
      * A really stupid "hash".  RtlHashUnicodeString() would have been
      * good, but is only available >= Windows XP.
      */
-    hash = (UINT32) lba_size;
-    {   PCHAR path_iterator = ansi_path.Buffer;
+    opener->filedisk->hash = (UINT32) opener->filedisk->disk->LBADiskSize;
+    {   PWCHAR path_iterator = opener->file_path->Buffer;
     
         while (*path_iterator)
-          hash += *path_iterator++;
+          opener->filedisk->hash += *path_iterator++;
       }
 
-    /* Create the filedisk PDO. */
-    filedisk = WvFilediskCreatePdo(media_type);
-    if (filedisk == NULL) {
-        DBG("Could not create file-backed disk!\n");
-        status = STATUS_INSUFFICIENT_RESOURCES;
-        goto err_pdo;
-      }
-
-    /* Set filedisk parameters. */
-    filedisk->disk->Media = media_type;
-    filedisk->disk->SectorSize = sector_size;
-    filedisk->disk->LBADiskSize = lba_size;
-    filedisk->disk->Cylinders = params->cylinders;
-    filedisk->disk->Heads = params->heads;
-    filedisk->disk->Sectors = params->sectors;
-    filedisk->file = file;
-    filedisk->hash = hash;
-
-    /* Add the filedisk to the bus. */
-    filedisk->disk->ParentBus = WvBus.Fdo;
-    if (!WvBusAddDev(filedisk->Dev)) {
-        status = STATUS_UNSUCCESSFUL;
-        goto err_add_child;
-      }
-
-    return STATUS_SUCCESS;
-
-    err_add_child:
-
-    WvFilediskFree_(filedisk->Dev);
-    err_pdo:
+    /* Opened. */
+    opener->filedisk->file = file;
+    goto out;
 
     err_query_info:
 
     ZwClose(file);
-    err_file_open:
+    err_open:
 
-    err_ansi_to_unicode:
+    out:
 
-    return status;
-  }
+    WvFilediskStopImpersonating();
+    err_impersonate:
 
-static VOID STDCALL WvFilediskClose_(IN WV_SP_DEV_T dev) {
-    WV_SP_FILEDISK_T filedisk = CONTAINING_RECORD(
-        dev,
-        WV_S_FILEDISK_T,
-        Dev
-      );
-
-    ZwClose(filedisk->file);
+    KeSetEvent(opener->completion, 0, FALSE);
     return;
   }
 
+/* Attempt to impersonate a client and open a file for the filedisk. */
+static NTSTATUS STDCALL WvFilediskOpen_(
+    IN WV_SP_FILEDISK_T filedisk,
+    IN PANSI_STRING file_path
+  ) {
+    WV_S_FILEDISK_OPENER_ opener;
+
+    /* Allocate and convert the file path from ANSI to Unicode. */
+    opener.status = RtlAnsiStringToUnicodeString(
+        opener.file_path,
+        file_path,
+        TRUE
+      );
+    if (!NT_SUCCESS(opener.status)) {
+        DBG("Couldn't allocate Unicode file path!\n");
+        goto err_ansi_to_unicode;
+      }
+
+    /* Build the impersonation context. */
+    opener.status = WvFilediskCreateClientSecurity(&filedisk->impersonation);
+    if (!NT_SUCCESS(opener.status)) {
+        DBG("Couldn't build impersonation context!\n");
+        goto err_impersonation;
+      }
+
+    /* Build the rest of the work item. */
+    opener.item->Func = WvFilediskOpenInThread_;
+    opener.filedisk = filedisk;
+    KeInitializeEvent(opener.completion, SynchronizationEvent, FALSE);
+
+    /* Attempt to open the file from within the filedisk's thread. */
+    if (!(WvlThreadAddItem(filedisk->Thread, opener.item))) {
+        DBG("Filedisk thread not active!\n");
+        goto err_add_item;
+      }
+    KeWaitForSingleObject(
+        opener.completion,
+        Executive,
+        KernelMode,
+        FALSE,
+        NULL
+      );
+    /* Fall through to free resources and return status. */
+
+    err_add_item:
+
+    err_impersonation:
+
+    RtlFreeUnicodeString(opener.file_path);
+    err_ansi_to_unicode:
+
+    return opener.status;
+  }
+
+/* Filedisk disk-unit query-response routine. */
 static UCHAR STDCALL WvFilediskUnitNum_(IN WVL_SP_DISK_T disk) {
     WV_SP_FILEDISK_T filedisk = CONTAINING_RECORD(
         disk,
@@ -339,6 +592,7 @@ static UCHAR STDCALL WvFilediskUnitNum_(IN WVL_SP_DISK_T disk) {
     return (UCHAR) WvlBusGetNodeNum(&filedisk->Dev->BusNode);
   }
 
+/* A filedisk's thread routine. */
 static VOID STDCALL WvFilediskThread_(IN OUT WVL_SP_THREAD_ITEM item) {
     WV_SP_FILEDISK_T filedisk = CONTAINING_RECORD(
         item,
@@ -392,89 +646,10 @@ static VOID STDCALL WvFilediskThread_(IN OUT WVL_SP_THREAD_ITEM item) {
         if (filedisk->Thread->State == WvlThreadStateStopping)
           filedisk->Thread->State = WvlThreadStateStopped;
       } /* while thread started or stopping. */
+    /* Close any open file handle. */
+    if (filedisk->file)
+      ZwClose(filedisk->file);
     return;
-  }
-
-/**
- * Create a filedisk PDO filled with the given disk parameters.
- *
- * @v MediaType                 The media type for the filedisk.
- * @ret WV_SP_FILEDISK_T        Points to the new filedisk, or NULL.
- *
- * Returns NULL if the PDO cannot be created.
- */
-WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
-    IN WVL_E_DISK_MEDIA_TYPE MediaType
-  ) {
-    static WV_S_DEV_IRP_MJ irp_mj = {
-        WvDiskPower,
-        WvDiskSysCtl,
-        WvDiskDevCtl,
-        WvDiskScsi,
-        WvDiskPnp,
-      };
-    NTSTATUS status;
-    WV_SP_FILEDISK_T filedisk;
-    PDEVICE_OBJECT pdo;
-  
-    DBG("Creating filedisk PDO...\n");
-
-    /* Create the disk PDO. */
-    status = WvlDiskCreatePdo(
-        WvDriverObj,
-        sizeof *filedisk,
-        MediaType,
-        &pdo
-      );
-    if (!NT_SUCCESS(status)) {
-        WvlError("WvlDiskCreatePdo", status);
-        goto err_pdo;
-      }
-
-    /* Initialize. */
-    filedisk = pdo->DeviceExtension;
-    RtlZeroMemory(filedisk, sizeof *filedisk);
-    WvlDiskInit(filedisk->disk);
-    WvDevInit(filedisk->Dev);
-    filedisk->Dev->Ops.Free = WvFilediskFree_;
-    filedisk->Dev->Ops.Close = WvFilediskClose_;
-    filedisk->Dev->ext = filedisk->disk;
-    filedisk->Dev->IrpMj = &irp_mj;
-    filedisk->disk->disk_ops.Io = WvFilediskIo_;
-    filedisk->disk->disk_ops.UnitNum = WvFilediskUnitNum_;
-    filedisk->disk->disk_ops.PnpQueryId = WvFilediskPnpQueryId_;
-    filedisk->disk->disk_ops.PnpQueryDevText = WvDiskPnpQueryDevText;
-    filedisk->disk->ext = filedisk;
-    filedisk->disk->DriverObj = WvDriverObj;
-    InitializeListHead(filedisk->Irps);
-    KeInitializeSpinLock(filedisk->IrpsLock);
-
-    /* Start the thread. */
-    filedisk->Thread->Main.Func = WvFilediskThread_;
-    status = WvlThreadStart(filedisk->Thread);
-    if (!NT_SUCCESS(status)) {
-        DBG("Couldn't create thread!\n");
-        goto err_thread;
-      }
-
-    /* Set associations for the PDO, device, disk. */
-    WvDevForDevObj(pdo, filedisk->Dev);
-    filedisk->Dev->Self = pdo;
-
-    /* Some device parameters. */
-    pdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
-    pdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
-
-    DBG("New PDO: %p\n", pdo);
-    return filedisk;
-
-    WvlThreadSendStopAndWait(filedisk->Thread);
-    err_thread:
-
-    IoDeleteDevice(pdo);
-    err_pdo:
-
-    return NULL;
   }
 
 /**
@@ -488,20 +663,25 @@ static VOID STDCALL WvFilediskFree_(IN WV_SP_DEV_T dev) {
         WV_S_FILEDISK_T,
         Dev[0]
       );
+    PDEVICE_OBJECT pdo = dev->Self;
 
     WvlThreadSendStopAndWait(filedisk->Thread);
-    IoDeleteDevice(dev->Self);
+    /* It's ok to pass this even if the field is still NULL. */
+    WvFilediskDeleteClientSecurity(&filedisk->impersonation);
+    IoDeleteDevice(pdo);
+    DBG("Deleted PDO: %p\n", pdo);
+    return;
   }
 
 /**
- * Find and hot-swap to a backing file.  This is a thread work item.
+ * Find and hot-swap to a backing file.  Internal.
  *
  * We search all filesystems for a particular filename, then swap
  * to using it as the backing store.  This is currently useful for
  * sector-mapped disks which should really have a file-in-use lock
  * for the file they represent.  Once the backing file is established,
- * we free the work item.  Otherwise, we re-enqueue the thread item
- * and the thread will keep trying.
+ * the work item is freed.  Otherwise, it is re-enqueued and the
+ * thread will keep trying.
  */
 static BOOLEAN STDCALL WvFilediskHotSwap_(
     IN WV_SP_FILEDISK_T filedisk,
@@ -642,12 +822,7 @@ static BOOLEAN STDCALL WvFilediskHotSwap_(
     return FALSE;
   }
 
-typedef struct WV_FILEDISK_HOT_SWAPPER_ {
-    WVL_S_THREAD_ITEM item[1];
-    WV_SP_FILEDISK_T filedisk;
-    UNICODE_STRING filename[1];
-  } WV_S_FILEDISK_HOT_SWAPPER_, * WV_SP_FILEDISK_HOT_SWAPPER_;
-
+/* The thread responsible for hot-swapping filedisks. */
 static VOID STDCALL WvFilediskHotSwapThread_(IN OUT WVL_SP_THREAD_ITEM item) {
     LARGE_INTEGER timeout;
     WVL_SP_THREAD thread = CONTAINING_RECORD(item, WVL_S_THREAD, Main);
@@ -696,54 +871,5 @@ static VOID STDCALL WvFilediskHotSwapThread_(IN OUT WVL_SP_THREAD_ITEM item) {
         /* Reset the work signal. */
         KeResetEvent(&thread->Signal);
       } /* while thread is running. */
-    return;
-  }
-
-VOID STDCALL WvFilediskHotSwap(IN WV_SP_FILEDISK_T filedisk, IN PCHAR file) {
-    static WVL_S_THREAD thread = {
-        /* Main */
-        {
-            /* Link */
-            {0},
-            /* Func */
-            WvFilediskHotSwapThread_,
-          },
-        /* State */
-        WvlThreadStateNotStarted,
-      };
-    WV_SP_FILEDISK_HOT_SWAPPER_ hot_swapper;
-    ANSI_STRING file_ansi;
-    NTSTATUS status;
-
-    hot_swapper = wv_malloc(sizeof *hot_swapper);
-    if (!hot_swapper) {
-        DBG("Non-critical: Couldn't allocate work item.\n");
-        return;
-      }
-    /* Build the Unicode string. */
-    RtlInitAnsiString(&file_ansi, file);
-    hot_swapper->filename->Buffer = NULL;
-    status = RtlAnsiStringToUnicodeString(
-        hot_swapper->filename,
-        &file_ansi,
-        TRUE
-      );
-    if (!NT_SUCCESS(status)) {
-        DBG("Non-critical: Couldn't allocate unicode string.\n");
-        wv_free(hot_swapper);
-        return;
-      }
-    /* Build the rest of the work item. */
-    hot_swapper->item->Func = WvFilediskHotSwapThread_;
-    hot_swapper->filedisk = filedisk;
-    /* Start the thread.  If it's already been started, no matter. */
-    WvlThreadStart(&thread);
-    /* Add the hot-swapper work item. */
-    if (!WvlThreadAddItem(&thread, hot_swapper->item)) {
-        DBG("Non-critical: Couldn't add work item.\n");
-        RtlFreeUnicodeString(hot_swapper->filename);
-        wv_free(hot_swapper);
-      }
-    /* The thread is responsible for freeing the work item and file path. */
     return;
   }

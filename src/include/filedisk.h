@@ -35,6 +35,7 @@ typedef struct WV_FILEDISK_T {
     WVL_S_THREAD Thread[1];
     LIST_ENTRY Irps[1];
     KSPIN_LOCK IrpsLock[1];
+    PVOID impersonation;
   } WV_S_FILEDISK_T, * WV_SP_FILEDISK_T;
 
 extern NTSTATUS STDCALL WvFilediskAttach(IN PIRP);
