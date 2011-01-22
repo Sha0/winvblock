@@ -53,6 +53,55 @@ static WVL_F_DISK_IO WvFilediskG4dIo_;
 
 /**
  * Check if a disk might be the matching backing disk for
+ * a GRUB4DOS sector-mapped disk by checking for an MBR signature.
+ *
+ * @v file              HANDLE to an open disk.
+ * @v filedisk          Points to the filedisk to match against.
+ */
+static BOOLEAN STDCALL WvFilediskG4dCheckDiskMatchMbrSig_(
+    IN HANDLE file,
+    IN WV_SP_FILEDISK_T filedisk
+  ) {
+    BOOLEAN ok = FALSE;
+    WVL_SP_DISK_MBR buf;
+    NTSTATUS status;
+    IO_STATUS_BLOCK io_status;
+
+    /* Allocate a buffer for testing for an MBR signature. */
+    buf = wv_malloc(sizeof *buf);
+    if (buf == NULL) {
+        goto err_alloc;
+      }
+
+    /* Read a potential MBR. */
+    status = ZwReadFile(
+        file,
+        NULL,
+        NULL,
+        NULL,
+        &io_status,
+        buf,
+        sizeof *buf,
+        &filedisk->offset,
+        NULL
+      );
+    if (!NT_SUCCESS(status))
+      goto err_read;
+
+    /* Check for the MBR signature. */
+    if (buf->mbr_sig == 0xAA55)
+      ok = TRUE;
+
+    err_read:
+
+    wv_free(buf);
+    err_alloc:
+
+    return ok;
+  }
+
+/**
+ * Check if a disk might be the matching backing disk for
  * a GRUB4DOS sector-mapped disk by checking for a .VHD footer.
  *
  * @v file              HANDLE to an open disk.
@@ -161,6 +210,9 @@ static BOOLEAN STDCALL WvFilediskG4dCheckDiskMatch_(
           break;
 
         case WvlDiskMediaTypeHard:
+          ok = WvFilediskG4dCheckDiskMatchMbrSig_(file, filedisk);
+          if (ok)
+            break;
           ok = WvFilediskG4dCheckDiskMatchVHD_(file, filedisk);
           break;
         case WvlDiskMediaTypeOptical:
