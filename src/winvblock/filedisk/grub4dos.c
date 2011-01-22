@@ -145,6 +145,23 @@ static NTSTATUS STDCALL WvFilediskG4dIo_(
 
     /* Establish pointer to the filedisk. */
     filedisk_ptr = CONTAINING_RECORD(disk, WV_S_FILEDISK_T, disk);
+
+    /*
+     * These SCSI read/write IRPs should be completed in the thread context.
+     * Check if the IRP was already marked pending.
+     */
+    if (!(IoGetCurrentIrpStackLocation(irp)->Control & SL_PENDING_RETURNED)) {
+        /* Enqueue and signal work. */
+        IoMarkIrpPending(irp);
+        ExInterlockedInsertTailList(
+            filedisk_ptr->Irps,
+            &irp->Tail.Overlay.ListEntry,
+            filedisk_ptr->IrpsLock
+          );
+        KeSetEvent(&filedisk_ptr->Thread->Signal, 0, FALSE);
+        return STATUS_PENDING;
+      }
+
     /*
      * Find the backing disk and use it.  We walk a list
      * of unicode disk device names and check each one.
