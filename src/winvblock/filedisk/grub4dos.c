@@ -29,6 +29,7 @@
 
 #include "portable.h"
 #include "winvblock.h"
+#include "irp.h"
 #include "wv_stdlib.h"
 #include "wv_string.h"
 #include "driver.h"
@@ -213,10 +214,7 @@ static NTSTATUS STDCALL WvFilediskG4dIo_(
       );
 
     dud:
-    irp->IoStatus.Information = 0;
-    irp->IoStatus.Status = STATUS_NO_MEDIA_IN_DEVICE;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
-    return STATUS_NO_MEDIA_IN_DEVICE;
+    return WvlIrpComplete(irp, 0, STATUS_DEVICE_NOT_READY);
   }
 
 typedef struct WV_FILEDISK_GRUB4DOS_DRIVE_FILE_SET {
