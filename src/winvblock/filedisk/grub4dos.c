@@ -306,7 +306,7 @@ VOID filedisk_grub4dos__find(void) {
     WV_SP_FILEDISK_T filedisk_ptr;
     const char sig[] = "GRUB4DOS";
     /* Matches disks to files. */
-    WV_S_FILEDISK_GRUB4DOS_DRIVE_FILE_SET sets[8];
+    WV_S_FILEDISK_GRUB4DOS_DRIVE_FILE_SET sets[8] = {0};
 
     /*
      * Find a GRUB4DOS sector-mapped disk.  Start by looking at the
