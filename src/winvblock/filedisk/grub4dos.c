@@ -58,7 +58,7 @@ static WVL_F_DISK_IO WvFilediskG4dIo_;
  * @v file              HANDLE to an open disk.
  * @v filedisk_ptr      Points to the filedisk to match against.
  */
-static NTSTATUS STDCALL check_disk_match(
+static NTSTATUS STDCALL WvFilediskG4dCheckDiskMatch_(
     IN HANDLE file,
     IN WV_SP_FILEDISK_T filedisk_ptr
   ) {
@@ -202,7 +202,7 @@ static NTSTATUS STDCALL WvFilediskG4dIo_(
           );
         /* If we could open it, check it out. */
         if (NT_SUCCESS(status))
-          status = check_disk_match(file, filedisk_ptr);
+          status = WvFilediskG4dCheckDiskMatch_(file, filedisk_ptr);
         /* If we liked this disk as our backing disk, stop looking. */
         if (NT_SUCCESS(status))
           break;
