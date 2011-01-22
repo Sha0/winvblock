@@ -194,6 +194,72 @@ static BOOLEAN STDCALL WvFilediskG4dCheckDiskMatchVHD_(
 
 /**
  * Check if a disk might be the matching backing disk for
+ * a GRUB4DOS sector-mapped disk by checking for some ISO9660
+ * filesystem magic (in the first volume descriptor).
+ *
+ * @v file              HANDLE to an open disk.
+ * @v filedisk          Points to the filedisk to match against.
+ */
+static BOOLEAN STDCALL WvFilediskG4dCheckDiskMatchIsoSig_(
+    IN HANDLE file,
+    IN WV_SP_FILEDISK_T filedisk
+  ) {
+    #ifdef _MSC_VER
+    #  pragma pack(1)
+    #endif
+    struct vol_desc {
+        UCHAR type;
+        UCHAR id[5];
+    } __attribute__((__packed__));
+    #ifdef _MSC_VER
+    #  pragma pack()
+    #endif
+    enum { first_vol_desc_byte_offset = 32768 };
+    static CHAR iso_magic[] = "CD001";
+    BOOLEAN ok = FALSE;
+    struct vol_desc * buf;
+    LARGE_INTEGER start;
+    NTSTATUS status;
+    IO_STATUS_BLOCK io_status;
+
+    /* Allocate a buffer for testing for some ISO9660 magic. */
+    buf = wv_malloc(filedisk->disk->SectorSize);
+    if (buf == NULL) {
+        goto err_alloc;
+      }
+
+    /* Calculate where a volume descriptor might be. */
+    start.QuadPart = filedisk->offset.QuadPart + first_vol_desc_byte_offset;
+
+    /* Read a potential ISO9660 volume descriptor. */
+    status = ZwReadFile(
+        file,
+        NULL,
+        NULL,
+        NULL,
+        &io_status,
+        buf,
+        filedisk->disk->SectorSize,
+        &start,
+        NULL
+      );
+    if (!NT_SUCCESS(status))
+      goto err_read;
+
+    /* Check for the ISO9660 magic. */
+    if (wv_memcmpeq(buf->id, iso_magic, sizeof iso_magic - 1))
+      ok = TRUE;
+
+    err_read:
+
+    wv_free(buf);
+    err_alloc:
+
+    return ok;
+  }
+
+/**
+ * Check if a disk might be the matching backing disk for
  * a GRUB4DOS sector-mapped disk.
  *
  * @v file              HANDLE to an open disk.
@@ -216,6 +282,7 @@ static BOOLEAN STDCALL WvFilediskG4dCheckDiskMatch_(
           ok = WvFilediskG4dCheckDiskMatchVHD_(file, filedisk);
           break;
         case WvlDiskMediaTypeOptical:
+          ok = WvFilediskG4dCheckDiskMatchIsoSig_(file, filedisk);
           break;
       }
     return ok;
