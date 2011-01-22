@@ -53,26 +53,27 @@ static WVL_F_DISK_IO WvFilediskG4dIo_;
 
 /**
  * Check if a disk might be the matching backing disk for
- * a GRUB4DOS sector-mapped disk.
+ * a GRUB4DOS sector-mapped disk by checking for a .VHD footer.
  *
  * @v file              HANDLE to an open disk.
  * @v filedisk_ptr      Points to the filedisk to match against.
  */
-static NTSTATUS STDCALL WvFilediskG4dCheckDiskMatch_(
+static BOOLEAN STDCALL WvFilediskG4dCheckDiskMatchVHD_(
     IN HANDLE file,
     IN WV_SP_FILEDISK_T filedisk_ptr
   ) {
+    BOOLEAN ok = FALSE;
     WV_SP_MSVHD_FOOTER buf;
     NTSTATUS status;
-    IO_STATUS_BLOCK io_status;
     LARGE_INTEGER end_part;
+    IO_STATUS_BLOCK io_status;
 
     /* Allocate a buffer for testing for a MS .VHD footer. */
     buf = wv_malloc(sizeof *buf);
     if (buf == NULL) {
-        status = STATUS_INSUFFICIENT_RESOURCES;
         goto err_alloc;
       }
+
     /*
      * Read in the buffer.  Note that we adjust for the .VHD footer (plus
      * prefixed padding for an .ISO) that we truncated from the reported disk
@@ -96,32 +97,76 @@ static NTSTATUS STDCALL WvFilediskG4dCheckDiskMatch_(
       );
     if (!NT_SUCCESS(status))
       goto err_read;
+
     /* Adjust the footer's byte ordering. */
     msvhd__footer_swap_endian(buf);
+
     /* Examine .VHD fields for validity. */
     if (!wv_memcmpeq(&buf->cookie, "conectix", sizeof buf->cookie))
-      status = STATUS_UNSUCCESSFUL;
+      goto err_cookie;
     if (buf->file_ver.val != 0x10000)
-      status = STATUS_UNSUCCESSFUL;
+      goto err_ver;
     if (buf->data_offset.val != 0xffffffff)
-      status = STATUS_UNSUCCESSFUL;
+      goto err_data_offset;
     if (buf->orig_size.val != buf->cur_size.val)
-      status = STATUS_UNSUCCESSFUL;
+      goto err_size;
     if (buf->type.val != 2)
-      status = STATUS_UNSUCCESSFUL;
+      goto err_type;
+
     /* Match against our expected disk size. */
     if (
         (filedisk_ptr->disk->LBADiskSize * filedisk_ptr->disk->SectorSize ) !=
         buf->cur_size.val
       )
-      status = STATUS_UNSUCCESSFUL;
+      goto err_real_size;
+
+    /* Passed the tests.  We expect it to be our backing disk. */
+    ok = TRUE;
+
+    err_real_size:
+
+    err_type:
+
+    err_size:
+
+    err_data_offset:
+
+    err_ver:
+
+    err_cookie:
 
     err_read:
 
     wv_free(buf);
     err_alloc:
 
-    return status;
+    return ok;
+  }
+
+/**
+ * Check if a disk might be the matching backing disk for
+ * a GRUB4DOS sector-mapped disk.
+ *
+ * @v file              HANDLE to an open disk.
+ * @v filedisk          Points to the filedisk to match against.
+ */
+static BOOLEAN STDCALL WvFilediskG4dCheckDiskMatch_(
+    IN HANDLE file,
+    IN WV_SP_FILEDISK_T filedisk
+  ) {
+    BOOLEAN ok = FALSE;
+
+    switch (filedisk->disk->Media) {
+        case WvlDiskMediaTypeFloppy:
+          break;
+
+        case WvlDiskMediaTypeHard:
+          ok = WvFilediskG4dCheckDiskMatchVHD_(file, filedisk);
+          break;
+        case WvlDiskMediaTypeOptical:
+          break;
+      }
+    return ok;
   }
 
 /**
@@ -201,11 +246,11 @@ static NTSTATUS STDCALL WvFilediskG4dIo_(
             0
           );
         /* If we could open it, check it out. */
-        if (NT_SUCCESS(status))
-          status = WvFilediskG4dCheckDiskMatch_(file, filedisk_ptr);
-        /* If we liked this disk as our backing disk, stop looking. */
-        if (NT_SUCCESS(status))
-          break;
+        if (NT_SUCCESS(status)) {
+            /* If we liked this disk as our backing disk, stop looking. */
+            if (WvFilediskG4dCheckDiskMatch_(file, filedisk_ptr))
+              break;
+          }
         /* We could not open this disk or didn't like it.  Try the next one. */
         if (file)
           ZwClose(file);
