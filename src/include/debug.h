@@ -60,11 +60,18 @@
     WvlDebugPrint(                  \
         __FILE__,                   \
         (const PCHAR) __FUNCTION__, \
-        __LINE__                    \
+        __LINE__,                   \
+        __VA_ARGS__                 \
       ),                            \
     DbgPrint(__VA_ARGS__)           \
   )
-extern WVL_M_LIB NTSTATUS STDCALL WvlDebugPrint(IN PCHAR, IN PCHAR, IN UINT32);
+extern WVL_M_LIB NTSTATUS STDCALL WvlDebugPrint(
+    IN PCHAR,
+    IN PCHAR,
+    IN UINT32,
+    IN PCHAR,
+    ...
+  );
 #else
 #  define DBG(...) ((VOID) 0)
 #endif
@@ -80,7 +87,8 @@ extern VOID STDCALL WvlDebugIrpEnd(IN PIRP, IN NTSTATUS);
 #  define WVL_M_DEBUG_IRP_END(Irp_, Status_) ((VOID) 0)
 #endif
 
-extern VOID Debug_Initialize(void);
+extern VOID WvlDebugModuleInit(void);
+extern VOID WvlDebugModuleUnload(void);
 extern WVL_M_LIB NTSTATUS STDCALL WvlError(IN PCHAR, IN NTSTATUS);
 
 #endif  /* WVL_M_DEBUG_H_ */

@@ -156,10 +156,12 @@ NTSTATUS STDCALL DriverEntry(
     WvDriverObj = DriverObject;
     if (WvDriverStarted)
       return STATUS_SUCCESS;
-    Debug_Initialize();
+    WvlDebugModuleInit();
     status = WvlRegNoteOsLoadOpts(&WvOsLoadOpts);
-    if (!NT_SUCCESS(status))
-      return WvlError("WvlRegNoteOsLoadOpts", status);
+    if (!NT_SUCCESS(status)) {
+        WvlDebugModuleUnload();
+        return WvlError("WvlRegNoteOsLoadOpts", status);
+      }
 
     WvDriverStateHandle = NULL;
 
@@ -382,6 +384,7 @@ static VOID STDCALL WvUnload(IN PDRIVER_OBJECT DriverObject) {
       PoUnregisterSystemState(WvDriverStateHandle);
     wv_free(WvOsLoadOpts);
     WvDriverStarted = FALSE;
+    WvlDebugModuleUnload();
     DBG("Done\n");
   }
 

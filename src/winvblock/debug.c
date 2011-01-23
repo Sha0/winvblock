@@ -44,13 +44,27 @@
 #include "aoe.h"
 #include "debug.h"
 
-static KSPIN_LOCK Debug_Globals_SpinLock;
+/* Private objects. */
+static KSPIN_LOCK WvlDebugLock_;
+#if WVL_M_DEBUG
+static KBUGCHECK_CALLBACK_RECORD WvlDebugBugCheckRecord_;
+static PCHAR WvlDebugLastMsg_ = NULL;
+static BOOLEAN WvlDebugBugCheckRegistered_ = FALSE;
+#endif
+
+/* Private function declarations. */
+#if WVL_M_DEBUG
+/* Why is KBUGCHECK_CALLBACK_ROUTINE missing? */
+static VOID WvlDebugBugCheck_(PVOID, ULONG);
+#endif
 
 #if WVL_M_DEBUG
 WVL_M_LIB NTSTATUS STDCALL WvlDebugPrint(
     IN PCHAR File,
     IN PCHAR Function,
-    IN UINT32 Line
+    IN UINT32 Line,
+    IN PCHAR Message,
+    ...
   ) {
     #if WVL_M_DEBUG_FILE
     DbgPrint(File);
@@ -62,13 +76,35 @@ WVL_M_LIB NTSTATUS STDCALL WvlDebugPrint(
     #if WVL_M_DEBUG_THREAD
     DbgPrint("T[%p]: ", (PVOID) PsGetCurrentThread());
     #endif
+    WvlDebugLastMsg_ = Message;
     return DbgPrint("%s(): ", Function);
   }
 #endif
 
-VOID Debug_Initialize(void) {
-  KeInitializeSpinLock ( &Debug_Globals_SpinLock );
-}
+VOID WvlDebugModuleInit(void) {
+    KeInitializeSpinLock(&WvlDebugLock_);
+    #if WVL_M_DEBUG
+    KeInitializeCallbackRecord(&WvlDebugBugCheckRecord_);
+    WvlDebugBugCheckRegistered_ = KeRegisterBugCheckCallback(
+        &WvlDebugBugCheckRecord_,
+        WvlDebugBugCheck_,
+        &WvlDebugLastMsg_,
+        sizeof WvlDebugLastMsg_,
+        WVL_M_LIT
+      );
+    if (!WvlDebugBugCheckRegistered_)
+      DBG("Couldn't register bug-check callback!\n");
+    #endif
+    return;
+  }
+
+VOID WvlDebugModuleUnload(void) {
+    #if WVL_M_DEBUG
+    if (WvlDebugBugCheckRegistered_)
+      KeDeregisterBugCheckCallback(&WvlDebugBugCheckRecord_);
+    #endif
+    return;
+  }
 
 WVL_M_LIB NTSTATUS STDCALL WvlError(
     IN PCHAR Message,
@@ -140,11 +176,11 @@ Debug_IrpListRecord (
   PDEBUG_IRPLIST Record;
   KIRQL Irql;
 
-  KeAcquireSpinLock ( &Debug_Globals_SpinLock, &Irql );
+  KeAcquireSpinLock(&WvlDebugLock_, &Irql);
   Record = Debug_Globals_IrpList;
   while ( Record != NULL && Record->Irp != Irp )
     Record = Record->Next;
-  KeReleaseSpinLock ( &Debug_Globals_SpinLock, Irql );
+  KeReleaseSpinLock(&WvlDebugLock_, Irql);
   return Record;
 }
 
@@ -170,7 +206,7 @@ WVL_M_LIB VOID STDCALL WvlDebugIrpStart(
   Record->Irp = Irp;
   Record->DebugMessage = DebugMessage;
   Record->Number = InterlockedIncrement ( &Debug_Globals_Number );;
-  KeAcquireSpinLock ( &Debug_Globals_SpinLock, &Irql );
+  KeAcquireSpinLock(&WvlDebugLock_, &Irql);
   if ( Debug_Globals_IrpList == NULL )
     {
       Debug_Globals_IrpList = Record;
@@ -184,7 +220,7 @@ WVL_M_LIB VOID STDCALL WvlDebugIrpStart(
       Temp->Next = Record;
       Record->Previous = Temp;
     }
-  KeReleaseSpinLock ( &Debug_Globals_SpinLock, Irql );
+  KeReleaseSpinLock(&WvlDebugLock_, Irql);
   DBG ( "IRP %d: %s\n", Record->Number, Record->DebugMessage );
 }
 
@@ -203,7 +239,7 @@ VOID STDCALL WvlDebugIrpEnd(IN PIRP Irp, IN NTSTATUS Status) {
    * Debug_Globals_IrpList, unless WvlDebugIrpEnd is called more than once on
    * an irp (which itself is a bug, it should only be called one time).
    */
-  KeAcquireSpinLock ( &Debug_Globals_SpinLock, &Irql );
+  KeAcquireSpinLock(&WvlDebugLock_, &Irql);
   if ( Record->Previous == NULL )
     {
       Debug_Globals_IrpList = Record->Next;
@@ -216,7 +252,7 @@ VOID STDCALL WvlDebugIrpEnd(IN PIRP Irp, IN NTSTATUS Status) {
     {
       Record->Next->Previous = Record->Previous;
     }
-  KeReleaseSpinLock ( &Debug_Globals_SpinLock, Irql );
+  KeReleaseSpinLock(&WvlDebugLock_, Irql);
 
   DBG ( "IRP %d: %s -> 0x%08x\n", Record->Number, Record->DebugMessage,
 	Status );
@@ -828,3 +864,17 @@ Debug_SCSIOPString (
     }
 }
 #endif  /* WVL_M_DEBUG && WVL_M_DEBUG_IRPS */
+
+#if WVL_M_DEBUG
+static VOID WvlDebugBugCheck_(PVOID buf, ULONG len) {
+    static WCHAR wv_string[] = WVL_M_WLIT L": Alive\n";
+    static UNICODE_STRING wv_ustring = {
+        sizeof wv_string,
+        sizeof wv_string,
+        wv_string
+      };
+
+    ZwDisplayString(&wv_ustring);
+    return;
+  }
+#endif
