@@ -45,6 +45,6 @@ typedef struct WV_GRUB4DOS_DRIVE_MAPPING {
   } WV_S_GRUB4DOS_DRIVE_MAPPING, * WV_SP_GRUB4DOS_DRIVE_MAPPING;
 
 extern VOID WvRamdiskG4dFind(void);
-extern VOID filedisk_grub4dos__find(void);
+extern VOID WvFilediskG4dFind(void);
 
 #endif  /* WV_M_GRUB4DOS_H_ */

@@ -72,5 +72,5 @@ WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
 VOID WvProbeDisks(void) {
     WvMemdiskFind();
     WvRamdiskG4dFind();
-    filedisk_grub4dos__find();
+    WvFilediskG4dFind();
   }

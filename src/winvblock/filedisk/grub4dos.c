@@ -473,7 +473,7 @@ static VOID STDCALL process_param_block(
       } /* while */
   }
 
-VOID filedisk_grub4dos__find(void) {
+VOID WvFilediskG4dFind(void) {
     PHYSICAL_ADDRESS PhysicalAddress;
     PUCHAR PhysicalMemory;
     WV_SP_PROBE_INT_VECTOR InterruptVector;
@@ -675,4 +675,5 @@ VOID filedisk_grub4dos__find(void) {
     if (!FoundGrub4DosMapping) {
         DBG("No GRUB4DOS sector-mapped disk mappings found\n");
       }
+    return;
   }
