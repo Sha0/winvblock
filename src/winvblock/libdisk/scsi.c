@@ -465,6 +465,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlDiskScsi(
                   );
                 break;
 
+              case SCSIOP_INQUIRY:
               case SCSIOP_MEDIUM_REMOVAL:
                 irp->IoStatus.Information = 0;
                 srb->SrbStatus = SRB_STATUS_SUCCESS;
