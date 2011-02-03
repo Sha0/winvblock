@@ -28,6 +28,7 @@
 #include <windows.h>
 #include <winioctl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <malloc.h>
 
 #include "portable.h"
@@ -92,6 +93,10 @@ static WVU_S_OPTION opt_mac = {
     "MAC", NULL, 1
   };
 
+static WVU_S_OPTION opt_service = {
+    "SERVICE", NULL, 1
+  };
+
 static WVU_SP_OPTION options[] = {
     &opt_h1,
     &opt_h2,
@@ -103,6 +108,7 @@ static WVU_SP_OPTION options[] = {
     &opt_media,
     &opt_uri,
     &opt_mac,
+    &opt_service,
   };
 
 static char present[] = "";
@@ -205,22 +211,26 @@ WinVBlock user-land utility for disk control. (C) 2006-2008 V.,\n\
 Usage:\n\
   winvblk -cmd <command> [-d <disk number>] [-m <media>] [-u <uri or path>]\n\
     [-mac <client mac address>] [-c <cyls>] [-h <heads>] [-s <sects per track>]\n\
+    [-service <service>]\n\
   winvblk -?\n\
 \n\
 Parameters:\n\
   <command> is one of:\n\
-    scan   - Shows the reachable AoE targets.\n\
-    show   - Shows the mounted AoE targets.\n\
-    mount  - Mounts an AoE target.  Requires -mac and -u\n\
-    umount - Unmounts an AoE disk.  Requires -d\n\
-    attach - Attaches <filepath> disk image file.  Requires -u and -m.\n\
-             -c, -h, -s are optional.\n\
-    detach - Detaches file-backed disk.  Requires -d\n\
+    scan    - Shows the reachable AoE targets.\n\
+    show    - Shows the mounted AoE targets.\n\
+    mount   - Mounts an AoE target.  Requires -mac and -u\n\
+    umount  - Unmounts an AoE disk.  Requires -d\n\
+    attach  - Attaches <filepath> disk image file.  Requires -u and -m.\n\
+              -c, -h, -s are optional.\n\
+    detach  - Detaches file-backed disk.  Requires -d\n\
+    install - Install a service.  Requires -service\n\
   <uri or path> is something like:\n\
     aoe:eX.Y        - Where X is the \"major\" (shelf) and Y is\n\
                       the \"minor\" (slot)\n\
     c:\\my_disk.hdd - The path to a disk image file or .ISO\n\
   <media> is one of 'c' for CD/DVD, 'f' for floppy, 'h' for hard disk drive\n\
+  <service> is one of:\n\
+    'wvblk32', 'wvblk64', 'aoe32', 'aoe64', 'wvhttp32', 'wvhttp64'\n\
 \n";
     printf(help_text);
     return 1;
@@ -532,6 +542,106 @@ static int STDCALL cmd_detach(void) {
     return 0;
   }
 
+static int STDCALL cmd_install(void) {
+    SC_HANDLE scm, svc;
+    int rc = EXIT_FAILURE, which;
+    static const char * service_names[] = {
+        "Invalid\\Service",
+        "WinVBlock", "WinVBlock",
+        "AoE", "AoE",
+        "HTTPDisk", "HTTPDisk",
+      };
+    static const char * service_binpaths[] = {
+        "#:\\Invalid\\Path",
+        "C:\\Windows\\System32\\Drivers\\WVBlk32.Sys",
+        "C:\\Windows\\System32\\Drivers\\WVBlk64.Sys",
+        "C:\\Windows\\System32\\Drivers\\AoE32.Sys",
+        "C:\\Windows\\System32\\Drivers\\AoE64.Sys",
+        "C:\\Windows\\System32\\Drivers\\WVHTTP32.Sys",
+        "C:\\Windows\\System32\\Drivers\\WVHTTP64.Sys",
+      };
+    if (!opt_service.value) {
+        puts("-service option required.  See -? for help.");
+        goto err_which;
+      }
+    /* Which service should we install? */
+    which = 0;
+    if (strcmp(opt_service.value, "wvblk32") == 0)
+      which = 1;
+    if (strcmp(opt_service.value, "wvblk64") == 0)
+      which = 2;
+    if (strcmp(opt_service.value, "aoe32") == 0)
+      which = 3;
+    if (strcmp(opt_service.value, "aoe64") == 0)
+      which = 4;
+    if (strcmp(opt_service.value, "wvhttp32") == 0)
+      which = 5;
+    if (strcmp(opt_service.value, "wvhttp64") == 0)
+      which = 6;
+    if (!which) {
+        puts("Invalid service specified.  See -? for help.");
+        goto err_which;
+      }
+
+    /* Get a handle to the Service Control Manager. */
+    scm = OpenSCManager(
+        "",
+        SERVICES_ACTIVE_DATABASE,
+        SC_MANAGER_CREATE_SERVICE
+      );
+    if (!scm) {
+        WvuShowLastErr();
+        goto err_scm;
+      }
+
+    svc = CreateServiceA(
+        /* Service Control Manager handle. */
+        scm,
+        /* Name. */
+        service_names[which],
+        /* Display name. */
+        service_names[which],
+        /* TODO */
+        SC_MANAGER_CREATE_SERVICE,
+        /* Type. */
+        SERVICE_KERNEL_DRIVER,
+        /* Start type. */
+        SERVICE_BOOT_START,
+        /* Error control. */
+        SERVICE_ERROR_NORMAL,
+        /* Binary path. */
+        service_binpaths[which],
+        /* Load order group. */
+        (which < 3) ? "SCSI miniport" : "SCSI Class",
+        /* Load order group tag: Don't care. */
+        NULL,
+        /* Dependencies: None. */
+        NULL,
+        /* Account name: SYSTEM. */
+        NULL,
+        /* Account password: Not specified for SYSTEM. */
+        NULL
+      );
+    if (!svc) {
+        WvuShowLastErr();
+        goto err_svc;
+      }
+
+    puts("Service installed.");
+    rc = EXIT_SUCCESS;
+    /* Fall through. */
+
+    CloseServiceHandle(svc);
+    err_svc:
+
+    CloseServiceHandle(scm);
+    err_scm:
+
+    err_which:
+
+    return rc;
+  }
+
 int main(int argc, char **argv, char **envp) {
     WVU_FP_CMD_ cmd = cmd_help;
     int status = 1;
@@ -575,6 +685,9 @@ int main(int argc, char **argv, char **envp) {
     if (strcmp(opt_cmd.value, "detach") == 0) {
         cmd = cmd_detach;
         bus_name = winvblock;
+      }
+    if (strcmp(opt_cmd.value, "install") == 0) {
+        return cmd_install();
       }
     /* Check for invalid command. */
     if (cmd == cmd_help)
