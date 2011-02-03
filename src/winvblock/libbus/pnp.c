@@ -183,7 +183,7 @@ static NTSTATUS STDCALL WvlBusPnpQueryCapabilities(
       io_stack_loc->Parameters.DeviceCapabilities.Capabilities;
     NTSTATUS status;
     DEVICE_CAPABILITIES ParentDeviceCapabilities;
-    PDEVICE_OBJECT lower = bus->LowerDeviceObject;;
+    PDEVICE_OBJECT lower = bus->LowerDeviceObject;
 
     if (DeviceCapabilities->Version != 1 ||
         DeviceCapabilities->Size < sizeof (DEVICE_CAPABILITIES) ||
