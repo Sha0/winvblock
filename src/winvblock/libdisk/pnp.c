@@ -202,6 +202,8 @@ static NTSTATUS STDCALL WvlDiskPnpSimple_(
     switch (io_stack_loc->MinorFunction) {
         case IRP_MN_DEVICE_USAGE_NOTIFICATION:
           DBG("IRP_MN_DEVICE_USAGE_NOTIFICATION\n");
+          if (disk->DenyPageFile)
+            return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
           if (io_stack_loc->Parameters.UsageNotification.InPath) {
               disk->SpecialFileCount++;
             } else {

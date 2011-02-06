@@ -152,6 +152,8 @@ struct WVL_DISK_T {
     PDRIVER_OBJECT DriverObj;
     WVL_E_DISK_STATE OldState;
     WVL_E_DISK_STATE State;
+    /* Do we allow page files? */
+    BOOLEAN DenyPageFile;
   };
 
 /* Yield a pointer to the disk. */

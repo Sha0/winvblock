@@ -193,6 +193,7 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
     filedisk->disk->disk_ops.PnpQueryDevText = WvDiskPnpQueryDevText;
     filedisk->disk->ext = filedisk;
     filedisk->disk->DriverObj = WvDriverObj;
+    filedisk->disk->DenyPageFile = TRUE;
     InitializeListHead(filedisk->Irps);
     KeInitializeSpinLock(filedisk->IrpsLock);
 
@@ -473,6 +474,7 @@ static VOID STDCALL WvFilediskOpenInThread_(IN OUT WVL_SP_THREAD_ITEM item) {
         FILE_OPEN,
         FILE_NON_DIRECTORY_FILE |
           FILE_RANDOM_ACCESS |
+          FILE_NO_INTERMEDIATE_BUFFERING |
           FILE_SYNCHRONOUS_IO_NONALERT,
         NULL,
         0
