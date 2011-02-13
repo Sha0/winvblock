@@ -24,6 +24,10 @@ mkdir bin %_%
 %@%
 call :_extract WinVBlk > bin\WinVBlk.INF
 
+%@% Extracting TxtSetup.OEM...
+%@%
+call :_extract TxtSetup > bin\TxtSetup.OEM
+
 %@% Extracting AoE.INF...
 %@%
 call :_extract AoE > bin\AoE.INF
@@ -260,6 +264,41 @@ ServiceType=0x00000001
 StartType=0x00000000
 ErrorControl=0x00000001
 ServiceBinary=%12%\wvhttp64.sys
+-----EOF-----
+
+
+
+-----TxtSetup-----
+[Disks]
+disk = "WinVBlock Driver Disk",\WinVBlk.inf,\
+ 
+[Defaults]
+scsi = WinVBlock32
+ 
+[scsi]
+WinVBlock32 = "WinVBlock Bus (32-bit)"
+WinVBlock64 = "WinVBlock Bus (64-bit)"
+ 
+[Files.scsi.WinVBlock32]
+driver = disk,WVBlk32.Sys,WinVBlock
+inf = disk,WinVBlk.Inf
+catalog = disk,WinVBlk.Cat
+ 
+[Files.scsi.WinVBlock64]
+driver = disk,WVBlk64.Sys,WinVBlock
+inf = disk,WinVBlk.Inf
+catalog = disk,WinVBlk.Cat
+ 
+[Config.WinVBlock]
+value="",TxtSetupInstalled,REG_DWORD,1
+ 
+[HardwareIds.scsi.WinVBlock32]
+id="ROOT\WINVBLOCK","WinVBlock"
+id="Detected\WinVBlock","WinVBlock"
+ 
+[HardwareIds.scsi.WinVBlock64]
+id="ROOT\WINVBLOCK","WinVBlock"
+id="Detected\WinVBlock","WinVBlock"
 -----EOF-----
 
 
