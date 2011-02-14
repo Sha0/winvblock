@@ -45,7 +45,7 @@ call :_extract HTTPDisk > bin\HTTPDisk.INF
 -----WinVBlk-----
 ; Common
 ; ~~~~~~
-
+ 
 [Version]
 Signature="$Windows NT$"
 Class=SCSIAdapter
@@ -56,7 +56,7 @@ DriverVer=05/16/2010,0.0.0.8
  
 [Manufacturer]
 WinVBlock=WinVBlockDriver,,NTamd64
-  
+ 
 [SourceDisksNames]
 0="Install Disk"
  
@@ -72,16 +72,16 @@ Files.Tools=11
  
 [Files.Tools]
 winvblk.exe
-
+ 
 [PdoDone]
 HKR,,PdoDone,0x00010001,1
-
+ 
 [BootStart]
 HKR,,Start,0x00010001,0
-
+ 
 ; x86
 ; ~~~
-
+ 
 [WinVBlockDriver]
 "WinVBlock Bus"=WinVBlock,Root\WinVBlock, Detected\WinVBlock
  
@@ -90,7 +90,7 @@ wvblk32.sys
  
 [WinVBlock]
 CopyFiles=Files.Driver,Files.Tools
-
+ 
 [WinVBlock.Services]
 AddService=WinVBlock,0x00000002,Service
  
@@ -100,7 +100,7 @@ CopyFiles=File.Driver,Files.Tools
  
 [DefaultInstall.Services]
 AddService=WinVBlock,0x00000002,Service
-
+ 
 [Service]
 ServiceType=0x00000001
 StartType=0x00000002
@@ -109,10 +109,10 @@ ServiceBinary=%12%\wvblk32.sys
 LoadOrderGroup=SCSI miniport
 ;AddReg=PdoDone
 AddReg=BootStart
-
+ 
 ; amd64
 ; ~~~~~
-
+ 
 [WinVBlockDriver.NTamd64]
 "WinVBlock Bus"=WinVBlock.NTamd64,Root\WinVBlock, Detected\WinVBlock
  
@@ -128,7 +128,7 @@ AddService=WinVBlock,0x00000002,Service.NTamd64
 [DefaultInstall.NTamd64]
 CopyINF=WinVBlk.INF
 CopyFiles=File.Driver.NTamd64,Files.Tools
-
+ 
 [DefaultInstall.NTamd64.Services]
 AddService=WinVBlock,0x00000002,Service.NTamd64
  
