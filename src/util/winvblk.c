@@ -40,6 +40,9 @@ typedef char
   WVL_S_BUS_NODE, WVL_S_DISK_T, KEVENT;
 #include "aoe.h"
 
+/** Forward declarations. */
+static int WvuStartService_(void);
+
 /* Command function. */
 typedef int STDCALL (WVU_F_CMD_)(void);
 typedef WVU_F_CMD_ * WVU_FP_CMD_;
@@ -97,6 +100,10 @@ static WVU_S_OPTION opt_service = {
     "SERVICE", NULL, 1
   };
 
+static WVU_S_OPTION opt_regsvr = {
+    "REGSERVER", NULL, 0
+  };
+
 static WVU_SP_OPTION options[] = {
     &opt_h1,
     &opt_h2,
@@ -109,6 +116,7 @@ static WVU_SP_OPTION options[] = {
     &opt_uri,
     &opt_mac,
     &opt_service,
+    &opt_regsvr,
   };
 
 static char present[] = "";
@@ -224,6 +232,7 @@ Parameters:\n\
               -c, -h, -s are optional.\n\
     detach  - Detaches file-backed disk.  Requires -d\n\
     install - Install a service.  Requires -service\n\
+    start   - Start the WinVBlock service.\n\
   <uri or path> is something like:\n\
     aoe:eX.Y        - Where X is the \"major\" (shelf) and Y is\n\
                       the \"minor\" (slot)\n\
@@ -642,6 +651,10 @@ static int STDCALL cmd_install(void) {
     return rc;
   }
 
+static int STDCALL cmd_start(void) {
+    return WvuStartService_();
+  }
+
 int main(int argc, char **argv, char **envp) {
     WVU_FP_CMD_ cmd = cmd_help;
     int status = 1;
@@ -658,6 +671,10 @@ int main(int argc, char **argv, char **envp) {
     /* Check for cry for help. */
     if (opt_h1.value || opt_h2.value)
       goto do_cmd;
+    /* Check for /RegServer switch. */
+    if (opt_regsvr.value) {
+        return EXIT_SUCCESS;
+      }
     /* Check for no command. */
     if (opt_cmd.value == NULL)
       goto do_cmd;
@@ -689,6 +706,9 @@ int main(int argc, char **argv, char **envp) {
     if (strcmp(opt_cmd.value, "install") == 0) {
         return cmd_install();
       }
+    if (strcmp(opt_cmd.value, "start") == 0) {
+        return cmd_start();
+      }
     /* Check for invalid command. */
     if (cmd == cmd_help)
       goto do_cmd;
@@ -717,4 +737,47 @@ int main(int argc, char **argv, char **envp) {
     err_bad_cmd:
 
     return status;
+  }
+
+static int WvuStartService_(void) {
+    SC_HANDLE scm, svc;
+    int rc = EXIT_FAILURE;
+
+    /* Get a handle to the Service Control Manager. */
+    scm = OpenSCManager(
+        "",
+        SERVICES_ACTIVE_DATABASE,
+        SC_MANAGER_ENUMERATE_SERVICE
+      );
+    if (!scm)
+      goto err_scm;
+
+    svc = OpenService(
+        /* Service Control Manager handle. */
+        scm,
+        /* Name. */
+        "WinVBlock",
+        /* Access. */
+        SERVICE_START
+      );
+    if (!svc)
+      goto err_svc;
+
+    if (!StartService(svc, 0, NULL))
+      goto err_start;
+
+    puts("WinVBlock Service started.");
+    rc = EXIT_SUCCESS;
+
+    err_start:
+
+    CloseServiceHandle(svc);
+    err_svc:
+
+    CloseServiceHandle(scm);
+    err_scm:
+
+    if (rc != EXIT_SUCCESS)
+      WvuShowLastErr();
+    return rc;
   }

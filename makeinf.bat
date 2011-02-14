@@ -79,6 +79,10 @@ HKR,,PdoDone,0x00010001,1
 [BootStart]
 HKR,,Start,0x00010001,0
  
+[StartService]
+11,,winvblk.exe,2
+ 
+ 
 ; x86
 ; ~~~
  
@@ -97,6 +101,7 @@ AddService=WinVBlock,0x00000002,Service
 [DefaultInstall]
 CopyINF=WinVBlk.INF
 CopyFiles=File.Driver,Files.Tools
+RegisterDlls=StartService
  
 [DefaultInstall.Services]
 AddService=WinVBlock,0x00000002,Service
@@ -109,6 +114,7 @@ ServiceBinary=%12%\wvblk32.sys
 LoadOrderGroup=SCSI miniport
 ;AddReg=PdoDone
 AddReg=BootStart
+ 
  
 ; amd64
 ; ~~~~~
@@ -128,6 +134,7 @@ AddService=WinVBlock,0x00000002,Service.NTamd64
 [DefaultInstall.NTamd64]
 CopyINF=WinVBlk.INF
 CopyFiles=File.Driver.NTamd64,Files.Tools
+RegisterDlls=StartService
  
 [DefaultInstall.NTamd64.Services]
 AddService=WinVBlock,0x00000002,Service.NTamd64
