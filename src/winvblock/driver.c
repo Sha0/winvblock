@@ -442,6 +442,25 @@ NTSTATUS STDCALL WvDriverGetDevCapabilities(
     return status;
   }
 
+/* Handle an IRP. */
+static NTSTATUS WvDriverDispatchIrp(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    PDRIVER_DISPATCH irp_handler;
+
+    WVL_M_DEBUG_IRP_START(dev_obj, irp);
+
+    irp_handler = WvDevGetIrpHandler(dev_obj);
+    return irp_handler(dev_obj, irp);
+  }
+
+/* Allow the driver to handle IRPs of a particular major code. */
+NTSTATUS STDCALL WvDriverHandleMajor(IN UCHAR Major) {
+    WvDriverObj->MajorFunction[Major] = WvDriverDispatchIrp;
+    return STATUS_SUCCESS;
+  }
+
 /**
  * Miscellaneous: Grouped memory allocation functions.
  */

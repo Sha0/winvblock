@@ -189,6 +189,13 @@ struct WV_DEV_T {
 
 extern WVL_M_LIB WV_SP_DEV_T WvDevFromDevObj(PDEVICE_OBJECT);
 extern WVL_M_LIB VOID WvDevForDevObj(PDEVICE_OBJECT, WV_SP_DEV_T);
+extern WVL_M_LIB PDRIVER_DISPATCH STDCALL WvDevGetIrpHandler(
+    IN PDEVICE_OBJECT
+  );
+extern WVL_M_LIB VOID STDCALL WvDevSetIrpHandler(
+    IN PDEVICE_OBJECT,
+    IN PDRIVER_DISPATCH
+  );
 extern WV_F_DEV_DISPATCH WvDevPnpQueryId;
 
 #endif  /* WV_M_DEVICE_H_ */

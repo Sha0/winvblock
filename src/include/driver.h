@@ -44,6 +44,7 @@ extern DRIVER_INITIALIZE DriverEntry;
 /* The physical/function device object's (PDO's/FDO's) DeviceExtension */
 typedef struct WV_DEV_EXT {
     struct WV_DEV_T * device;
+    PDRIVER_DISPATCH IrpDispatch;
   } WV_S_DEV_EXT, * WV_SP_DEV_EXT;
 
 /* Haven't found a better place for this, yet. */

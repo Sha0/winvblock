@@ -226,3 +226,32 @@ WVL_M_LIB VOID WvDevForDevObj(PDEVICE_OBJECT dev_obj, WV_SP_DEV_T dev) {
     dev_ext->device = dev;
     return;
   }
+
+/**
+ * Get a device's IRP handler routine.
+ *
+ * @v dev_obj                   Points to the DEVICE_OBJECT to get
+ *                              the handler for.
+ * @ret PDRIVER_DISPATCH        Points to the IRP handler routine.
+ */
+WVL_M_LIB PDRIVER_DISPATCH STDCALL WvDevGetIrpHandler(
+    IN PDEVICE_OBJECT dev_obj
+  ) {
+    WV_SP_DEV_EXT dev_ext = dev_obj->DeviceExtension;
+    return dev_ext->IrpDispatch;
+  }
+
+/**
+ * Set a device's IRP handler routine.
+ *
+ * @v dev_obj           Points to the DEVICE_OBJECT to set the handler for.
+ * @v irp_dispatch      Points to the IRP handler routine.
+ */
+WVL_M_LIB VOID STDCALL WvDevSetIrpHandler(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PDRIVER_DISPATCH irp_dispatch
+  ) {
+    WV_SP_DEV_EXT dev_ext = dev_obj->DeviceExtension;
+    dev_ext->IrpDispatch = irp_dispatch;
+    return;
+  }
