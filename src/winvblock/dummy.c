@@ -72,6 +72,28 @@ static NTSTATUS STDCALL WvDummyPnp(
       }
   }
 
+/* Handle an IRP. */
+static NTSTATUS WvDummyIrpDispatch(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    PIO_STACK_LOCATION io_stack_loc;
+
+    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    switch (io_stack_loc->MajorFunction) {
+        case IRP_MJ_PNP:
+          return WvDummyPnp(
+              dev_obj->DeviceExtension,
+              irp,
+              io_stack_loc->MinorFunction
+            );
+
+        default:
+          ;
+      }
+    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+  }
+
 typedef struct WV_ADD_DUMMY {
     const WV_S_DUMMY_IDS * DummyIds;
     DEVICE_TYPE DevType;
@@ -139,6 +161,7 @@ static NTSTATUS STDCALL WvDummyAdd_(
     if (Pdo)
       *Pdo = pdo;
     WvDevForDevObj(pdo, dev);
+    WvDevSetIrpHandler(pdo, WvDummyIrpDispatch);
     WvlBusInitNode(&dev->BusNode, pdo);
     /* Associate the parent bus. */
     dev->Parent = WvBus.Fdo;
