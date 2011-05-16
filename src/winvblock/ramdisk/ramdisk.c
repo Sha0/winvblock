@@ -175,6 +175,56 @@ static UCHAR STDCALL WvRamdiskUnitNum_(IN WVL_SP_DISK_T disk) {
     return (UCHAR) WvlBusGetNodeNum(&ramdisk->Dev->BusNode);
   }
 
+/* Handle an IRP. */
+static NTSTATUS WvRamdiskIrpDispatch(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    PIO_STACK_LOCATION io_stack_loc;
+    WV_SP_RAMDISK_T ramdisk;
+    NTSTATUS status;
+
+    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    ramdisk = dev_obj->DeviceExtension;
+    switch (io_stack_loc->MajorFunction) {
+        case IRP_MJ_SCSI:
+          return WvlDiskScsi(dev_obj, irp, ramdisk->disk);
+
+        case IRP_MJ_PNP:
+          status = WvlDiskDevCtl(
+              ramdisk->disk,
+              irp,
+              io_stack_loc->MinorFunction
+            );
+          /* Note any state change. */
+          ramdisk->Dev->OldState = ramdisk->disk->OldState;
+          ramdisk->Dev->State = ramdisk->disk->State;
+          return status;
+
+        case IRP_MJ_DEVICE_CONTROL:
+          return WvlDiskDevCtl(
+              ramdisk->disk,
+              irp,
+              io_stack_loc->Parameters.DeviceIoControl.IoControlCode
+            );
+
+        case IRP_MJ_POWER:
+          return WvlDiskPower(dev_obj, irp, ramdisk->disk);
+
+        case IRP_MJ_CREATE:
+        case IRP_MJ_CLOSE:
+          /* Always succeed with nothing to do. */
+          return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
+
+        case IRP_MJ_SYSTEM_CONTROL:
+          return WvlDiskSysCtl(dev_obj, irp, ramdisk->disk);
+
+        default:
+          ;
+      }
+    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+  }
+
 /**
  * Create a RAM disk PDO of the given media type.
  *
@@ -227,6 +277,7 @@ WV_SP_RAMDISK_T STDCALL WvRamdiskCreatePdo(
 
     /* Set associations for the PDO, device, disk. */
     WvDevForDevObj(pdo, ramdisk->Dev);
+    WvDevSetIrpHandler(pdo, WvRamdiskIrpDispatch);
     ramdisk->Dev->Self = pdo;
 
     /* Some device parameters. */
