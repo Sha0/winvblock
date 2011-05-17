@@ -377,3 +377,39 @@ BOOLEAN STDCALL AoeBusAddDev(
     DBG("Exit\n");
     return TRUE;
   }
+
+/* Handle an IRP. */
+static NTSTATUS AoeBusIrpDispatch(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    PIO_STACK_LOCATION io_stack_loc;
+
+    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    switch (io_stack_loc->MajorFunction) {
+        case IRP_MJ_PNP:
+          return WvlBusPnp(&AoeBusMain, irp);
+
+        case IRP_MJ_DEVICE_CONTROL: {
+            ULONG POINTER_ALIGNMENT code;
+
+            code = io_stack_loc->Parameters.DeviceIoControl.IoControlCode;
+            return AoeBusDevCtl(irp, code);
+          }
+
+        case IRP_MJ_POWER:
+          return WvlBusPower(&AoeBusMain, irp);
+
+        case IRP_MJ_CREATE:
+        case IRP_MJ_CLOSE:
+          /* Always succeed with nothing to do. */
+          return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
+
+        case IRP_MJ_SYSTEM_CONTROL:
+          return WvlBusSysCtl(&AoeBusMain, irp);
+
+        default:
+          ;
+      }
+    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+  }
