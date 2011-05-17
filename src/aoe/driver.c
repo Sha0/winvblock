@@ -83,6 +83,7 @@ static __drv_dispatchType(IRP_MJ_DEVICE_CONTROL)
 static __drv_dispatchType(IRP_MJ_SCSI) DRIVER_DISPATCH AoeIrpScsi_;
 static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH AoeIrpPnp_;
 static DRIVER_UNLOAD AoeUnload_;
+static DRIVER_DISPATCH AoeDiskIrpDispatch;
 
 /** Tag types. */
 typedef enum AOE_TAG_TYPE_ {
@@ -1820,6 +1821,7 @@ static AOE_SP_DISK AoeDiskCreatePdo_(void) {
 
     /* Set associations for the PDO, device, disk. */
     WvDevForDevObj(pdo, aoe_disk->Dev);
+    WvDevSetIrpHandler(pdo, AoeDiskIrpDispatch);
     KeInitializeEvent(
         &aoe_disk->SearchEvent,
         SynchronizationEvent,
@@ -2017,4 +2019,54 @@ static UCHAR STDCALL AoeDiskUnitNum_(IN WVL_SP_DISK_T disk) {
 
     /* Possible precision loss. */
     return (UCHAR) WvlBusGetNodeNum(aoe_disk->BusNode);
+  }
+
+/* Handle an IRP. */
+static NTSTATUS AoeDiskIrpDispatch(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    PIO_STACK_LOCATION io_stack_loc;
+    AOE_SP_DISK aoe_disk;
+    NTSTATUS status;
+
+    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    aoe_disk = dev_obj->DeviceExtension;
+    switch (io_stack_loc->MajorFunction) {
+        case IRP_MJ_SCSI:
+          return WvlDiskScsi(dev_obj, irp, aoe_disk->disk);
+
+        case IRP_MJ_PNP:
+          status = WvlDiskDevCtl(
+              aoe_disk->disk,
+              irp,
+              io_stack_loc->MinorFunction
+            );
+          /* Note any state change. */
+          aoe_disk->Dev->OldState = aoe_disk->disk->OldState;
+          aoe_disk->Dev->State = aoe_disk->disk->State;
+          return status;
+
+        case IRP_MJ_DEVICE_CONTROL:
+          return WvlDiskDevCtl(
+              aoe_disk->disk,
+              irp,
+              io_stack_loc->Parameters.DeviceIoControl.IoControlCode
+            );
+
+        case IRP_MJ_POWER:
+          return WvlDiskPower(dev_obj, irp, aoe_disk->disk);
+
+        case IRP_MJ_CREATE:
+        case IRP_MJ_CLOSE:
+          /* Always succeed with nothing to do. */
+          return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
+
+        case IRP_MJ_SYSTEM_CONTROL:
+          return WvlDiskSysCtl(dev_obj, irp, aoe_disk->disk);
+
+        default:
+          ;
+      }
+    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
