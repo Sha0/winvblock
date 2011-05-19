@@ -57,6 +57,7 @@ extern NTSTATUS STDCALL AoeBusAttachFdo(
     IN PDEVICE_OBJECT
   );
 extern BOOLEAN STDCALL AoeBusAddDev(IN OUT AOE_SP_DISK);
+extern DRIVER_DISPATCH AoeBusIrpDispatch;
 /* From aoe/registry.c */
 extern BOOLEAN STDCALL AoeRegSetup(OUT PNTSTATUS);
 
@@ -2069,4 +2070,44 @@ static NTSTATUS AoeDiskIrpDispatch(
           ;
       }
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+  }
+
+/* Handle an IRP. */
+static NTSTATUS AoeDriverDispatchIrp(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    NTSTATUS status;
+    PDRIVER_DISPATCH irp_handler;
+
+    WVL_M_DEBUG_IRP_START(dev_obj, irp);
+
+    if (dev_obj == AoeBusMain.Fdo) {
+        status = AoeBusIrpDispatch(dev_obj, irp);
+        /* Did the bus detach? */
+        if (AoeBusMain.State == WvlBusStateDeleted) {
+            /* Stop the thread. */
+            AoeStop_ = TRUE;
+            KeSetEvent(&AoeSignal_, 0, FALSE);
+            KeWaitForSingleObject(
+                AoeThreadObj_,
+                Executive,
+                KernelMode,
+                FALSE,
+                NULL
+              );
+            ObDereferenceObject(AoeThreadObj_);
+            ZwClose(AoeThreadHandle_);
+            /* Prevent AoeCleanup() from trying to stop the thread. */
+            AoeThreadHandle_ = NULL;
+            /* Delete. */
+            IoDeleteDevice(AoeBusMain.Fdo);
+            /* Disassociate. */
+            AoeBusMain.Fdo = NULL;
+          }
+      } else {
+        irp_handler = WvDevGetIrpHandler(dev_obj);
+        status = irp_handler(dev_obj, irp);
+      }
+    return status;
   }

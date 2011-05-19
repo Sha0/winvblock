@@ -379,7 +379,7 @@ BOOLEAN STDCALL AoeBusAddDev(
   }
 
 /* Handle an IRP. */
-static NTSTATUS AoeBusIrpDispatch(
+NTSTATUS AoeBusIrpDispatch(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
