@@ -1811,7 +1811,7 @@ static AOE_SP_DISK AoeDiskCreatePdo_(void) {
     aoe_disk->disk->DriverObj = AoeDriverObj_;
 
     /* Set associations for the PDO, device, disk. */
-    WvDevSetIrpHandler(pdo, AoeDiskIrpDispatch);
+    aoe_disk->Dev->IrpDispatch = AoeDiskIrpDispatch;
     KeInitializeEvent(
         &aoe_disk->SearchEvent,
         SynchronizationEvent,
@@ -2057,13 +2057,16 @@ static NTSTATUS AoeDriverDispatchIrp(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    NTSTATUS status;
+    SP_AOE_DEV aoe_dev;
     PDRIVER_DISPATCH irp_handler;
+    NTSTATUS status;
 
     WVL_M_DEBUG_IRP_START(dev_obj, irp);
 
+    aoe_dev = dev_obj->DeviceExtension;
+    irp_handler = aoe_dev->IrpDispatch;
+    status = irp_handler(dev_obj, irp);
     if (dev_obj == AoeBusMain.Fdo) {
-        status = AoeBusIrpDispatch(dev_obj, irp);
         /* Did the bus detach? */
         if (AoeBusMain.State == WvlBusStateDeleted) {
             /* Stop the thread. */
@@ -2085,9 +2088,6 @@ static NTSTATUS AoeDriverDispatchIrp(
             /* Disassociate. */
             AoeBusMain.Fdo = NULL;
           }
-      } else {
-        irp_handler = WvDevGetIrpHandler(dev_obj);
-        status = irp_handler(dev_obj, irp);
       }
     return status;
   }

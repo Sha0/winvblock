@@ -52,6 +52,7 @@ extern NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP);
 static WV_F_DEV_PNP_ID AoeBusPnpId_;
 NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT);
 VOID AoeBusFree(void);
+DRIVER_DISPATCH AoeBusIrpDispatch;
 
 /* Globals. */
 WVL_S_BUS_T AoeBusMain = {0};
@@ -292,6 +293,7 @@ static NTSTATUS AoeBusCreatePdo_(void) {
  */
 NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
     NTSTATUS status;
+    SP_AOE_DEV aoe_dev;
 
     /* Do we already have our main bus? */
     if (AoeBusMain.Fdo) {
@@ -309,7 +311,7 @@ NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
     /* Create the bus FDO. */
     status = IoCreateDevice(
         driver_obj,
-        0,
+        sizeof *aoe_dev,
         &AoeBusName_,
         FILE_DEVICE_CONTROLLER,
         FILE_DEVICE_SECURE_OPEN,
@@ -331,6 +333,8 @@ NTSTATUS AoeBusCreate(IN PDRIVER_OBJECT driver_obj) {
       }
     /* Ok! */
     AoeBusMain.QueryDevText = AoeBusPnpQueryDevText_;
+    aoe_dev = AoeBusMain.Fdo->DeviceExtension;
+    aoe_dev->IrpDispatch = AoeBusIrpDispatch;
     AoeBusMain.Fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
     AoeBusMain.Fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
     AoeBusMain.Fdo->Flags &= ~DO_DEVICE_INITIALIZING;

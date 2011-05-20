@@ -73,9 +73,17 @@ typedef enum AOE_SEARCH_STATE {
     AoeSearchStates
   } AOE_E_SEARCH_STATE, * AOE_EP_SEARCH_STATE;
 
+/*** Object types */
+typedef struct S_AOE_DEV_ S_AOE_DEV, * SP_AOE_DEV;
+
+/*** Structure/union definitions */
+struct S_AOE_DEV_ {
+    PDRIVER_DISPATCH IrpDispatch;
+  };
+
 /** The AoE disk type. */
 typedef struct AOE_DISK {
-    WV_S_DEV_EXT DevExt[1];
+    S_AOE_DEV Dev[1];
     PDEVICE_OBJECT Pdo;
     WVL_S_BUS_NODE BusNode[1];
     WVL_S_DISK_T disk[1];
