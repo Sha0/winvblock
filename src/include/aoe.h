@@ -76,7 +76,6 @@ typedef enum AOE_SEARCH_STATE {
 /** The AoE disk type. */
 typedef struct AOE_DISK {
     WV_S_DEV_EXT DevExt[1];
-    WV_S_DEV_T Dev[1];
     PDEVICE_OBJECT Pdo;
     WVL_S_BUS_NODE BusNode[1];
     WVL_S_DISK_T disk[1];
@@ -91,6 +90,10 @@ typedef struct AOE_DISK {
     KEVENT SearchEvent;
     BOOLEAN Boot;
     AOE_E_SEARCH_STATE search_state;
+    /* Current state of the device. */
+    WV_E_DEV_STATE State;
+    /* Previous state of the device. */
+    WV_E_DEV_STATE OldState;
   } AOE_S_DISK, * AOE_SP_DISK;
 
 typedef struct AOE_MOUNT_TARGET {

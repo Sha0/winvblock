@@ -65,7 +65,6 @@ extern BOOLEAN STDCALL AoeRegSetup(OUT PNTSTATUS);
 static VOID STDCALL AoeThread_(IN PVOID);
 static VOID AoeProcessAbft_(void);
 static AOE_SP_DISK AoeDiskCreatePdo_(void);
-static WV_F_DEV_FREE AoeDiskFree_;
 static WVL_F_DISK_IO AoeDiskIo_;
 static WVL_F_DISK_MAX_XFER_LEN AoeDiskMaxXferLen_;
 static BOOLEAN STDCALL AoeDiskInit_(AOE_SP_DISK);
@@ -193,11 +192,6 @@ static LONG AoePendingTags_ = 0;
 static HANDLE AoeThreadHandle_;
 static PETHREAD AoeThreadObj_ = NULL;
 static BOOLEAN AoeStarted_ = FALSE;
-
-/* Yield a pointer to the AoE disk. */
-static AOE_SP_DISK AoeDiskFromDev_(WV_SP_DEV_T dev_ptr) {
-    return disk__get_ptr(dev_ptr)->ext;
-  }
 
 typedef enum AOE_CLEANUP_ {
     AoeCleanupReg_,
@@ -1441,7 +1435,6 @@ NTSTATUS STDCALL AoeDiskPnpQueryDevText_(
     IN PIRP irp,
     IN WVL_SP_DISK_T disk
   ) {
-    IN WV_SP_DEV_T dev = WvDevFromDevObj(dev_obj);
     WCHAR (*str)[512];
     PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     NTSTATUS status;
@@ -1604,7 +1597,7 @@ static VOID AoeProcessAbft_(void) {
     aoe_disk->Boot = TRUE;
     if (!AoeDiskInit_(aoe_disk)) {
         DBG("Couldn't find AoE disk!\n");
-        AoeDiskFree_(aoe_disk->Dev);
+        IoDeleteDevice(aoe_disk->Pdo);
         return;
       }
     AoeBusAddDev(aoe_disk);
@@ -1771,7 +1764,7 @@ NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP irp) {
     aoe_disk->Boot = FALSE;
     if (!AoeDiskInit_(aoe_disk)) {
         DBG("Couldn't find AoE disk!\n");
-        AoeDiskFree_(aoe_disk->Dev);
+        IoDeleteDevice(aoe_disk->Pdo);
         return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
       }
     AoeBusAddDev(aoe_disk);
@@ -1807,9 +1800,6 @@ static AOE_SP_DISK AoeDiskCreatePdo_(void) {
     RtlZeroMemory(aoe_disk, sizeof *aoe_disk);
     /* Populate non-zero device defaults. */
     WvlDiskInit(aoe_disk->disk);
-    WvDevInit(aoe_disk->Dev);
-    aoe_disk->Dev->Ops.Free = AoeDiskFree_;
-    aoe_disk->Dev->ext = aoe_disk->disk;
     aoe_disk->disk->Media = WvlDiskMediaTypeHard;
     aoe_disk->disk->disk_ops.Io = AoeDiskIo_;
     aoe_disk->disk->disk_ops.MaxXferLen = AoeDiskMaxXferLen_;
@@ -1821,7 +1811,6 @@ static AOE_SP_DISK AoeDiskCreatePdo_(void) {
     aoe_disk->disk->DriverObj = AoeDriverObj_;
 
     /* Set associations for the PDO, device, disk. */
-    WvDevForDevObj(pdo, aoe_disk->Dev);
     WvDevSetIrpHandler(pdo, AoeDiskIrpDispatch);
     KeInitializeEvent(
         &aoe_disk->SearchEvent,
@@ -1829,7 +1818,7 @@ static AOE_SP_DISK AoeDiskCreatePdo_(void) {
         FALSE
       );
     KeInitializeSpinLock(&aoe_disk->SpinLock);
-    aoe_disk->Dev->Self = aoe_disk->Pdo = pdo;
+    aoe_disk->Pdo = pdo;
 
     /* Some device parameters. */
     pdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
@@ -1837,15 +1826,6 @@ static AOE_SP_DISK AoeDiskCreatePdo_(void) {
 
     DBG("New PDO: %p\n", pdo);
     return aoe_disk;
-  }
-
-/**
- * Default AoE disk deletion operation.
- *
- * @v dev               Points to the AoE disk device to delete.
- */
-static VOID STDCALL AoeDiskFree_(IN WV_SP_DEV_T dev) {
-    IoDeleteDevice(dev->Self);
   }
 
 static NTSTATUS STDCALL AoeIrpNotSupported_(
@@ -1868,7 +1848,7 @@ static NTSTATUS AoeIrpPower_(
       return WvlBusPower(&AoeBusMain, irp);
     aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (aoe_disk->Dev->State == WvDevStateDeleted) {
+    if (aoe_disk->State == WvDevStateDeleted) {
         /* Even if it doesn't, a power IRP is important! */
         PoStartNextPowerIrp(irp);
         return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
@@ -1890,7 +1870,7 @@ static NTSTATUS AoeIrpCreateClose_(
       return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
     aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (aoe_disk->Dev->State == WvDevStateDeleted)
+    if (aoe_disk->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Always succeed with nothing to do. */
     return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
@@ -1909,7 +1889,7 @@ static NTSTATUS AoeIrpSysCtl_(
       return WvlBusSysCtl(&AoeBusMain, irp);
     aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (aoe_disk->Dev->State == WvDevStateDeleted)
+    if (aoe_disk->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
     return WvlDiskSysCtl(dev_obj, irp, aoe_disk->disk);
@@ -1933,7 +1913,7 @@ static NTSTATUS AoeIrpDevCtl_(
       }
     aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (aoe_disk->Dev->State == WvDevStateDeleted)
+    if (aoe_disk->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
     return WvlDiskDevCtl(
@@ -1956,7 +1936,7 @@ static NTSTATUS AoeIrpScsi_(
       return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
     aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (aoe_disk->Dev->State == WvDevStateDeleted)
+    if (aoe_disk->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
     return WvlDiskScsi(
@@ -2005,7 +1985,7 @@ static NTSTATUS AoeIrpPnp_(
       }
     aoe_disk = dev_obj->DeviceExtension;
     /* Check that the device exists. */
-    if (aoe_disk->Dev->State == WvDevStateDeleted)
+    if (aoe_disk->State == WvDevStateDeleted)
       return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
     /* Use the disk routine. */
     return WvlDiskPnp(dev_obj, irp, aoe_disk->disk);
@@ -2044,8 +2024,8 @@ static NTSTATUS AoeDiskIrpDispatch(
               io_stack_loc->MinorFunction
             );
           /* Note any state change. */
-          aoe_disk->Dev->OldState = aoe_disk->disk->OldState;
-          aoe_disk->Dev->State = aoe_disk->disk->State;
+          aoe_disk->OldState = aoe_disk->disk->OldState;
+          aoe_disk->State = aoe_disk->disk->State;
           return status;
 
         case IRP_MJ_DEVICE_CONTROL:
