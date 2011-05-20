@@ -47,6 +47,7 @@
 extern NTSTATUS STDCALL AoeBusDevCtlScan(IN PIRP);
 extern NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP);
 extern NTSTATUS STDCALL AoeBusDevCtlMount(IN PIRP);
+extern VOID AoeStop(void);
 
 /* Forward declarations. */
 static WV_F_DEV_PNP_ID AoeBusPnpId_;
@@ -388,18 +389,26 @@ NTSTATUS AoeBusIrpDispatch(
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc;
+    NTSTATUS status;
+    ULONG POINTER_ALIGNMENT code;
 
     io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     switch (io_stack_loc->MajorFunction) {
         case IRP_MJ_PNP:
-          return WvlBusPnp(&AoeBusMain, irp);
+          status = WvlBusPnp(&AoeBusMain, irp);
+          /* Did the bus detach? */
+          if (AoeBusMain.State == WvlBusStateDeleted) {
+              AoeStop();
+              /* Delete. */
+              IoDeleteDevice(AoeBusMain.Fdo);
+              /* Disassociate. */
+              AoeBusMain.Fdo = NULL;
+            }
+          return status;
 
-        case IRP_MJ_DEVICE_CONTROL: {
-            ULONG POINTER_ALIGNMENT code;
-
-            code = io_stack_loc->Parameters.DeviceIoControl.IoControlCode;
-            return AoeBusDevCtl(irp, code);
-          }
+        case IRP_MJ_DEVICE_CONTROL:
+          code = io_stack_loc->Parameters.DeviceIoControl.IoControlCode;
+          return AoeBusDevCtl(irp, code);
 
         case IRP_MJ_POWER:
           return WvlBusPower(&AoeBusMain, irp);

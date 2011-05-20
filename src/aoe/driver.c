@@ -2066,28 +2066,23 @@ static NTSTATUS AoeDriverDispatchIrp(
     aoe_dev = dev_obj->DeviceExtension;
     irp_handler = aoe_dev->IrpDispatch;
     status = irp_handler(dev_obj, irp);
-    if (dev_obj == AoeBusMain.Fdo) {
-        /* Did the bus detach? */
-        if (AoeBusMain.State == WvlBusStateDeleted) {
-            /* Stop the thread. */
-            AoeStop_ = TRUE;
-            KeSetEvent(&AoeSignal_, 0, FALSE);
-            KeWaitForSingleObject(
-                AoeThreadObj_,
-                Executive,
-                KernelMode,
-                FALSE,
-                NULL
-              );
-            ObDereferenceObject(AoeThreadObj_);
-            ZwClose(AoeThreadHandle_);
-            /* Prevent AoeCleanup() from trying to stop the thread. */
-            AoeThreadHandle_ = NULL;
-            /* Delete. */
-            IoDeleteDevice(AoeBusMain.Fdo);
-            /* Disassociate. */
-            AoeBusMain.Fdo = NULL;
-          }
-      }
     return status;
+  }
+
+VOID AoeStop(void) {
+    /* Stop the thread. */
+    AoeStop_ = TRUE;
+    KeSetEvent(&AoeSignal_, 0, FALSE);
+    KeWaitForSingleObject(
+        AoeThreadObj_,
+        Executive,
+        KernelMode,
+        FALSE,
+        NULL
+      );
+    ObDereferenceObject(AoeThreadObj_);
+    ZwClose(AoeThreadHandle_);
+    /* Prevent AoeCleanup() from trying to stop the thread. */
+    AoeThreadHandle_ = NULL;
+    return;
   }
