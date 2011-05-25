@@ -159,14 +159,17 @@ static NTSTATUS WvFilediskIrpDispatch(
           return WvlDiskScsi(dev_obj, irp, filedisk->disk);
 
         case IRP_MJ_PNP:
-          status = WvlDiskDevCtl(
-              filedisk->disk,
-              irp,
-              io_stack_loc->MinorFunction
-            );
+          status = WvlDiskPnp(dev_obj, irp, filedisk->disk);
           /* Note any state change. */
           filedisk->Dev->OldState = filedisk->disk->OldState;
           filedisk->Dev->State = filedisk->disk->State;
+          if (filedisk->Dev->State == WvlDiskStateNotStarted) {
+              if (!filedisk->Dev->BusNode.Linked) {
+                  /* Unlinked _and_ deleted */
+                  DBG("Deleting filedisk PDO: %p", dev_obj);
+                  IoDeleteDevice(dev_obj);
+                }
+            }
           return status;
 
         case IRP_MJ_DEVICE_CONTROL:
