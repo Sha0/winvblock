@@ -191,14 +191,17 @@ static NTSTATUS WvRamdiskIrpDispatch(
           return WvlDiskScsi(dev_obj, irp, ramdisk->disk);
 
         case IRP_MJ_PNP:
-          status = WvlDiskDevCtl(
-              ramdisk->disk,
-              irp,
-              io_stack_loc->MinorFunction
-            );
+          status = WvlDiskPnp(dev_obj, irp, ramdisk->disk);
           /* Note any state change. */
           ramdisk->Dev->OldState = ramdisk->disk->OldState;
           ramdisk->Dev->State = ramdisk->disk->State;
+          if (ramdisk->Dev->State == WvlDiskStateNotStarted) {
+              if (!ramdisk->Dev->BusNode.Linked) {
+                  /* Unlinked _and_ deleted */
+                  DBG("Deleting RAM disk PDO: %p", dev_obj);
+                  IoDeleteDevice(dev_obj);
+                }
+            }
           return status;
 
         case IRP_MJ_DEVICE_CONTROL:
