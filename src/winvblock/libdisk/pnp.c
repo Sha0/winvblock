@@ -215,9 +215,27 @@ static NTSTATUS STDCALL WvlDiskPnpSimple_(
 
         case IRP_MN_QUERY_PNP_DEVICE_STATE:
           DBG("IRP_MN_QUERY_PNP_DEVICE_STATE\n");
-          irp->IoStatus.Information = 0;
-          status = STATUS_SUCCESS;
-          break;
+          status = irp->IoStatus.Status;
+          IoCompleteRequest(irp, IO_NO_INCREMENT);
+          return status;
+
+        case IRP_MN_QUERY_RESOURCE_REQUIREMENTS:
+          DBG("IRP_MN_QUERY_RESOURCE_REQUIREMENTS\n");
+          status = irp->IoStatus.Status;
+          IoCompleteRequest(irp, IO_NO_INCREMENT);
+          return status;
+
+        case IRP_MN_QUERY_RESOURCES:
+          DBG("IRP_MN_QUERY_RESOURCES\n");
+          status = irp->IoStatus.Status;
+          IoCompleteRequest(irp, IO_NO_INCREMENT);
+          return status;
+
+        case IRP_MN_FILTER_RESOURCE_REQUIREMENTS:
+          DBG("IRP_MN_FILTER_RESOURCE_REQUIREMENTS\n");
+          status = irp->IoStatus.Status;
+          IoCompleteRequest(irp, IO_NO_INCREMENT);
+          return status;
 
         case IRP_MN_START_DEVICE:
           DBG("IRP_MN_START_DEVICE\n");
