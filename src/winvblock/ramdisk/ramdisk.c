@@ -223,7 +223,7 @@ static NTSTATUS WvRamdiskIrpDispatch(
           return WvlDiskSysCtl(dev_obj, irp, ramdisk->disk);
 
         default:
-          ;
+          DBG("Unhandled IRP_MJ_*: %d\n", io_stack_loc->MajorFunction);
       }
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
