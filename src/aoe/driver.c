@@ -71,19 +71,25 @@ static BOOLEAN STDCALL AoeDiskInit_(AOE_SP_DISK);
 static WVL_F_DISK_CLOSE AoeDiskClose_;
 static WVL_F_DISK_UNIT_NUM AoeDiskUnitNum_;
 static DRIVER_DISPATCH AoeIrpNotSupported_;
-static __drv_dispatchType(IRP_MJ_POWER) DRIVER_DISPATCH AoeIrpPower_;
+static DRIVER_UNLOAD AoeUnload_;
 static
+  __drv_dispatchType(IRP_MJ_POWER)
   __drv_dispatchType(IRP_MJ_CREATE)
   __drv_dispatchType(IRP_MJ_CLOSE)
-  DRIVER_DISPATCH AoeIrpCreateClose_;
-static __drv_dispatchType(IRP_MJ_SYSTEM_CONTROL)
-  DRIVER_DISPATCH AoeIrpSysCtl_;
-static __drv_dispatchType(IRP_MJ_DEVICE_CONTROL)
-  DRIVER_DISPATCH AoeIrpDevCtl_;
-static __drv_dispatchType(IRP_MJ_SCSI) DRIVER_DISPATCH AoeIrpScsi_;
-static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH AoeIrpPnp_;
-static DRIVER_UNLOAD AoeUnload_;
-static DRIVER_DISPATCH AoeDiskIrpDispatch;
+  __drv_dispatchType(IRP_MJ_SYSTEM_CONTROL)
+  __drv_dispatchType(IRP_MJ_DEVICE_CONTROL)
+  __drv_dispatchType(IRP_MJ_SCSI)
+  __drv_dispatchType(IRP_MJ_PNP)
+  DRIVER_DISPATCH AoeDiskIrpDispatch;
+static
+  __drv_dispatchType(IRP_MJ_POWER)
+  __drv_dispatchType(IRP_MJ_CREATE)
+  __drv_dispatchType(IRP_MJ_CLOSE)
+  __drv_dispatchType(IRP_MJ_SYSTEM_CONTROL)
+  __drv_dispatchType(IRP_MJ_DEVICE_CONTROL)
+  __drv_dispatchType(IRP_MJ_SCSI)
+  __drv_dispatchType(IRP_MJ_PNP)
+  DRIVER_DISPATCH AoeDriverDispatchIrp;
 
 /** Tag types. */
 typedef enum AOE_TAG_TYPE_ {
@@ -378,13 +384,13 @@ NTSTATUS STDCALL DriverEntry(
     /* Initialize DriverObject for IRPs. */
     for (i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++)
       DriverObject->MajorFunction[i] = AoeIrpNotSupported_;
-    DriverObject->MajorFunction[IRP_MJ_PNP] = AoeIrpPnp_;
-    DriverObject->MajorFunction[IRP_MJ_POWER] = AoeIrpPower_;
-    DriverObject->MajorFunction[IRP_MJ_CREATE] = AoeIrpCreateClose_;
-    DriverObject->MajorFunction[IRP_MJ_CLOSE] = AoeIrpCreateClose_;
-    DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = AoeIrpSysCtl_;
-    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = AoeIrpDevCtl_;
-    DriverObject->MajorFunction[IRP_MJ_SCSI] = AoeIrpScsi_;
+    DriverObject->MajorFunction[IRP_MJ_PNP] = AoeDriverDispatchIrp;
+    DriverObject->MajorFunction[IRP_MJ_POWER] = AoeDriverDispatchIrp;
+    DriverObject->MajorFunction[IRP_MJ_CREATE] = AoeDriverDispatchIrp;
+    DriverObject->MajorFunction[IRP_MJ_CLOSE] = AoeDriverDispatchIrp;
+    DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = AoeDriverDispatchIrp;
+    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = AoeDriverDispatchIrp;
+    DriverObject->MajorFunction[IRP_MJ_SCSI] = AoeDriverDispatchIrp;
     /* Set the driver Unload callback. */
     DriverObject->DriverUnload = AoeUnload_;
     /* Set the driver AddDevice callback. */
@@ -1835,162 +1841,6 @@ static NTSTATUS STDCALL AoeIrpNotSupported_(
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
-/* Handle a power IRP. */
-static NTSTATUS AoeIrpPower_(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    AOE_SP_DISK aoe_disk;
-
-    WVL_M_DEBUG_IRP_START(dev_obj, irp);
-    /* Check for a bus IRP. */
-    if (dev_obj == AoeBusMain.Fdo)
-      return WvlBusPower(&AoeBusMain, irp);
-    aoe_disk = dev_obj->DeviceExtension;
-    /* Check that the device exists. */
-    if (aoe_disk->State == WvDevStateDeleted) {
-        /* Even if it doesn't, a power IRP is important! */
-        PoStartNextPowerIrp(irp);
-        return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
-      }
-    /* Use the disk routine. */
-    return WvlDiskPower(dev_obj, irp, aoe_disk->disk);
-  }
-
-/* Handle an IRP_MJ_CREATE or IRP_MJ_CLOSE IRP. */
-static NTSTATUS AoeIrpCreateClose_(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    AOE_SP_DISK aoe_disk;
-
-    WVL_M_DEBUG_IRP_START(dev_obj, irp);
-    /* Check for a bus IRP. */
-    if (dev_obj == AoeBusMain.Fdo)
-      return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
-    aoe_disk = dev_obj->DeviceExtension;
-    /* Check that the device exists. */
-    if (aoe_disk->State == WvDevStateDeleted)
-      return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
-    /* Always succeed with nothing to do. */
-    return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
-  }
-
-/* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
-static NTSTATUS AoeIrpSysCtl_(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    AOE_SP_DISK aoe_disk;
-
-    WVL_M_DEBUG_IRP_START(dev_obj, irp);
-    /* Check for a bus IRP. */
-    if (dev_obj == AoeBusMain.Fdo)
-      return WvlBusSysCtl(&AoeBusMain, irp);
-    aoe_disk = dev_obj->DeviceExtension;
-    /* Check that the device exists. */
-    if (aoe_disk->State == WvDevStateDeleted)
-      return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
-    /* Use the disk routine. */
-    return WvlDiskSysCtl(dev_obj, irp, aoe_disk->disk);
-  }
-
-/* Handle an IRP_MJ_DEVICE_CONTROL IRP. */
-static NTSTATUS AoeIrpDevCtl_(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    AOE_SP_DISK aoe_disk;
-    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-
-    WVL_M_DEBUG_IRP_START(dev_obj, irp);
-    /* Check for a bus IRP. */
-    if (dev_obj == AoeBusMain.Fdo) {
-        return AoeBusDevCtl(
-            irp,
-            io_stack_loc->Parameters.DeviceIoControl.IoControlCode
-          );
-      }
-    aoe_disk = dev_obj->DeviceExtension;
-    /* Check that the device exists. */
-    if (aoe_disk->State == WvDevStateDeleted)
-      return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
-    /* Use the disk routine. */
-    return WvlDiskDevCtl(
-        aoe_disk->disk,
-        irp,
-        io_stack_loc->Parameters.DeviceIoControl.IoControlCode
-      );
-  }
-
-/* Handle an IRP_MJ_SCSI IRP. */
-static NTSTATUS AoeIrpScsi_(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    AOE_SP_DISK aoe_disk;
-
-    WVL_M_DEBUG_IRP_START(dev_obj, irp);
-    /* Check for a bus IRP. */
-    if (dev_obj == AoeBusMain.Fdo)
-      return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
-    aoe_disk = dev_obj->DeviceExtension;
-    /* Check that the device exists. */
-    if (aoe_disk->State == WvDevStateDeleted)
-      return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
-    /* Use the disk routine. */
-    return WvlDiskScsi(
-        dev_obj,
-        irp,
-        aoe_disk->disk
-      );
-  }
-
-/* Handle an IRP_MJ_PNP IRP. */
-static NTSTATUS AoeIrpPnp_(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    AOE_SP_DISK aoe_disk;
-    UCHAR code = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
-
-    WVL_M_DEBUG_IRP_START(dev_obj, irp);
-    /* Check for a bus IRP. */
-    if (dev_obj == AoeBusMain.Fdo) {
-        NTSTATUS status;
-
-        status = WvlBusPnp(&AoeBusMain, irp);
-        /* Did the bus detach? */
-        if (AoeBusMain.State == WvlBusStateDeleted) {
-            /* Stop the thread. */
-            AoeStop_ = TRUE;
-            KeSetEvent(&AoeSignal_, 0, FALSE);
-            KeWaitForSingleObject(
-                AoeThreadObj_,
-                Executive,
-                KernelMode,
-                FALSE,
-                NULL
-              );
-            ObDereferenceObject(AoeThreadObj_);
-            ZwClose(AoeThreadHandle_);
-            /* Prevent AoeCleanup() from trying to stop the thread. */
-            AoeThreadHandle_ = NULL;
-            /* Delete. */
-            IoDeleteDevice(AoeBusMain.Fdo);
-            /* Disassociate. */
-            AoeBusMain.Fdo = NULL;
-          }
-        return status;
-      }
-    aoe_disk = dev_obj->DeviceExtension;
-    /* Check that the device exists. */
-    if (aoe_disk->State == WvDevStateDeleted)
-      return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
-    /* Use the disk routine. */
-    return WvlDiskPnp(dev_obj, irp, aoe_disk->disk);
-  }
-
 static UCHAR STDCALL AoeDiskUnitNum_(IN WVL_SP_DISK_T disk) {
     AOE_SP_DISK aoe_disk = CONTAINING_RECORD(
         disk,
@@ -2002,7 +1852,7 @@ static UCHAR STDCALL AoeDiskUnitNum_(IN WVL_SP_DISK_T disk) {
     return (UCHAR) WvlBusGetNodeNum(aoe_disk->BusNode);
   }
 
-/* Handle an IRP. */
+/* Handle an AoE disk IRP. */
 static NTSTATUS AoeDiskIrpDispatch(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
@@ -2018,14 +1868,17 @@ static NTSTATUS AoeDiskIrpDispatch(
           return WvlDiskScsi(dev_obj, irp, aoe_disk->disk);
 
         case IRP_MJ_PNP:
-          status = WvlDiskDevCtl(
-              aoe_disk->disk,
-              irp,
-              io_stack_loc->MinorFunction
-            );
+          status = WvlDiskPnp(dev_obj, irp, aoe_disk->disk);
           /* Note any state change. */
           aoe_disk->OldState = aoe_disk->disk->OldState;
           aoe_disk->State = aoe_disk->disk->State;
+          if (aoe_disk->State == WvlDiskStateNotStarted) {
+              if (!aoe_disk->BusNode->Linked) {
+                  /* Unlinked _and_ deleted */
+                  DBG("Deleting AoE disk PDO: %p", dev_obj);
+                  IoDeleteDevice(dev_obj);
+                }
+            }
           return status;
 
         case IRP_MJ_DEVICE_CONTROL:
@@ -2047,7 +1900,8 @@ static NTSTATUS AoeDiskIrpDispatch(
           return WvlDiskSysCtl(dev_obj, irp, aoe_disk->disk);
 
         default:
-          ;
+          DBG("Unhandled IRP_MJ_*: %d\n", io_stack_loc->MajorFunction);
+
       }
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
