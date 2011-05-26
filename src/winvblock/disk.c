@@ -42,12 +42,6 @@
 static WV_F_DEV_FREE WvDiskDevFree_;
 
 /** Exports. */
-NTSTATUS STDCALL WvDiskScsi(IN WV_SP_DEV_T dev, IN PIRP irp, IN UCHAR c) {
-    WVL_SP_DISK_T disk = disk__get_ptr(dev);
-
-    return WvlDiskScsi(dev->Self, irp, disk);
-  }
-
 NTSTATUS STDCALL WvDiskPnp(
     IN WV_SP_DEV_T dev,
     IN PIRP irp,
