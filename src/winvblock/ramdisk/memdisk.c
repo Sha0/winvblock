@@ -36,6 +36,7 @@
 #include "ramdisk.h"
 #include "debug.h"
 #include "mdi.h"
+#include "x86.h"
 #include "probe.h"
 
 /* From bus.c */
@@ -119,7 +120,7 @@ static BOOLEAN STDCALL WvMemdiskCheckMbft_(
 VOID WvMemdiskFind(void) {
     PHYSICAL_ADDRESS phys_addr;
     PUCHAR phys_mem;
-    WV_SP_PROBE_INT_VECTOR int_vector;
+    SP_X86_SEG16OFF16 int_vector;
     WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook;
     UINT32 offset;
     BOOLEAN found = FALSE;
@@ -132,7 +133,7 @@ VOID WvMemdiskFind(void) {
         return;
       }
     int_vector =
-      (WV_SP_PROBE_INT_VECTOR) (phys_mem + 0x13 * sizeof *int_vector);
+      (SP_X86_SEG16OFF16) (phys_mem + 0x13 * sizeof *int_vector);
     /* Walk the "safe hook" chain of INT 13h hooks as far as possible. */
     while (safe_mbr_hook = WvProbeGetSafeHook(phys_mem, int_vector)) {
         if (!wv_memcmpeq(safe_mbr_hook->VendorId, "MEMDISK ", 8)) {

@@ -35,6 +35,7 @@
 #include "disk.h"
 #include "ramdisk.h"
 #include "debug.h"
+#include "x86.h"
 #include "probe.h"
 #include "grub4dos.h"
 
@@ -45,7 +46,7 @@ extern WVL_S_BUS_T WvBus;
 VOID WvRamdiskG4dFind(void) {
     PHYSICAL_ADDRESS phys_addr;
     PUCHAR phys_mem;
-    WV_SP_PROBE_INT_VECTOR int_vector;
+    SP_X86_SEG16OFF16 int_vector;
     WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook;
     WV_SP_GRUB4DOS_DRIVE_MAPPING g4d_drive_mapping;
     UINT32 i = 8;
@@ -63,7 +64,7 @@ VOID WvRamdiskG4dFind(void) {
         return;
       }
     int_vector =
-      (WV_SP_PROBE_INT_VECTOR) (phys_mem + 0x13 * sizeof *int_vector);
+      (SP_X86_SEG16OFF16) (phys_mem + 0x13 * sizeof *int_vector);
     /* Walk the "safe hook" chain of INT 13h hooks as far as possible. */
     while (safe_mbr_hook = WvProbeGetSafeHook(phys_mem, int_vector)) {
         if (!wv_memcmpeq(

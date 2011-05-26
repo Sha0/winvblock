@@ -1,9 +1,7 @@
 /**
- * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
- * Copyright 2006-2008, V.
- * For WinAoE contact information, see http://winaoe.org/
+ * Copyright (C) 2010-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
- * This file is part of WinVBlock, derived from WinAoE.
+ * This file is part of WinVBlock, originally derived from WinAoE.
  *
  * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,40 +16,40 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef WV_M_PROBE_H_
-#  define WV_M_PROBE_H_
+#ifndef M_X86_H_
 
 /****
  * @file
  *
- * Boot-time disk probing specifics.
+ * x86 stuff.
  */
 
+/*** Macros. */
+#define M_X86_H_
+
+/**
+ * Return a 32-bit, linear address for a SEG16:OFF16
+ *
+ * @v Seg16Off16        The WV_SP_PROBE_INT_VECTOR with the
+ *                      segment and offset.
+ * @ret UINT32          The linear address for the segment and offset.
+ */
+#define M_X86_SEG16OFF16_ADDR(Seg16Off16) \
+  ((((UINT32)(Seg16Off16)->Segment) << 4) + (Seg16Off16)->Offset)
+
 /*** Types. */
-typedef struct WV_PROBE_SAFE_MBR_HOOK
-  WV_S_PROBE_SAFE_MBR_HOOK, * WV_SP_PROBE_SAFE_MBR_HOOK;
+typedef struct S_X86_SEG16OFF16_ S_X86_SEG16OFF16, * SP_X86_SEG16OFF16;
 
 /*** Struct definitions. */
 #ifdef _MSC_VER
 #  pragma pack(1)
 #endif
-struct WV_PROBE_SAFE_MBR_HOOK {
-    UCHAR Jump[3];
-    UCHAR Signature[8];
-    UCHAR VendorId[8];
-    S_X86_SEG16OFF16 PrevHook;
-    UINT32 Flags;
-    UINT32 Mbft;     /* MEMDISK only. */
+struct S_X86_SEG16OFF16_ {
+    UINT16 Offset;
+    UINT16 Segment;
   } __attribute__((__packed__));
 #ifdef _MSC_VER
 #  pragma pack()
 #endif
 
-/*** Function declarations. */
-extern WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
-    IN PUCHAR,
-    IN SP_X86_SEG16OFF16
-  );
-extern VOID WvProbeDisks(void);
-
-#endif  /* WV_M_PROBE_H_ */
+#endif /* M_X86_H_ */

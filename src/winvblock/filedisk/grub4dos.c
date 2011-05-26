@@ -39,6 +39,7 @@
 #include "libthread.h"
 #include "filedisk.h"
 #include "debug.h"
+#include "x86.h"
 #include "probe.h"
 #include "grub4dos.h"
 #include "byte.h"
@@ -476,7 +477,7 @@ static VOID STDCALL process_param_block(
 VOID WvFilediskG4dFind(void) {
     PHYSICAL_ADDRESS PhysicalAddress;
     PUCHAR PhysicalMemory;
-    WV_SP_PROBE_INT_VECTOR InterruptVector;
+    SP_X86_SEG16OFF16 InterruptVector;
     UINT32 Int13Hook;
     WV_SP_PROBE_SAFE_MBR_HOOK SafeMbrHookPtr;
     WV_SP_GRUB4DOS_DRIVE_MAPPING Grub4DosDriveMapSlotPtr;
@@ -497,9 +498,8 @@ VOID WvFilediskG4dFind(void) {
         DBG("Could not map low memory\n");
         return;
       }
-    InterruptVector = (WV_SP_PROBE_INT_VECTOR) (
-        PhysicalMemory + 0x13 * sizeof *InterruptVector
-      );
+    InterruptVector =
+      (SP_X86_SEG16OFF16) (PhysicalMemory + 0x13 * sizeof *InterruptVector);
     /* Walk the "safe hook" chain of INT 13h hooks as far as possible. */
     while (SafeMbrHookPtr = WvProbeGetSafeHook(
         PhysicalMemory,

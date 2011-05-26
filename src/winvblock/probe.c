@@ -42,19 +42,19 @@
 #include "grub4dos.h"
 #include "libthread.h"
 #include "filedisk.h"
+#include "x86.h"
 #include "probe.h"
 
 WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
     IN PUCHAR PhysicalMemory,
-    IN WV_SP_PROBE_INT_VECTOR InterruptVector
+    IN SP_X86_SEG16OFF16 InterruptVector
   ) {
     UINT32 int13_hook;
     WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook;
     UCHAR sig[9] = {0};
     UCHAR ven_id[9] = {0};
 
-    int13_hook = (((UINT32) InterruptVector->Segment) << 4) +
-      ((UINT32) InterruptVector->Offset);
+    int13_hook = M_X86_SEG16OFF16_ADDR(InterruptVector);
     safe_mbr_hook = (WV_SP_PROBE_SAFE_MBR_HOOK) (PhysicalMemory + int13_hook);
     RtlCopyMemory(sig, safe_mbr_hook->Signature, 8);
     RtlCopyMemory(ven_id, safe_mbr_hook->VendorId, 8);

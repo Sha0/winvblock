@@ -41,6 +41,7 @@
 #include "disk.h"
 #include "registry.h"
 #include "mount.h"
+#include "x86.h"
 #include "probe.h"
 #include "filedisk.h"
 #include "dummy.h"
