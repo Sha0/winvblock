@@ -156,9 +156,6 @@ struct WVL_DISK_T {
     BOOLEAN DenyPageFile;
   };
 
-/* Yield a pointer to the disk. */
-#define disk__get_ptr(dev_ptr) ((WVL_SP_DISK_T) dev_ptr->ext)
-
 /* An MBR C/H/S address and ways to access its components. */
 typedef UCHAR chs[3];
 
