@@ -57,7 +57,6 @@ extern NTSTATUS STDCALL WvDriverGetDevCapabilities(
 extern WVL_M_LIB PDEVICE_OBJECT WvBusFdo(void);
 extern BOOLEAN STDCALL WvBusAddDev(IN WV_SP_DEV_T);
 /* From disk.c */
-extern NTSTATUS STDCALL WvDiskPower(IN struct WV_DEV_T *, IN PIRP);
 extern NTSTATUS STDCALL WvDiskSysCtl(IN struct WV_DEV_T *, IN PIRP);
 extern NTSTATUS STDCALL WvDiskDevCtl(
     IN struct WV_DEV_T *,
