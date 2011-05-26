@@ -152,15 +152,6 @@ typedef WV_F_DEV_SCSI * WV_FP_DEV_SCSI;
 typedef NTSTATUS STDCALL WV_F_DEV_PNP(IN WV_SP_DEV_T, IN PIRP, IN UCHAR);
 typedef WV_F_DEV_PNP * WV_FP_DEV_PNP;
 
-/* IRP major function handler table. */
-typedef struct WV_DEV_IRP_MJ {
-    WV_FP_DEV_DISPATCH Power;
-    WV_FP_DEV_DISPATCH SysCtl;
-    WV_FP_DEV_CTL DevCtl;
-    WV_FP_DEV_SCSI Scsi;
-    WV_FP_DEV_PNP Pnp;
-  } WV_S_DEV_IRP_MJ, * WV_SP_DEV_IRP_MJ;
-
 /* Details common to all devices this driver works with */
 struct WV_DEV_T {
     /* For debugging */
@@ -181,8 +172,6 @@ struct WV_DEV_T {
     WV_S_DEV_OPS Ops;
     /* Points to further extensions. */
     PVOID ext;
-    /* How to handle IRPs based on major function code. */
-    WV_SP_DEV_IRP_MJ IrpMj;
     /* Was the device established at boot time? */
     BOOLEAN Boot;
   };

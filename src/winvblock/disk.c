@@ -41,15 +41,6 @@
 /** Private declarations. */
 static WV_F_DEV_FREE WvDiskDevFree_;
 
-/* Device IRP major function dispatch table. */
-static WV_S_DEV_IRP_MJ WvDiskIrpMj_ = {
-    WvDiskPower,
-    WvDiskSysCtl,
-    WvDiskDevCtl,
-    WvDiskScsi,
-    WvDiskPnp,
-  };
-
 /** Exports. */
 NTSTATUS STDCALL WvDiskPower(IN WV_SP_DEV_T dev, IN PIRP irp) {
     WVL_SP_DISK_T disk = disk__get_ptr(dev);

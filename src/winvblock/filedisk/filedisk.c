@@ -207,13 +207,6 @@ static NTSTATUS WvFilediskIrpDispatch(
 WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
     IN WVL_E_DISK_MEDIA_TYPE MediaType
   ) {
-    static WV_S_DEV_IRP_MJ irp_mj = {
-        WvDiskPower,
-        WvDiskSysCtl,
-        WvDiskDevCtl,
-        WvDiskScsi,
-        WvDiskPnp,
-      };
     NTSTATUS status;
     WV_SP_FILEDISK_T filedisk;
     PDEVICE_OBJECT pdo;
@@ -239,7 +232,6 @@ WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(
     WvDevInit(filedisk->Dev);
     filedisk->Dev->Ops.Free = WvFilediskFree_;
     filedisk->Dev->ext = filedisk->disk;
-    filedisk->Dev->IrpMj = &irp_mj;
     filedisk->disk->disk_ops.Io = WvFilediskIo_;
     filedisk->disk->disk_ops.UnitNum = WvFilediskUnitNum_;
     filedisk->disk->disk_ops.PnpQueryId = WvFilediskPnpQueryId_;

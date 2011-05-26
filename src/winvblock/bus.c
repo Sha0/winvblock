@@ -161,13 +161,6 @@ static NTSTATUS WvBusIrpDispatch(
 
 /* Establish the bus FDO, thread, and possibly PDO. */
 NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING RegistryPath) {
-    static WV_S_DEV_IRP_MJ irp_mj = {
-        (WV_FP_DEV_DISPATCH) 0,
-        (WV_FP_DEV_DISPATCH) 0,
-        (WV_FP_DEV_CTL) 0,
-        (WV_FP_DEV_SCSI) 0,
-        (WV_FP_DEV_PNP) 0,
-      };
     NTSTATUS status;
     PDEVICE_OBJECT fdo = NULL;
     HANDLE reg_key;
@@ -198,7 +191,6 @@ NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING RegistryPath) {
     WvBus.Fdo = fdo;
     WvBusDev.Self = WvBus.Fdo;
     WvBusDev.IsBus = TRUE;
-    WvBusDev.IrpMj = &irp_mj;
     WvBus.QueryDevText = WvBusPnpQueryDevText;
     WvDevForDevObj(WvBus.Fdo, &WvBusDev);
     WvDevSetIrpHandler(WvBus.Fdo, WvBusIrpDispatch);

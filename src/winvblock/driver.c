@@ -62,17 +62,15 @@ static LPWSTR WvOsLoadOpts = NULL;
 
 /* Forward declarations. */
 static DRIVER_DISPATCH WvIrpNotSupported;
-static __drv_dispatchType(IRP_MJ_POWER) DRIVER_DISPATCH WvIrpPower;
 static
+  __drv_dispatchType(IRP_MJ_POWER)
   __drv_dispatchType(IRP_MJ_CREATE)
   __drv_dispatchType(IRP_MJ_CLOSE)
-  DRIVER_DISPATCH WvIrpCreateClose;
-static __drv_dispatchType(IRP_MJ_SYSTEM_CONTROL)
-  DRIVER_DISPATCH WvIrpSysCtl;
-static __drv_dispatchType(IRP_MJ_DEVICE_CONTROL)
-  DRIVER_DISPATCH WvIrpDevCtl;
-static __drv_dispatchType(IRP_MJ_SCSI) DRIVER_DISPATCH WvIrpScsi;
-static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH WvIrpPnp;
+  __drv_dispatchType(IRP_MJ_SYSTEM_CONTROL)
+  __drv_dispatchType(IRP_MJ_DEVICE_CONTROL)
+  __drv_dispatchType(IRP_MJ_SCSI)
+  __drv_dispatchType(IRP_MJ_PNP)
+  DRIVER_DISPATCH WvDriverDispatchIrp;
 static DRIVER_UNLOAD WvUnload;
 
 static LPWSTR STDCALL WvGetOpt(IN LPWSTR opt_name) {
@@ -177,15 +175,13 @@ NTSTATUS STDCALL DriverEntry(
      */
     for (i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++)
       DriverObject->MajorFunction[i] = WvIrpNotSupported;
-    DriverObject->MajorFunction[IRP_MJ_PNP] = WvIrpPnp;
-    DriverObject->MajorFunction[IRP_MJ_POWER] = WvIrpPower;
-    DriverObject->MajorFunction[IRP_MJ_CREATE] = WvIrpCreateClose;
-    DriverObject->MajorFunction[IRP_MJ_CLOSE] = WvIrpCreateClose;
-    DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] =
-      WvIrpSysCtl;
-    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] =
-      WvIrpDevCtl;
-    DriverObject->MajorFunction[IRP_MJ_SCSI] = WvIrpScsi;
+    DriverObject->MajorFunction[IRP_MJ_PNP] = WvDriverDispatchIrp;
+    DriverObject->MajorFunction[IRP_MJ_POWER] = WvDriverDispatchIrp;
+    DriverObject->MajorFunction[IRP_MJ_CREATE] = WvDriverDispatchIrp;
+    DriverObject->MajorFunction[IRP_MJ_CLOSE] = WvDriverDispatchIrp;
+    DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = WvDriverDispatchIrp;
+    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = WvDriverDispatchIrp;
+    DriverObject->MajorFunction[IRP_MJ_SCSI] = WvDriverDispatchIrp;
     /* Set the driver Unload callback. */
     DriverObject->DriverUnload = WvUnload;
     /* Set the driver AddDevice callback. */
@@ -211,169 +207,6 @@ static NTSTATUS STDCALL WvIrpNotSupported(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
-    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
-  }
-
-/* Handle a power IRP. */
-static NTSTATUS WvIrpPower(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    WV_SP_DEV_T dev;
-
-    WVL_M_DEBUG_IRP_START(dev_obj, irp);
-    /* Check for a bus IRP. */
-    if (dev_obj == WvBus.Fdo)
-      return WvlBusPower(&WvBus, irp);
-    /* WvDevFromDevObj() checks for a NULL dev_obj */
-    dev = WvDevFromDevObj(dev_obj);
-    /* Check that the device exists. */
-    if (!dev || dev->State == WvDevStateDeleted) {
-        /* Even if it doesn't, a power IRP is important! */
-        PoStartNextPowerIrp(irp);
-        return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
-      }
-    /* Call the particular device's power handler. */
-    if (dev->IrpMj && dev->IrpMj->Power)
-      return dev->IrpMj->Power(dev, irp);
-    /* Otherwise, we don't support the IRP. */
-    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
-  }
-
-/* Handle an IRP_MJ_CREATE or IRP_MJ_CLOSE IRP. */
-static NTSTATUS WvIrpCreateClose(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    WV_SP_DEV_T dev;
-
-    WVL_M_DEBUG_IRP_START(dev_obj, irp);
-    /* Check for a bus IRP. */
-    if (dev_obj == WvBus.Fdo)
-      /* Always succeed with nothing to do. */
-      return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
-    /* WvDevFromDevObj() checks for a NULL dev_obj */
-    dev = WvDevFromDevObj(dev_obj);
-    /* Check that the device exists. */
-    if (!dev || dev->State == WvDevStateDeleted)
-      return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
-    /* Always succeed with nothing to do. */
-    return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
-  }
-
-/* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
-static NTSTATUS WvIrpSysCtl(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    WV_SP_DEV_T dev;
-
-    WVL_M_DEBUG_IRP_START(dev_obj, irp);
-    /* Check for a bus IRP. */
-    if (dev_obj == WvBus.Fdo)
-      return WvlBusSysCtl(&WvBus, irp);
-    /* WvDevFromDevObj() checks for a NULL dev_obj */
-    dev = WvDevFromDevObj(dev_obj);
-    /* Check that the device exists. */
-    if (!dev || dev->State == WvDevStateDeleted)
-      return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
-    /* Call the particular device's power handler. */
-    if (dev->IrpMj && dev->IrpMj->SysCtl)
-      return dev->IrpMj->SysCtl(dev, irp);
-    /* Otherwise, we don't support the IRP. */
-    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
-  }
-
-/* Handle an IRP_MJ_DEVICE_CONTROL IRP. */
-static NTSTATUS WvIrpDevCtl(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-    ULONG POINTER_ALIGNMENT code =
-      io_stack_loc->Parameters.DeviceIoControl.IoControlCode;
-    WV_SP_DEV_T dev;
-
-    WVL_M_DEBUG_IRP_START(dev_obj, irp);
-    /* Check for a bus IRP. */
-    if (dev_obj == WvBus.Fdo)
-      return WvBusDevCtl(irp, code);
-    /* WvDevFromDevObj() checks for a NULL dev_obj */
-    dev = WvDevFromDevObj(dev_obj);
-    /* Check that the device exists. */
-    if (!dev || dev->State == WvDevStateDeleted)
-      return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
-    /* Call the particular device's power handler. */
-    if (dev->IrpMj && dev->IrpMj->DevCtl) {
-        return dev->IrpMj->DevCtl(
-            dev,
-            irp,
-            code
-          );
-      }
-    /* Otherwise, we don't support the IRP. */
-    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
-  }
-
-/* Handle an IRP_MJ_SCSI IRP. */
-static NTSTATUS WvIrpScsi(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    WV_SP_DEV_T dev;
-    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-
-    WVL_M_DEBUG_IRP_START(dev_obj, irp);
-    /* Check for a bus IRP. */
-    if (dev_obj == WvBus.Fdo)
-      /* Not supported. */
-      return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
-    /* WvDevFromDevObj() checks for a NULL dev_obj */
-    dev = WvDevFromDevObj(dev_obj);
-    /* Check that the device exists. */
-    if (!dev || dev->State == WvDevStateDeleted)
-      return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
-    /* Call the particular device's power handler. */
-    if (dev->IrpMj && dev->IrpMj->Scsi) {
-        return dev->IrpMj->Scsi(
-            dev,
-            irp,
-            io_stack_loc->Parameters.Scsi.Srb->Function
-          );
-      }
-    /* Otherwise, we don't support the IRP. */
-    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
-  }
-
-/* Handle an IRP_MJ_PNP IRP. */
-static NTSTATUS WvIrpPnp(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    WV_SP_DEV_T dev;
-    NTSTATUS status;
-
-    WVL_M_DEBUG_IRP_START(dev_obj, irp);
-    /* Check for a bus IRP. */
-    if (dev_obj == WvBus.Fdo)
-      return WvlBusPnp(&WvBus, irp);
-    /* WvDevFromDevObj() checks for a NULL dev_obj */
-    dev = WvDevFromDevObj(dev_obj);
-    /* Check that the device exists. */
-    if (!dev || dev->State == WvDevStateDeleted)
-      return WvlIrpComplete(irp, 0, STATUS_NO_SUCH_DEVICE);
-    /* Call the particular device's power handler. */
-    if (dev->IrpMj && dev->IrpMj->Pnp) {
-        PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-
-        status = dev->IrpMj->Pnp(
-            dev,
-            irp,
-            io_stack_loc->MinorFunction
-          );
-        return status;
-      }
-    /* Otherwise, we don't support the IRP. */
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 

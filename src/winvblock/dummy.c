@@ -78,18 +78,20 @@ static NTSTATUS WvDummyIrpDispatch(
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc;
+    WV_SP_DEV_T dev;
 
     io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    dev = WvDevFromDevObj(dev_obj);
     switch (io_stack_loc->MajorFunction) {
         case IRP_MJ_PNP:
           return WvDummyPnp(
-              dev_obj->DeviceExtension,
+              dev,
               irp,
               io_stack_loc->MinorFunction
             );
 
         default:
-          ;
+          DBG("Unhandled IRP_MJ_*: %d\n", io_stack_loc->MajorFunction);
       }
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
@@ -108,13 +110,6 @@ static NTSTATUS STDCALL WvDummyAdd_(
     IN WV_SP_DUMMY_IDS DummyIds,
     IN PDEVICE_OBJECT * Pdo
   ) {
-    static WV_S_DEV_IRP_MJ irp_mj = {
-        (WV_FP_DEV_DISPATCH) 0,
-        (WV_FP_DEV_DISPATCH) 0,
-        (WV_FP_DEV_CTL) 0,
-        (WV_FP_DEV_SCSI) 0,
-        WvDummyPnp,
-      };
     NTSTATUS status;
     PDEVICE_OBJECT pdo = NULL;
     WV_SP_DEV_T dev;
@@ -154,7 +149,6 @@ static NTSTATUS STDCALL WvDummyAdd_(
 
     /* Ok! */
     WvDevInit(dev);
-    dev->IrpMj = &irp_mj;
     dev->ext = new_dummy_ids;   /* TODO: Implement a dummy free.  Leaking. */
     dev->Self = pdo;
     /* Optionally fill the caller's PDO pointer. */

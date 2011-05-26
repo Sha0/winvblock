@@ -239,13 +239,6 @@ static NTSTATUS WvRamdiskIrpDispatch(
 WV_SP_RAMDISK_T STDCALL WvRamdiskCreatePdo(
     IN WVL_E_DISK_MEDIA_TYPE MediaType
   ) {
-    static WV_S_DEV_IRP_MJ irp_mj = {
-        WvDiskPower,
-        WvDiskSysCtl,
-        WvDiskDevCtl,
-        WvDiskScsi,
-        WvDiskPnp,
-      };
     NTSTATUS status;
     WV_SP_RAMDISK_T ramdisk;
     PDEVICE_OBJECT pdo;
@@ -270,7 +263,6 @@ WV_SP_RAMDISK_T STDCALL WvRamdiskCreatePdo(
     WvDevInit(ramdisk->Dev);
     ramdisk->Dev->Ops.Free = WvRamdiskFree_;
     ramdisk->Dev->ext = ramdisk->disk;
-    ramdisk->Dev->IrpMj = &irp_mj;
     ramdisk->disk->disk_ops.Io = WvRamdiskIo_;
     ramdisk->disk->disk_ops.UnitNum = WvRamdiskUnitNum_;
     ramdisk->disk->disk_ops.PnpQueryId = WvRamdiskPnpQueryId_;
