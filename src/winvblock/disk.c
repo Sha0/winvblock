@@ -38,9 +38,6 @@
 #include "disk.h"
 #include "debug.h"
 
-/** Private declarations. */
-static WV_F_DEV_FREE WvDiskDevFree_;
-
 /** Exports. */
 NTSTATUS STDCALL WvDiskPnpQueryDevText(
     IN PDEVICE_OBJECT dev_obj,
@@ -98,17 +95,4 @@ NTSTATUS STDCALL WvDiskPnpQueryDevText(
     alloc_str:
 
     return WvlIrpComplete(irp, irp->IoStatus.Information, status);
-  }
-
-/** Private. */
-
-/**
- * Default disk deletion operation.
- *
- * @v dev               Points to the disk device to delete.
- */
-static VOID STDCALL WvDiskDevFree_(IN WV_SP_DEV_T dev) {
-    WVL_SP_DISK_T disk = disk__get_ptr(dev);
-
-    wv_free(disk);
   }
