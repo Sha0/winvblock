@@ -42,21 +42,6 @@
 static WV_F_DEV_FREE WvDiskDevFree_;
 
 /** Exports. */
-NTSTATUS STDCALL WvDiskPnp(
-    IN WV_SP_DEV_T dev,
-    IN PIRP irp,
-    IN UCHAR code
-  ) {
-    NTSTATUS status;
-    WVL_SP_DISK_T disk = disk__get_ptr(dev);
-
-    status = WvlDiskPnp(dev->Self, irp, disk);
-    /* Note any state change. */
-    dev->OldState = disk->OldState;
-    dev->State = disk->State;
-    return status;
-  }
-
 NTSTATUS STDCALL WvDiskPnpQueryDevText(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
