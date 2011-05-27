@@ -44,7 +44,15 @@ typedef struct WV_GRUB4DOS_DRIVE_MAPPING {
     UINT64 SectorCount;
   } WV_S_GRUB4DOS_DRIVE_MAPPING, * WV_SP_GRUB4DOS_DRIVE_MAPPING;
 
-extern VOID WvRamdiskG4dFind(void);
-extern VOID WvFilediskG4dFind(void);
+extern VOID WvFilediskCreateG4dDisk(
+    WV_SP_GRUB4DOS_DRIVE_MAPPING,
+    WVL_E_DISK_MEDIA_TYPE,
+    UINT32
+  );
+extern VOID WvRamdiskCreateG4dDisk(
+    WV_SP_GRUB4DOS_DRIVE_MAPPING,
+    WVL_E_DISK_MEDIA_TYPE,
+    UINT32
+  );
 
 #endif  /* WV_M_GRUB4DOS_H_ */

@@ -474,206 +474,86 @@ static VOID STDCALL process_param_block(
       } /* while */
   }
 
-VOID WvFilediskG4dFind(void) {
-    PHYSICAL_ADDRESS PhysicalAddress;
-    PUCHAR PhysicalMemory;
-    SP_X86_SEG16OFF16 InterruptVector;
-    UINT32 Int13Hook;
-    WV_SP_PROBE_SAFE_MBR_HOOK SafeMbrHookPtr;
-    WV_SP_GRUB4DOS_DRIVE_MAPPING Grub4DosDriveMapSlotPtr;
-    UINT32 i;
-    BOOLEAN FoundGrub4DosMapping = FALSE;
+/** Create a GRUB4DOS sector-mapped disk and add it to the WinVBlock bus. */
+VOID WvFilediskCreateG4dDisk(
+    WV_SP_GRUB4DOS_DRIVE_MAPPING slot,
+    WVL_E_DISK_MEDIA_TYPE media_type,
+    UINT32 sector_size
+  ) {
     WV_SP_FILEDISK_T filedisk_ptr;
-    const char sig[] = "GRUB4DOS";
+    #ifdef TODO_RESTORE_FILE_MAPPED_G4D_DISKS
     /* Matches disks to files. */
     WV_S_FILEDISK_GRUB4DOS_DRIVE_FILE_SET sets[8] = {0};
+    #endif
 
     /*
-     * Find a GRUB4DOS sector-mapped disk.  Start by looking at the
-     * real-mode IDT and following the "SafeMBRHook" INT 0x13 hook.
+     * Create the threaded, file-backed disk.  Hook the
+     * read/write routine so we can access the backing disk
+     * late(r) during the boot process.
      */
-    PhysicalAddress.QuadPart = 0LL;
-    PhysicalMemory = MmMapIoSpace(PhysicalAddress, 0x100000, MmNonCached);
-    if (!PhysicalMemory) {
-        DBG("Could not map low memory\n");
+    filedisk_ptr = WvFilediskCreatePdo(media_type);
+    if (!filedisk_ptr) {
+        DBG("Could not create GRUB4DOS sector-mapped disk!\n");
         return;
       }
-    InterruptVector =
-      (SP_X86_SEG16OFF16) (PhysicalMemory + 0x13 * sizeof *InterruptVector);
-    /* Walk the "safe hook" chain of INT 13h hooks as far as possible. */
-    while (SafeMbrHookPtr = WvProbeGetSafeHook(
-        PhysicalMemory,
-        InterruptVector
-      )) {
-        /* Check signature. */
-        if (!wv_memcmpeq(SafeMbrHookPtr->VendorId, sig, sizeof sig - 1)) {
-            DBG("Non-GRUB4DOS INT 0x13 Safe Hook\n");
-            InterruptVector = &SafeMbrHookPtr->PrevHook;
-            continue;
+    DBG("Sector-mapped disk is type: %d\n", media_type);
+
+    /* Record the usual filedisk I/O function for later. */
+    WvFilediskG4dPrevIo_ = filedisk_ptr->disk->disk_ops.Io;
+    /* Hook the first I/O request.  FIXME: We're hooking a global... */
+    filedisk_ptr->disk->disk_ops.Io = WvFilediskG4dIo_;
+    /* Other parameters we know. */
+    filedisk_ptr->disk->Media = media_type;
+    filedisk_ptr->disk->SectorSize = sector_size;
+
+    #ifdef TODO_RESTORE_FILE_MAPPED_G4D_DISKS
+    /* Find an associated filename, if one exists. */
+    {   int j = 8;
+
+        while (j--) {
+            if (
+                (sets[j].int13_drive_num == slot->SourceDrive) &&
+                (sets[j].filepath != NULL)
+              )
+              WvFilediskHotSwap(filedisk_ptr, sets[j].filepath);
           }
-        Grub4DosDriveMapSlotPtr = (WV_SP_GRUB4DOS_DRIVE_MAPPING) (
-            PhysicalMemory +
-            (((UINT32) InterruptVector->Segment) << 4)
-            + 0x20
-          );
-        /*
-         * Search for parameter blocks, which are disguised as
-         * GRUB4DOS RAM disk mappings for 2048-byte memory regions.
-         */
-        i = 8;
-        while (i--) {
-            PHYSICAL_ADDRESS param_block_addr;
-            char * param_block;
+      } /* j scope. */
+    #endif
 
-            if (Grub4DosDriveMapSlotPtr[i].DestDrive != 0xff)
-              continue;
-            param_block_addr.QuadPart =
-              Grub4DosDriveMapSlotPtr[i].SectorStart * 512;
-            param_block = MmMapIoSpace(param_block_addr, 2048, MmNonCached);
-            if (param_block == NULL) {
-                DBG("Could not map potential G4D parameter block\n");
-                continue;
-              }
-            /*
-             * Could be a parameter block.  Process it.  There can be only one.
-             */
-            process_param_block(param_block, sets);
-            MmUnmapIoSpace(param_block, 2048);
-            if (sets[0].filepath != NULL)
-              break;
-          } /* search for parameter blocks. */
-      /* Search for sector-mapped (typically file-backed) disks. */
-      i = 8;
-      while (i--) {
-          WVL_E_DISK_MEDIA_TYPE media_type;
-          UINT32 sector_size;
+    /* Note the offset of the disk image from the backing disk's start. */
+    filedisk_ptr->offset.QuadPart =
+      slot->SectorStart * (slot->DestODD ? 2048 : 512);
+    /*
+     * Size and geometry.  Please note that since we require a .VHD
+     * footer, we exclude this from the LBA disk size by truncating
+     * a 512-byte sector for HDD images, or a 2048-byte sector for .ISO.
+     */
+    {   ULONGLONG total_size =
+          slot->SectorCount * (slot->DestODD ? 2048 : 512);
 
-          if (
-              (Grub4DosDriveMapSlotPtr[i].SectorCount == 0) ||
-              (Grub4DosDriveMapSlotPtr[i].DestDrive == 0xff)
-            ) {
-              DBG("Skipping non-sector-mapped GRUB4DOS disk\n");
-              continue;
-            }
-          DBG(
-              "GRUB4DOS SourceDrive: 0x%02x\n",
-              Grub4DosDriveMapSlotPtr[i].SourceDrive
-            );
-          DBG(
-              "GRUB4DOS DestDrive: 0x%02x\n",
-              Grub4DosDriveMapSlotPtr[i].DestDrive
-            );
-          DBG("GRUB4DOS MaxHead: %d\n", Grub4DosDriveMapSlotPtr[i].MaxHead);
-          DBG(
-              "GRUB4DOS MaxSector: %d\n",
-              Grub4DosDriveMapSlotPtr[i].MaxSector
-            );
-          DBG(
-              "GRUB4DOS DestMaxCylinder: %d\n",
-              Grub4DosDriveMapSlotPtr[i].DestMaxCylinder
-            );
-          DBG(
-              "GRUB4DOS DestMaxHead: %d\n",
-              Grub4DosDriveMapSlotPtr[i].DestMaxHead
-            );
-          DBG(
-              "GRUB4DOS DestMaxSector: %d\n",
-              Grub4DosDriveMapSlotPtr[i].DestMaxSector
-            );
-          DBG(
-              "GRUB4DOS SectorStart: 0x%08x\n",
-              Grub4DosDriveMapSlotPtr[i].SectorStart
-            );
-          DBG(
-              "GRUB4DOS SectorCount: %d\n",
-              Grub4DosDriveMapSlotPtr[i].SectorCount
-            );
-          /* Possible precision loss. */
-          if (Grub4DosDriveMapSlotPtr[i].SourceODD) {
-              media_type = WvlDiskMediaTypeOptical;
-              sector_size = 2048;
-            } else {
-              media_type =
-                (Grub4DosDriveMapSlotPtr[i].SourceDrive & 0x80) ?
-                WvlDiskMediaTypeHard :
-                WvlDiskMediaTypeFloppy;
-              sector_size = 512;
-            }
-          /*
-           * Create the threaded, file-backed disk.  Hook the
-           * read/write routine so we can accessing the backing disk
-           * late(r) during the boot process.
-           */
-          filedisk_ptr = WvFilediskCreatePdo(media_type);
-          if (filedisk_ptr == NULL) {
-              DBG("Could not create GRUB4DOS disk!\n");
-              return;
-            }
-          /* Record the usual filedisk I/O function for later. */
-          WvFilediskG4dPrevIo_ = filedisk_ptr->disk->disk_ops.Io;
-          /* Hook the first I/O request. */
-          filedisk_ptr->disk->disk_ops.Io = WvFilediskG4dIo_;
-          /* Other parameters we know. */
-          filedisk_ptr->disk->Media = media_type;
-          filedisk_ptr->disk->SectorSize = sector_size;
-          /* Find an associated filename, if one exists. */
-          {   int j = 8;
+        filedisk_ptr->disk->LBADiskSize =
+          (total_size - filedisk_ptr->disk->SectorSize) /
+          filedisk_ptr->disk->SectorSize;
+      } /* total_size scope. */
+    filedisk_ptr->disk->Heads = slot->MaxHead + 1;
+    filedisk_ptr->disk->Sectors = slot->DestMaxSector;
+    filedisk_ptr->disk->Cylinders = (
+        filedisk_ptr->disk->LBADiskSize /
+        (filedisk_ptr->disk->Heads * filedisk_ptr->disk->Sectors)
+      );
+    /*
+     * Set a filedisk "hash" and mark the drive as a boot-drive.
+     * The "hash" is 'G4DX', where X is the GRUB4DOS INT 13h
+     * drive number.  Note that mutiple G4D INT 13h chains will
+     * cause a "hash" collision!  Too bad for now.
+     */
+    filedisk_ptr->hash = 'G4DX';
+    ((PUCHAR) &filedisk_ptr->hash)[0] = slot->SourceDrive;
+    filedisk_ptr->Dev->Boot = TRUE;
+    /* Add the filedisk to the bus. */
+    filedisk_ptr->disk->ParentBus = WvBus.Fdo;
+    if (!WvBusAddDev(filedisk_ptr->Dev))
+      WvDevFree(filedisk_ptr->Dev);
 
-              while (j--) {
-                  if (
-                      (sets[j].int13_drive_num ==
-                        Grub4DosDriveMapSlotPtr[i].SourceDrive) &&
-                      (sets[j].filepath != NULL)
-                    )
-                    WvFilediskHotSwap(filedisk_ptr, sets[j].filepath);
-                }
-            } /* j scope. */
-          DBG("Sector-mapped disk is type: %d\n", media_type);
-          /* Note the offset of the disk image from the backing disk's start. */
-          filedisk_ptr->offset.QuadPart =
-            Grub4DosDriveMapSlotPtr[i].SectorStart *
-            (Grub4DosDriveMapSlotPtr[i].DestODD ? 2048 : 512);
-          /*
-           * Size and geometry.  Please note that since we require a .VHD
-           * footer, we exclude this from the LBA disk size by truncating
-           * a 512-byte sector for HDD images, or a 2048-byte sector for .ISO.
-           */
-          {   ULONGLONG total_size =
-                Grub4DosDriveMapSlotPtr[i].SectorCount *
-                (Grub4DosDriveMapSlotPtr[i].DestODD ? 2048 : 512);
-
-              filedisk_ptr->disk->LBADiskSize =
-                (total_size - filedisk_ptr->disk->SectorSize) /
-                filedisk_ptr->disk->SectorSize;
-            } /* total_size scope. */
-          filedisk_ptr->disk->Heads = Grub4DosDriveMapSlotPtr[i].MaxHead + 1;
-          filedisk_ptr->disk->Sectors =
-            Grub4DosDriveMapSlotPtr[i].DestMaxSector;
-          filedisk_ptr->disk->Cylinders =
-            filedisk_ptr->disk->LBADiskSize /
-            (filedisk_ptr->disk->Heads * filedisk_ptr->disk->Sectors);
-          /*
-           * Set a filedisk "hash" and mark the drive as a boot-drive.
-           * The "hash" is 'G4DX', where X is the GRUB4DOS INT 13h
-           * drive number.  Note that mutiple G4D INT 13h chains will
-           * cause a "hash" collision!  Too bad for now.
-           */
-          filedisk_ptr->hash = 'G4DX';
-          ((PUCHAR) &filedisk_ptr->hash)[0] =
-            Grub4DosDriveMapSlotPtr[i].SourceDrive;
-          FoundGrub4DosMapping = TRUE;
-          filedisk_ptr->Dev->Boot = TRUE;
-          /* Add the filedisk to the bus. */
-          filedisk_ptr->disk->ParentBus = WvBus.Fdo;
-          if (!WvBusAddDev(filedisk_ptr->Dev))
-            WvDevFree(filedisk_ptr->Dev);
-        } /* search for sector-mapped disks. */
-      InterruptVector = &SafeMbrHookPtr->PrevHook;
-    } /* walk the safe hook chain. */
-
-    MmUnmapIoSpace(PhysicalMemory, 0x100000);
-    if (!FoundGrub4DosMapping) {
-        DBG("No GRUB4DOS sector-mapped disk mappings found\n");
-      }
     return;
   }

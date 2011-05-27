@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
  *
- * This file is part of WinVBlock, derived from WinAoE.
+ * This file is part of WinVBlock, originally derived from WinAoE.
  *
  * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,15 +16,22 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef WV_M_MEMDISK_H_
-#  define WV_M_MEMDISK_H_
+#ifndef M_MEMDISK_H_
 
-/**
+/****
  * @file
  *
  * MEMDISK specifics.
  */
 
-extern VOID WvMemdiskFind(void);
+/*** Macros. */
+#define M_MEMDISK_H_
 
-#endif  /* WV_M_MEMDISK_H_ */
+/*** Function declarations. */
+extern VOID WvMemdiskFind(void);
+extern BOOLEAN WvMemdiskProcessSafeHook(
+    PUCHAR,
+    SP_X86_SEG16OFF16
+  );
+
+#endif  /* M_MEMDISK_H_ */

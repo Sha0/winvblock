@@ -44,7 +44,8 @@ extern WVL_S_BUS_T WvBus;
 
 static BOOLEAN STDCALL WvMemdiskCheckMbft_(
     PUCHAR phys_mem,
-    UINT32 offset
+    UINT32 offset,
+    BOOLEAN walk
   ) {
     WV_SP_MDI_MBFT mbft = (WV_SP_MDI_MBFT) (phys_mem + offset);
     UINT32 i;
@@ -120,35 +121,33 @@ static BOOLEAN STDCALL WvMemdiskCheckMbft_(
 VOID WvMemdiskFind(void) {
     PHYSICAL_ADDRESS phys_addr;
     PUCHAR phys_mem;
-    SP_X86_SEG16OFF16 int_vector;
-    WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook;
     UINT32 offset;
     BOOLEAN found = FALSE;
 
-    /* Find a MEMDISK.  We check the "safe hook" chain, then scan for mBFTs. */
+    /* Find a MEMDISK by scanning for mBFTs.  Map the first MiB of memory. */
     phys_addr.QuadPart = 0LL;
     phys_mem = MmMapIoSpace(phys_addr, 0x100000, MmNonCached);
     if (!phys_mem) {
         DBG("Could not map low memory\n");
-        return;
+        goto err_map;
       }
-    int_vector =
-      (SP_X86_SEG16OFF16) (phys_mem + 0x13 * sizeof *int_vector);
-    /* Walk the "safe hook" chain of INT 13h hooks as far as possible. */
-    while (safe_mbr_hook = WvProbeGetSafeHook(phys_mem, int_vector)) {
-        if (!wv_memcmpeq(safe_mbr_hook->VendorId, "MEMDISK ", 8)) {
-        	  DBG("Non-MEMDISK INT 0x13 Safe Hook\n");
-        	} else {
-        	  found |= WvMemdiskCheckMbft_(phys_mem, safe_mbr_hook->Mbft);
-        	}
-        int_vector = &safe_mbr_hook->PrevHook;
-      }
-    /* Now search for "floating" mBFTs. */
+
     for (offset = 0; offset < 0xFFFF0; offset += 0x10) {
-        found |= WvMemdiskCheckMbft_(phys_mem, offset);
+        found |= WvMemdiskCheckMbft_(phys_mem, offset, TRUE);
       }
+
     MmUnmapIoSpace(phys_mem, 0x100000);
-    if (!found) {
-        DBG("No MEMDISKs found\n");
-      }
+    err_map:
+
+    DBG("%smBFTs found\n", found ? "" : "No ");
+    return;
+  }
+
+BOOLEAN WvMemdiskProcessSafeHook(
+    PUCHAR phys_mem,
+    SP_X86_SEG16OFF16 segoff
+  ) {
+    UINT32 offset = M_X86_SEG16OFF16_ADDR(segoff);
+
+    return WvMemdiskCheckMbft_(phys_mem, offset, FALSE);
   }

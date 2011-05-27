@@ -48,10 +48,7 @@ struct WV_PROBE_SAFE_MBR_HOOK {
 #endif
 
 /*** Function declarations. */
-extern WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
-    IN PUCHAR,
-    IN SP_X86_SEG16OFF16
-  );
+extern BOOLEAN WvProbeSafeHookChain(PUCHAR, SP_X86_SEG16OFF16);
 extern VOID WvProbeDisks(void);
 
 #endif  /* WV_M_PROBE_H_ */
