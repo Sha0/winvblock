@@ -148,9 +148,7 @@ VOID WvMemdiskFind(void) {
 
 BOOLEAN WvMemdiskProcessSafeHook(
     PUCHAR phys_mem,
-    SP_X86_SEG16OFF16 segoff
+    WV_SP_PROBE_SAFE_MBR_HOOK mbr_safe_hook
   ) {
-    UINT32 offset = M_X86_SEG16OFF16_ADDR(segoff);
-
-    return WvMemdiskCheckMbft_(phys_mem, offset, FALSE);
+    return WvMemdiskCheckMbft_(phys_mem, mbr_safe_hook->Mbft, FALSE);
   }

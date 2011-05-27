@@ -185,7 +185,7 @@ BOOLEAN WvProbeSafeHookChain(
     /* Walk the "safe hook" chain of INT 0x13 hooks as far as possible. */
     while (safe_mbr_hook = WvProbeGetSafeHook(phys_mem, segoff)) {
         found |=
-          WvMemdiskProcessSafeHook(phys_mem, segoff) ||
+          WvMemdiskProcessSafeHook(phys_mem, safe_mbr_hook) ||
           WvGrub4dosProcessSafeHook(phys_mem, segoff, safe_mbr_hook);
         segoff = &safe_mbr_hook->PrevHook;
       }

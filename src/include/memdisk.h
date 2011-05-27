@@ -31,7 +31,7 @@
 extern VOID WvMemdiskFind(void);
 extern BOOLEAN WvMemdiskProcessSafeHook(
     PUCHAR,
-    SP_X86_SEG16OFF16
+    WV_SP_PROBE_SAFE_MBR_HOOK
   );
 
 #endif  /* M_MEMDISK_H_ */
