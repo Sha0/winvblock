@@ -36,4 +36,13 @@
 #  define WVL_M_LIB __declspec(dllimport)
 #endif
 
+/*** Object types. */
+typedef union U_WV_LARGE_INT_ U_WV_LARGE_INT, UP_WV_LARGE_INT;
+
+/*** Struct/union definitions. */
+union U_WV_LARGE_INT_ {
+    LONGLONG longlong;
+    LARGE_INTEGER large_int;
+  };
+
 #endif  /* WVL_M_WINVBLOCK_H_ */

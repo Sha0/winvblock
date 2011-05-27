@@ -38,6 +38,8 @@
 #define POOLSIZE 2048
 
 extern PDRIVER_OBJECT WvDriverObj;
+extern UINT32 WvFindDisk;
+extern KSPIN_LOCK WvFindDiskLock;
 /* Note the exception to the function naming convention. */
 extern DRIVER_INITIALIZE DriverEntry;
 

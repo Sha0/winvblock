@@ -53,6 +53,8 @@ extern VOID WvBusCleanup(void);
 
 /* Exported. */
 PDRIVER_OBJECT WvDriverObj = NULL;
+UINT32 WvFindDisk;
+KSPIN_LOCK WvFindDiskLock;
 
 /* Globals. */
 static PVOID WvDriverStateHandle;
@@ -135,6 +137,40 @@ static NTSTATUS STDCALL WvAttachFdo(
     return WvBusAttach(pdo);
   }
 
+static VOID STDCALL WvDriverReinitialize(
+    IN PDRIVER_OBJECT driver_obj,
+    IN PVOID context,
+    ULONG count
+  ) {
+    static U_WV_LARGE_INT delay_time = {-10000000LL};
+    KIRQL irql;
+    UINT32 find_disk;
+
+    DBG("Called\n");
+
+    /* Check if any threads still need to find their disk. */
+    KeAcquireSpinLock(&WvFindDiskLock, &irql);
+    find_disk = WvFindDisk;
+    KeReleaseSpinLock(&WvFindDiskLock, irql);
+
+    /* Should we retry? */
+    if (!find_disk || count >= 10) {
+        DBG("Exiting\n");
+        return;
+      }
+
+    /* Yes, we should. */
+    IoRegisterBootDriverReinitialization(
+        WvDriverObj,
+        WvDriverReinitialize,
+        NULL
+      );
+    /* Sleep. */
+    DBG("Sleeping...");
+    KeDelayExecutionThread(KernelMode, FALSE, &delay_time.large_int);
+    return;
+  }
+
 /*
  * Note the exception to the function naming convention.
  * TODO: See if a Makefile change is good enough.
@@ -169,6 +205,9 @@ NTSTATUS STDCALL DriverEntry(
       )) == NULL) {
         DBG("Could not set system state to ES_CONTINUOUS!!\n");
       }
+
+    KeInitializeSpinLock(&WvFindDiskLock);
+
     /*
      * Set up IRP MajorFunction function table for devices
      * this driver handles.
@@ -191,6 +230,13 @@ NTSTATUS STDCALL DriverEntry(
     status = WvBusEstablish(RegistryPath);
     if(!NT_SUCCESS(status))
       goto err_bus;
+
+    /* Register re-initialization routine to allow for disks to arrive. */
+    IoRegisterBootDriverReinitialization(
+        WvDriverObj,
+        WvDriverReinitialize,
+        NULL
+      );
 
     WvDriverStarted = TRUE;
     DBG("Exit\n");
