@@ -1458,7 +1458,7 @@ NTSTATUS STDCALL AoeDiskPnpQueryDevText_(
         case DeviceTextDescription:
           str_len = swprintf(*str, L"AoE Disk") + 1;
           irp->IoStatus.Information =
-            (ULONG_PTR) wv_palloc(str_len * sizeof *str);
+            (ULONG_PTR) wv_palloc(str_len * sizeof **str);
           if (irp->IoStatus.Information == 0) {
               DBG("wv_palloc DeviceTextDescription\n");
               status = STATUS_INSUFFICIENT_RESOURCES;
@@ -1467,7 +1467,7 @@ NTSTATUS STDCALL AoeDiskPnpQueryDevText_(
           RtlCopyMemory(
               (PWCHAR) irp->IoStatus.Information,
               str,
-              str_len * sizeof *str
+              str_len * sizeof **str
             );
           status = STATUS_SUCCESS;
           goto alloc_info;
