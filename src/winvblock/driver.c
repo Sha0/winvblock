@@ -155,7 +155,7 @@ static VOID STDCALL WvDriverReinitialize(
 
     /* Should we retry? */
     if (!find_disk || count >= 10) {
-        DBG("Exiting\n");
+        DBG("Exiting...\n");
         return;
       }
 

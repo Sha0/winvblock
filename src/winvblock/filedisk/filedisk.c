@@ -58,7 +58,7 @@ static NTSTATUS STDCALL WvFilediskPnpQueryId_(
     IN PIRP,
     IN WVL_SP_DISK_T
   );
-static WVL_F_THREAD_ITEM WvFiledikOpenInThread_;
+static WVL_F_THREAD_ITEM WvFilediskOpenInThread_;
 static NTSTATUS STDCALL WvFilediskOpen_(IN WV_SP_FILEDISK_T, IN PANSI_STRING);
 static WVL_F_DISK_UNIT_NUM WvFilediskUnitNum_;
 static WVL_F_THREAD_ITEM WvFilediskThread_;

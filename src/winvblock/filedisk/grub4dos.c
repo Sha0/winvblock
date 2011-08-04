@@ -48,10 +48,6 @@
 /* From bus.c */
 extern WVL_S_BUS_T WvBus;
 
-/** Private. */
-static WVL_FP_DISK_IO WvFilediskG4dPrevIo_;
-static WVL_F_DISK_IO WvFilediskG4dIo_;
-
 /**
  * Check if a disk might be the matching backing disk for
  * a GRUB4DOS sector-mapped disk by checking for an MBR signature.
@@ -289,51 +285,50 @@ static BOOLEAN STDCALL WvFilediskG4dCheckDiskMatch_(
     return ok;
   }
 
+/* A work item for a filedisk thread to find the backing disk. */
+typedef struct S_WV_FILEDISK_G4D_FIND_BACKING_DISK_ {
+    WVL_S_THREAD_ITEM item[1];
+    WV_SP_FILEDISK_T filedisk;
+  }
+  S_WV_FILEDISK_G4D_FIND_BACKING_DISK,
+  * SP_WV_FILEDISK_G4D_FIND_BACKING_DISK;
+
 /**
- * Temporarily used by established disks in order to access the
- * backing disk late(r) during the boot process.
+ * Stalls the arrival of a GRUB4DOS sector-mapped disk until
+ * the backing disk is found, and stalls driver re-initialization.
  */
-static NTSTATUS STDCALL WvFilediskG4dIo_(
-    IN WVL_SP_DISK_T disk,
-    IN WVL_E_DISK_IO_MODE mode,
-    IN LONGLONG start_sector,
-    IN UINT32 sector_count,
-    IN PUCHAR buffer,
-    IN PIRP irp
+static VOID STDCALL WvFilediskG4dFindBackingDisk_(
+    IN OUT WVL_SP_THREAD_ITEM item
   ) {
+    static U_WV_LARGE_INT delay_time = {-10000000LL};
+    SP_WV_FILEDISK_G4D_FIND_BACKING_DISK finder = CONTAINING_RECORD(
+        item,
+        S_WV_FILEDISK_G4D_FIND_BACKING_DISK,
+        item[0]
+      );
     WV_SP_FILEDISK_T filedisk_ptr;
     NTSTATUS status;
     GUID disk_guid = GUID_DEVINTERFACE_DISK;
     PWSTR sym_links;
     PWCHAR pos;
     HANDLE file;
+    int count = 0;
+    KIRQL irql;
 
     /* Establish pointer to the filedisk. */
-    filedisk_ptr = CONTAINING_RECORD(disk, WV_S_FILEDISK_T, disk);
+    filedisk_ptr = finder->filedisk;
 
-    /*
-     * These SCSI read/write IRPs should be completed in the thread context.
-     * Check if the IRP was already marked pending.
-     */
-    if (!(IoGetCurrentIrpStackLocation(irp)->Control & SL_PENDING_RETURNED)) {
-        /* Enqueue and signal work. */
-        IoMarkIrpPending(irp);
-        ExInterlockedInsertTailList(
-            filedisk_ptr->Irps,
-            &irp->Tail.Overlay.ListEntry,
-            filedisk_ptr->IrpsLock
-          );
-        KeSetEvent(&filedisk_ptr->Thread->Signal, 0, FALSE);
-        return STATUS_PENDING;
-      }
+    /* Free the work item. */
+    wv_free(item);
 
+    do {
     /*
      * Find the backing disk and use it.  We walk a list
      * of unicode disk device names and check each one.
      */
     status = IoGetDeviceInterfaces(&disk_guid, NULL, 0, &sym_links);
     if (!NT_SUCCESS(status))
-      goto dud;
+      goto retry;
     pos = sym_links;
     while (*pos != UNICODE_NULL) {
         UNICODE_STRING path;
@@ -381,22 +376,69 @@ static NTSTATUS STDCALL WvFilediskG4dIo_(
     wv_free(sym_links);
     /* If we did not find the backing disk, we are a dud. */
     if (!NT_SUCCESS(status))
-      goto dud;
-    /* Use the backing disk and restore the original read/write routine. */
+      goto retry;
+    /* Use the backing disk and report the sector-mapped disk. */
     filedisk_ptr->file = file;
-    filedisk_ptr->disk->disk_ops.Io = WvFilediskG4dPrevIo_;
-    /* Call the original read/write routine. */
-    return WvFilediskG4dPrevIo_(
-        filedisk_ptr->disk,
-        mode,
-        start_sector,
-        sector_count,
-        buffer,
-        irp
-      );
+    if (!WvBusAddDev(filedisk_ptr->Dev))
+      WvDevFree(filedisk_ptr->Dev);
 
-    dud:
-    return WvlIrpComplete(irp, 0, STATUS_DEVICE_NOT_READY);
+    /* Release the driver re-initialization stall. */
+    KeAcquireSpinLock(&WvFindDiskLock, &irql);
+    --WvFindDisk;
+    KeReleaseSpinLock(&WvFindDiskLock, irql);
+
+    DBG("Found backing disk for filedisk %p\n", (PVOID) filedisk_ptr);
+    return;
+
+    retry:
+    /* Sleep. */
+    DBG("Sleeping...");
+    KeDelayExecutionThread(KernelMode, FALSE, &delay_time.large_int);
+    } while (count++ < 10);
+  }
+
+/**
+ * Initiate a search for a GRUB4DOS backing disk.
+ *
+ * @v filedisk          The filedisk whose backing disk we need.
+ */
+static BOOLEAN STDCALL WvFilediskG4dFindBackingDisk(
+    IN WV_SP_FILEDISK_T filedisk
+  ) {
+    SP_WV_FILEDISK_G4D_FIND_BACKING_DISK finder;
+    KIRQL irql;
+
+    finder = wv_malloc(sizeof *finder);
+    if (!finder) {
+        DBG("Couldn't allocate work item!\n");
+        goto err_finder;
+      }
+
+    KeAcquireSpinLock(&WvFindDiskLock, &irql);
+    ++WvFindDisk;
+    KeReleaseSpinLock(&WvFindDiskLock, irql);
+
+    finder->item->Func = WvFilediskG4dFindBackingDisk_;
+    finder->filedisk = filedisk;
+    /* Add the hot-swapper work item. */
+    if (!WvlThreadAddItem(filedisk->Thread, finder->item)) {
+        DBG("Couldn't add work item!\n");
+        goto err_work_item;
+      }
+
+    /* The thread is responsible for freeing the work item. */
+    return TRUE;
+
+    err_work_item:
+
+    KeAcquireSpinLock(&WvFindDiskLock, &irql);
+    --WvFindDisk;
+    KeReleaseSpinLock(&WvFindDiskLock, irql);
+
+    wv_free(finder);
+    err_finder:
+
+    return FALSE;
   }
 
 typedef struct WV_FILEDISK_GRUB4DOS_DRIVE_FILE_SET {
@@ -498,10 +540,6 @@ VOID WvFilediskCreateG4dDisk(
       }
     DBG("Sector-mapped disk is type: %d\n", media_type);
 
-    /* Record the usual filedisk I/O function for later. */
-    WvFilediskG4dPrevIo_ = filedisk_ptr->disk->disk_ops.Io;
-    /* Hook the first I/O request.  FIXME: We're hooking a global... */
-    filedisk_ptr->disk->disk_ops.Io = WvFilediskG4dIo_;
     /* Other parameters we know. */
     filedisk_ptr->disk->Media = media_type;
     filedisk_ptr->disk->SectorSize = sector_size;
@@ -552,7 +590,7 @@ VOID WvFilediskCreateG4dDisk(
     filedisk_ptr->Dev->Boot = TRUE;
     /* Add the filedisk to the bus. */
     filedisk_ptr->disk->ParentBus = WvBus.Fdo;
-    if (!WvBusAddDev(filedisk_ptr->Dev))
+    if (!WvFilediskG4dFindBackingDisk(filedisk_ptr))
       WvDevFree(filedisk_ptr->Dev);
 
     return;
