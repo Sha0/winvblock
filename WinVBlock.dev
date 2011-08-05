@@ -1,14 +1,14 @@
 [Project]
 FileName=WinVBlock.dev
 Name=WinVBlock
-UnitCount=72
+UnitCount=73
 PchHead=-1
 PchSource=-1
 Ver=3
 IsCpp=1
 ProfilesCount=2
 ProfileIndex=0
-Folders=AoE,HTTPDisk,HTTPDisk_Util,Include,Util,WinVBlock,WinVBlock/FileDisk,WinVBlock/LibBus,WinVBlock/LibDisk,WinVBlock/LibThread,WinVBlock/RAMDisk
+Folders=AoE,HTTPDisk,HTTPDisk_Util,Include,Util,WinVBlock,WinVBlock/FileDisk,WinVBlock/GRUB4DOS,WinVBlock/LibBus,WinVBlock/LibDisk,WinVBlock/LibThread,WinVBlock/RAMDisk
 
 [VersionInfo]
 Major=0
@@ -795,6 +795,16 @@ BuildCmd=
 FileName=src\include\x86.h
 CompileCpp=1
 Folder=Include
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit73]
+FileName=src\winvblock\grub4dos\g4dbus.c
+CompileCpp=1
+Folder=WinVBlock/GRUB4DOS
 Compile=1
 Link=1
 Priority=1000
