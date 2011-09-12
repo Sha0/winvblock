@@ -37,7 +37,7 @@
 #include "device.h"
 #include "disk.h"
 #include "mount.h"
-#include "libthread.h"
+#include "thread.h"
 #include "filedisk.h"
 #include "debug.h"
 

@@ -31,7 +31,7 @@
 
 #include "portable.h"
 #include "winvblock.h"
-#include "libthread.h"
+#include "thread.h"
 #include "wv_stdlib.h"
 #include "wv_string.h"
 #include "irp.h"

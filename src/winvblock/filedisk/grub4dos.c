@@ -36,7 +36,7 @@
 #include "bus.h"
 #include "device.h"
 #include "disk.h"
-#include "libthread.h"
+#include "thread.h"
 #include "filedisk.h"
 #include "debug.h"
 #include "x86.h"

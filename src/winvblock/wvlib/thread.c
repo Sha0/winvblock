@@ -28,7 +28,7 @@
 #include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
-#include "libthread.h"
+#include "thread.h"
 #include "debug.h"
 
 static LIST_ENTRY WvlThreads;

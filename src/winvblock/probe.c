@@ -39,7 +39,7 @@
 #include "bus.h"
 #include "ramdisk.h"
 #include "grub4dos.h"
-#include "libthread.h"
+#include "thread.h"
 #include "filedisk.h"
 #include "x86.h"
 #include "probe.h"

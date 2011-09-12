@@ -1,8 +1,8 @@
 @echo off
 
-set libname=libthread
+set libname=wvlib
 
-set c=libthread.c
+set c=thread.c
 
 echo !INCLUDE $(NTMAKEENV)\makefile.def	> makefile
 
