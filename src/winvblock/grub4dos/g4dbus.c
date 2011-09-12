@@ -27,6 +27,7 @@
 
 #include <ntddk.h>
 #include <initguid.h>
+#include <stdio.h>
 
 #include "portable.h"
 #include "winvblock.h"
@@ -57,12 +58,14 @@ struct S_WVG4DBUS_ {
       } BusRelations;
     WV_S_DEV_T Dev;
     PDEVICE_OBJECT ParentBus;
+    PVOID Int13hHook;
   };
 
 /*** Function declarations. */
 static NTSTATUS STDCALL WvG4dBusIrpComplete(IN PIRP);
 static NTSTATUS WvG4dBusIrpDispatch(IN PDEVICE_OBJECT, IN PIRP);
 static NTSTATUS STDCALL WvG4dBusIrpPnp(IN PDEVICE_OBJECT, IN PIRP);
+static NTSTATUS STDCALL WvG4dBusIrpPnpQueryId(IN PDEVICE_OBJECT, IN PIRP);
 static NTSTATUS STDCALL WvG4dBusIrpPnpQueryDevText(IN PDEVICE_OBJECT, IN PIRP);
 static NTSTATUS STDCALL WvG4dBusIrpPnpQueryBusInfo(IN PDEVICE_OBJECT, IN PIRP);
 static NTSTATUS STDCALL WvG4dBusIrpPnpQueryDevRelations(
@@ -130,6 +133,9 @@ static NTSTATUS STDCALL WvG4dBusIrpPnp(
 
     code = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
     switch (code) {
+        case IRP_MN_QUERY_ID:
+          return WvG4dBusIrpPnpQueryId(dev_obj, irp);
+
         case IRP_MN_QUERY_DEVICE_TEXT:
           return WvG4dBusIrpPnpQueryDevText(dev_obj, irp);
 
@@ -163,6 +169,93 @@ static NTSTATUS STDCALL WvG4dBusIrpPnp(
         default:
           irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
       }
+    return WvG4dBusIrpComplete(irp);
+  }
+
+/* Return device IDs .*/
+static NTSTATUS STDCALL WvG4dBusIrpPnpQueryId(
+    IN PDEVICE_OBJECT dev_obj,
+    IN PIRP irp
+  ) {
+    static const WCHAR hw_id[] = WVL_M_WLIT L"\\Int13hHook\0";
+    static const WCHAR instance_id[] = L"HOOK_at_%08X\0\0\0\0";
+    BUS_QUERY_ID_TYPE query_type;
+    SIZE_T buf_size;
+    WCHAR * buf;
+    NTSTATUS status;
+    INT copied;
+    SP_WVG4DBUS bus;
+    M_FUNC_ENTRY();
+
+    query_type = IoGetCurrentIrpStackLocation(irp)->Parameters.QueryId.IdType;
+
+    /* Determine the buffer size to allocate */
+    switch (query_type) {
+        case BusQueryDeviceID:
+        case BusQueryHardwareIDs:
+        case BusQueryCompatibleIDs:
+          buf_size = sizeof hw_id;
+          break;
+
+        case BusQueryInstanceID:
+          buf_size = sizeof instance_id;
+          break;
+
+        default:
+          DBG("Unknown query type for G4D bus dev %p!", (PVOID) dev_obj);
+          status = STATUS_INVALID_PARAMETER;
+          goto err_query_type;
+      }
+
+    /* Allocate the buffer */
+    buf = wv_mallocz(buf_size);
+    if (!buf) {
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto err_buf;
+      }
+
+    /* Populate the buffer with the ID */
+    switch (query_type) {
+        case BusQueryDeviceID:
+        case BusQueryHardwareIDs:
+        case BusQueryCompatibleIDs:
+          copied = swprintf(buf, hw_id);
+          break;
+
+        case BusQueryInstanceID:
+        	/* "Location" */
+        	bus = CONTAINING_RECORD(
+              dev_obj->DeviceExtension,
+              S_WVG4DBUS,
+              DevExt
+            );
+          copied = swprintf(buf, instance_id, bus->Int13hHook);
+          break;
+
+        default:
+          /* Impossible thanks to earlier 'switch' */
+          ;
+      }
+    if (!copied) {
+        DBG("swprintf() error!\n");
+        status = STATUS_UNSUCCESSFUL;
+        goto err_copied;
+      }
+
+    DBG("IRP_MN_QUERY_ID for G4D bus dev %p\n", (PVOID) dev_obj);
+    irp->IoStatus.Information = (ULONG_PTR) buf;
+    irp->IoStatus.Status = STATUS_SUCCESS;
+    return WvG4dBusIrpComplete(irp);
+
+    err_copied:
+
+    wv_free(buf);
+    err_buf:
+
+    err_query_type:
+
+    irp->IoStatus.Information = 0;
+    irp->IoStatus.Status = status;
     return WvG4dBusIrpComplete(irp);
   }
 
