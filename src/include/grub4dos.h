@@ -16,17 +16,39 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef WV_M_GRUB4DOS_H_
-#  define WV_M_GRUB4DOS_H_
+#ifndef M_GRUB4DOS_H_
+#  define M_GRUB4DOS_H_
 
-/**
+/****
  * @file
  *
  * GRUB4DOS disk specifics.
  */
 
+/*** Macros. */
+#define M_G4D_SLOTS 8
+
+/*** Object types. */
+typedef struct S_WV_G4D_DRIVE_MAPPING_
+  S_WV_G4D_DRIVE_MAPPING,
+  * SP_WV_G4D_DRIVE_MAPPING;
+  
+/*** Function declarations. */
+extern VOID WvFilediskCreateG4dDisk(
+    SP_WV_G4D_DRIVE_MAPPING,
+    WVL_E_DISK_MEDIA_TYPE,
+    UINT32
+  );
+extern VOID WvRamdiskCreateG4dDisk(
+    SP_WV_G4D_DRIVE_MAPPING,
+    WVL_E_DISK_MEDIA_TYPE,
+    UINT32
+  );
+
+/*** Struct/union definitions. */
+
 /* From GRUB4DOS 0.4.4's stage2/shared.h */
-typedef struct WV_GRUB4DOS_DRIVE_MAPPING {
+struct S_WV_G4D_DRIVE_MAPPING_ {
     UCHAR SourceDrive;
     UCHAR DestDrive;
     UCHAR MaxHead;
@@ -42,17 +64,6 @@ typedef struct WV_GRUB4DOS_DRIVE_MAPPING {
     UCHAR InSituOption:1;
     UINT64 SectorStart;
     UINT64 SectorCount;
-  } WV_S_GRUB4DOS_DRIVE_MAPPING, * WV_SP_GRUB4DOS_DRIVE_MAPPING;
+  };
 
-extern VOID WvFilediskCreateG4dDisk(
-    WV_SP_GRUB4DOS_DRIVE_MAPPING,
-    WVL_E_DISK_MEDIA_TYPE,
-    UINT32
-  );
-extern VOID WvRamdiskCreateG4dDisk(
-    WV_SP_GRUB4DOS_DRIVE_MAPPING,
-    WVL_E_DISK_MEDIA_TYPE,
-    UINT32
-  );
-
-#endif  /* WV_M_GRUB4DOS_H_ */
+#endif  /* M_GRUB4DOS_H_ */

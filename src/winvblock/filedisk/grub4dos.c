@@ -518,7 +518,7 @@ static VOID STDCALL process_param_block(
 
 /** Create a GRUB4DOS sector-mapped disk and add it to the WinVBlock bus. */
 VOID WvFilediskCreateG4dDisk(
-    WV_SP_GRUB4DOS_DRIVE_MAPPING slot,
+    SP_WV_G4D_DRIVE_MAPPING slot,
     WVL_E_DISK_MEDIA_TYPE media_type,
     UINT32 sector_size
   ) {

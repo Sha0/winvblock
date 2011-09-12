@@ -44,7 +44,7 @@ extern WVL_S_BUS_T WvBus;
 
 /** Create a GRUB4DOS RAM disk and add it to the WinVBlock bus. */
 VOID WvRamdiskCreateG4dDisk(
-    WV_SP_GRUB4DOS_DRIVE_MAPPING slot,
+    SP_WV_G4D_DRIVE_MAPPING slot,
     WVL_E_DISK_MEDIA_TYPE media_type,
     UINT32 sector_size
   ) {

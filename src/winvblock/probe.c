@@ -19,7 +19,7 @@
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
+/****
  * @file
  *
  * Boot-time disk probing specifics.
@@ -45,7 +45,22 @@
 #include "probe.h"
 #include "memdisk.h"
 
+/*** Function declarations. */
+static BOOLEAN WvProbeIvtForSafeHook(void);
+static WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
+    IN PUCHAR,
+    IN SP_X86_SEG16OFF16
+  );
+static BOOLEAN WvGrub4dosProcessSlot(SP_WV_G4D_DRIVE_MAPPING);
+static BOOLEAN WvGrub4dosProcessSafeHook(
+    PUCHAR,
+    SP_X86_SEG16OFF16,
+    WV_SP_PROBE_SAFE_MBR_HOOK
+  );
+
 /*** Function definitions. */
+
+/** Process a potential INT 0x13 "safe hook" */
 static WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
     IN PUCHAR PhysicalMemory,
     IN SP_X86_SEG16OFF16 InterruptVector
@@ -98,7 +113,7 @@ static BOOLEAN WvProbeIvtForSafeHook(void) {
   }
 
 /** Process a GRUB4DOS drive mapping slot.  Probably belongs elsewhere. */
-static BOOLEAN WvGrub4dosProcessSlot(WV_SP_GRUB4DOS_DRIVE_MAPPING slot) {
+static BOOLEAN WvGrub4dosProcessSlot(SP_WV_G4D_DRIVE_MAPPING slot) {
     WVL_E_DISK_MEDIA_TYPE media_type;
     UINT32 sector_size;
 
@@ -143,7 +158,7 @@ static BOOLEAN WvGrub4dosProcessSafeHook(
   ) {
     enum {CvG4dSlots = 8};
     static const UCHAR sig[sizeof safe_mbr_hook->VendorId] = "GRUB4DOS";
-    WV_SP_GRUB4DOS_DRIVE_MAPPING g4d_map;
+    SP_WV_G4D_DRIVE_MAPPING g4d_map;
     #ifdef TODO_RESTORE_FILE_MAPPED_G4D_DISKS
     WV_SP_FILEDISK_GRUB4DOS_DRIVE_FILE_SET sets;
     #endif
@@ -162,7 +177,7 @@ static BOOLEAN WvGrub4dosProcessSafeHook(
         DBG("Couldn't allocate GRUB4DOS file mapping!\n");
     #endif
 
-    g4d_map = (WV_SP_GRUB4DOS_DRIVE_MAPPING) (
+    g4d_map = (SP_WV_G4D_DRIVE_MAPPING) (
         phys_mem + (((UINT32) segoff->Segment) << 4) + 0x20
       );
     /* Process each drive mapping slot. */

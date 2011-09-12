@@ -34,14 +34,14 @@
 #include "driver.h"
 #include "bus.h"
 #include "device.h"
+#include "disk.h"
+#include "grub4dos.h"
 #include "debug.h"
 
 /*** Macros. */
 #define M_FUNC_ENTRY()
-#define TODO NULL
-#define M_G4D_SLOTS 8
 
-/*** Types. */
+/*** Object types. */
 typedef struct S_WVG4DBUS_ S_WVG4DBUS, * SP_WVG4DBUS;
 
 /*** Struct/union definitions. */
