@@ -419,7 +419,7 @@ NTSTATUS AoeBusIrpDispatch(
           return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
 
         case IRP_MJ_SYSTEM_CONTROL:
-          return WvlBusSysCtl(&AoeBusMain, irp);
+          return WvlIrpPassToLower(AoeBusMain.LowerDeviceObject, irp);
 
         default:
           ;

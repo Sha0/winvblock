@@ -108,10 +108,6 @@ extern WVL_M_LIB UINT32 STDCALL WvlBusGetNodeCount(
     WVL_SP_BUS_T
   );
 /* IRP-related. */
-extern WVL_M_LIB NTSTATUS STDCALL WvlBusSysCtl(
-    IN WVL_SP_BUS_T,
-    IN PIRP
-  );
 extern WVL_M_LIB NTSTATUS STDCALL WvlBusPower(
     IN WVL_SP_BUS_T,
     IN PIRP

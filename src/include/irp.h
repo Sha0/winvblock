@@ -31,4 +31,18 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlIrpComplete(
     IN NTSTATUS
   );
 
+/**
+ * Pass an IRP on to a lower device object.
+ *
+ * @v Lower             Points to the lower device object in the stack.
+ * @v Irp               Points to the IRP to pass.
+ * @ret NTSTATUS        Returns the status value, as returned by the
+ *                      lower device object, or STATUS_SUCCESS, if
+ *                      no lower device object was passed.
+ */
+extern WVL_M_LIB NTSTATUS STDCALL WvlIrpPassToLower(
+    IN PDEVICE_OBJECT Lower,
+    IN PIRP Irp
+  );
+
 #endif	/* WV_M_IRP_H_ */

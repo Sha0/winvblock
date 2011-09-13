@@ -174,7 +174,7 @@ NTSTATUS HttpdiskBusIrp(IN PDEVICE_OBJECT DevObj, IN PIRP Irp) {
           return WvlBusPower(&HttpdiskBus_, Irp);
 
         case IRP_MJ_SYSTEM_CONTROL:
-          return WvlBusSysCtl(&HttpdiskBus_, Irp);
+          return WvlIrpPassToLower(HttpdiskBus_.LowerDeviceObject, Irp);
 
         default:
           DBG("Unhandled major: %d\n", major);

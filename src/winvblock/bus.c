@@ -152,7 +152,7 @@ static NTSTATUS WvBusIrpDispatch(
           return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
 
         case IRP_MJ_SYSTEM_CONTROL:
-          return WvlBusSysCtl(&WvBus, irp);
+          return WvlIrpPassToLower(WvBus.LowerDeviceObject, irp);
 
         default:
           ;

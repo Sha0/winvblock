@@ -48,3 +48,21 @@ WVL_M_LIB NTSTATUS STDCALL WvlIrpComplete(
     WVL_M_DEBUG_IRP_END(Irp, Status);
     return Status;
   }
+
+WVL_M_LIB NTSTATUS STDCALL WvlIrpPassToLower(
+    IN PDEVICE_OBJECT Lower,
+    IN PIRP Irp
+  ) {
+    /* Check that a lower device object was passed. */
+    if (Lower) {
+        DBG("Passing IRP down\n");
+        IoSkipCurrentIrpStackLocation(Irp);
+        return IoCallDriver(Lower, Irp);
+      }
+
+    Irp->IoStatus.Information = 0;
+    Irp->IoStatus.Status = STATUS_SUCCESS;
+    WVL_M_DEBUG_IRP_END(Irp, STATUS_SUCCESS);
+    IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    return STATUS_SUCCESS;
+  }

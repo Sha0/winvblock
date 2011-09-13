@@ -34,22 +34,6 @@
 #include "bus.h"
 #include "debug.h"
 
-/* Handle an IRP_MJ_SYSTEM_CONTROL IRP. */
-WVL_M_LIB NTSTATUS STDCALL WvlBusSysCtl(
-    IN WVL_SP_BUS_T Bus,
-    IN PIRP Irp
-  ) {
-    PDEVICE_OBJECT lower = Bus->LowerDeviceObject;
-
-    /* We might be a floating FDO. */
-    if (lower) {
-        DBG("Passing IRP_MJ_SYSTEM_CONTROL down\n");
-        IoSkipCurrentIrpStackLocation(Irp);
-        return IoCallDriver(lower, Irp);
-      }
-    return WvlIrpComplete(Irp, 0, STATUS_SUCCESS);
-  }
-
 /* Handle a power IRP. */
 WVL_M_LIB NTSTATUS STDCALL WvlBusPower(
     IN WVL_SP_BUS_T Bus,
