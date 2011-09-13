@@ -8,7 +8,7 @@ Ver=3
 IsCpp=1
 ProfilesCount=2
 ProfileIndex=0
-Folders=AoE,HTTPDisk,HTTPDisk_Util,Include,Util,WinVBlock,WinVBlock/FileDisk,WinVBlock/GRUB4DOS,WinVBlock/LibBus,WinVBlock/LibDisk,WinVBlock/Lib,WinVBlock/RAMDisk
+Folders=AoE,HTTPDisk,HTTPDisk_Util,Include,Util,WinVBlock,WinVBlock/FileDisk,WinVBlock/GRUB4DOS,WinVBlock/LibBus,WinVBlock/LibDisk,WinVBlock/WvLib,WinVBlock/RAMDisk
 
 [VersionInfo]
 Major=0
@@ -604,7 +604,7 @@ BuildCmd=
 [Unit63]
 FileName=src\winvblock\wvlib\thread.c
 CompileCpp=1
-Folder=WinVBlock/Lib
+Folder=WinVBlock/WvLib
 Compile=1
 Link=1
 Priority=1000
