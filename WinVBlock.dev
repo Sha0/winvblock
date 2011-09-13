@@ -8,7 +8,7 @@ Ver=3
 IsCpp=1
 ProfilesCount=2
 ProfileIndex=0
-Folders=AoE,HTTPDisk,HTTPDisk_Util,Include,Util,WinVBlock,WinVBlock/FileDisk,WinVBlock/GRUB4DOS,WinVBlock/LibBus,WinVBlock/LibDisk,WinVBlock/WvLib,WinVBlock/RAMDisk
+Folders=AoE,HTTPDisk,HTTPDisk_Util,Include,Util,WinVBlock,WinVBlock/FileDisk,WinVBlock/GRUB4DOS,WinVBlock/LibBus,WinVBlock/LibDisk,WinVBlock/RAMDisk,WinVBlock/WvLib
 
 [VersionInfo]
 Major=0
@@ -552,9 +552,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit57]
-FileName=src\winvblock\irp.c
+FileName=src\winvblock\wvlib\irp.c
 CompileCpp=1
-Folder=WinVBlock
+Folder=WinVBlock/WvLib
 Compile=1
 Link=1
 Priority=1000

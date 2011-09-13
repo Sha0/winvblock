@@ -2,7 +2,7 @@
 
 set libname=wvlib
 
-set c=thread.c
+set c=thread.c irp.c
 
 echo !INCLUDE $(NTMAKEENV)\makefile.def	> makefile
 
