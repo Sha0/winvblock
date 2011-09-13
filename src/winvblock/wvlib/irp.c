@@ -28,6 +28,7 @@
 #include "portable.h"
 #include "winvblock.h"
 #include "debug.h"
+#include "irp.h"
 
 /*** Function definitions */
 
@@ -79,4 +80,46 @@ WVL_M_LIB NTSTATUS STDCALL WvlIrpPassPowerToLower(
     WVL_M_DEBUG_IRP_END(Irp, STATUS_SUCCESS);
     IoCompleteRequest(Irp, IO_NO_INCREMENT);
     return STATUS_SUCCESS;
+  }
+
+WVL_M_LIB NTSTATUS STDCALL WvlIrpHandleWithTable(
+    IN PDEVICE_OBJECT DevObj,
+    IN PIRP Irp,
+    IN SP_WVL_IRP_HANDLER_TABLE Table
+  ) {
+    PIO_STACK_LOCATION io_stack_loc;
+    UCHAR code;
+    SP_WVL_IRP_HANDLER end;
+    SP_WVL_IRP_HANDLER handler;
+
+    ASSERT(DevObj);
+    ASSERT(Irp);
+    ASSERT(Table);
+    ASSERT(Table->Count);
+    ASSERT(Table->Elements);
+
+    io_stack_loc = IoGetCurrentIrpStackLocation(Irp);
+
+    if (Table->IsMajor)
+      code = io_stack_loc->MajorFunction;
+      else
+      code = io_stack_loc->MinorFunction;
+
+    end = Table->Elements + Table->Count;
+
+    for (handler = Table->Elements; handler < end; ++handler) {
+        ASSERT(handler->Function);
+
+        if (code == handler->Code)
+          return handler->Function(DevObj, Irp);
+
+        continue;
+      }
+
+    DBG("IRP not handled\n");
+    Irp->IoStatus.Information = 0;
+    Irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
+    WVL_M_DEBUG_IRP_END(Irp, STATUS_NOT_SUPPORTED);
+    IoCompleteRequest(Irp, IO_NO_INCREMENT);
+    return STATUS_NOT_SUPPORTED;
   }
