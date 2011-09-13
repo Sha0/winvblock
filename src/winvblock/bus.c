@@ -144,7 +144,7 @@ static NTSTATUS WvBusIrpDispatch(
           }
 
         case IRP_MJ_POWER:
-          return WvlBusPower(&WvBus, irp);
+          return WvlIrpPassPowerToLower(WvBus.LowerDeviceObject, irp);
 
         case IRP_MJ_CREATE:
         case IRP_MJ_CLOSE:

@@ -107,11 +107,6 @@ extern WVL_M_LIB PDEVICE_OBJECT STDCALL WvlBusGetNodePdo(
 extern WVL_M_LIB UINT32 STDCALL WvlBusGetNodeCount(
     WVL_SP_BUS_T
   );
-/* IRP-related. */
-extern WVL_M_LIB NTSTATUS STDCALL WvlBusPower(
-    IN WVL_SP_BUS_T,
-    IN PIRP
-  );
 /* IRP_MJ_PNP dispatcher in libbus/pnp.c */
 extern WVL_M_LIB NTSTATUS STDCALL WvlBusPnp(
     IN WVL_SP_BUS_T,

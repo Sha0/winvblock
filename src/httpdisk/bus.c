@@ -171,7 +171,7 @@ NTSTATUS HttpdiskBusIrp(IN PDEVICE_OBJECT DevObj, IN PIRP Irp) {
           return status;
 
         case IRP_MJ_POWER:
-          return WvlBusPower(&HttpdiskBus_, Irp);
+          return WvlIrpPassPowerToLower(HttpdiskBus_.LowerDeviceObject, Irp);
 
         case IRP_MJ_SYSTEM_CONTROL:
           return WvlIrpPassToLower(HttpdiskBus_.LowerDeviceObject, Irp);

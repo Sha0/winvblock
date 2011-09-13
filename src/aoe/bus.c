@@ -411,7 +411,7 @@ NTSTATUS AoeBusIrpDispatch(
           return AoeBusDevCtl(irp, code);
 
         case IRP_MJ_POWER:
-          return WvlBusPower(&AoeBusMain, irp);
+          return WvlIrpPassPowerToLower(AoeBusMain.LowerDeviceObject, irp);
 
         case IRP_MJ_CREATE:
         case IRP_MJ_CLOSE:
