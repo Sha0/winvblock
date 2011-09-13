@@ -16,15 +16,27 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef WV_M_IRP_H_
-#  define WV_M_IRP_H_
+#ifndef M_IRP_H_
 
-/**
+/****
  * @file
  *
  * IRP specifics.
  */
 
+/*** Macros */
+#define M_IRP_H_
+
+/*** Function declarations */
+
+/**
+ * Common IRP completion routine.
+ *
+ * @v Irp               Points to the IRP to complete.
+ * @v Info              Number of bytes returned for the IRP, or 0.
+ * @v Status            Status for the IRP to complete.
+ * @ret NTSTATUS        Returns the status value, as passed.
+ */
 extern WVL_M_LIB NTSTATUS STDCALL WvlIrpComplete(
     IN PIRP,
     IN ULONG_PTR,
@@ -59,4 +71,4 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlIrpPassPowerToLower(
     IN PIRP Irp
   );
 
-#endif	/* WV_M_IRP_H_ */
+#endif	/* M_IRP_H_ */

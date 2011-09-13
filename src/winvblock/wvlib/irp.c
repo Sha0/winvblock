@@ -17,7 +17,7 @@
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
+/****
  * @file
  *
  * IRP specifics.
@@ -29,14 +29,8 @@
 #include "winvblock.h"
 #include "debug.h"
 
-/**
- * Common IRP completion routine.
- *
- * @v Irp               Points to the IRP to complete.
- * @v Info              Number of bytes returned for the IRP, or 0.
- * @v Status            Status for the IRP to complete.
- * @ret NTSTATUS        Returns the status value, as passed.
- */
+/*** Function definitions */
+
 WVL_M_LIB NTSTATUS STDCALL WvlIrpComplete(
     IN PIRP Irp,
     IN ULONG_PTR Info,
@@ -44,8 +38,8 @@ WVL_M_LIB NTSTATUS STDCALL WvlIrpComplete(
   ) {
     Irp->IoStatus.Information = Info;
     Irp->IoStatus.Status = Status;
-    IoCompleteRequest(Irp, IO_NO_INCREMENT);
     WVL_M_DEBUG_IRP_END(Irp, Status);
+    IoCompleteRequest(Irp, IO_NO_INCREMENT);
     return Status;
   }
 
