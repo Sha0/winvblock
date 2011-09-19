@@ -1,6 +1,6 @@
 @echo off
 
-set lib=libbus libdisk ramdisk filedisk wvlib grub4dos
+set lib=libbus libdisk ramdisk filedisk wvlib grub4dos safehook
 
 set links=
 for /d %%a in (%lib%) do (
