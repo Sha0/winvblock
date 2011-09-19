@@ -42,7 +42,7 @@
 #include "thread.h"
 #include "filedisk.h"
 #include "x86.h"
-#include "probe.h"
+#include "safehook.h"
 #include "memdisk.h"
 
 /*** Function declarations. */

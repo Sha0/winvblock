@@ -36,7 +36,7 @@
 #include "ramdisk.h"
 #include "debug.h"
 #include "x86.h"
-#include "probe.h"
+#include "safehook.h"
 #include "grub4dos.h"
 
 /* From bus.c */

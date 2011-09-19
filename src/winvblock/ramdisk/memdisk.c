@@ -37,7 +37,7 @@
 #include "debug.h"
 #include "mdi.h"
 #include "x86.h"
-#include "probe.h"
+#include "safehook.h"
 
 /* From bus.c */
 extern WVL_S_BUS_T WvBus;

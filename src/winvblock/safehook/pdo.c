@@ -38,7 +38,7 @@
 #include "disk.h"
 #include "debug.h"
 #include "x86.h"
-#include "probe.h"
+#include "safehook.h"
 #include "irp.h"
 
 /*** Macros */

@@ -10,7 +10,7 @@ for /d %%a in (%lib%) do (
   popd
   )
 
-set c=debug.c driver.c probe.c registry.c winvblock.rc device.c wv_stdlib.c wv_string.c dummy.c bus.c disk.c
+set c=debug.c driver.c registry.c winvblock.rc device.c wv_stdlib.c wv_string.c dummy.c bus.c disk.c
 
 set name=WVBlk%bits%
 

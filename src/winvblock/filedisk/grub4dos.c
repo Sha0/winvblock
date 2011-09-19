@@ -40,7 +40,7 @@
 #include "filedisk.h"
 #include "debug.h"
 #include "x86.h"
-#include "probe.h"
+#include "safehook.h"
 #include "grub4dos.h"
 #include "byte.h"
 #include "msvhd.h"

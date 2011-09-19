@@ -2,7 +2,7 @@
 
 set libname=safehook
 
-set c=pdo.c
+set c=pdo.c probe.c
 
 echo !INCLUDE $(NTMAKEENV)\makefile.def	> makefile
 

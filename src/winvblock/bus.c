@@ -42,7 +42,7 @@
 #include "registry.h"
 #include "mount.h"
 #include "x86.h"
-#include "probe.h"
+#include "safehook.h"
 #include "filedisk.h"
 #include "dummy.h"
 #include "debug.h"
