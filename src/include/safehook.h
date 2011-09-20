@@ -31,7 +31,36 @@
 typedef struct WV_PROBE_SAFE_MBR_HOOK
   WV_S_PROBE_SAFE_MBR_HOOK, * WV_SP_PROBE_SAFE_MBR_HOOK;
 
-/*** Struct definitions. */
+/*** Function declarations. */
+
+/**
+ * Create a "safe INT 0x13 hook" bus PDO
+ *
+ * @v HookAddr          The SEG16:OFF16 address for the hook
+ * @v SafeHook          Points to the safe hook
+ * @v ParentBus         The parent bus for the newly-created safe hook bus
+ * @ret PDEVICE_OBJECT  The newly-create safe hook bus, or NULL upon failure
+ */
+extern PDEVICE_OBJECT STDCALL WvSafeHookPdoCreate(
+    IN SP_X86_SEG16OFF16 HookAddr,
+    IN WV_SP_PROBE_SAFE_MBR_HOOK SafeHook,
+    IN PDEVICE_OBJECT ParentBus
+  );
+
+/**
+ * Probe a SEG16:OFF16 for a "safe INT 0x13 hook" and create a bus PDO
+ *
+ * @v HookAddr          The SEG16:OFF16 address to probe
+ * @v ParentBus         If a safe hook is found, it will be a child bus to
+ *                      this parent bus
+ * @ret PDEVICE_OBJECT  A child bus, if found, else NULL
+ */
+extern PDEVICE_OBJECT STDCALL WvSafeHookProbe(
+    IN SP_X86_SEG16OFF16 HookAddr,
+    IN PDEVICE_OBJECT ParentBus
+  );
+
+/*** Struct/union definitions */
 #ifdef _MSC_VER
 #  pragma pack(1)
 #endif
@@ -46,9 +75,5 @@ struct WV_PROBE_SAFE_MBR_HOOK {
 #ifdef _MSC_VER
 #  pragma pack()
 #endif
-
-/*** Function declarations. */
-extern BOOLEAN WvProbeSafeHookChain(PUCHAR, SP_X86_SEG16OFF16);
-extern VOID WvProbeDisks(void);
 
 #endif  /* WV_M_PROBE_H_ */

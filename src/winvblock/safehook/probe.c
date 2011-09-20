@@ -22,7 +22,7 @@
 /****
  * @file
  *
- * Boot-time disk probing specifics.
+ * "Safe INT 0x13 hook" probing/walking
  */
 
 #include <ntddk.h>
@@ -45,12 +45,7 @@
 #include "safehook.h"
 #include "memdisk.h"
 
-/*** Function declarations. */
-static BOOLEAN WvProbeIvtForSafeHook(void);
-static WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
-    IN PUCHAR,
-    IN SP_X86_SEG16OFF16
-  );
+/*** Function declarations */
 static BOOLEAN WvGrub4dosProcessSlot(SP_WV_G4D_DRIVE_MAPPING);
 static BOOLEAN WvGrub4dosProcessSafeHook(
     PUCHAR,
@@ -58,43 +53,23 @@ static BOOLEAN WvGrub4dosProcessSafeHook(
     WV_SP_PROBE_SAFE_MBR_HOOK
   );
 
-/*** Function definitions. */
+/*** Function definitions */
 
-/** Process a potential INT 0x13 "safe hook" */
-static WV_SP_PROBE_SAFE_MBR_HOOK STDCALL WvProbeGetSafeHook(
-    IN PUCHAR PhysicalMemory,
-    IN SP_X86_SEG16OFF16 InterruptVector
+/* Process a potential INT 0x13 "safe hook" */
+PDEVICE_OBJECT STDCALL WvSafeHookProbe(
+    IN SP_X86_SEG16OFF16 HookAddr,
+    IN PDEVICE_OBJECT ParentBus
   ) {
-    UINT32 int13_hook;
-    WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook;
-    UCHAR sig[9] = {0};
-    UCHAR ven_id[9] = {0};
-
-    int13_hook = M_X86_SEG16OFF16_ADDR(InterruptVector);
-    safe_mbr_hook = (WV_SP_PROBE_SAFE_MBR_HOOK) (PhysicalMemory + int13_hook);
-    RtlCopyMemory(sig, safe_mbr_hook->Signature, sizeof sig - 1);
-    RtlCopyMemory(ven_id, safe_mbr_hook->VendorId, sizeof ven_id - 1);
-
-    DBG("INT 0x13 Segment: 0x%04x\n", InterruptVector->Segment);
-    DBG("INT 0x13 Offset: 0x%04x\n", InterruptVector->Offset);
-    DBG("INT 0x13 Hook: 0x%08x\n", int13_hook);
-    DBG("INT 0x13 Safe Hook Signature: %s\n", sig);
-
-    if (!wv_memcmpeq(sig, "$INT13SF", sizeof "$INT13SF" - 1)) {
-        DBG("Invalid INT 0x13 Safe Hook Signature; End of chain\n");
-        return NULL;
-      }
-    return safe_mbr_hook;
-  }
-
-/** Probe the IVT for a "safe INT 0x13 hook" */
-static BOOLEAN WvProbeIvtForSafeHook(void) {
+    static const CHAR sig[] = "$INT13SF";
     PHYSICAL_ADDRESS phys_addr;
-    PVOID phys_mem;
-    SP_X86_SEG16OFF16 int_vector;
-    BOOLEAN found = FALSE;
+    PUCHAR phys_mem;
+    PDEVICE_OBJECT dev;
+    UINT32 hook_addr;
+    WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook;
 
-    /* Map the first MiB of memory. */
+    dev = NULL;
+
+    /* Map the first MiB of memory */
     phys_addr.QuadPart = 0LL;
     phys_mem = MmMapIoSpace(phys_addr, 0x100000, MmNonCached);
     if (!phys_mem) {
@@ -102,22 +77,43 @@ static BOOLEAN WvProbeIvtForSafeHook(void) {
         goto err_map;
       }
 
-    int_vector = phys_mem;
-    int_vector += 0x13;
-    found = WvProbeSafeHookChain(phys_mem, int_vector);
+    /* Special-case 0:004C to use the IVT entry for INT 0x13 */
+    if (HookAddr->Segment == 0 && HookAddr->Offset == (4 * 0x13))
+      HookAddr = (PVOID) (phys_mem + 4 * 0x13);
+
+    hook_addr = M_X86_SEG16OFF16_ADDR(HookAddr);
+    DBG(
+        "Probing for safe hook at %04X:%04X (0x%08X)...\n",
+        HookAddr->Segment,
+        HookAddr->Offset,
+        hook_addr
+      );
+
+    /* Check for the signature */
+    safe_mbr_hook = (WV_SP_PROBE_SAFE_MBR_HOOK) (phys_mem + hook_addr);
+    if (!wv_memcmpeq(safe_mbr_hook->Signature, sig, sizeof sig - 1)) {
+        DBG("Invalid safe INT 0x13 hook signature.  End of chain\n");
+        goto err_sig;
+      }
+
+    /* Found one */
+    DBG("Found safe hook with vendor ID: %.8s\n", safe_mbr_hook->VendorId);
+    dev = WvSafeHookPdoCreate(HookAddr, safe_mbr_hook, ParentBus);
+
+    err_sig:
 
     MmUnmapIoSpace(phys_mem, 0x100000);
     err_map:
 
-    return found;
+    return dev;
   }
 
-/** Process a GRUB4DOS drive mapping slot.  Probably belongs elsewhere. */
+/** Process a GRUB4DOS drive mapping slot.  Probably belongs elsewhere */
 static BOOLEAN WvGrub4dosProcessSlot(SP_WV_G4D_DRIVE_MAPPING slot) {
     WVL_E_DISK_MEDIA_TYPE media_type;
     UINT32 sector_size;
 
-    /* Check for an empty mapping. */
+    /* Check for an empty mapping */
     if (slot->SectorCount == 0)
       return FALSE;
     DBG("GRUB4DOS SourceDrive: 0x%02x\n", slot->SourceDrive);
@@ -141,7 +137,7 @@ static BOOLEAN WvGrub4dosProcessSlot(SP_WV_G4D_DRIVE_MAPPING slot) {
         sector_size = 512;
       }
 
-    /* Check for a RAM disk mapping. */
+    /* Check for a RAM disk mapping */
     if (slot->DestDrive == 0xFF) {
         WvRamdiskCreateG4dDisk(slot, media_type, sector_size);
       } else {
@@ -150,7 +146,7 @@ static BOOLEAN WvGrub4dosProcessSlot(SP_WV_G4D_DRIVE_MAPPING slot) {
     return TRUE;
   }
 
-/** Process a GRUB4DOS "safe hook".  Probably belongs elsewhere. */
+/** Process a GRUB4DOS "safe hook".  Probably belongs elsewhere */
 static BOOLEAN WvGrub4dosProcessSafeHook(
     PUCHAR phys_mem,
     SP_X86_SEG16OFF16 segoff,
@@ -180,36 +176,11 @@ static BOOLEAN WvGrub4dosProcessSafeHook(
     g4d_map = (SP_WV_G4D_DRIVE_MAPPING) (
         phys_mem + (((UINT32) segoff->Segment) << 4) + 0x20
       );
-    /* Process each drive mapping slot. */
+    /* Process each drive mapping slot */
     i = CvG4dSlots;
     while (i--)
       found |= WvGrub4dosProcessSlot(g4d_map + i);
     DBG("%sGRUB4DOS drives found\n", found ? "" : "No ");
 
     return TRUE;
-  }
-
-/** Walk the chain of "safe INT 0x13 hooks" */
-BOOLEAN WvProbeSafeHookChain(
-    PUCHAR phys_mem,
-    SP_X86_SEG16OFF16 segoff
-  ) {
-    WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook;
-    BOOLEAN found = FALSE;
-
-    /* Walk the "safe hook" chain of INT 0x13 hooks as far as possible. */
-    while (safe_mbr_hook = WvProbeGetSafeHook(phys_mem, segoff)) {
-        found |=
-          WvMemdiskProcessSafeHook(phys_mem, safe_mbr_hook) ||
-          WvGrub4dosProcessSafeHook(phys_mem, segoff, safe_mbr_hook);
-        segoff = &safe_mbr_hook->PrevHook;
-      }
-
-    DBG(found ? "Safe hook chain walked\n" : "No safe hooks processed\n");
-    return found;
-  }
-
-VOID WvProbeDisks(void) {
-    WvProbeIvtForSafeHook();
-    WvMemdiskFind();
   }

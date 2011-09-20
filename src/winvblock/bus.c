@@ -45,6 +45,7 @@
 #include "safehook.h"
 #include "filedisk.h"
 #include "dummy.h"
+#include "memdisk.h"
 #include "debug.h"
 
 /* Names for the main bus. */
@@ -67,6 +68,7 @@ KSPIN_LOCK WvBusPdoLock;
 /* The main bus. */
 WVL_S_BUS_T WvBus = {0};
 WV_S_DEV_T WvBusDev = {0};
+static WVL_S_BUS_NODE WvBusSafeHookChild;
 
 /* Forward declarations. */
 NTSTATUS STDCALL WvBusDevCtl(IN PIRP, IN ULONG POINTER_ALIGNMENT);
@@ -81,9 +83,11 @@ WVL_F_BUS_PNP WvBusPnpQueryDevText;
  * This function will return a failure status if the bus is already attached.
  */
 NTSTATUS STDCALL WvBusAttach(PDEVICE_OBJECT Pdo) {
+    S_X86_SEG16OFF16 int_13h;
     KIRQL irql;
     NTSTATUS status;
     PDEVICE_OBJECT lower;
+    PDEVICE_OBJECT safe_hook_child;
 
     /* Do we alreay have our main bus? */
     KeAcquireSpinLock(&WvBusPdoLock, &irql);
@@ -110,7 +114,14 @@ NTSTATUS STDCALL WvBusAttach(PDEVICE_OBJECT Pdo) {
     WvBus.LowerDeviceObject = lower;
 
     /* Probe for disks. */
-    WvProbeDisks();
+    int_13h.Segment = 0;
+    int_13h.Offset = 0x13 * sizeof int_13h;
+    safe_hook_child = WvSafeHookProbe(&int_13h, WvBus.Fdo);
+    if (safe_hook_child) {
+        WvlBusInitNode(&WvBusSafeHookChild, safe_hook_child);
+        WvlBusAddNode(&WvBus, &WvBusSafeHookChild);
+      }
+    WvMemdiskFind();
 
     return STATUS_SUCCESS;
 

@@ -117,7 +117,9 @@ static BOOLEAN STDCALL WvMemdiskCheckMbft_(
     assoc_hook->Flags = 1;
     /* Should we try to walk the "safe hook" chain? */
     if (walk)
-      WvProbeSafeHookChain(phys_mem, &assoc_hook->PrevHook);
+      { PDEVICE_OBJECT TODO = NULL;
+        TODO = WvSafeHookProbe(&assoc_hook->PrevHook, TODO);
+      }
     return TRUE;
   }
 
