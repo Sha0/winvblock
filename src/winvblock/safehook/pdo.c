@@ -168,6 +168,7 @@ static NTSTATUS STDCALL WvSafeHookPdoIrpPnpQueryId(
     IN PIRP irp
   ) {
     static const WCHAR hw_id[] = WVL_M_WLIT L"\\Int13hHook\0";
+    static const WCHAR ven_id[] = WVL_M_WLIT L"\\%sHook\0\0\0\0\0\0\0";
     static const WCHAR instance_id[] = L"HOOK_at_%08X\0\0\0\0";
     BUS_QUERY_ID_TYPE query_type;
     SIZE_T buf_size;
@@ -175,16 +176,25 @@ static NTSTATUS STDCALL WvSafeHookPdoIrpPnpQueryId(
     NTSTATUS status;
     INT copied;
     SP_WV_SAFEHOOK_PDO bus;
+    WCHAR ven_buf[9];
     M_FUNC_ENTRY();
 
     query_type = IoGetCurrentIrpStackLocation(irp)->Parameters.QueryId.IdType;
 
     /* Determine the buffer size to allocate */
     switch (query_type) {
-        case BusQueryDeviceID:
         case BusQueryHardwareIDs:
-        case BusQueryCompatibleIDs:
+          /* The vendor ID */
+          buf_size = sizeof ven_id;
+          break;
+
+        case BusQueryDeviceID:
           buf_size = sizeof hw_id;
+          break;
+
+        case BusQueryCompatibleIDs:
+          /* The vendor ID and the default */
+          buf_size = sizeof ven_id + sizeof hw_id;
           break;
 
         case BusQueryInstanceID:
@@ -201,27 +211,57 @@ static NTSTATUS STDCALL WvSafeHookPdoIrpPnpQueryId(
       }
 
     /* Allocate the buffer */
-    buf = wv_mallocz(buf_size);
+    buf = wv_pallocz(buf_size);
     if (!buf) {
         status = STATUS_INSUFFICIENT_RESOURCES;
         goto err_buf;
       }
 
+  	bus = CONTAINING_RECORD(
+        dev_obj->DeviceExtension,
+        S_WV_SAFEHOOK_PDO,
+        DevExt
+      );
+
+    /* Sanitize and copy */
+    {
+        INT i;
+        INT bad;
+        for (i = 0; i < sizeof ven_buf / sizeof *ven_buf - 1; ++i) {
+            ven_buf[i] = bus->SafeHookCopy.VendorId[i];
+            bad = (
+                ven_buf[i] <= L'\x20' ||
+                ven_buf[i] > L'\x7F' ||
+                ven_buf[i] == L'\x2C'
+              );
+            if (bad)
+              ven_buf[i] = L'_';
+            continue;
+          }
+        ven_buf[i] = L'\0';
+      }
+
     /* Populate the buffer with the ID */
     switch (query_type) {
-        case BusQueryDeviceID:
         case BusQueryHardwareIDs:
-        case BusQueryCompatibleIDs:
+          copied = swprintf(buf, ven_id, ven_buf);
+          break;
+
+        case BusQueryDeviceID:
           copied = swprintf(buf, hw_id);
+          break;
+
+        case BusQueryCompatibleIDs:
+          copied = swprintf(buf, ven_id, ven_buf);
+          if (!copied)
+            break;
+          /* Advance to the next ID */
+          ++copied;
+          copied += swprintf(buf + copied, hw_id);
           break;
 
         case BusQueryInstanceID:
         	/* "Location" */
-        	bus = CONTAINING_RECORD(
-              dev_obj->DeviceExtension,
-              S_WV_SAFEHOOK_PDO,
-              DevExt
-            );
           copied = swprintf(
               buf,
               instance_id,
