@@ -89,6 +89,10 @@ NTSTATUS STDCALL WvBusAttach(PDEVICE_OBJECT Pdo) {
     PDEVICE_OBJECT lower;
     PDEVICE_OBJECT safe_hook_child;
 
+    /* Allow our own raw PDOs to be installed */
+    if (Pdo->DriverObject == WvDriverObj)
+      return STATUS_SUCCESS;
+
     /* Do we alreay have our main bus? */
     KeAcquireSpinLock(&WvBusPdoLock, &irql);
     if (WvBus.Pdo) {

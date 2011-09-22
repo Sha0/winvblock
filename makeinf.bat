@@ -56,6 +56,7 @@ DriverVer=05/16/2010,0.0.0.8
  
 [Manufacturer]
 WinVBlock=WinVBlockDriver,,NTamd64
+SafeInt13hHook=SafeInt13hHook,,NTamd64
  
 [SourceDisksNames]
 0="Install Disk"
@@ -89,6 +90,9 @@ HKR,,Start,0x00010001,0
 [WinVBlockDriver]
 "WinVBlock Bus"=WinVBlock,Root\WinVBlock, Detected\WinVBlock
  
+[SafeInt13hHook]
+"Safe INT 0x13 Hook Bus"=WinVBlock,WinVBlock\Int13hHook\
+ 
 [Files.Driver]
 wvblk32.sys
  
@@ -121,6 +125,9 @@ AddReg=BootStart
  
 [WinVBlockDriver.NTamd64]
 "WinVBlock Bus"=WinVBlock.NTamd64,Root\WinVBlock, Detected\WinVBlock
+ 
+[SafeInt13hHook.NTamd64]
+"Safe INT 0x13 Hook Bus"=WinVBlock,WinVBlock\Int13hHook\
  
 [Files.Driver.NTamd64]
 wvblk64.sys
