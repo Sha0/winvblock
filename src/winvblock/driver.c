@@ -1,9 +1,9 @@
 /**
- * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2012, Shao Miller <sha0.miller@gmail.com>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
- * This file is part of WinVBlock, derived from WinAoE.
+ * This file is part of WinVBlock, originally derived from WinAoE.
  *
  * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -171,67 +171,82 @@ static VOID STDCALL WvDriverReinitialize(
     return;
   }
 
-/*
- * Note the exception to the function naming convention.
- * TODO: See if a Makefile change is good enough.
+/**
+ * @name DriverEntry
+ *
+ * The driver entry-point
+ *
+ * @param drv_obj
+ *   The driver object provided by Windows
+ *
+ * @param reg_path
+ *   The Registry path provided by Windows
+ *
+ * @return
+ *   The status
  */
 NTSTATUS STDCALL DriverEntry(
-    IN PDRIVER_OBJECT DriverObject,
-    IN PUNICODE_STRING RegistryPath
+    IN DRIVER_OBJECT * drv_obj,
+    IN UNICODE_STRING * reg_path
   ) {
     NTSTATUS status;
-    int i;
+    ULONG i;
 
     DBG("Entry\n");
+
+    /* Have we already initialized the driver? */
     if (WvDriverObj) {
         DBG("Re-entry not allowed!\n");
         return STATUS_NOT_SUPPORTED;
       }
-    WvDriverObj = DriverObject;
+    WvDriverObj = drv_obj;
+
+    /* Have we already started the driver? */
     if (WvDriverStarted)
       return STATUS_SUCCESS;
+
     WvlDebugModuleInit();
+
+    /* Check OS loader options */
     status = WvlRegNoteOsLoadOpts(&WvOsLoadOpts);
     if (!NT_SUCCESS(status)) {
         WvlDebugModuleUnload();
         return WvlError("WvlRegNoteOsLoadOpts", status);
       }
 
-    WvDriverStateHandle = NULL;
-
-    if ((WvDriverStateHandle = PoRegisterSystemState(
-        NULL,
-        ES_CONTINUOUS
-      )) == NULL) {
-        DBG("Could not set system state to ES_CONTINUOUS!!\n");
-      }
+    /* AoE doesn't support sleeping */
+    WvDriverStateHandle = PoRegisterSystemState(NULL, ES_CONTINUOUS);
+    if (!WvDriverStateHandle)
+      DBG("Could not set system state to ES_CONTINUOUS!!\n");
 
     KeInitializeSpinLock(&WvFindDiskLock);
 
     /*
      * Set up IRP MajorFunction function table for devices
-     * this driver handles.
+     * this driver handles
      */
     for (i = 0; i <= IRP_MJ_MAXIMUM_FUNCTION; i++)
-      DriverObject->MajorFunction[i] = WvIrpNotSupported;
-    DriverObject->MajorFunction[IRP_MJ_PNP] = WvDriverDispatchIrp;
-    DriverObject->MajorFunction[IRP_MJ_POWER] = WvDriverDispatchIrp;
-    DriverObject->MajorFunction[IRP_MJ_CREATE] = WvDriverDispatchIrp;
-    DriverObject->MajorFunction[IRP_MJ_CLOSE] = WvDriverDispatchIrp;
-    DriverObject->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = WvDriverDispatchIrp;
-    DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = WvDriverDispatchIrp;
-    DriverObject->MajorFunction[IRP_MJ_SCSI] = WvDriverDispatchIrp;
-    /* Set the driver Unload callback. */
-    DriverObject->DriverUnload = WvUnload;
-    /* Set the driver AddDevice callback. */
-    DriverObject->DriverExtension->AddDevice = WvAttachFdo;
+      drv_obj->MajorFunction[i] = WvIrpNotSupported;
+    drv_obj->MajorFunction[IRP_MJ_PNP] = WvDriverDispatchIrp;
+    drv_obj->MajorFunction[IRP_MJ_POWER] = WvDriverDispatchIrp;
+    drv_obj->MajorFunction[IRP_MJ_CREATE] = WvDriverDispatchIrp;
+    drv_obj->MajorFunction[IRP_MJ_CLOSE] = WvDriverDispatchIrp;
+    drv_obj->MajorFunction[IRP_MJ_SYSTEM_CONTROL] = WvDriverDispatchIrp;
+    drv_obj->MajorFunction[IRP_MJ_DEVICE_CONTROL] = WvDriverDispatchIrp;
+    drv_obj->MajorFunction[IRP_MJ_SCSI] = WvDriverDispatchIrp;
 
-    /* Establish the bus PDO. */
-    status = WvBusEstablish(RegistryPath);
+    /* Set the driver Unload callback */
+    drv_obj->DriverUnload = WvUnload;
+
+    /* Set the driver AddDevice callback */
+    drv_obj->DriverExtension->AddDevice = WvAttachFdo;
+
+    /* Establish the bus PDO */
+    status = WvBusEstablish(reg_path);
     if(!NT_SUCCESS(status))
       goto err_bus;
 
-    /* Register re-initialization routine to allow for disks to arrive. */
+    /* Register re-initialization routine to allow for disks to arrive */
     IoRegisterBootDriverReinitialization(
         WvDriverObj,
         WvDriverReinitialize,
@@ -244,7 +259,8 @@ NTSTATUS STDCALL DriverEntry(
 
     err_bus:
 
-    WvUnload(DriverObject);
+    /* Release resources and unwind state */
+    WvUnload(drv_obj);
     DBG("Exit due to failure\n");
     return status;
   }
