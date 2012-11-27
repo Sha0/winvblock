@@ -51,18 +51,30 @@ extern NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING);
 extern NTSTATUS STDCALL WvBusDevCtl(IN PIRP, IN ULONG POINTER_ALIGNMENT);
 extern VOID WvBusCleanup(void);
 
-/* Exported. */
-PDRIVER_OBJECT WvDriverObj = NULL;
+/** Public objects */
+DRIVER_OBJECT * WvDriverObj;
 UINT32 WvFindDisk;
 KSPIN_LOCK WvFindDiskLock;
+S_WVL_RESOURCE_TRACKER WvDriverUsage[1];
 
-/* Globals. */
-static PVOID WvDriverStateHandle;
-static BOOLEAN WvDriverStarted = FALSE;
-/* Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters. */
-static LPWSTR WvOsLoadOpts = NULL;
+/** Private objects */
 
-/* Forward declarations. */
+/** Power state handle */
+static VOID * WvDriverStateHandle;
+
+/** Is the driver started? */
+static BOOLEAN WvDriverStarted;
+
+/** Contains TXTSETUP.SIF/BOOT.INI-style OsLoadOptions parameters */
+static WCHAR * WvOsLoadOpts;
+
+/** The list of registered mini-drivers */
+static S_WVL_LOCKED_LIST WvRegisteredMiniDrivers[1];
+
+/** Notice for WvDeregisterMiniDrivers that the registration list is empty */
+static KEVENT WvMiniDriversDeregistered;
+
+/* Private function declarations */
 static DRIVER_DISPATCH WvIrpNotSupported;
 static
   __drv_dispatchType(IRP_MJ_POWER)
@@ -76,14 +88,6 @@ static
 static DRIVER_UNLOAD WvUnload;
 static DRIVER_UNLOAD WvUnloadMiniDriver;
 static VOID WvDeregisterMiniDrivers(void);
-
-/** Objects */
-
-/** The list of registered mini-drivers */
-static S_WVL_LOCKED_LIST WvRegisteredMiniDrivers[1];
-
-/** Notice for WvDeregisterMiniDrivers that the registration list is empty */
-static KEVENT WvMiniDriversDeregistered;
 
 static LPWSTR STDCALL WvGetOpt(IN LPWSTR opt_name) {
     LPWSTR our_opts, the_opt;
@@ -165,6 +169,7 @@ static VOID STDCALL WvDriverReinitialize(
 
     /* Should we retry? */
     if (!find_disk || count >= 10) {
+        WvlDecrementResourceUsage(WvDriverUsage);
         DBG("Exiting...\n");
         return;
       }
@@ -215,6 +220,9 @@ NTSTATUS STDCALL DriverEntry(
     if (WvDriverStarted)
       return STATUS_SUCCESS;
 
+    /* Track resource usage */
+    WvlInitializeResourceTracker(WvDriverUsage);
+
     WvlDebugModuleInit();
 
     /* Check OS loader options */
@@ -254,6 +262,7 @@ NTSTATUS STDCALL DriverEntry(
     /* Initialize the list of registered mini-drivers */
     WvlInitializeLockedList(WvRegisteredMiniDrivers);
     KeInitializeEvent(&WvMiniDriversDeregistered, NotificationEvent, FALSE);
+    WvlIncrementResourceUsage(WvDriverUsage);
 
     /* Establish the bus PDO */
     status = WvBusEstablish(reg_path);
@@ -261,6 +270,7 @@ NTSTATUS STDCALL DriverEntry(
       goto err_bus;
 
     /* Register re-initialization routine to allow for disks to arrive */
+    WvlIncrementResourceUsage(WvDriverUsage);
     IoRegisterBootDriverReinitialization(
         WvDriverObj,
         WvDriverReinitialize,
@@ -303,6 +313,9 @@ static VOID STDCALL WvUnload(IN DRIVER_OBJECT * drv_obj) {
     wv_free(WvOsLoadOpts);
     WvDriverStarted = FALSE;
     WvlDebugModuleUnload();
+
+    WvlWaitForResourceZeroUsage(WvDriverUsage);
+
     DBG("Done\n");
   }
 
@@ -684,6 +697,8 @@ static VOID WvDeregisterMiniDrivers(void) {
         FALSE,
         NULL
       );
+
+    WvlDecrementResourceUsage(WvDriverUsage);
   }
 
 /* TODO: Find a better place for this and adjust headers */
@@ -725,7 +740,7 @@ WVL_M_LIB VOID WvlInitializeResourceTracker(
   ) {
     ASSERT(res_tracker);
     res_tracker->UsageCount = 0;
-    KeInitializeEvent(&res_tracker->ZeroUsage, NotificationEvent, FALSE);
+    KeInitializeEvent(&res_tracker->ZeroUsage, NotificationEvent, TRUE);
   }
 
 /* TODO: Find a better place for this and adjust headers */

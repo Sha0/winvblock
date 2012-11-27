@@ -45,12 +45,6 @@ typedef struct S_WVL_LOCKED_LIST S_WVL_LOCKED_LIST;
 
 typedef struct S_WVL_RESOURCE_TRACKER S_WVL_RESOURCE_TRACKER;
 
-extern PDRIVER_OBJECT WvDriverObj;
-extern UINT32 WvFindDisk;
-extern KSPIN_LOCK WvFindDiskLock;
-/* Note the exception to the function naming convention. */
-extern DRIVER_INITIALIZE DriverEntry;
-
 /* The physical/function device object's (PDO's/FDO's) DeviceExtension */
 typedef struct WV_DEV_EXT {
     struct WV_DEV_T * device;
@@ -62,6 +56,11 @@ extern NTSTATUS STDCALL WvDriverGetDevCapabilities(
     IN PDEVICE_OBJECT,
     IN PDEVICE_CAPABILITIES
   );
+
+/** Function declarations */
+
+/* From driver.c */
+extern DRIVER_INITIALIZE DriverEntry;
 
 /* From bus.c */
 extern WVL_M_LIB PDEVICE_OBJECT WvBusFdo(void);
@@ -249,5 +248,11 @@ struct S_WVL_RESOURCE_TRACKER {
     /** An event that is set when the usage count is zero */
     KEVENT ZeroUsage;
   };
+
+/** Objects */
+extern DRIVER_OBJECT * WvDriverObj;
+extern UINT32 WvFindDisk;
+extern KSPIN_LOCK WvFindDiskLock;
+extern S_WVL_RESOURCE_TRACKER WvDriverUsage[1];
 
 #endif	/* WV_M_DRIVER_H_ */
