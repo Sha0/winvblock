@@ -74,6 +74,16 @@ static
   __drv_dispatchType(IRP_MJ_PNP)
   DRIVER_DISPATCH WvDriverDispatchIrp;
 static DRIVER_UNLOAD WvUnload;
+static DRIVER_UNLOAD WvUnloadMiniDriver;
+static VOID WvDeregisterMiniDrivers(void);
+
+/** Objects */
+
+/** The list of registered mini-drivers */
+static S_WVL_LOCKED_LIST WvRegisteredMiniDrivers[1];
+
+/** Notice for WvDeregisterMiniDrivers that the registration list is empty */
+static KEVENT WvMiniDriversDeregistered;
 
 static LPWSTR STDCALL WvGetOpt(IN LPWSTR opt_name) {
     LPWSTR our_opts, the_opt;
@@ -241,6 +251,10 @@ NTSTATUS STDCALL DriverEntry(
     /* Set the driver AddDevice callback */
     drv_obj->DriverExtension->AddDevice = WvAttachFdo;
 
+    /* Initialize the list of registered mini-drivers */
+    WvlInitializeLockedList(WvRegisteredMiniDrivers);
+    KeInitializeEvent(&WvMiniDriversDeregistered, NotificationEvent, FALSE);
+
     /* Establish the bus PDO */
     status = WvBusEstablish(reg_path);
     if(!NT_SUCCESS(status))
@@ -272,8 +286,17 @@ static NTSTATUS STDCALL WvIrpNotSupported(
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
-static VOID STDCALL WvUnload(IN PDRIVER_OBJECT DriverObject) {
+/**
+ * Release resources and unwind state
+ *
+ * @param drv_obj
+ *   The driver object provided by Windows
+ */
+static VOID STDCALL WvUnload(IN DRIVER_OBJECT * drv_obj) {
     DBG("Unloading...\n");
+
+    WvDeregisterMiniDrivers();
+
     WvBusCleanup();
     if (WvDriverStateHandle != NULL)
       PoUnregisterSystemState(WvDriverStateHandle);
@@ -548,4 +571,150 @@ WVL_M_LIB PVOID STDCALL WvlMemGroupBatchAlloc(
       Group->First = tmp_group.First;
     /* All done. */
     return first_obj;
+  }
+
+WVL_M_LIB NTSTATUS WvlRegisterMiniDriver(
+    OUT S_WVL_MINI_DRIVER ** minidriver,
+    IN OUT DRIVER_OBJECT * drv_obj,
+    IN DRIVER_ADD_DEVICE * add_dev,
+    IN DRIVER_UNLOAD * unload
+  ) {
+    /* Check for invalid parameters or uninitialized library */
+    if (!minidriver || !drv_obj || !unload || !WvDriverStarted)
+      return STATUS_UNSUCCESSFUL;
+
+    *minidriver = wv_malloc(sizeof **minidriver);
+    if (!*minidriver)
+      return STATUS_INSUFFICIENT_RESOURCES;
+
+    /* Initialize the mini-driver object */
+    (*minidriver)->DriverObject = drv_obj;
+    (*minidriver)->AddDevice = add_dev;
+    (*minidriver)->Unload = unload;
+
+    /* If the mini-driver is external, initialize its driver object */
+    if (drv_obj != WvDriverObj) {
+        /* IRP major function dispatch table */
+        RtlCopyMemory(
+            drv_obj->MajorFunction,
+            WvDriverObj->MajorFunction,
+            sizeof drv_obj->MajorFunction
+          );
+
+        /* Set the driver's Unload and AddDevice routines */
+        drv_obj->DriverUnload = WvUnloadMiniDriver;
+        drv_obj->DriverExtension->AddDevice = add_dev;
+      }
+
+    /* Register the mini-driver */
+    WvlAppendLockedListLink(WvRegisteredMiniDrivers, (*minidriver)->Link);
+
+    return STATUS_SUCCESS;
+  }
+
+WVL_M_LIB VOID WvlDeregisterMiniDriver(
+    IN S_WVL_MINI_DRIVER * minidriver
+  ) {
+    /* Ignore an invalid parameter */
+    if (!minidriver)
+      return;
+
+    /*
+     * De-register the mini-driver.  If this is the last mini-driver
+     * in the registration list, notify WvDeregisterMiniDrivers
+     */
+    if (WvlRemoveLockedListLink(WvRegisteredMiniDrivers, minidriver->Link))
+      KeSetEvent(&WvMiniDriversDeregistered, 0, FALSE);
+
+    wv_free(minidriver);
+  }
+
+/**
+ * Invoke an external mini-driver's Unload routine.  Internal
+ * mini-drivers' Unload routines will be invoked by WvDeregisterMiniDrivers.
+ * Multiple mini-drivers with the same driver object are understood
+ *
+ * @param drv_obj
+ *   The driver object provided by Windows
+ */
+static VOID STDCALL WvUnloadMiniDriver(IN DRIVER_OBJECT * drv_obj) {
+    KIRQL irql;
+    LIST_ENTRY * cur_link;
+    S_WVL_MINI_DRIVER * minidriver;
+
+    /* Find the associated mini-driver(s) */
+    KeAcquireSpinLock(&WvRegisteredMiniDrivers->Lock, &irql);
+    for (
+        cur_link = WvRegisteredMiniDrivers->List->Flink;
+        cur_link != WvRegisteredMiniDrivers->List;
+        cur_link = cur_link->Flink
+      ) {
+        ASSERT(cur_link);
+        minidriver = CONTAINING_RECORD(cur_link, S_WVL_MINI_DRIVER, Link);
+
+        /* Check for a match */
+        if (minidriver->DriverObject == drv_obj) {
+            KeReleaseSpinLock(&WvRegisteredMiniDrivers->Lock, irql);
+
+            ASSERT(minidriver->Unload);
+            minidriver->Unload(drv_obj);
+
+            /* Start over at the beginning of the list */
+            KeAcquireSpinLock(&WvRegisteredMiniDrivers->Lock, &irql);
+            cur_link = WvRegisteredMiniDrivers->List;
+          }
+      }
+    KeReleaseSpinLock(&WvRegisteredMiniDrivers->Lock, irql);
+  }
+
+/**
+ * Unload all internal mini-drivers and wait for all
+ * mini-drivers to be deregistered
+ */
+static VOID WvDeregisterMiniDrivers(void) {
+    /* Process internal mini-drivers */
+    ASSERT(WvDriverObj);
+    WvUnloadMiniDriver(WvDriverObj);
+
+    /* Wait for all mini-driver Unload routines to complete */
+    KeWaitForSingleObject(
+        &WvMiniDriversDeregistered,
+        Executive,
+        KernelMode,
+        FALSE,
+        NULL
+      );
+  }
+
+/* TODO: Find a better place for this and adjust headers */
+WVL_M_LIB VOID WvlInitializeLockedList(OUT S_WVL_LOCKED_LIST * list) {
+    ASSERT(list);
+    KeInitializeSpinLock(&list->Lock);
+    InitializeListHead(list->List);
+  }
+
+/* TODO: Find a better place for this and adjust headers */
+WVL_M_LIB VOID WvlAppendLockedListLink(
+    IN OUT S_WVL_LOCKED_LIST * list,
+    IN OUT LIST_ENTRY * link
+  ) {
+    ASSERT(list);
+    ASSERT(link);
+    ExInterlockedInsertTailList(list->List, link, &list->Lock);
+  }
+
+/* TODO: Find a better place for this and adjust headers */
+WVL_M_LIB BOOLEAN WvlRemoveLockedListLink(
+    IN OUT S_WVL_LOCKED_LIST * list,
+    IN OUT LIST_ENTRY * link
+  ) {
+    KIRQL irql;
+    BOOLEAN result;
+
+    ASSERT(list);
+    ASSERT(link);
+    KeAcquireSpinLock(&list->Lock, &irql);
+    result = RemoveEntryList(link);
+    KeReleaseSpinLock(&list->Lock, irql);
+    return result;
   }
