@@ -43,6 +43,8 @@ typedef struct S_WVL_MINI_DRIVER S_WVL_MINI_DRIVER;
 
 typedef struct S_WVL_LOCKED_LIST S_WVL_LOCKED_LIST;
 
+typedef struct S_WVL_RESOURCE_TRACKER S_WVL_RESOURCE_TRACKER;
+
 extern PDRIVER_OBJECT WvDriverObj;
 extern UINT32 WvFindDisk;
 extern KSPIN_LOCK WvFindDiskLock;
@@ -154,6 +156,46 @@ extern WVL_M_LIB BOOLEAN WvlRemoveLockedListLink(
   );
 
 /**
+ * Initialize a resource tracker
+ *
+ * @param ResourceTracker
+ *   The resource tracker to initialize
+ */
+extern WVL_M_LIB VOID WvlInitializeResourceTracker(
+    S_WVL_RESOURCE_TRACKER * ResourceTracker
+  );
+
+/**
+ * Wait for a resource to have zero usage
+ *
+ * @param ResourceTracker
+ *   The tracker for the resource
+ */
+extern WVL_M_LIB VOID WvlWaitForResourceZeroUsage(
+    S_WVL_RESOURCE_TRACKER * ResourceTracker
+  );
+
+/**
+ * Increment the usage count for a resource
+ *
+ * @param ResourceTracker
+ *   The tracker for the resource
+ */
+extern WVL_M_LIB VOID WvlIncrementResourceUsage(
+    S_WVL_RESOURCE_TRACKER * ResourceTracker
+  );
+
+/**
+ * Decrement the usage count for a resource
+ *
+ * @param ResourceTracker
+ *   The tracker for the resource
+ */
+extern WVL_M_LIB VOID WvlDecrementResourceUsage(
+    S_WVL_RESOURCE_TRACKER * ResourceTracker
+  );
+
+/**
  * Miscellaneous: Grouped memory allocation functions.
  */
 
@@ -197,6 +239,15 @@ struct S_WVL_MINI_DRIVER {
 struct S_WVL_LOCKED_LIST {
     LIST_ENTRY List[1];
     KSPIN_LOCK Lock;
+  };
+
+/** Track resource usage */
+struct S_WVL_RESOURCE_TRACKER {
+    /** The usage count */
+    LONG UsageCount;
+
+    /** An event that is set when the usage count is zero */
+    KEVENT ZeroUsage;
   };
 
 #endif	/* WV_M_DRIVER_H_ */

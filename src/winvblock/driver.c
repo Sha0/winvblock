@@ -718,3 +718,56 @@ WVL_M_LIB BOOLEAN WvlRemoveLockedListLink(
     KeReleaseSpinLock(&list->Lock, irql);
     return result;
   }
+
+/* TODO: Find a better place for this and adjust headers */
+WVL_M_LIB VOID WvlInitializeResourceTracker(
+    S_WVL_RESOURCE_TRACKER * res_tracker
+  ) {
+    ASSERT(res_tracker);
+    res_tracker->UsageCount = 0;
+    KeInitializeEvent(&res_tracker->ZeroUsage, NotificationEvent, FALSE);
+  }
+
+/* TODO: Find a better place for this and adjust headers */
+WVL_M_LIB VOID WvlWaitForResourceZeroUsage(
+    S_WVL_RESOURCE_TRACKER * res_tracker
+  ) {
+    ASSERT(res_tracker);
+    KeWaitForSingleObject(
+        &res_tracker->ZeroUsage,
+        Executive,
+        KernelMode,
+        FALSE,
+        NULL
+      );
+  }
+
+/* TODO: Find a better place for this and adjust headers */
+WVL_M_LIB VOID WvlIncrementResourceUsage(
+    S_WVL_RESOURCE_TRACKER * res_tracker
+  ) {
+    LONG c;
+
+    ASSERT(res_tracker);
+    c = InterlockedIncrement(&res_tracker->UsageCount);
+
+    /* If the usage is no longer zero, clear the event */
+    ASSERT(c >= 0);
+    if (c == 1)
+      KeClearEvent(&res_tracker->ZeroUsage);
+  }
+
+/* TODO: Find a better place for this and adjust headers */
+WVL_M_LIB VOID WvlDecrementResourceUsage(
+    S_WVL_RESOURCE_TRACKER * res_tracker
+  ) {
+    LONG c;
+
+    ASSERT(res_tracker);
+    c = InterlockedDecrement(&res_tracker->UsageCount);
+
+    /* If the usage count reaches zero, set the event */
+    ASSERT(c >= 0);
+    if (!c)
+      KeSetEvent(&res_tracker->ZeroUsage, 0, FALSE);
+  }
