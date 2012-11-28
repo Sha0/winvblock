@@ -44,7 +44,7 @@
 #include "ramdisk.h"
 #include "debug.h"
 
-/* From bus.c */
+/* From mainbus/mainbus.c */
 extern WVL_S_BUS_T WvBus;
 extern NTSTATUS STDCALL WvBusAttach(IN PDEVICE_OBJECT);
 extern NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING);

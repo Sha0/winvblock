@@ -1,9 +1,9 @@
 /**
- * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2012, Shao Miller <sha0.miller@gmail.com>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
- * This file is part of WinVBlock, derived from WinAoE.
+ * This file is part of WinVBlock, originally derived from WinAoE.
  *
  * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -302,12 +302,7 @@ VOID WvBusCleanup(void) {
     return;
   }
 
-/**
- * Add a child node to the bus.
- *
- * @v Dev               Points to the child device to add.
- * @ret                 TRUE for success, FALSE for failure.
- */
+/* TODO: Cosmetic changes */
 BOOLEAN STDCALL WvBusAddDev(
     IN OUT WV_SP_DEV_T Dev
   ) {
@@ -475,13 +470,6 @@ NTSTATUS STDCALL WvBusPnpQueryDevText(
     return WvlIrpComplete(irp, irp->IoStatus.Information, status);
   }
 
-/**
- * Fetch the WinVBlock main bus FDO.
- *
- * @ret PDEVICE_OBJECT          The FDO.
- *
- * This function is useful to drivers trying to communicate with this one.
- */
-WVL_M_LIB PDEVICE_OBJECT WvBusFdo(void) {
+WVL_M_LIB DEVICE_OBJECT * WvBusFdo(void) {
     return WvBus.Fdo;
   }

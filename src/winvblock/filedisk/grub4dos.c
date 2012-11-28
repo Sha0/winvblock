@@ -1,7 +1,7 @@
 /**
- * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2012, Shao Miller <sha0.miller@gmail.com>.
  *
- * This file is part of WinVBlock, derived from WinAoE.
+ * This file is part of WinVBlock, originally derived from WinAoE.
  *
  * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@
 #include "byte.h"
 #include "msvhd.h"
 
-/* From bus.c */
+/* From ../mainbus/mainbus.c */
 extern WVL_S_BUS_T WvBus;
 
 /**

@@ -1,6 +1,6 @@
 @echo off
 
-set lib=libbus libdisk ramdisk filedisk wvlib grub4dos safehook
+set lib=libbus libdisk ramdisk filedisk wvlib grub4dos safehook mainbus
 
 set links=
 for /d %%a in (%lib%) do (
@@ -10,7 +10,7 @@ for /d %%a in (%lib%) do (
   popd
   )
 
-set c=debug.c driver.c registry.c winvblock.rc device.c wv_stdlib.c wv_string.c dummy.c bus.c disk.c
+set c=debug.c driver.c registry.c winvblock.rc device.c wv_stdlib.c wv_string.c disk.c
 
 set name=WVBlk%bits%
 

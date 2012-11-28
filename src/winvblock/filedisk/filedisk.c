@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2012, Shao Miller <sha0.miller@gmail.com>.
  *
  * This file is part of WinVBlock, originally derived from WinAoE.
  *
@@ -41,7 +41,7 @@
 #include "filedisk.h"
 #include "debug.h"
 
-/* From bus.c */
+/* From ../mainbus/mainbus.c */
 extern WVL_S_BUS_T WvBus;
 extern NTSTATUS STDCALL WvBusRemoveDev(IN WV_SP_DEV_T);
 

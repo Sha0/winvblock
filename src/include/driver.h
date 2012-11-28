@@ -62,10 +62,32 @@ extern NTSTATUS STDCALL WvDriverGetDevCapabilities(
 /* From driver.c */
 extern DRIVER_INITIALIZE DriverEntry;
 
-/* From bus.c */
-extern WVL_M_LIB PDEVICE_OBJECT WvBusFdo(void);
+/* From mainbus/mainbus.c */
+
+/**
+ * Return the main bus FDO.  This function is useful for
+ * drivers/mini-drivers trying to communicate with this one
+ *
+ * @return
+ *   A pointer to the main bus FDO
+ */
+extern WVL_M_LIB DEVICE_OBJECT * WvBusFdo(void);
+
+/**
+ * Add a child node to the main bus
+ *
+ * @param Device
+ *   Points to the child device to add
+ *
+ * @retval TRUE
+ *   Success
+ * @retval FALSE
+ *   Failure
+ */
+/* TODO: Fix WV_SP_DEV_T being unknown, here */
 extern BOOLEAN STDCALL WvBusAddDev(IN WV_SP_DEV_T);
-/* From disk.c */
+
+/** From disk.c */
 extern NTSTATUS STDCALL WvDiskPnpQueryDevText(
     IN PDEVICE_OBJECT,
     IN PIRP,

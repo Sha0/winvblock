@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2012, Shao Miller <sha0.miller@gmail.com>.
  *
  * This file is part of WinVBlock, originally derived from WinAoE.
  *
@@ -39,7 +39,7 @@
 #include "safehook.h"
 #include "grub4dos.h"
 
-/* From bus.c */
+/* From ../mainbus/mainbus.c */
 extern WVL_S_BUS_T WvBus;
 
 /** Create a GRUB4DOS RAM disk and add it to the WinVBlock bus. */
