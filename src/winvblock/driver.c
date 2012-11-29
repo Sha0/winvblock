@@ -86,6 +86,8 @@ static
   __drv_dispatchType(IRP_MJ_PNP)
   DRIVER_DISPATCH WvDriverDispatchIrp;
 static DRIVER_UNLOAD WvUnload;
+/* TODO: DRIVER_ADD_DEVICE isn't available in DDK 3790.1830, it seems */
+static DRIVER_ADD_DEVICE WvDriveDevice;
 static DRIVER_UNLOAD WvUnloadMiniDriver;
 static VOID WvDeregisterMiniDrivers(void);
 static NTSTATUS WvStartDeviceThread(IN DEVICE_OBJECT * Device);
@@ -161,7 +163,19 @@ static LPWSTR STDCALL WvGetOpt(IN LPWSTR opt_name) {
     return the_opt;
   }
 
-static NTSTATUS STDCALL WvAttachFdo(
+/**
+ * Drive a supported device
+ *
+ * @param DriverObject
+ *   The driver object provided by Windows
+ *
+ * @param PhysicalDeviceObject
+ *   The PDO to probe and attach an FDO to
+ *
+ * @return
+ *   The status of the operation
+ */
+static NTSTATUS STDCALL WvDriveDevice(
     IN PDRIVER_OBJECT driver_obj,
     IN PDEVICE_OBJECT pdo
   ) {
@@ -274,7 +288,7 @@ NTSTATUS STDCALL DriverEntry(
     drv_obj->DriverUnload = WvUnload;
 
     /* Set the driver AddDevice callback */
-    drv_obj->DriverExtension->AddDevice = WvAttachFdo;
+    drv_obj->DriverExtension->AddDevice = WvDriveDevice;
 
     /* Initialize the list of registered mini-drivers */
     WvlInitializeLockedList(WvRegisteredMiniDrivers);
@@ -316,7 +330,7 @@ static NTSTATUS STDCALL WvIrpNotSupported(
 /**
  * Release resources and unwind state
  *
- * @param drv_obj
+ * @param DriverObject
  *   The driver object provided by Windows
  */
 static VOID STDCALL WvUnload(IN DRIVER_OBJECT * drv_obj) {

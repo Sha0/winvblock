@@ -52,7 +52,14 @@
 #define WV_M_BUS_NAME (L"\\Device\\" WVL_M_WLIT)
 #define WV_M_BUS_DOSNAME (L"\\DosDevices\\" WVL_M_WLIT)
 
-/* Globals. */
+/** Public functions */
+NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING);
+NTSTATUS STDCALL WvBusAttach(IN PDEVICE_OBJECT);
+VOID WvBusCleanup(void);
+NTSTATUS STDCALL WvBusDevCtl(IN PIRP, IN ULONG POINTER_ALIGNMENT);
+WVL_F_BUS_PNP WvBusPnpQueryDevText;
+
+/** Public objects */
 UNICODE_STRING WvBusName = {
     sizeof WV_M_BUS_NAME - sizeof (WCHAR),
     sizeof WV_M_BUS_NAME - sizeof (WCHAR),
@@ -68,11 +75,93 @@ KSPIN_LOCK WvBusPdoLock;
 /* The main bus. */
 WVL_S_BUS_T WvBus = {0};
 WV_S_DEV_T WvBusDev = {0};
+
+/** Private function declarations */
+
+/* TODO: DRIVER_ADD_DEVICE isn't available in DDK 3790.1830, it seems */
+static DRIVER_ADD_DEVICE WvMainBusDriveDevice;
+static DRIVER_UNLOAD WvMainBusUnload;
+
+/** Private objects */
+
 static WVL_S_BUS_NODE WvBusSafeHookChild;
 
-/* Forward declarations. */
-NTSTATUS STDCALL WvBusDevCtl(IN PIRP, IN ULONG POINTER_ALIGNMENT);
-WVL_F_BUS_PNP WvBusPnpQueryDevText;
+/** This mini-driver */
+static S_WVL_MINI_DRIVER * WvMainBusMiniDriver;
+
+/**
+ * The mini-driver entry-point
+ *
+ * @param drv_obj
+ *   The driver object provided by the caller
+ *
+ * @param reg_path
+ *   The Registry path provided by the caller
+ *
+ * @return
+ *   The status
+ */
+NTSTATUS STDCALL WvMainBusDriverEntry(
+    IN DRIVER_OBJECT * drv_obj,
+    IN UNICODE_STRING * reg_path
+  ) {
+    NTSTATUS status;
+
+    /* Register this mini-driver */
+    status = WvlRegisterMiniDriver(
+        &WvMainBusMiniDriver,
+        drv_obj,
+        WvMainBusDriveDevice,
+        WvMainBusUnload
+      );
+    if (!NT_SUCCESS(status))
+      goto err_register;
+    ASSERT(WvMainBusMiniDriver);
+
+    /* Create the bus FDO and possibly the PDO */
+    status = WvBusEstablish(reg_path);
+    if (!NT_SUCCESS(status))
+      goto err_bus;
+
+    return status;
+
+    WvBusCleanup();
+    err_bus:
+
+    WvlDeregisterMiniDriver(WvMainBusMiniDriver);
+    err_register:
+
+    return status;
+  }
+
+/**
+ * Drive a supported device
+ *
+ * @param DriverObject
+ *   The driver object provided by the caller
+ *
+ * @param PhysicalDeviceObject
+ *   The PDO to probe and attach an FDO to
+ *
+ * @return
+ *   The status of the operation
+ */
+static NTSTATUS STDCALL WvMainBusDriveDevice(
+    IN PDRIVER_OBJECT driver_obj,
+    IN PDEVICE_OBJECT pdo
+  ) {
+    return WvBusAttach(pdo);
+  }
+
+/**
+ * Release resources and unwind state
+ *
+ * @param DriverObject
+ *   The driver object provided by the caller
+ */
+static VOID STDCALL WvMainBusUnload(IN DRIVER_OBJECT * drv_obj) {
+    WvBusCleanup();
+  }
 
 /**
  * Attempt to attach the bus to a PDO.
