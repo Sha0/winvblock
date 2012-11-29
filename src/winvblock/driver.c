@@ -88,6 +88,23 @@ static
 static DRIVER_UNLOAD WvUnload;
 static DRIVER_UNLOAD WvUnloadMiniDriver;
 static VOID WvDeregisterMiniDrivers(void);
+static NTSTATUS WvStartDeviceThread(IN DEVICE_OBJECT * Device);
+static VOID WvStopDeviceThread(IN DEVICE_OBJECT * Device);
+static F_WVL_DEVICE_THREAD_FUNCTION WvStopDeviceThreadInThread;
+static F_WVL_DEVICE_THREAD_FUNCTION WvTestDeviceThread;
+static NTSTATUS WvAddIrpToDeviceQueue(IN DEVICE_OBJECT * Device, IN IRP * Irp);
+/* KSTART_ROUTINE isn't available in DDK 3790.1830, it seems */
+static VOID WvDeviceThread(VOID * Context);
+static VOID WvProcessDeviceThreadWorkItem(
+    IN DEVICE_OBJECT * Device,
+    IN S_WVL_DEVICE_THREAD_WORK_ITEM * WorkItem,
+    IN BOOLEAN DeviceNotAvailable
+  );
+static VOID WvProcessDeviceIrp(
+    IN DEVICE_OBJECT * Device,
+    IN IRP * Irp,
+    IN BOOLEAN DeviceNotAvailable
+  );
 
 static LPWSTR STDCALL WvGetOpt(IN LPWSTR opt_name) {
     LPWSTR our_opts, the_opt;
@@ -785,4 +802,521 @@ WVL_M_LIB VOID WvlDecrementResourceUsage(
     ASSERT(c >= 0);
     if (!c)
       KeSetEvent(&res_tracker->ZeroUsage, 0, FALSE);
+  }
+
+WVL_M_LIB NTSTATUS STDCALL WvlCreateDevice(
+    IN S_WVL_MINI_DRIVER * minidriver,
+    IN ULONG dev_ext_sz,
+    IN UNICODE_STRING * dev_name,
+    IN DEVICE_TYPE dev_type,
+    IN ULONG dev_characteristics,
+    IN BOOLEAN exclusive,
+    OUT DEVICE_OBJECT ** dev_obj
+  ) {
+    NTSTATUS status;
+    DEVICE_OBJECT * new_dev;
+    WV_S_DEV_EXT * new_dev_ext;
+
+    /* Check for invalid parameters */
+    if (!minidriver || dev_ext_sz < sizeof *new_dev_ext || !dev_obj)
+      return STATUS_INVALID_PARAMETER;
+
+    /* Create the device object */
+    ASSERT(minidriver->DriverObject);
+    status = IoCreateDevice(
+        minidriver->DriverObject,
+        dev_ext_sz,
+        dev_name,
+        dev_type,
+        dev_characteristics,
+        exclusive,
+        &new_dev
+      );
+    if (!NT_SUCCESS(status))
+      goto err_create_dev;
+    ASSERT(new_dev);
+
+    /* Initialize the common part of the device extension */
+    new_dev_ext = new_dev->DeviceExtension;
+    ASSERT(new_dev_ext);
+    /* TODO: device and IrpDispatch */
+    KeInitializeEvent(&new_dev_ext->IrpArrival, NotificationEvent, FALSE);
+    InitializeListHead(new_dev_ext->IrpQueue);
+    new_dev_ext->NotAvailable = FALSE;
+    KeInitializeSpinLock(&new_dev_ext->Lock);
+    new_dev_ext->MiniDriver = minidriver;
+    WvlInitializeResourceTracker(new_dev_ext->Usage);
+
+    /* Start the device thread */
+    status = WvStartDeviceThread(new_dev);
+    if (!NT_SUCCESS(status))
+      goto err_dev_thread;
+
+    WvlIncrementResourceUsage(minidriver->Usage);
+    return STATUS_SUCCESS;
+
+    WvStopDeviceThread(new_dev);
+    err_dev_thread:
+
+    WvlDeleteDevice(new_dev);
+    err_create_dev:
+
+    return status;
+  }
+
+WVL_M_LIB VOID STDCALL WvlDeleteDevice(IN DEVICE_OBJECT * dev) {
+    WV_S_DEV_EXT * dev_ext;
+    S_WVL_MINI_DRIVER * minidriver;
+
+    ASSERT(dev);
+    dev_ext = dev->DeviceExtension;
+    ASSERT(dev_ext);
+    minidriver = dev_ext->MiniDriver;
+    ASSERT(minidriver);
+    WvlWaitForResourceZeroUsage(dev_ext->Usage);
+    IoDeleteDevice(dev);
+    WvlDecrementResourceUsage(minidriver->Usage);
+  }
+
+/**
+ * Start a device thread
+ *
+ * @param Device
+ *   The device to start a thread for
+ *
+ * @return
+ *   The status of the operation
+ */
+static NTSTATUS WvStartDeviceThread(IN DEVICE_OBJECT * dev) {
+    WV_S_DEV_EXT * dev_ext;
+    OBJECT_ATTRIBUTES obj_attrs;
+    NTSTATUS status;
+
+    if (!dev)
+      return STATUS_INVALID_PARAMETER;
+
+    dev_ext = dev->DeviceExtension;
+    ASSERT(dev_ext);
+
+    KeInitializeEvent(&dev_ext->IrpArrival, NotificationEvent, FALSE);
+    InitializeObjectAttributes(
+        &obj_attrs,
+        NULL,
+        OBJ_KERNEL_HANDLE,
+        NULL,
+        NULL
+      );
+    status = PsCreateSystemThread(
+        &dev_ext->ThreadHandle,
+        THREAD_ALL_ACCESS,
+        &obj_attrs,
+        NULL,
+        NULL,
+        WvDeviceThread,
+        dev
+      );
+    if (!NT_SUCCESS(status))
+      goto err_create_thread;
+
+    WvlIncrementResourceUsage(dev_ext->Usage);
+
+    status = WvlCallFunctionInDeviceThread(
+        dev,
+        WvTestDeviceThread,
+        NULL,
+        TRUE
+      );
+    if (!NT_SUCCESS(status))
+      goto err_test_thread;
+
+    return status;
+
+    err_test_thread:
+
+    WvStopDeviceThread(dev);
+    err_create_thread:
+
+    return status;
+  }
+
+/**
+ * Stop a device thread
+ *
+ * @param Device
+ *   The device whose thread will be stopped
+ */
+static VOID WvStopDeviceThread(IN DEVICE_OBJECT * dev) {
+    WV_S_DEV_EXT * dev_ext;
+    NTSTATUS status;
+    PETHREAD thread;
+
+    ASSERT(dev);
+    dev_ext = dev->DeviceExtension;
+    ASSERT(dev_ext);
+
+    /* Reference the thread */
+    status = ObReferenceObjectByHandle(
+        dev_ext->ThreadHandle,
+        THREAD_ALL_ACCESS,
+        *PsThreadType,
+        KernelMode,
+        &thread,
+        NULL
+      );
+    ASSERT(NT_SUCCESS(status));
+
+    /* Signal the the stop */
+    status = WvlCallFunctionInDeviceThread(
+        dev,
+        WvStopDeviceThreadInThread,
+        NULL,
+        TRUE
+      );
+    ASSERT(NT_SUCCESS(status));
+
+    /* Wait for the thread to stop */
+    KeWaitForSingleObject(
+        thread,
+        Executive,
+        KernelMode,
+        FALSE,
+        NULL
+      );
+
+    /* Cleanup */
+    ObDereferenceObject(thread);
+    ZwClose(dev_ext->ThreadHandle);
+    dev_ext->ThreadHandle = NULL;
+    WvlDecrementResourceUsage(dev_ext->Usage);
+  }
+
+/**
+ * Stop a device thread from within the thread
+ *
+ * @param Device
+ *   The device whose thread will be stopped
+ *
+ * @param Context
+ *   Ignored
+ *
+ * @retval STATUS_SUCCESS
+ *
+ * This function is a bit of a sentinel, as WvDeviceThread will notice it
+ */
+static NTSTATUS WvStopDeviceThreadInThread(
+    IN DEVICE_OBJECT * dev,
+    IN VOID * c
+  ) {
+    ASSERT(dev);
+    (VOID) c;
+    DBG("Stopping thread for device %p...\n", (VOID *) dev);
+    return STATUS_SUCCESS;
+  }
+
+/**
+ * Test a device thread
+ *
+ * @param Device
+ *   The device whose thread will be tested
+ *
+ * @param Context
+ *   Ignored.
+ *
+ * @retval STATUS_SUCCESS
+ */
+static NTSTATUS WvTestDeviceThread(IN DEVICE_OBJECT * dev, IN VOID * c) {
+    WV_S_DEV_EXT * dev_ext;
+
+    (VOID) c;
+
+    ASSERT(dev);
+    dev_ext = dev->DeviceExtension;
+    ASSERT(dev_ext);
+
+    WvlIncrementResourceUsage(dev_ext->Usage);
+    WvlDecrementResourceUsage(dev_ext->Usage);
+    DBG("Thread test for device %p passed\n", (VOID *) dev);
+    return STATUS_SUCCESS;
+  }
+
+WVL_M_LIB NTSTATUS STDCALL WvlCallFunctionInDeviceThread(
+    IN DEVICE_OBJECT * dev,
+    IN F_WVL_DEVICE_THREAD_FUNCTION * func,
+    IN VOID * context,
+    IN BOOLEAN wait
+  ) {
+    WV_S_DEV_EXT * dev_ext;
+    S_WVL_DEVICE_THREAD_WORK_ITEM stack_work_item;
+    S_WVL_DEVICE_THREAD_WORK_ITEM * work_item;
+    VOID ** ptrs;
+    NTSTATUS status;
+
+    /* Check for invalid parameters */
+    if (!dev || !func)
+      return STATUS_INVALID_PARAMETER;
+
+    dev_ext = dev->DeviceExtension;
+    ASSERT(dev_ext);
+
+    /*
+     * If we wait for the function to complete, we use the stack.
+     * Otherwise, we try to allocate the work item
+     */
+    if (!wait) {
+        work_item = wv_malloc(sizeof *work_item);
+        if (!work_item)
+          return STATUS_INSUFFICIENT_RESOURCES;
+      } else {
+        work_item = &stack_work_item;
+      }
+
+    KeInitializeEvent(&work_item->Complete, NotificationEvent, FALSE);
+    work_item->Status = STATUS_DRIVER_INTERNAL_ERROR;
+
+    /**
+     * We use some of the 4 driver-owned pointers in the dummy IRP.
+     * The first lets WvDeviceThread recognize and find the work item.
+     * The second is the context to be passed to the called function.
+     * The third lets WvDeviceThread recognize and free the work item,
+     * if required
+     */
+    ptrs = work_item->DummyIrp->Tail.Overlay.DriverContext;
+    ptrs[0] = work_item;
+    ptrs[1] = context;
+    ptrs[2] = wait ? NULL : work_item;
+
+    status = WvAddIrpToDeviceQueue(dev, work_item->DummyIrp);
+    if (!NT_SUCCESS(status)) {
+        /* The thread is probably stopped */
+        if (!wait)
+          wv_free(work_item);
+        return status;
+      }
+
+    /* It we're not waiting, just return success */
+    if (!wait)
+      return STATUS_SUCCESS;
+
+    /* Otherwise, wait for the function to complete and return its status */
+    KeWaitForSingleObject(
+        &work_item->Complete,
+        Executive,
+        KernelMode,
+        FALSE,
+        NULL
+      );
+    return work_item->Status;
+  }
+
+/**
+ * Add an IRP (or pseudo-IRP) to a device's IRP queue
+ *
+ * @param Device
+ *   The device to process the IRP
+ *
+ * @param Irp
+ *   The IRP to enqueue for the device
+ *
+ * @retval STATUS_NO_SUCH_DEVICE
+ *   The device is no longer available
+ * @retval STATUS_SUCCESS
+ *   The IRP was successfully queued
+ */
+static NTSTATUS WvAddIrpToDeviceQueue(IN DEVICE_OBJECT * dev, IN IRP * irp) {
+    WV_S_DEV_EXT * dev_ext;
+    KIRQL irql;
+    NTSTATUS status;
+
+    ASSERT(dev);
+    ASSERT(irp);
+
+    dev_ext = dev->DeviceExtension;
+    ASSERT(dev_ext);
+
+    KeAcquireSpinLock(&dev_ext->Lock, &irql);
+    if (dev_ext->NotAvailable) {
+        status = STATUS_NO_SUCH_DEVICE;
+      } else {
+        InsertTailList(dev_ext->IrpQueue, &irp->Tail.Overlay.ListEntry);
+        status = STATUS_SUCCESS;
+      }
+    KeReleaseSpinLock(&dev_ext->Lock, irql);
+    KeSetEvent(&dev_ext->IrpArrival, 0, FALSE);
+
+    return status;
+  }
+
+/**
+ * The device thread for a mini-driver device
+ *
+ * @param Context
+ *   The device object
+ *
+ * This routine will process IRPs (and pseudo-IRPs) in the device's queue
+ */
+static VOID STDCALL WvDeviceThread(IN VOID * context) {
+    DEVICE_OBJECT * dev;
+    WV_S_DEV_EXT * dev_ext;
+    LARGE_INTEGER timeout;
+    LIST_ENTRY * link;
+    BOOLEAN stop;
+    KIRQL irql;
+    IRP * irp;
+    S_WVL_DEVICE_THREAD_WORK_ITEM * work_item;
+
+    dev = context;
+    ASSERT(dev);
+
+    DBG("Thread for device %p started\n", (VOID *) dev);
+
+    dev_ext = dev->DeviceExtension;
+    ASSERT(dev_ext);
+
+    /* Wake up at least every 30 seconds. */
+    timeout.QuadPart = -300000000LL;
+
+    stop = FALSE;
+    KeAcquireSpinLock(&dev_ext->Lock, &irql);
+    while (1) {
+        link = RemoveHeadList(dev_ext->IrpQueue);
+        ASSERT(link);
+
+        /* Did we finish our pass through the IRP queue? */
+        if (link == dev_ext->IrpQueue) {
+            /* Yes */
+            KeReleaseSpinLock(&dev_ext->Lock, irql);
+
+            /* Are we stopping? */
+            if (stop) {
+                /*
+                 * Yes.  All IRPs have been processed and no more
+                 * can be added, since the device was marked as no
+                 * longer available before 'stop' was set
+                 */
+                break;
+              }
+
+            /* Otherwise, wait for more work or the timeout */
+            KeWaitForSingleObject(
+                &dev_ext->IrpArrival,
+                Executive,
+                KernelMode,
+                FALSE,
+                &timeout
+              );
+            KeClearEvent(&dev_ext->IrpArrival);
+            KeAcquireSpinLock(&dev_ext->Lock, &irql);
+            continue;
+          }
+
+        /* Otherwise, examine the IRP */
+        irp = CONTAINING_RECORD(link, IRP, Tail.Overlay.ListEntry);
+        ASSERT(irp);
+
+        /* Is this a work item? */
+        if (irp->Tail.Overlay.DriverContext[0]) {
+            /* Yes */
+            work_item = CONTAINING_RECORD(
+                irp,
+                S_WVL_DEVICE_THREAD_WORK_ITEM,
+                DummyIrp
+              );
+            ASSERT(work_item);
+
+            /* Check for a stop signal */
+            if (work_item->Function == WvStopDeviceThreadInThread)
+              dev_ext->NotAvailable = TRUE;
+
+            /* Restore the IRQL and process the work item */
+            KeReleaseSpinLock(&dev_ext->Lock, irql);
+            WvProcessDeviceThreadWorkItem(dev, work_item, stop);
+          } else {
+            /* This is a normal IRP.  Restore the IRQL and process it */
+            KeReleaseSpinLock(&dev_ext->Lock, irql);
+            WvProcessDeviceIrp(dev, irp, stop);
+          }
+
+        /* Continue processing the IRP queue */
+        KeAcquireSpinLock(&dev_ext->Lock, &irql);
+
+        /* Check if we should be stopping, soon */
+        if (dev_ext->NotAvailable)
+          stop = TRUE;
+      }
+
+    DBG("Thread for device %p terminated\n", (VOID *) dev);
+    PsTerminateSystemThread(STATUS_SUCCESS);
+  }
+
+/**
+ * Process a device thread work item
+ *
+ * @param Device
+ *   The device to process the work item
+ *
+ * @param WorkItem
+ *   The work item to process
+ *
+ * @param DeviceNotAvailable
+ *   A boolean specifying whether or not to reject the work item
+ */
+static VOID WvProcessDeviceThreadWorkItem(
+    IN DEVICE_OBJECT * dev,
+    IN S_WVL_DEVICE_THREAD_WORK_ITEM * work_item,
+    IN BOOLEAN reject
+  ) {
+    VOID ** ptrs;
+
+    ASSERT(dev);
+    ASSERT(work_item);
+
+    if (reject) {
+        work_item->Status = STATUS_NO_SUCH_DEVICE;
+      } else {
+        /* Call the work item function, passing the device and context */
+        ptrs = work_item->DummyIrp->Tail.Overlay.DriverContext;
+        ASSERT(work_item->Function);
+        work_item->Status = work_item->Function(dev, ptrs[1]);
+
+        /* Possible cleanup */
+        /* TODO: Move this 'if' into 'wv_free'? */
+        if (ptrs[2])
+          wv_free(ptrs[2]);
+      }
+
+    /* Signal that the work item has been completed */
+    KeSetEvent(&work_item->Complete, 0, FALSE);
+  }
+
+/**
+ * Process an IRP in a device's thread context
+ *
+ * @param Device
+ *   The device to process the IRP
+ *
+ * @param Irp
+ *   The IRP to process
+ *
+ * @param DeviceNotAvailable
+ *   A boolean specifying whether or not to reject the IRP
+ */
+static VOID WvProcessDeviceIrp(
+    IN DEVICE_OBJECT * dev,
+    IN IRP * irp,
+    IN BOOLEAN reject
+  ) {
+    WV_S_DEV_EXT * dev_ext;
+    ASSERT(dev);
+    ASSERT(irp);
+
+    if (reject) {
+        irp->IoStatus.Status = STATUS_NO_SUCH_DEVICE;
+        IoCompleteRequest(irp, IO_NO_INCREMENT);
+      } else {
+        /* Dispatch the IRP */
+        dev_ext = dev->DeviceExtension;
+        ASSERT(dev_ext);
+        ASSERT(dev_ext->IrpDispatch);
+        dev_ext->IrpDispatch(dev, irp);
+      }
   }

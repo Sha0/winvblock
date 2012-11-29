@@ -39,17 +39,31 @@
 
 /** Object types */
 
-typedef struct S_WVL_MINI_DRIVER S_WVL_MINI_DRIVER;
-
 typedef struct S_WVL_LOCKED_LIST S_WVL_LOCKED_LIST;
 
 typedef struct S_WVL_RESOURCE_TRACKER S_WVL_RESOURCE_TRACKER;
 
-/* The physical/function device object's (PDO's/FDO's) DeviceExtension */
-typedef struct WV_DEV_EXT {
-    struct WV_DEV_T * device;
-    PDRIVER_DISPATCH IrpDispatch;
-  } WV_S_DEV_EXT, * WV_SP_DEV_EXT;
+typedef struct S_WVL_MINI_DRIVER S_WVL_MINI_DRIVER;
+
+typedef struct WV_DEV_EXT WV_S_DEV_EXT, * WV_SP_DEV_EXT;
+
+typedef struct S_WVL_DEVICE_THREAD_WORK_ITEM S_WVL_DEVICE_THREAD_WORK_ITEM;
+
+/** Function types */
+
+/**
+ * The type of a function to be called within a device's thread context
+ *
+ * @param Device
+ *   The device whose thread context the function will be called within
+ *
+ * @param Context
+ *   Optional.  Additional context to pass to the function
+ *
+ * @return
+ *   The status of the operation
+ */
+typedef NTSTATUS F_WVL_DEVICE_THREAD_FUNCTION(IN DEVICE_OBJECT *, IN VOID *);
 
 /* Haven't found a better place for this, yet. */
 extern NTSTATUS STDCALL WvDriverGetDevCapabilities(
@@ -217,6 +231,95 @@ extern WVL_M_LIB VOID WvlDecrementResourceUsage(
   );
 
 /**
+ * Create a mini-driver device
+ *
+ * @param MiniDriver
+ *   The mini-driver associated with the device
+ *
+ * @param DeviceExtensionSize
+ *   The size of the device extension, in bytes.  This must be at least
+ *   large enough to hold a WV_S_DEV_EXT, as the device extension for
+ *   all mini-driver devices must point to a WV_S_DEV_EXT
+ *
+ * @param DeviceName
+ *   Optional.  The name of the device
+ *
+ * @param DeviceType
+ *   The device type
+ *
+ * @param DeviceCharacteristics
+ *   Flags for the device characteristics
+ *
+ * @param Exclusive
+ *   Determines whether or not to allow multiple handles to the device
+ *
+ * @param DeviceObject
+ *   Points to the DEVICE_OBJECT pointer to populate with a pointer to
+ *   the created mini-driver device
+ *
+ * @return
+ *   The status of the operation
+ *
+ * Each mini-driver device has an associated thread
+ */
+extern WVL_M_LIB NTSTATUS STDCALL WvlCreateDevice(
+    IN S_WVL_MINI_DRIVER * MiniDriver,
+    IN ULONG DeviceExtensionSize,
+    IN UNICODE_STRING * DeviceName,
+    IN DEVICE_TYPE DeviceType,
+    IN ULONG DeviceCharacteristics,
+    IN BOOLEAN Exclusive,
+    OUT DEVICE_OBJECT ** DeviceObject
+  );
+
+/**
+ * Delete a mini-driver device
+ *
+ * @param Device
+ *   The mini-driver device to be deleted
+ */
+extern WVL_M_LIB VOID STDCALL WvlDeleteDevice(IN DEVICE_OBJECT * Device);
+
+/**
+ * Call a function in a device's thread context
+ *
+ * @param Device
+ *   The device whose thread context will be used
+ *
+ * @param Function
+ *   The function to be called
+ *
+ * @param Context
+ *   Optional.  Additional context to pass to the function
+ *
+ * @param Wait
+ *   Specifies whether or not to wait for the called function to complete.
+ *   If FALSE, a work item will be allocated from non-paged pool and will
+ *   be freed once the called function has completed
+ *
+ * @retval STATUS_INSUFFICIENT_RESOURCES
+ *   If 'Wait' was FALSE, this means that a work item could not be
+ *   allocated from non-paged pool.  Otherwise, this is the status returned
+ *   by the called function
+ * @retval STATUS_SUCCESS
+ *   If 'Wait' was FALSE, this means the the work item was enqueued
+ * @retval STATUS_INVALID_PARAMETER
+ *    An invalid parameter was passed to this function or, if 'Wait'
+ *    is 'TRUE', this status could also have been returned by the called
+ *    function
+ * @retval STATUS_NO_SUCH_DEVICE
+ *    Returned if the device is no longer available
+ * @return
+ *   If 'Wait' was TRUE, the status is that returned by the called function
+ */
+extern WVL_M_LIB NTSTATUS STDCALL WvlCallFunctionInDeviceThread(
+    IN DEVICE_OBJECT * Device,
+    IN F_WVL_DEVICE_THREAD_FUNCTION * Function,
+    IN VOID * Context,
+    IN BOOLEAN Wait
+  );
+
+/**
  * Miscellaneous: Grouped memory allocation functions.
  */
 
@@ -241,21 +344,6 @@ extern WVL_M_LIB PVOID STDCALL WvlMemGroupBatchAlloc(
 
 /** Struct/union type definitions */
 
-/** A mini-driver */
-struct S_WVL_MINI_DRIVER {
-    /** Position in the list of registered mini-drivers */
-    LIST_ENTRY Link[1];
-
-    /** The mini-driver's driver object, provided by Windows */
-    DRIVER_OBJECT * DriverObject;
-
-    /** Probe and potentially drive a PDO with an FDO */
-    DRIVER_ADD_DEVICE * AddDevice;
-
-    /** Perform mini-driver cleanup */
-    DRIVER_UNLOAD * Unload;
-  };
-
 /** An atomic list */
 struct S_WVL_LOCKED_LIST {
     LIST_ENTRY List[1];
@@ -269,6 +357,75 @@ struct S_WVL_RESOURCE_TRACKER {
 
     /** An event that is set when the usage count is zero */
     KEVENT ZeroUsage;
+  };
+
+/** A mini-driver */
+struct S_WVL_MINI_DRIVER {
+    /** Position in the list of registered mini-drivers */
+    LIST_ENTRY Link[1];
+
+    /** The mini-driver's driver object, provided by Windows */
+    DRIVER_OBJECT * DriverObject;
+
+    /** Probe and potentially drive a PDO with an FDO */
+    DRIVER_ADD_DEVICE * AddDevice;
+
+    /** Perform mini-driver cleanup */
+    DRIVER_UNLOAD * Unload;
+
+    /** Track mini-driver usage */
+    S_WVL_RESOURCE_TRACKER Usage[1];
+  };
+
+/** The common part of the device extension for all mini-driver devices */
+struct WV_DEV_EXT {
+    /** Points to the old common device extension.  TODO: Rework */
+    struct WV_DEV_T * device;
+
+    /** The IRP dispatch function */
+    DRIVER_DISPATCH * IrpDispatch;
+
+    /** The device thread's signal for IRP arrival */
+    KEVENT IrpArrival;
+
+    /** A handle to the device thread */
+    HANDLE ThreadHandle;
+
+    /** The device's IRP queue.  Requires lock for modification */
+    LIST_ENTRY IrpQueue[1];
+
+    /** Is the device available?  Requires lock for modification */
+    BOOLEAN NotAvailable;
+
+    /** The device lock */
+    KSPIN_LOCK Lock;
+
+    /** The device's mini-driver */
+    S_WVL_MINI_DRIVER * MiniDriver;
+
+    /** The device usage */
+    S_WVL_RESOURCE_TRACKER Usage[1];
+  };
+
+/** A pseudo-IRP device thread work item */
+struct S_WVL_DEVICE_THREAD_WORK_ITEM {
+    /**
+     * The device thread function to be called when this work
+     * item is processed
+     */
+    F_WVL_DEVICE_THREAD_FUNCTION * Function;
+
+    /** Signals when the function to be called has completed */
+    KEVENT Complete;
+
+    /** The status returned by the called function */
+    NTSTATUS Status;
+
+    /**
+     * A dummy IRP that can be linked to the device's IRP queue.
+     * (What a waste of space!)
+     */
+    IRP DummyIrp[1];
   };
 
 /** Objects */
