@@ -682,12 +682,11 @@ WVL_M_LIB VOID WvlDeregisterMiniDriver(
  *   The driver object provided by Windows
  */
 static VOID STDCALL WvUnloadMiniDriver(IN DRIVER_OBJECT * drv_obj) {
-    KIRQL irql;
     LIST_ENTRY * cur_link;
     S_WVL_MINI_DRIVER * minidriver;
 
     /* Find the associated mini-driver(s) */
-    KeAcquireSpinLock(&WvRegisteredMiniDrivers->Lock, &irql);
+    WvlAcquireLockedList(WvRegisteredMiniDrivers);
     for (
         cur_link = WvRegisteredMiniDrivers->List->Flink;
         cur_link != WvRegisteredMiniDrivers->List;
@@ -698,17 +697,17 @@ static VOID STDCALL WvUnloadMiniDriver(IN DRIVER_OBJECT * drv_obj) {
 
         /* Check for a match */
         if (minidriver->DriverObject == drv_obj) {
-            KeReleaseSpinLock(&WvRegisteredMiniDrivers->Lock, irql);
+            WvlReleaseLockedList(WvRegisteredMiniDrivers);
 
             ASSERT(minidriver->Unload);
             minidriver->Unload(drv_obj);
 
             /* Start over at the beginning of the list */
-            KeAcquireSpinLock(&WvRegisteredMiniDrivers->Lock, &irql);
+            WvlAcquireLockedList(WvRegisteredMiniDrivers);
             cur_link = WvRegisteredMiniDrivers->List;
           }
       }
-    KeReleaseSpinLock(&WvRegisteredMiniDrivers->Lock, irql);
+    WvlReleaseLockedList(WvRegisteredMiniDrivers);
   }
 
 /**
@@ -735,8 +734,20 @@ static VOID WvDeregisterMiniDrivers(void) {
 /* TODO: Find a better place for this and adjust headers */
 WVL_M_LIB VOID WvlInitializeLockedList(OUT S_WVL_LOCKED_LIST * list) {
     ASSERT(list);
-    KeInitializeSpinLock(&list->Lock);
+    KeInitializeEvent(&list->Lock, SynchronizationEvent, TRUE);
     InitializeListHead(list->List);
+  }
+
+/* TODO: Find a better place for this and adjust headers */
+WVL_M_LIB VOID WvlAcquireLockedList(IN S_WVL_LOCKED_LIST * list) {
+    ASSERT(list);
+    KeWaitForSingleObject(&list->Lock, Executive, KernelMode, FALSE, NULL);
+  }
+
+/* TODO: Find a better place for this and adjust headers */
+WVL_M_LIB VOID WvlReleaseLockedList(IN S_WVL_LOCKED_LIST * list) {
+    ASSERT(list);
+    KeSetEvent(&list->Lock, 0, FALSE);
   }
 
 /* TODO: Find a better place for this and adjust headers */
@@ -746,7 +757,9 @@ WVL_M_LIB VOID WvlAppendLockedListLink(
   ) {
     ASSERT(list);
     ASSERT(link);
-    ExInterlockedInsertTailList(list->List, link, &list->Lock);
+    WvlAcquireLockedList(list);
+    InsertTailList(list->List, link);
+    WvlReleaseLockedList(list);
   }
 
 /* TODO: Find a better place for this and adjust headers */
@@ -754,14 +767,13 @@ WVL_M_LIB BOOLEAN WvlRemoveLockedListLink(
     IN OUT S_WVL_LOCKED_LIST * list,
     IN OUT LIST_ENTRY * link
   ) {
-    KIRQL irql;
     BOOLEAN result;
 
     ASSERT(list);
     ASSERT(link);
-    KeAcquireSpinLock(&list->Lock, &irql);
+    WvlAcquireLockedList(list);
     result = RemoveEntryList(link);
-    KeReleaseSpinLock(&list->Lock, irql);
+    WvlReleaseLockedList(list);
     return result;
   }
 

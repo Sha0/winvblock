@@ -160,6 +160,22 @@ extern WVL_M_LIB VOID WvlDeregisterMiniDriver(
 extern WVL_M_LIB VOID WvlInitializeLockedList(OUT S_WVL_LOCKED_LIST * List);
 
 /**
+ * Acquire the lock for an atomic list
+ *
+ * @param List
+ *   The atomic list to acquire the lock for
+ */
+extern WVL_M_LIB VOID WvlAcquireLockedList(IN S_WVL_LOCKED_LIST * List);
+
+/**
+ * Release the lock for an atomic list
+ *
+ * @param List
+ *   The atomic list to release the lock for
+ */
+extern WVL_M_LIB VOID WvlReleaseLockedList(IN S_WVL_LOCKED_LIST * List);
+
+/**
  * Append an item to an atomic list
  *
  * @param List
@@ -347,7 +363,7 @@ extern WVL_M_LIB PVOID STDCALL WvlMemGroupBatchAlloc(
 /** An atomic list */
 struct S_WVL_LOCKED_LIST {
     LIST_ENTRY List[1];
-    KSPIN_LOCK Lock;
+    KEVENT Lock;
   };
 
 /** Track resource usage */
