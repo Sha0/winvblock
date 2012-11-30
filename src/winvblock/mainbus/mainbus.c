@@ -22,7 +22,7 @@
 /**
  * @file
  *
- * WinVBlock driver bus specifics.
+ * Main bus specifics
  */
 
 #include <stdio.h>
@@ -52,10 +52,11 @@
 #define WV_M_BUS_NAME (L"\\Device\\" WVL_M_WLIT)
 #define WV_M_BUS_DOSNAME (L"\\DosDevices\\" WVL_M_WLIT)
 
+/** Object types */
+typedef struct S_WV_MAIN_BUS S_WV_MAIN_BUS;
+
 /** Public functions */
 NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING);
-NTSTATUS STDCALL WvBusAttach(IN PDEVICE_OBJECT);
-VOID WvBusCleanup(void);
 NTSTATUS STDCALL WvBusDevCtl(IN PIRP, IN ULONG POINTER_ALIGNMENT);
 WVL_F_BUS_PNP WvBusPnpQueryDevText;
 
@@ -70,8 +71,6 @@ UNICODE_STRING WvBusDosname = {
     sizeof WV_M_BUS_DOSNAME - sizeof (WCHAR),
     WV_M_BUS_DOSNAME
   };
-BOOLEAN WvSymlinkDone = FALSE;
-KSPIN_LOCK WvBusPdoLock;
 /* The main bus. */
 WVL_S_BUS_T WvBus = {0};
 WV_S_DEV_T WvBusDev = {0};
@@ -81,6 +80,19 @@ WV_S_DEV_T WvBusDev = {0};
 /* TODO: DRIVER_ADD_DEVICE isn't available in DDK 3790.1830, it seems */
 static DRIVER_ADD_DEVICE WvMainBusDriveDevice;
 static DRIVER_UNLOAD WvMainBusUnload;
+static F_WVL_DEVICE_THREAD_FUNCTION WvMainBusDriveDeviceInThread;
+static VOID WvMainBusOldProbe(DEVICE_OBJECT * DeviceObject);
+
+/** Struct/union type definitions */
+
+/** The bus extension type */
+struct S_WV_MAIN_BUS {
+    /** This must be the first member of all extension types */
+    WV_S_DEV_EXT DeviceExtension[1];
+
+    /** The lower device this FDO is attached to, if any */
+    DEVICE_OBJECT * LowerDeviceObject;
+  };
 
 /** Private objects */
 
@@ -88,6 +100,9 @@ static WVL_S_BUS_NODE WvBusSafeHookChild;
 
 /** This mini-driver */
 static S_WVL_MINI_DRIVER * WvMainBusMiniDriver;
+
+/** The main bus */
+static DEVICE_OBJECT * WvMainBusDevice;
 
 /**
  * The mini-driver entry-point
@@ -123,9 +138,11 @@ NTSTATUS STDCALL WvMainBusDriverEntry(
     if (!NT_SUCCESS(status))
       goto err_bus;
 
+    /* Do not introduce more resource acquisition, here */
+
     return status;
 
-    WvBusCleanup();
+    /* Nothing to do.  See comment, above */
     err_bus:
 
     WvlDeregisterMiniDriver(WvMainBusMiniDriver);
@@ -135,22 +152,30 @@ NTSTATUS STDCALL WvMainBusDriverEntry(
   }
 
 /**
- * Drive a supported device
+ * Drive a PDO with the main bus FDO
  *
  * @param DriverObject
  *   The driver object provided by the caller
  *
  * @param PhysicalDeviceObject
- *   The PDO to probe and attach an FDO to
+ *   The PDO to probe and attach the main bus FDO to
  *
  * @return
  *   The status of the operation
  */
 static NTSTATUS STDCALL WvMainBusDriveDevice(
-    IN PDRIVER_OBJECT driver_obj,
-    IN PDEVICE_OBJECT pdo
+    IN DRIVER_OBJECT * drv_obj,
+    IN DEVICE_OBJECT * pdo
   ) {
-    return WvBusAttach(pdo);
+    ASSERT(drv_obj);
+    (VOID) drv_obj;
+    ASSERT(WvMainBusDevice);
+    return WvlCallFunctionInDeviceThread(
+        WvMainBusDevice,
+        WvMainBusDriveDeviceInThread,
+        pdo,
+        TRUE
+      );
   }
 
 /**
@@ -160,73 +185,97 @@ static NTSTATUS STDCALL WvMainBusDriveDevice(
  *   The driver object provided by the caller
  */
 static VOID STDCALL WvMainBusUnload(IN DRIVER_OBJECT * drv_obj) {
+    ASSERT(drv_obj);
+    (VOID) drv_obj;
     WvlDeregisterMiniDriver(WvMainBusMiniDriver);
-    WvBusCleanup();
+    return;
   }
 
 /**
- * Attempt to attach the bus to a PDO.
+ * Drive a PDO with the main bus FDO
  *
- * @v pdo               The PDO to attach to.
- * @ret NTSTATUS        The status of the operation.
+ * @param DeviceObject
+ *   The main bus FDO
  *
- * This function will return a failure status if the bus is already attached.
+ * @param Context
+ *   The PDO to probe and attach the main bus FDO to
+ *
+ * @return
+ *   The status of the operation
  */
-NTSTATUS STDCALL WvBusAttach(PDEVICE_OBJECT Pdo) {
-    S_X86_SEG16OFF16 int_13h;
-    KIRQL irql;
+static NTSTATUS WvMainBusDriveDeviceInThread(
+    DEVICE_OBJECT * dev_obj,
+    VOID * context
+  ) {
+    DEVICE_OBJECT * const pdo = context;
+    S_WV_MAIN_BUS * bus;
     NTSTATUS status;
-    PDEVICE_OBJECT lower;
+    DEVICE_OBJECT * lower;
+    
+
+    ASSERT(dev_obj);
+    bus = dev_obj->DeviceExtension;
+    ASSERT(bus);
+    ASSERT(pdo);
+
+    /* Assume failure */
+    status = STATUS_NOT_SUPPORTED;
+
+    /*
+     * If we're already attached, reject the request.  If the PDO
+     * belongs to us, also reject the request
+     */
+    if (bus->LowerDeviceObject || pdo->DriverObject == dev_obj->DriverObject) {
+        DBG("Refusing to drive PDO %p\n", (VOID *) pdo);
+        goto err_params;
+      }
+
+    /* Attach the FDO to the PDO */
+    lower = IoAttachDeviceToDeviceStack(dev_obj, pdo);
+    if (!lower) {
+        DBG("Error driving PDO %p!\n", (VOID *) pdo);
+        goto err_lower;
+      }
+    bus->LowerDeviceObject = lower;
+
+    /* TODO: Remove these once this when the modules are mini-drivers */
+    WvBus.LowerDeviceObject = lower;
+    WvBus.Pdo = pdo;
+    WvBus.State = WvlBusStateStarted;
+    WvMainBusOldProbe(dev_obj);
+
+    DBG("Driving PDO %p\n", (VOID *) pdo);
+    return STATUS_SUCCESS;
+
+    IoDetachDevice(lower);
+    err_lower:
+
+    err_params:
+
+    return status;
+  }
+
+/**
+ * Probe for default children of the main bus
+ *
+ * @param DeviceObject
+ *   The main bus FDO
+ */
+static VOID WvMainBusOldProbe(DEVICE_OBJECT * dev_obj) {
+    S_X86_SEG16OFF16 int_13h;
     PDEVICE_OBJECT safe_hook_child;
 
-    /* Allow our own raw PDOs to be installed */
-    if (Pdo->DriverObject == WvDriverObj)
-      return STATUS_SUCCESS;
+    ASSERT(dev_obj);
 
-    /* Do we alreay have our main bus? */
-    KeAcquireSpinLock(&WvBusPdoLock, &irql);
-    if (WvBus.Pdo) {
-        KeReleaseSpinLock(&WvBusPdoLock, irql);
-        DBG("Already have the main bus.  Refusing.\n");
-        status = STATUS_NOT_SUPPORTED;
-        goto err_already_established;
-      }
-    WvBus.Pdo = Pdo;
-    KeReleaseSpinLock(&WvBusPdoLock, irql);
-    WvBus.State = WvlBusStateStarted;
-    /* Attach the FDO to the PDO. */
-    lower = IoAttachDeviceToDeviceStack(
-        WvBus.Fdo,
-        Pdo
-      );
-    if (lower == NULL) {
-        status = STATUS_NO_SUCH_DEVICE;
-        DBG("IoAttachDeviceToDeviceStack() failed!\n");
-        goto err_attach;
-      }
-    DBG("Attached to PDO %p.\n", Pdo);
-    WvBus.LowerDeviceObject = lower;
-
-    /* Probe for disks. */
+    /* Probe for children */
     int_13h.Segment = 0;
     int_13h.Offset = 0x13 * sizeof int_13h;
-    safe_hook_child = WvSafeHookProbe(&int_13h, WvBus.Fdo);
+    safe_hook_child = WvSafeHookProbe(&int_13h, dev_obj);
     if (safe_hook_child) {
         WvlBusInitNode(&WvBusSafeHookChild, safe_hook_child);
         WvlBusAddNode(&WvBus, &WvBusSafeHookChild);
       }
     WvMemdiskFind();
-
-    return STATUS_SUCCESS;
-
-    IoDetachDevice(lower);
-    err_attach:
-
-    WvBus.Pdo = NULL;
-    err_already_established:
-
-    DBG("Failed to attach.\n");
-    return status;
   }
 
 /* Handle an IRP. */
@@ -265,25 +314,31 @@ static NTSTATUS WvBusIrpDispatch(
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
-/* Establish the bus FDO, thread, and possibly PDO. */
-NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING RegistryPath) {
+/**
+ * Establish the bus FDO, thread, and possibly PDO
+ *
+ * @param RegistryPath
+ *   Points to the unicode string for the driver's parameters
+ *
+ * @return
+ *   The status of the operation
+ */
+NTSTATUS STDCALL WvBusEstablish(IN UNICODE_STRING * reg_path) {
     NTSTATUS status;
+    S_WV_MAIN_BUS * bus;
     PDEVICE_OBJECT fdo = NULL;
     HANDLE reg_key;
     UINT32 pdo_done = 0;
     PDEVICE_OBJECT pdo = NULL;
 
-    /* Initialize the spin-lock for WvBusAttach(). */
-    KeInitializeSpinLock(&WvBusPdoLock);
-
-    /* Initialize the bus. */
+    /* Initialize the bus */
     WvlBusInit(&WvBus);
     WvDevInit(&WvBusDev);
 
-    /* Create the bus FDO. */
-    status = IoCreateDevice(
-        WvDriverObj,
-        sizeof (WV_S_DEV_EXT),
+    /* Create the bus FDO */
+    status = WvlCreateDevice(
+        WvMainBusMiniDriver,
+        sizeof *bus,
         &WvBusName,
         FILE_DEVICE_CONTROLLER,
         FILE_DEVICE_SECURE_OPEN,
@@ -291,23 +346,26 @@ NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING RegistryPath) {
         &fdo
       );
     if (!NT_SUCCESS(status)) {
-        DBG("IoCreateDevice() failed!\n");
+        DBG("WvlCreateDevice() failed!\n");
         goto err_fdo;
       }
-    WvBus.Fdo = fdo;
-    WvBusDev.Self = WvBus.Fdo;
+    ASSERT(fdo);
+    WvMainBusDevice = WvBusDev.Self = WvBus.Fdo = fdo;
+    bus = fdo->DeviceExtension;
+    ASSERT(bus);
     WvBusDev.IsBus = TRUE;
     WvBus.QueryDevText = WvBusPnpQueryDevText;
     WvDevForDevObj(WvBus.Fdo, &WvBusDev);
     WvDevSetIrpHandler(WvBus.Fdo, WvBusIrpDispatch);
-    WvBus.Fdo->Flags |= DO_DIRECT_IO;         /* FIXME? */
-    WvBus.Fdo->Flags |= DO_POWER_INRUSH;      /* FIXME? */
+    /* TODO: Review the following two settings */
+    WvBus.Fdo->Flags |= DO_DIRECT_IO;
+    WvBus.Fdo->Flags |= DO_POWER_INRUSH;
     WvBus.Fdo->Flags &= ~DO_DEVICE_INITIALIZING;
     #ifdef RIS
     WvBus.Dev.State = Started;
     #endif
 
-    /* DosDevice symlink. */
+    /* DosDevice symlink */
     status = IoCreateSymbolicLink(
         &WvBusDosname,
         &WvBusName
@@ -316,23 +374,22 @@ NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING RegistryPath) {
         DBG("IoCreateSymbolicLink() failed!\n");
         goto err_dos_symlink;
       }
-    WvSymlinkDone = TRUE;
 
-    /* Open our Registry path. */
-    status = WvlRegOpenKey(RegistryPath->Buffer, &reg_key);
+    /* Open our Registry path */
+    status = WvlRegOpenKey(reg_path->Buffer, &reg_key);
     if (!NT_SUCCESS(status)) {
         DBG("Couldn't open Registry path!\n");
         goto err_reg;
       }
 
-    /* Check the Registry to see if we've already got a PDO. */
+    /* Check the Registry to see if we've already got a PDO */
     status = WvlRegFetchDword(reg_key, L"PdoDone", &pdo_done);
     if (NT_SUCCESS(status) && pdo_done) {
         WvlRegCloseKey(reg_key);
         return status;
       }
 
-    /* If not, create a root-enumerated PDO for our bus. */
+    /* If not, create a root-enumerated PDO for our bus */
     IoReportDetectedDevice(
         WvDriverObj,
         InterfaceTypeUndefined,
@@ -344,52 +401,42 @@ NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING RegistryPath) {
         &pdo
       );
     if (pdo == NULL) {
-        DBG("IoReportDetectedDevice() went wrong!  Exiting.\n");
+        DBG("IoReportDetectedDevice() went wrong!  Exiting\n");
         status = STATUS_UNSUCCESSFUL;
         goto err_pdo;
       }
 
-    /* Remember that we have a PDO for next time. */
+    /* Remember that we have a PDO for next time */
     status = WvlRegStoreDword(reg_key, L"PdoDone", 1);
     if (!NT_SUCCESS(status)) {
-        DBG("Couldn't save PdoDone to Registry.  Oh well.\n");
+        DBG("Couldn't save PdoDone to Registry.  Oh well\n");
       }
-    /* Attach FDO to PDO. */
-    status = WvBusAttach(pdo);
+    /* Attach FDO to PDO */
+    status = WvMainBusDriveDevice(WvMainBusDevice->DriverObject, pdo);
     if (!NT_SUCCESS(status)) {
-        DBG("WvBusAttach() went wrong!\n");
+        DBG("WvMainBusDriveDevice() went wrong!\n");
         goto err_attach;
       }
-    /* PDO created, FDO attached.  All done. */
+    /* PDO created, FDO attached.  All done */
     return STATUS_SUCCESS;
 
     err_attach:
 
-    /* Should we really delete an IoReportDetectedDevice() device? */
+    /* TODO: Should we really delete an IoReportDetectedDevice() device? */
     IoDeleteDevice(pdo);
     err_pdo:
 
     WvlRegCloseKey(reg_key);
     err_reg:
 
-    /* Cleanup by WvBusCleanup() */
+    IoDeleteSymbolicLink(&WvBusDosname);
     err_dos_symlink:
 
-    /* Cleanup by WvBusCleanup() */
+    WvlDeleteDevice(WvBus.Fdo);
+    WvBus.Fdo = NULL;
     err_fdo:
 
     return status;
-  }
-
-/* Tear down WinVBlock bus resources. */
-VOID WvBusCleanup(void) {
-    if (WvSymlinkDone)
-      IoDeleteSymbolicLink(&WvBusDosname);
-    /* Similar to IRP_MJ_PNP:IRP_MN_REMOVE_DEVICE */
-    WvlBusClear(&WvBus);
-    IoDeleteDevice(WvBus.Fdo);
-    WvBus.Fdo = NULL;
-    return;
   }
 
 /* TODO: Cosmetic changes */
@@ -562,4 +609,14 @@ NTSTATUS STDCALL WvBusPnpQueryDevText(
 
 WVL_M_LIB DEVICE_OBJECT * WvBusFdo(void) {
     return WvBus.Fdo;
+  }
+
+/**
+ * Signal the main bus that it's time to go away
+ */
+VOID WvMainBusRemove(void) {
+    /* This will be called from the main bus' thread */
+    ASSERT(WvMainBusDevice);
+    IoDeleteSymbolicLink(&WvBusDosname);
+    WvlDeleteDevice(WvMainBusDevice);
   }

@@ -1,9 +1,9 @@
 /**
- * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2012, Shao Miller <sha0.miller@gmail.com>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
- * This file is part of WinVBlock, derived from WinAoE.
+ * This file is part of WinVBlock, originally derived from WinAoE.
  *
  * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +35,10 @@
 #include "irp.h"
 #include "bus.h"
 #include "debug.h"
+
+/* TODO: Remove these when the main bus module is a mini-driver */
+extern WVL_M_LIB DEVICE_OBJECT * WvBusFdo(void);
+extern VOID WvMainBusRemove(void);
 
 static NTSTATUS STDCALL WvlBusPnpIoCompletion(
     IN PDEVICE_OBJECT dev_obj,
@@ -92,6 +96,11 @@ static NTSTATUS STDCALL WvlBusPnpRemoveDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
         status = IoCallDriver(lower, irp);
       }
     WvlBusClear(bus);
+
+    /* TODO: Remove this when the main bus module is a mini-driver */
+    if (bus->Fdo == WvBusFdo())
+      WvMainBusRemove();
+
     /* Without a lower DEVICE_OBJECT, we have to complete the IRP. */
     if (!lower)
       return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
