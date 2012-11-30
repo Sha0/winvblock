@@ -94,7 +94,6 @@ static NTSTATUS WvStartDeviceThread(IN DEVICE_OBJECT * Device);
 static VOID WvStopDeviceThread(IN DEVICE_OBJECT * Device);
 static F_WVL_DEVICE_THREAD_FUNCTION WvStopDeviceThreadInThread;
 static F_WVL_DEVICE_THREAD_FUNCTION WvTestDeviceThread;
-static NTSTATUS WvAddIrpToDeviceQueue(IN DEVICE_OBJECT * Device, IN IRP * Irp);
 /* KSTART_ROUTINE isn't available in DDK 3790.1830, it seems */
 static VOID WvDeviceThread(VOID * Context);
 static VOID WvProcessDeviceThreadWorkItem(
@@ -513,7 +512,7 @@ static NTSTATUS WvDriverDispatchIrp(
         ptrs[2] = &irp_status;
 
         /* Add the IRP to the device's queue */
-        status = WvAddIrpToDeviceQueue(dev_obj, irp);
+        status = WvlAddIrpToDeviceQueue(dev_obj, irp);
         if (!NT_SUCCESS(status))
           return status;
 
@@ -1013,16 +1012,38 @@ WVL_M_LIB NTSTATUS STDCALL WvlCreateDevice(
     return status;
   }
 
-WVL_M_LIB VOID STDCALL WvlDeleteDevice(IN DEVICE_OBJECT * dev) {
+WVL_M_LIB VOID STDCALL WvlDeleteDevice(IN DEVICE_OBJECT * dev_obj) {
+    WV_S_DEV_EXT * dev_ext;
+
+    ASSERT(dev_obj);
+    dev_ext = dev_obj->DeviceExtension;
+    ASSERT(dev_ext);
+
+    WvlLockDevice(dev_obj);
+    dev_ext->NotAvailable = TRUE;
+    WvlUnlockDevice(dev_obj);
+  }
+
+WVL_M_LIB VOID STDCALL WvlLockDevice(IN DEVICE_OBJECT * dev_obj) {
     WV_S_DEV_EXT * dev_ext;
     KIRQL irql;
 
-    ASSERT(dev);
-    dev_ext = dev->DeviceExtension;
+    ASSERT(dev_obj);
+    dev_ext = dev_obj->DeviceExtension;
     ASSERT(dev_ext);
+
     KeAcquireSpinLock(&dev_ext->Lock, &irql);
-    dev_ext->NotAvailable = TRUE;
-    KeReleaseSpinLock(&dev_ext->Lock, irql);
+    dev_ext->PreLockIrql = irql;
+  }
+
+WVL_M_LIB VOID STDCALL WvlUnlockDevice(IN DEVICE_OBJECT * dev_obj) {
+    WV_S_DEV_EXT * dev_ext;
+
+    ASSERT(dev_obj);
+    dev_ext = dev_obj->DeviceExtension;
+    ASSERT(dev_ext);
+
+    KeReleaseSpinLock(&dev_ext->Lock, dev_ext->PreLockIrql);
   }
 
 /**
@@ -1065,6 +1086,7 @@ static NTSTATUS WvStartDeviceThread(IN DEVICE_OBJECT * dev) {
     if (!NT_SUCCESS(status))
       goto err_create_thread;
 
+    /* Decremented by WvDeviceThread */
     WvlIncrementResourceUsage(dev_ext->Usage);
 
     status = WvlCallFunctionInDeviceThread(
@@ -1235,7 +1257,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlCallFunctionInDeviceThread(
     ptrs[2] = wait ? NULL : work_item;
     ptrs[3] = NULL;
 
-    status = WvAddIrpToDeviceQueue(dev, work_item->DummyIrp);
+    status = WvlAddIrpToDeviceQueue(dev, work_item->DummyIrp);
     if (!NT_SUCCESS(status)) {
         /* The thread is probably stopped */
         if (!wait)
@@ -1258,23 +1280,11 @@ WVL_M_LIB NTSTATUS STDCALL WvlCallFunctionInDeviceThread(
     return work_item->Status;
   }
 
-/**
- * Add an IRP (or pseudo-IRP) to a device's IRP queue
- *
- * @param Device
- *   The device to process the IRP
- *
- * @param Irp
- *   The IRP to enqueue for the device
- *
- * @retval STATUS_NO_SUCH_DEVICE
- *   The device is no longer available
- * @retval STATUS_SUCCESS
- *   The IRP was successfully queued
- */
-static NTSTATUS WvAddIrpToDeviceQueue(IN DEVICE_OBJECT * dev, IN IRP * irp) {
+WVL_M_LIB NTSTATUS STDCALL WvlAddIrpToDeviceQueue(
+    IN DEVICE_OBJECT * dev,
+    IN IRP * irp
+  ) {
     WV_S_DEV_EXT * dev_ext;
-    KIRQL irql;
     NTSTATUS status;
 
     ASSERT(dev);
@@ -1283,15 +1293,15 @@ static NTSTATUS WvAddIrpToDeviceQueue(IN DEVICE_OBJECT * dev, IN IRP * irp) {
     dev_ext = dev->DeviceExtension;
     ASSERT(dev_ext);
 
-    KeAcquireSpinLock(&dev_ext->Lock, &irql);
+    WvlLockDevice(dev);
     if (dev_ext->NotAvailable) {
         status = STATUS_NO_SUCH_DEVICE;
       } else {
         InsertTailList(dev_ext->IrpQueue, &irp->Tail.Overlay.ListEntry);
         status = STATUS_SUCCESS;
       }
-    KeReleaseSpinLock(&dev_ext->Lock, irql);
     KeSetEvent(&dev_ext->IrpArrival, 0, FALSE);
+    WvlUnlockDevice(dev);
 
     return status;
   }
@@ -1305,29 +1315,27 @@ static NTSTATUS WvAddIrpToDeviceQueue(IN DEVICE_OBJECT * dev, IN IRP * irp) {
  * This routine will process IRPs (and pseudo-IRPs) in the device's queue
  */
 static VOID STDCALL WvDeviceThread(IN VOID * context) {
-    DEVICE_OBJECT * dev;
+    DEVICE_OBJECT * const dev_obj = context;
     WV_S_DEV_EXT * dev_ext;
     LARGE_INTEGER timeout;
     LIST_ENTRY * link;
     BOOLEAN stop;
-    KIRQL irql;
     IRP * irp;
     S_WVL_DEVICE_THREAD_WORK_ITEM * work_item;
     S_WVL_MINI_DRIVER * minidriver;
 
-    dev = context;
-    ASSERT(dev);
+    ASSERT(dev_obj);
 
-    DBG("Thread for device %p started\n", (VOID *) dev);
+    DBG("Thread for device %p started\n", (VOID *) dev_obj);
 
-    dev_ext = dev->DeviceExtension;
+    dev_ext = dev_obj->DeviceExtension;
     ASSERT(dev_ext);
 
     /* Wake up at least every 30 seconds. */
     timeout.QuadPart = -300000000LL;
 
     stop = FALSE;
-    KeAcquireSpinLock(&dev_ext->Lock, &irql);
+    WvlLockDevice(dev_obj);
     while (1) {
         link = RemoveHeadList(dev_ext->IrpQueue);
         ASSERT(link);
@@ -1335,7 +1343,7 @@ static VOID STDCALL WvDeviceThread(IN VOID * context) {
         /* Did we finish our pass through the IRP queue? */
         if (link == dev_ext->IrpQueue) {
             /* Yes */
-            KeReleaseSpinLock(&dev_ext->Lock, irql);
+            WvlUnlockDevice(dev_obj);
 
             /* Are we stopping? */
             if (stop) {
@@ -1355,8 +1363,8 @@ static VOID STDCALL WvDeviceThread(IN VOID * context) {
                 FALSE,
                 &timeout
               );
+            WvlLockDevice(dev_obj);
             KeClearEvent(&dev_ext->IrpArrival);
-            KeAcquireSpinLock(&dev_ext->Lock, &irql);
             continue;
           }
 
@@ -1378,17 +1386,17 @@ static VOID STDCALL WvDeviceThread(IN VOID * context) {
             if (work_item->Function == WvStopDeviceThreadInThread)
               dev_ext->NotAvailable = TRUE;
 
-            /* Restore the IRQL and process the work item */
-            KeReleaseSpinLock(&dev_ext->Lock, irql);
-            WvProcessDeviceThreadWorkItem(dev, work_item, stop);
+            /* Unlock the device and process the work item */
+            WvlUnlockDevice(dev_obj);
+            WvProcessDeviceThreadWorkItem(dev_obj, work_item, stop);
           } else {
-            /* This is a normal IRP.  Restore the IRQL and process it */
-            KeReleaseSpinLock(&dev_ext->Lock, irql);
-            WvProcessDeviceIrp(dev, irp, stop);
+            /* This is a normal IRP.  Unlock the device and process it */
+            WvlUnlockDevice(dev_obj);
+            WvProcessDeviceIrp(dev_obj, irp, stop);
           }
 
         /* Continue processing the IRP queue */
-        KeAcquireSpinLock(&dev_ext->Lock, &irql);
+        WvlLockDevice(dev_obj);
 
         /* Check if we should be stopping, soon */
         if (dev_ext->NotAvailable)
@@ -1398,11 +1406,13 @@ static VOID STDCALL WvDeviceThread(IN VOID * context) {
     minidriver = dev_ext->MiniDriver;
     ASSERT(minidriver);
 
-    /* Delete the device */
+    /* Incremented by WvStartDeviceThread */
     WvlDecrementResourceUsage(dev_ext->Usage);
+
+    /* Delete the device */
     WvlWaitForResourceZeroUsage(dev_ext->Usage);
-    DBG("Device %p deleted.  Thread terminated\n", (VOID *) dev);
-    IoDeleteDevice(dev);
+    DBG("Device %p deleted.  Thread terminated\n", (VOID *) dev_obj);
+    IoDeleteDevice(dev_obj);
 
     WvlDecrementResourceUsage(minidriver->Usage);
 

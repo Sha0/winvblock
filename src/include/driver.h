@@ -297,6 +297,34 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlCreateDevice(
 extern WVL_M_LIB VOID STDCALL WvlDeleteDevice(IN DEVICE_OBJECT * Device);
 
 /**
+ * Acquire the lock for a mini-driver device
+ *
+ * @param Device
+ *   The device to acquire the lock for
+ *
+ * Certain members of the device extension require the device lock for
+ * inspection or modification.  Call this function to acquire that lock.
+ * Call WvlUnlockDevice to unlock the device.  While the device lock is
+ * acquired, the IRQL == DISPATCH_LEVEL, so the restrictions of that IRQL
+ * apply
+ */
+extern WVL_M_LIB VOID STDCALL WvlLockDevice(IN DEVICE_OBJECT * Device);
+
+/**
+ * Release the lock for a mini-driver device
+ *
+ * @param Device
+ *   The device to release the lock for
+ *
+ * Certain members of the device extension require the device lock for
+ * inspection or modification.  Call this function to release that lock.
+ * Call WvlLockDevice to lock the device.  Because acquiring the device
+ * locked yields IRQL == DISPATCH_LEVEL, this function must be called in
+ * order to restore the previous IRQL
+ */
+extern WVL_M_LIB VOID STDCALL WvlUnlockDevice(IN DEVICE_OBJECT * Device);
+
+/**
  * Call a function in a device's thread context
  *
  * @param Device
@@ -333,6 +361,25 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlCallFunctionInDeviceThread(
     IN F_WVL_DEVICE_THREAD_FUNCTION * Function,
     IN VOID * Context,
     IN BOOLEAN Wait
+  );
+
+/**
+ * Add an IRP (or pseudo-IRP) to a device's IRP queue
+ *
+ * @param Device
+ *   The device to process the IRP
+ *
+ * @param Irp
+ *   The IRP to enqueue for the device
+ *
+ * @retval STATUS_NO_SUCH_DEVICE
+ *   The device is no longer available
+ * @retval STATUS_SUCCESS
+ *   The IRP was successfully queued
+ */
+extern WVL_M_LIB NTSTATUS STDCALL WvlAddIrpToDeviceQueue(
+    IN DEVICE_OBJECT * Device,
+    IN IRP * Irp
   );
 
 /**
@@ -407,14 +454,23 @@ struct WV_DEV_EXT {
     /** A handle to the device thread */
     HANDLE ThreadHandle;
 
-    /** The device's IRP queue.  Requires lock for modification */
+    /**
+     * The device's IRP queue.  Device must be acquired for inspection
+     * and modification
+     */
     LIST_ENTRY IrpQueue[1];
 
-    /** Is the device available?  Requires lock for modification */
+    /**
+     * Is the device available?  Device must be acquired for inspection
+     * and modification
+     */
     BOOLEAN NotAvailable;
 
-    /** The device lock */
+    /** Spin-lock for device acquisition */
     KSPIN_LOCK Lock;
+
+    /** IRQL before the spin-lock for the device was acquired */
+    KIRQL PreLockIrql;
 
     /** The device's mini-driver */
     S_WVL_MINI_DRIVER * MiniDriver;
