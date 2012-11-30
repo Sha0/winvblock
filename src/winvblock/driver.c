@@ -46,6 +46,7 @@
 
 /* From mainbus/mainbus.c */
 extern WVL_S_BUS_T WvBus;
+extern DRIVER_INITIALIZE WvMainBusDriverEntry;
 extern NTSTATUS STDCALL WvBusAttach(IN PDEVICE_OBJECT);
 extern NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING);
 extern NTSTATUS STDCALL WvBusDevCtl(IN PIRP, IN ULONG POINTER_ALIGNMENT);
@@ -163,25 +164,6 @@ static LPWSTR STDCALL WvGetOpt(IN LPWSTR opt_name) {
     return the_opt;
   }
 
-/**
- * Drive a supported device
- *
- * @param DriverObject
- *   The driver object provided by Windows
- *
- * @param PhysicalDeviceObject
- *   The PDO to probe and attach an FDO to
- *
- * @return
- *   The status of the operation
- */
-static NTSTATUS STDCALL WvDriveDevice(
-    IN PDRIVER_OBJECT driver_obj,
-    IN PDEVICE_OBJECT pdo
-  ) {
-    return WvBusAttach(pdo);
-  }
-
 static VOID STDCALL WvDriverReinitialize(
     IN PDRIVER_OBJECT driver_obj,
     IN PVOID context,
@@ -292,13 +274,16 @@ NTSTATUS STDCALL DriverEntry(
 
     /* Initialize the list of registered mini-drivers */
     WvlInitializeLockedList(WvRegisteredMiniDrivers);
-    KeInitializeEvent(&WvMiniDriversDeregistered, NotificationEvent, FALSE);
+    KeInitializeEvent(&WvMiniDriversDeregistered, NotificationEvent, TRUE);
     WvlIncrementResourceUsage(WvDriverUsage);
 
-    /* Establish the bus PDO */
-    status = WvBusEstablish(reg_path);
+    /*
+     * Invoke internal mini-drivers.  The order here determines which
+     * mini-drivers have a higher priority for driving devices
+     */
+    status = WvMainBusDriverEntry(drv_obj, reg_path);
     if(!NT_SUCCESS(status))
-      goto err_bus;
+      goto err_internal_minidriver;
 
     /* Register re-initialization routine to allow for disks to arrive */
     WvlIncrementResourceUsage(WvDriverUsage);
@@ -312,11 +297,89 @@ NTSTATUS STDCALL DriverEntry(
     DBG("Exit\n");
     return STATUS_SUCCESS;
 
-    err_bus:
+    err_internal_minidriver:
 
     /* Release resources and unwind state */
     WvUnload(drv_obj);
     DBG("Exit due to failure\n");
+    return status;
+  }
+
+/**
+ * Drive a supported device
+ *
+ * @param DriverObject
+ *   Ignored.  The driver object provided by Windows
+ *
+ * @param PhysicalDeviceObject
+ *   The PDO to probe and attach an FDO to
+ *
+ * @return
+ *   The status of the operation
+ */
+static NTSTATUS STDCALL WvDriveDevice(
+    IN PDRIVER_OBJECT driver_obj,
+    IN PDEVICE_OBJECT pdo
+  ) {
+    LIST_ENTRY * link;
+    S_WVL_MINI_DRIVER * minidriver;
+    NTSTATUS status;
+
+    /* Ignore the main driver object that Windows will pass */
+    (VOID) driver_obj;
+
+    /* Assume failure */
+    status = STATUS_NOT_SUPPORTED;
+
+    /*
+     * We need to own the registered mini-drivers list until we've
+     * finished working with it.  Unfortunately, there is a slight race
+     * here where:
+     *
+     * 1. An external mini-driver's Unload routine could be invoked,
+     *    meaning the mini-driver should not be driving any more devices
+     *
+     * 2. This very function is invoked by Windows to attempt to drive a
+     *    device
+     *
+     * 3. This function examines the list of registered drivers before
+     *    the mini-driver's Unload routine has a chance to deregister
+     *
+     * Hopefully if the mini-driver calls IoCreateDevice while it's in an
+     * "unloading" state (from Windows' perspective), the request will be
+     * refused.  That would help for the mini-driver's AddDevice to fail
+     * and return control back to this function.
+     *
+     * Just in case, the mini-driver's Unload routine's call to
+     * WvlDeregisterMiniDriver will stall until all of the mini-driver's
+     * devices have been deleted.  As long as the Unload routine hasn't
+     * performed any clean-up before deregistering, the mini-driver
+     * can continue to serve its devices, as awkward as it might be
+     */
+    WvlAcquireLockedList(WvRegisteredMiniDrivers);
+    for (
+        link = WvRegisteredMiniDrivers->List->Flink;
+        link != WvRegisteredMiniDrivers->List;
+        link = link->Flink
+      ) {
+        ASSERT(link);
+        minidriver = CONTAINING_RECORD(link, S_WVL_MINI_DRIVER, Link);
+        ASSERT(minidriver);
+
+        /* Skip this mini-driver if it has no AddDevice routine */
+        if (!minidriver->AddDevice)
+          continue;
+
+        ASSERT(minidriver->DriverObject);
+        ASSERT(pdo);
+        status = minidriver->AddDevice(minidriver->DriverObject, pdo);
+
+        /* If the mini-driver drives the device, we're done */
+        if (NT_SUCCESS(status))
+          break;
+      }
+    WvlReleaseLockedList(WvRegisteredMiniDrivers);
+
     return status;
   }
 
@@ -338,7 +401,6 @@ static VOID STDCALL WvUnload(IN DRIVER_OBJECT * drv_obj) {
 
     WvDeregisterMiniDrivers();
 
-    WvBusCleanup();
     if (WvDriverStateHandle != NULL)
       PoUnregisterSystemState(WvDriverStateHandle);
     wv_free(WvOsLoadOpts);
@@ -623,8 +685,8 @@ WVL_M_LIB NTSTATUS WvlRegisterMiniDriver(
     IN DRIVER_ADD_DEVICE * add_dev,
     IN DRIVER_UNLOAD * unload
   ) {
-    /* Check for invalid parameters or uninitialized library */
-    if (!minidriver || !drv_obj || !unload || !WvDriverStarted)
+    /* Check for invalid parameters */
+    if (!minidriver || !drv_obj || !unload)
       return STATUS_UNSUCCESSFUL;
 
     *minidriver = wv_malloc(sizeof **minidriver);
@@ -635,6 +697,7 @@ WVL_M_LIB NTSTATUS WvlRegisterMiniDriver(
     (*minidriver)->DriverObject = drv_obj;
     (*minidriver)->AddDevice = add_dev;
     (*minidriver)->Unload = unload;
+    WvlInitializeResourceTracker((*minidriver)->Usage);
 
     /* If the mini-driver is external, initialize its driver object */
     if (drv_obj != WvDriverObj) {
@@ -652,6 +715,7 @@ WVL_M_LIB NTSTATUS WvlRegisterMiniDriver(
 
     /* Register the mini-driver */
     WvlAppendLockedListLink(WvRegisteredMiniDrivers, (*minidriver)->Link);
+    KeClearEvent(&WvMiniDriversDeregistered);
 
     return STATUS_SUCCESS;
   }
@@ -670,6 +734,7 @@ WVL_M_LIB VOID WvlDeregisterMiniDriver(
     if (WvlRemoveLockedListLink(WvRegisteredMiniDrivers, minidriver->Link))
       KeSetEvent(&WvMiniDriversDeregistered, 0, FALSE);
 
+    WvlWaitForResourceZeroUsage(minidriver->Usage);
     wv_free(minidriver);
   }
 

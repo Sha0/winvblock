@@ -129,7 +129,7 @@ extern NTSTATUS STDCALL WvDiskPnpQueryDevText(
  *
  * @retval STATUS_SUCCESS
  * @retval STATUS_UNSUCCESSFUL
- *   An invalid parameter was passed or the library is not initialized
+ *   An invalid parameter was passed
  * @retval STATUS_INSUFFICIENT_RESOURCES
  *   A mini-driver object could not be allocated
  */

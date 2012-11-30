@@ -160,6 +160,7 @@ static NTSTATUS STDCALL WvMainBusDriveDevice(
  *   The driver object provided by the caller
  */
 static VOID STDCALL WvMainBusUnload(IN DRIVER_OBJECT * drv_obj) {
+    WvlDeregisterMiniDriver(WvMainBusMiniDriver);
     WvBusCleanup();
   }
 
