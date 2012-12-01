@@ -59,10 +59,6 @@ typedef struct S_WV_MAIN_BUS S_WV_MAIN_BUS;
 /** External functions */
 
 /* From ../libbus/pnp.c */
-extern NTSTATUS STDCALL WvlBusPnpQueryCapabilities(
-    IN WVL_SP_BUS_T Bus,
-    IN PIRP Irp
-  );
 extern NTSTATUS STDCALL WvlBusPnpQueryDevRelations(
     IN WVL_SP_BUS_T Bus,
     IN PIRP Irp
@@ -112,6 +108,8 @@ static __drv_dispatchType(IRP_MJ_SYSTEM_CONTROL) DRIVER_DISPATCH
 /** PnP handlers */
 static __drv_dispatchType(IRP_MN_QUERY_BUS_INFORMATION) DRIVER_DISPATCH
   WvMainBusPnpQueryBusInfo;
+static __drv_dispatchType(IRP_MN_QUERY_CAPABILITIES) DRIVER_DISPATCH
+  WvMainBusPnpQueryCapabilities;
 
 /** Struct/union type definitions */
 
@@ -720,7 +718,7 @@ static NTSTATUS WvMainBusDispatchPnpIrp(
 
         case IRP_MN_QUERY_CAPABILITIES:
         DBG("IRP_MN_QUERY_CAPABILITIES\n");
-        return WvlBusPnpQueryCapabilities(&WvBus, irp);
+        return WvMainBusPnpQueryCapabilities(dev_obj, irp);
 
         case IRP_MN_REMOVE_DEVICE:
         DBG("IRP_MN_REMOVE_DEVICE\n");
@@ -846,6 +844,41 @@ static NTSTATUS STDCALL WvMainBusPnpQueryBusInfo(
     irp->IoStatus.Status = status;
     IoCompleteRequest(irp, IO_NO_INCREMENT);
     return status;
+  }
+
+/**
+ * IRP_MJ_PNP:IRP_MN_QUERY_CAPABILITIES handler
+ *
+ * IRQL == PASSIVE_LEVEL
+ * Ok to send this IRP
+ * Completed by PDO
+ *
+ * @return
+ *   Success:
+ *     Irp->IoStatus.Status == STATUS_SUCCESS
+ *     I/O stack location: Parameters.DeviceCapabilities.Capabilities
+ *       populated
+ *   Error:
+ *     Irp->IoStatus.Status == STATUS_UNSUCCESSFUL
+ */
+static NTSTATUS STDCALL WvMainBusPnpQueryCapabilities(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
+  ) {
+    S_WV_MAIN_BUS * bus;
+
+    ASSERT(dev_obj);
+    bus = dev_obj->DeviceExtension;
+    ASSERT(bus);
+    ASSERT(irp);
+
+    /* Unlikely, but if we're a floating FDO... */
+    if (!bus->LowerDeviceObject)
+      return WvlIrpComplete(irp, 0, STATUS_UNSUCCESSFUL);
+
+    /* Let the lower device handle the IRP */
+    IoSkipCurrentIrpStackLocation(irp);
+    return IoCallDriver(bus->LowerDeviceObject, irp);
   }
 
 static NTSTATUS WvMainBusDispatchDeviceControlIrp(
