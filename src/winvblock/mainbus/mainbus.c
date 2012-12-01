@@ -58,11 +58,6 @@ typedef struct S_WV_MAIN_BUS S_WV_MAIN_BUS;
 /** External functions */
 
 /* From ../libbus/pnp.c */
-extern NTSTATUS STDCALL WvlBusPnpSimple(
-    IN WVL_SP_BUS_T Bus,
-    IN PIRP Irp,
-    IN UCHAR Code
-  );
 extern NTSTATUS STDCALL WvlBusPnpQueryBusInfo(
     IN WVL_SP_BUS_T Bus,
     IN PIRP Irp
@@ -675,12 +670,15 @@ static NTSTATUS WvMainBusDispatchPnpIrp(
     IN IRP * irp
   ) {
     UCHAR code;
+    NTSTATUS status;
+    DEVICE_OBJECT * lower;
 
     ASSERT(dev_obj);
     ASSERT(irp);
     (VOID) dev_obj;
 
     code = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
+    lower = WvBus.LowerDeviceObject;
 
     switch (code) {
         case IRP_MN_QUERY_DEVICE_TEXT:
@@ -709,9 +707,70 @@ static NTSTATUS WvMainBusDispatchPnpIrp(
         DBG("IRP_MN_START_DEVICE\n");
         return WvlBusPnpStartDev(&WvBus, irp);
 
+        case IRP_MN_QUERY_PNP_DEVICE_STATE:
+        DBG("IRP_MN_QUERY_PNP_DEVICE_STATE\n");
+        irp->IoStatus.Information = 0;
+        status = STATUS_SUCCESS;
+        break;
+
+        case IRP_MN_QUERY_STOP_DEVICE:
+        DBG("IRP_MN_QUERY_STOP_DEVICE\n");
+        WvBus.OldState = WvBus.State;
+        WvBus.State = WvlBusStateStopPending;
+        status = STATUS_SUCCESS;
+        break;
+
+        case IRP_MN_CANCEL_STOP_DEVICE:
+        DBG("IRP_MN_CANCEL_STOP_DEVICE\n");
+        WvBus.State = WvBus.OldState;
+        status = STATUS_SUCCESS;
+        break;
+
+        case IRP_MN_STOP_DEVICE:
+        DBG("IRP_MN_STOP_DEVICE\n");
+        WvBus.OldState = WvBus.State;
+        WvBus.State = WvlBusStateStopped;
+        status = STATUS_SUCCESS;
+        break;
+
+        case IRP_MN_QUERY_REMOVE_DEVICE:
+        DBG("IRP_MN_QUERY_REMOVE_DEVICE\n");
+        WvBus.OldState = WvBus.State;
+        WvBus.State = WvlBusStateRemovePending;
+        status = STATUS_SUCCESS;
+        break;
+
+        case IRP_MN_CANCEL_REMOVE_DEVICE:
+        DBG("IRP_MN_CANCEL_REMOVE_DEVICE\n");
+        WvBus.State = WvBus.OldState;
+        status = STATUS_SUCCESS;
+        break;
+
+        case IRP_MN_SURPRISE_REMOVAL:
+        DBG("IRP_MN_SURPRISE_REMOVAL\n");
+        WvBus.OldState = WvBus.State;
+        WvBus.State = WvlBusStateSurpriseRemovePending;
+        status = STATUS_SUCCESS;
+        break;
+
+        case IRP_MN_QUERY_RESOURCES:
+        case IRP_MN_QUERY_RESOURCE_REQUIREMENTS:
+        DBG("IRP_MN_QUERY_RESOURCE*\n");
+        IoCompleteRequest(irp, IO_NO_INCREMENT);
+        return STATUS_SUCCESS;
+
         default:
-        return WvlBusPnpSimple(&WvBus, irp, code);
+        DBG("Unhandled IRP_MN_*: %d\n", code);
+        status = irp->IoStatus.Status;
       }
+
+    irp->IoStatus.Status = status;
+    /* Should we pass it on?  We might be a floating FDO. */
+    if (lower) {
+        IoSkipCurrentIrpStackLocation(irp);
+        return IoCallDriver(lower, irp);
+      }
+    return WvlIrpComplete(irp, irp->IoStatus.Information, status);
   }
 
 static NTSTATUS WvMainBusDispatchDeviceControlIrp(
