@@ -83,6 +83,17 @@ static DRIVER_UNLOAD WvMainBusUnload;
 static F_WVL_DEVICE_THREAD_FUNCTION WvMainBusDriveDeviceInThread;
 static VOID WvMainBusOldProbe(DEVICE_OBJECT * DeviceObject);
 
+/** Main bus IRP dispatchers */
+static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH WvMainBusDispatchPnpIrp;
+static __drv_dispatchType(IRP_MJ_DEVICE_CONTROL) DRIVER_DISPATCH
+  WvMainBusDispatchDeviceControlIrp;
+static __drv_dispatchType(IRP_MJ_POWER) DRIVER_DISPATCH
+  WvMainBusDispatchPowerIrp;
+static __drv_dispatchType(IRP_MJ_CREATE) __drv_dispatchType(IRP_MJ_CLOSE)
+  DRIVER_DISPATCH WvMainBusDispatchCreateCloseIrp;
+static __drv_dispatchType(IRP_MJ_SYSTEM_CONTROL) DRIVER_DISPATCH
+  WvMainBusDispatchSystemControlIrp;
+
 /** Struct/union type definitions */
 
 /** The bus extension type */
@@ -104,6 +115,8 @@ static S_WVL_MINI_DRIVER * WvMainBusMiniDriver;
 /** The main bus */
 static DEVICE_OBJECT * WvMainBusDevice;
 
+static A_WVL_MJ_DISPATCH_TABLE WvMainBusMajorDispatchTable;
+
 /**
  * The mini-driver entry-point
  *
@@ -121,6 +134,18 @@ NTSTATUS STDCALL WvMainBusDriverEntry(
     IN UNICODE_STRING * reg_path
   ) {
     NTSTATUS status;
+
+    /* Build the main bus' major dispatch table */
+    WvMainBusMajorDispatchTable[IRP_MJ_PNP] = WvMainBusDispatchPnpIrp;
+    WvMainBusMajorDispatchTable[IRP_MJ_DEVICE_CONTROL] =
+      WvMainBusDispatchDeviceControlIrp;
+    WvMainBusMajorDispatchTable[IRP_MJ_POWER] = WvMainBusDispatchPowerIrp;
+    WvMainBusMajorDispatchTable[IRP_MJ_CREATE] =
+      WvMainBusDispatchCreateCloseIrp;
+    WvMainBusMajorDispatchTable[IRP_MJ_CLOSE] =
+      WvMainBusDispatchCreateCloseIrp;
+    WvMainBusMajorDispatchTable[IRP_MJ_SYSTEM_CONTROL] =
+      WvMainBusDispatchSystemControlIrp;
 
     /* Register this mini-driver */
     status = WvlRegisterMiniDriver(
@@ -278,39 +303,39 @@ static VOID WvMainBusOldProbe(DEVICE_OBJECT * dev_obj) {
     WvMemdiskFind();
   }
 
-/* Handle an IRP. */
+/**
+ * Handle an IRP from the main bus' thread context
+ *
+ * @param DeviceObject
+ *   The main bus device
+ *
+ * @param Irp
+ *   The IRP to process
+ *
+ * @return
+ *   The status of the operation
+ */
 static NTSTATUS WvBusIrpDispatch(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp
   ) {
     PIO_STACK_LOCATION io_stack_loc;
 
+    ASSERT(dev_obj);
+    ASSERT(irp);
+
     io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-    switch (io_stack_loc->MajorFunction) {
-        case IRP_MJ_PNP:
-          return WvlBusPnp(&WvBus, irp);
+    ASSERT(io_stack_loc);
 
-        case IRP_MJ_DEVICE_CONTROL: {
-            ULONG POINTER_ALIGNMENT code;
-
-            code = io_stack_loc->Parameters.DeviceIoControl.IoControlCode;
-            return WvBusDevCtl(irp, code);
-          }
-
-        case IRP_MJ_POWER:
-          return WvlIrpPassPowerToLower(WvBus.LowerDeviceObject, irp);
-
-        case IRP_MJ_CREATE:
-        case IRP_MJ_CLOSE:
-          /* Always succeed with nothing to do. */
-          return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
-
-        case IRP_MJ_SYSTEM_CONTROL:
-          return WvlIrpPassToLower(WvBus.LowerDeviceObject, irp);
-
-        default:
-          ;
+    /* Handle a known IRP major type */
+    if (WvMainBusMajorDispatchTable[io_stack_loc->MajorFunction]) {
+        return WvMainBusMajorDispatchTable[io_stack_loc->MajorFunction](
+            dev_obj,
+            irp
+          );
       }
+
+    /* Handle an unknown type */
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
@@ -619,4 +644,58 @@ VOID WvMainBusRemove(void) {
     ASSERT(WvMainBusDevice);
     IoDeleteSymbolicLink(&WvBusDosname);
     WvlDeleteDevice(WvMainBusDevice);
+  }
+
+static NTSTATUS WvMainBusDispatchPnpIrp(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
+  ) {
+    ASSERT(dev_obj);
+    ASSERT(irp);
+    (VOID) dev_obj;
+    return WvlBusPnp(&WvBus, irp);
+  }
+
+static NTSTATUS WvMainBusDispatchDeviceControlIrp(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
+  ) {
+    IO_STACK_LOCATION * io_stack_loc;
+    ULONG POINTER_ALIGNMENT code;
+
+    ASSERT(dev_obj);
+    ASSERT(irp);
+    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    ASSERT(io_stack_loc);
+    code = io_stack_loc->Parameters.DeviceIoControl.IoControlCode;
+    return WvBusDevCtl(irp, code);
+  }
+
+static NTSTATUS WvMainBusDispatchPowerIrp(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
+  ) {
+    ASSERT(dev_obj);
+    ASSERT(irp);
+    return WvlIrpPassPowerToLower(WvBus.LowerDeviceObject, irp);
+  }
+
+static NTSTATUS WvMainBusDispatchCreateCloseIrp(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
+  ) {
+    ASSERT(dev_obj);
+    ASSERT(irp);
+    /* Always succeed with nothing to do */
+    /* TODO: Track resource usage */
+    return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
+  }
+
+static NTSTATUS WvMainBusDispatchSystemControlIrp(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
+  ) {
+    ASSERT(dev_obj);
+    ASSERT(irp);
+    return WvlIrpPassToLower(WvBus.LowerDeviceObject, irp);
   }
