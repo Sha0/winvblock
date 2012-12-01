@@ -47,6 +47,8 @@ typedef struct S_WVL_MINI_DRIVER S_WVL_MINI_DRIVER;
 
 typedef struct WV_DEV_EXT WV_S_DEV_EXT, * WV_SP_DEV_EXT;
 
+typedef struct S_WVL_STATUS_WAITER S_WVL_STATUS_WAITER;
+
 typedef struct S_WVL_DEVICE_THREAD_WORK_ITEM S_WVL_DEVICE_THREAD_WORK_ITEM;
 
 /** Function types */
@@ -372,14 +374,35 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlCallFunctionInDeviceThread(
  * @param Irp
  *   The IRP to enqueue for the device
  *
+ * @param Wait
+ *   Specifies whether or not to wait for the IRP to be processed by the
+ *   mini-driver device's thread.
+ *
+ *   If FALSE and the IRP is added to the device's queue, this function
+ *   should return STATUS_PENDING.
+ *
+ *   If FALSE and the device is no longer available, the IRP will be
+ *   completed and this function should return STATUS_NO_SUCH_DEVICE.
+ *
+ *   If TRUE and the IRP is added to the device's queue, this function
+ *   returns the status of processing the IRP within the device's
+ *   thread context.
+ *
+ *   If TRUE and the device is no longer available, the IRP will be
+ *   completed and this function should return STATUS_NO_SUCH_DEVICE
+ *
  * @retval STATUS_NO_SUCH_DEVICE
- *   The device is no longer available
- * @retval STATUS_SUCCESS
- *   The IRP was successfully queued
+ *   The device is no longer available.  'Wait' is TRUE or FALSE
+ * @retval STATUS_PENDING
+ *   The IRP was successfully queued and 'Wait' was FALSE
+ * @return
+ *   Other values are returned when 'Wait' is TRUE and indicate the
+ *   status of processing the IRP within the device's thread context
  */
 extern WVL_M_LIB NTSTATUS STDCALL WvlAddIrpToDeviceQueue(
     IN DEVICE_OBJECT * Device,
-    IN IRP * Irp
+    IN IRP * Irp,
+    IN BOOLEAN Wait
   );
 
 /**
@@ -479,6 +502,15 @@ struct WV_DEV_EXT {
     S_WVL_RESOURCE_TRACKER Usage[1];
   };
 
+/** Wait for a status value to be set with this */
+struct S_WVL_STATUS_WAITER {
+    /** Signals when the status has been set */
+    KEVENT Complete;
+
+    /** The status returned */
+    NTSTATUS Status;
+  };
+
 /** A pseudo-IRP device thread work item */
 struct S_WVL_DEVICE_THREAD_WORK_ITEM {
     /**
@@ -486,12 +518,6 @@ struct S_WVL_DEVICE_THREAD_WORK_ITEM {
      * item is processed
      */
     F_WVL_DEVICE_THREAD_FUNCTION * Function;
-
-    /** Signals when the function to be called has completed */
-    KEVENT Complete;
-
-    /** The status returned by the called function */
-    NTSTATUS Status;
 
     /**
      * A dummy IRP that can be linked to the device's IRP queue.

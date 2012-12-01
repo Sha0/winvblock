@@ -482,9 +482,6 @@ static NTSTATUS WvDriverDispatchIrp(
   ) {
     WV_S_DEV_EXT * dev_ext;
     VOID ** ptrs;
-    KEVENT completion;
-    NTSTATUS irp_status;
-    NTSTATUS status;
     DRIVER_DISPATCH * irp_handler;
 
     ASSERT(dev_obj);
@@ -501,30 +498,11 @@ static NTSTATUS WvDriverDispatchIrp(
     if (dev_ext->MiniDriver) {
         ptrs = irp->Tail.Overlay.DriverContext;
 
-        /* Clear context so it doesn't appear to be a work item */
-        ptrs[0] = NULL;
+        /* Clear context */
+        RtlZeroMemory(ptrs, sizeof irp->Tail.Overlay.DriverContext);
 
-        /* Initialize a completion event */
-        KeInitializeEvent(&completion, NotificationEvent, FALSE);
-        ptrs[1] = &completion;
-
-        /* Collect status */
-        ptrs[2] = &irp_status;
-
-        /* Add the IRP to the device's queue */
-        status = WvlAddIrpToDeviceQueue(dev_obj, irp);
-        if (!NT_SUCCESS(status))
-          return status;
-
-        /* Wait for IRP completion and return status */
-        KeWaitForSingleObject(
-            &completion,
-            Executive,
-            KernelMode,
-            FALSE,
-            NULL
-          );
-        return irp_status;
+        /* Add the IRP to the device's queue and wait for result */
+        return WvlAddIrpToDeviceQueue(dev_obj, irp, TRUE);
       }
 
     /* Handle the old, non-mini-driver case */
@@ -1241,69 +1219,93 @@ WVL_M_LIB NTSTATUS STDCALL WvlCallFunctionInDeviceThread(
       }
 
     work_item->Function = func;
-    KeInitializeEvent(&work_item->Complete, NotificationEvent, FALSE);
-    work_item->Status = STATUS_DRIVER_INTERNAL_ERROR;
 
     /**
      * We use some of the 4 driver-owned pointers in the dummy IRP.
      * The first lets WvDeviceThread recognize and find the work item.
      * The second is the context to be passed to the called function.
      * The third lets WvDeviceThread recognize and free the work item,
-     * if required
+     * if required.  The fourth is used by WvlAddIrpToDeviceQueue for
+     * waiting for IRP completion, if required
      */
     ptrs = work_item->DummyIrp->Tail.Overlay.DriverContext;
     ptrs[0] = work_item;
     ptrs[1] = context;
     ptrs[2] = wait ? NULL : work_item;
-    ptrs[3] = NULL;
 
-    status = WvlAddIrpToDeviceQueue(dev, work_item->DummyIrp);
-    if (!NT_SUCCESS(status)) {
-        /* The thread is probably stopped */
-        if (!wait)
-          wv_free(work_item);
-        return status;
-      }
+    status = WvlAddIrpToDeviceQueue(dev, work_item->DummyIrp, wait);
 
-    /* It we're not waiting, just return success */
-    if (!wait)
+    /* If we're not waiting and the work item was enqueued, that's good */
+    if (!wait && status == STATUS_PENDING)
       return STATUS_SUCCESS;
 
-    /* Otherwise, wait for the function to complete and return its status */
-    KeWaitForSingleObject(
-        &work_item->Complete,
-        Executive,
-        KernelMode,
-        FALSE,
-        NULL
-      );
-    return work_item->Status;
+    /* Otherwise, return the result */
+    return status;
   }
 
 WVL_M_LIB NTSTATUS STDCALL WvlAddIrpToDeviceQueue(
     IN DEVICE_OBJECT * dev,
-    IN IRP * irp
+    IN IRP * irp,
+    IN BOOLEAN wait
   ) {
+    VOID ** ptrs;
+    S_WVL_STATUS_WAITER status_waiter;
     WV_S_DEV_EXT * dev_ext;
+    KEVENT completion;
     NTSTATUS status;
 
-    ASSERT(dev);
     ASSERT(irp);
+    ptrs = irp->Tail.Overlay.DriverContext;
 
+    /*
+     * If we wait for status, we tell the thread where to return that
+     * status and where the completion event is.  Note that
+     * WvDriverDispatchIrp _must_ zero out all of the DriverContext
+     * pointers.  That way the thread won't work with garbage
+     */
+    if (wait) {
+        KeInitializeEvent(&status_waiter.Complete, NotificationEvent, FALSE);
+        status_waiter.Status = STATUS_DRIVER_INTERNAL_ERROR;
+        ptrs[3] = &status_waiter;
+      }
+
+    ASSERT(dev);
     dev_ext = dev->DeviceExtension;
     ASSERT(dev_ext);
 
     WvlLockDevice(dev);
     if (dev_ext->NotAvailable) {
-        status = STATUS_NO_SUCH_DEVICE;
+        status = irp->IoStatus.Status = STATUS_NO_SUCH_DEVICE;
       } else {
         InsertTailList(dev_ext->IrpQueue, &irp->Tail.Overlay.ListEntry);
-        status = STATUS_SUCCESS;
+        status = STATUS_PENDING;
       }
     KeSetEvent(&dev_ext->IrpArrival, 0, FALSE);
     WvlUnlockDevice(dev);
 
-    return status;
+    /* If the device wasn't available and it was a real IRP, complete it */
+    if (status == STATUS_NO_SUCH_DEVICE && !ptrs[0]) {
+        irp->IoStatus.Status = status;
+        IoCompleteRequest(irp, IO_NO_INCREMENT);
+        return status;
+      }
+
+    /* If we're not waiting, that's good enough */
+    if (!wait)
+      return status;
+
+    /*
+     * Otherwise, wait for the IRP or work item to complete and return
+     * its status
+     */
+    KeWaitForSingleObject(
+        &status_waiter.Complete,
+        Executive,
+        KernelMode,
+        FALSE,
+        NULL
+      );
+    return status_waiter.Status;
   }
 
 /**
@@ -1438,26 +1440,32 @@ static VOID WvProcessDeviceThreadWorkItem(
     IN BOOLEAN reject
   ) {
     VOID ** ptrs;
+    S_WVL_STATUS_WAITER * status_waiter;
+    NTSTATUS status;
 
     ASSERT(dev);
     ASSERT(work_item);
+    ptrs = work_item->DummyIrp->Tail.Overlay.DriverContext;
+    status_waiter = ptrs[3];
 
     if (reject) {
-        work_item->Status = STATUS_NO_SUCH_DEVICE;
+        status = STATUS_NO_SUCH_DEVICE;
       } else {
         /* Call the work item function, passing the device and context */
-        ptrs = work_item->DummyIrp->Tail.Overlay.DriverContext;
         ASSERT(work_item->Function);
-        work_item->Status = work_item->Function(dev, ptrs[1]);
-
-        /* Possible cleanup */
-        /* TODO: Move this 'if' into 'wv_free'? */
-        if (ptrs[2])
-          wv_free(ptrs[2]);
+        status = work_item->Function(dev, ptrs[1]);
       }
 
+    /* Possible cleanup */
+    /* TODO: Move this 'if' into 'wv_free'? */
+    if (ptrs[2])
+      wv_free(ptrs[2]);
+
     /* Signal that the work item has been completed */
-    KeSetEvent(&work_item->Complete, 0, FALSE);
+    if (status_waiter) {
+        status_waiter->Status = status;
+        KeSetEvent(&status_waiter->Complete, 0, FALSE);
+      }
   }
 
 /**
@@ -1477,30 +1485,32 @@ static VOID WvProcessDeviceIrp(
     IN IRP * irp,
     IN BOOLEAN reject
   ) {
+    VOID ** ptrs;
+    S_WVL_STATUS_WAITER * status_waiter;
+    NTSTATUS status;
     WV_S_DEV_EXT * dev_ext;
-    KEVENT * event;
-    NTSTATUS * status;
 
     ASSERT(dev);
     ASSERT(irp);
+    ptrs = irp->Tail.Overlay.DriverContext;
 
     /* Note the IRP completion event and status slot */
-    event = irp->Tail.Overlay.DriverContext[1];
-    ASSERT(event);
-    status = irp->Tail.Overlay.DriverContext[2];
-    ASSERT(status);
+    status_waiter = ptrs[3];
 
     if (reject) {
-        *status = irp->IoStatus.Status = STATUS_NO_SUCH_DEVICE;
+        status = irp->IoStatus.Status = STATUS_NO_SUCH_DEVICE;
         IoCompleteRequest(irp, IO_NO_INCREMENT);
       } else {
         /* Dispatch the IRP */
         dev_ext = dev->DeviceExtension;
         ASSERT(dev_ext);
         ASSERT(dev_ext->IrpDispatch);
-        *status = dev_ext->IrpDispatch(dev, irp);
+        status = dev_ext->IrpDispatch(dev, irp);
       }
 
-    /* Signal completion to the waiting thread */
-    KeSetEvent(event, 0, FALSE);
+    /* Signal that the IRP has been completed */
+    if (status_waiter) {
+        status_waiter->Status = status;
+        KeSetEvent(&status_waiter->Complete, 0, FALSE);
+      }
   }
