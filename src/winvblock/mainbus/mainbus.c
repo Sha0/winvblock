@@ -55,6 +55,29 @@
 /** Object types */
 typedef struct S_WV_MAIN_BUS S_WV_MAIN_BUS;
 
+/** External functions */
+
+/* From ../libbus/pnp.c */
+extern NTSTATUS STDCALL WvlBusPnpSimple(
+    IN WVL_SP_BUS_T Bus,
+    IN PIRP Irp,
+    IN UCHAR Code
+  );
+extern NTSTATUS STDCALL WvlBusPnpQueryBusInfo(
+    IN WVL_SP_BUS_T Bus,
+    IN PIRP Irp
+  );
+extern NTSTATUS STDCALL WvlBusPnpQueryCapabilities(
+    IN WVL_SP_BUS_T Bus,
+    IN PIRP Irp
+  );
+extern NTSTATUS STDCALL WvlBusPnpQueryDevRelations(
+    IN WVL_SP_BUS_T Bus,
+    IN PIRP Irp
+  );
+extern NTSTATUS STDCALL WvlBusPnpRemoveDev(IN WVL_SP_BUS_T Bus, IN PIRP Irp);
+extern NTSTATUS STDCALL WvlBusPnpStartDev(IN WVL_SP_BUS_T Bus, IN PIRP Irp);
+
 /** Public functions */
 NTSTATUS STDCALL WvBusEstablish(IN PUNICODE_STRING);
 NTSTATUS STDCALL WvBusDevCtl(IN PIRP, IN ULONG POINTER_ALIGNMENT);
@@ -646,14 +669,49 @@ VOID WvMainBusRemove(void) {
     WvlDeleteDevice(WvMainBusDevice);
   }
 
+/** PnP IRP dispatcher */
 static NTSTATUS WvMainBusDispatchPnpIrp(
     IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {
+    UCHAR code;
+
     ASSERT(dev_obj);
     ASSERT(irp);
     (VOID) dev_obj;
-    return WvlBusPnp(&WvBus, irp);
+
+    code = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
+
+    switch (code) {
+        case IRP_MN_QUERY_DEVICE_TEXT:
+        DBG("IRP_MN_QUERY_DEVICE_TEXT\n");
+        if (WvBus.QueryDevText)
+          return WvBus.QueryDevText(&WvBus, irp);
+        return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+
+        case IRP_MN_QUERY_BUS_INFORMATION:
+        DBG("IRP_MN_QUERY_BUS_INFORMATION\n");
+        return WvlBusPnpQueryBusInfo(&WvBus, irp);
+
+        case IRP_MN_QUERY_DEVICE_RELATIONS:
+        DBG("IRP_MN_QUERY_DEVICE_RELATIONS\n");
+        return WvlBusPnpQueryDevRelations(&WvBus, irp);
+
+        case IRP_MN_QUERY_CAPABILITIES:
+        DBG("IRP_MN_QUERY_CAPABILITIES\n");
+        return WvlBusPnpQueryCapabilities(&WvBus, irp);
+
+        case IRP_MN_REMOVE_DEVICE:
+        DBG("IRP_MN_REMOVE_DEVICE\n");
+        return WvlBusPnpRemoveDev(&WvBus, irp);
+
+        case IRP_MN_START_DEVICE:
+        DBG("IRP_MN_START_DEVICE\n");
+        return WvlBusPnpStartDev(&WvBus, irp);
+
+        default:
+        return WvlBusPnpSimple(&WvBus, irp, code);
+      }
   }
 
 static NTSTATUS WvMainBusDispatchDeviceControlIrp(
