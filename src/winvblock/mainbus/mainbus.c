@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <ntddk.h>
 #include <scsi.h>
+#include <initguid.h>
 
 #include "portable.h"
 #include "winvblock.h"
@@ -58,10 +59,6 @@ typedef struct S_WV_MAIN_BUS S_WV_MAIN_BUS;
 /** External functions */
 
 /* From ../libbus/pnp.c */
-extern NTSTATUS STDCALL WvlBusPnpQueryBusInfo(
-    IN WVL_SP_BUS_T Bus,
-    IN PIRP Irp
-  );
 extern NTSTATUS STDCALL WvlBusPnpQueryCapabilities(
     IN WVL_SP_BUS_T Bus,
     IN PIRP Irp
@@ -112,6 +109,10 @@ static __drv_dispatchType(IRP_MJ_CREATE) __drv_dispatchType(IRP_MJ_CLOSE)
 static __drv_dispatchType(IRP_MJ_SYSTEM_CONTROL) DRIVER_DISPATCH
   WvMainBusDispatchSystemControlIrp;
 
+/** PnP handlers */
+static __drv_dispatchType(IRP_MN_QUERY_BUS_INFORMATION) DRIVER_DISPATCH
+  WvMainBusPnpQueryBusInfo;
+
 /** Struct/union type definitions */
 
 /** The bus extension type */
@@ -121,6 +122,9 @@ struct S_WV_MAIN_BUS {
 
     /** The lower device this FDO is attached to, if any */
     DEVICE_OBJECT * LowerDeviceObject;
+
+    /** PnP bus information */
+    PNP_BUS_INFORMATION PnpBusInfo[1];
   };
 
 /** Private objects */
@@ -134,6 +138,21 @@ static S_WVL_MINI_DRIVER * WvMainBusMiniDriver;
 static DEVICE_OBJECT * WvMainBusDevice;
 
 static A_WVL_MJ_DISPATCH_TABLE WvMainBusMajorDispatchTable;
+
+DEFINE_GUID(
+    GUID_MAIN_BUS_TYPE,
+    0x2530ea73L,
+    0x086b,
+    0x11d1,
+    0xa0,
+    0x9f,
+    0x00,
+    0xc0,
+    0x4f,
+    0xc3,
+    0x40,
+    0xb1
+  );
 
 /**
  * The mini-driver entry-point
@@ -394,8 +413,13 @@ NTSTATUS STDCALL WvBusEstablish(IN UNICODE_STRING * reg_path) {
       }
     ASSERT(fdo);
     WvMainBusDevice = WvBusDev.Self = WvBus.Fdo = fdo;
+
     bus = fdo->DeviceExtension;
     ASSERT(bus);
+    bus->PnpBusInfo->BusTypeGuid = GUID_MAIN_BUS_TYPE;
+    bus->PnpBusInfo->LegacyBusType = PNPBus;
+    bus->PnpBusInfo->BusNumber = 0;
+
     WvBusDev.IsBus = TRUE;
     WvBus.QueryDevText = WvBusPnpQueryDevText;
     WvDevForDevObj(WvBus.Fdo, &WvBusDev);
@@ -675,7 +699,6 @@ static NTSTATUS WvMainBusDispatchPnpIrp(
 
     ASSERT(dev_obj);
     ASSERT(irp);
-    (VOID) dev_obj;
 
     code = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
     lower = WvBus.LowerDeviceObject;
@@ -689,7 +712,7 @@ static NTSTATUS WvMainBusDispatchPnpIrp(
 
         case IRP_MN_QUERY_BUS_INFORMATION:
         DBG("IRP_MN_QUERY_BUS_INFORMATION\n");
-        return WvlBusPnpQueryBusInfo(&WvBus, irp);
+        return WvMainBusPnpQueryBusInfo(dev_obj, irp);
 
         case IRP_MN_QUERY_DEVICE_RELATIONS:
         DBG("IRP_MN_QUERY_DEVICE_RELATIONS\n");
@@ -771,6 +794,58 @@ static NTSTATUS WvMainBusDispatchPnpIrp(
         return IoCallDriver(lower, irp);
       }
     return WvlIrpComplete(irp, irp->IoStatus.Information, status);
+  }
+
+/**
+ * IRP_MJ_PNP:IRP_MN_QUERY_BUS_INFORMATION handler
+ *
+ * IRQL == PASSIVE_LEVEL
+ * Do not send this IRP
+ *
+ * @return
+ *   Success:
+ *     Irp->IoStatus.Status == STATUS_SUCCESS
+ *     Irp->IoStatus.Information populated from paged memory
+ *   Error:
+ *     Irp->IoStatus.Status == STATUS_INSUFFICIENT_RESOURCES
+ *     Irp->IoStatus.Information == 0
+ *
+ * TODO: Not handled by function drivers, so what is it doing here?!
+ */
+static NTSTATUS STDCALL WvMainBusPnpQueryBusInfo(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
+  ) {
+    S_WV_MAIN_BUS * bus;
+    VOID * pnp_bus_info;
+    NTSTATUS status;
+
+    ASSERT(dev_obj);
+    ASSERT(irp);
+    bus = dev_obj->DeviceExtension;
+    ASSERT(bus);
+
+    /* Allocate for a copy of the bus info */
+    pnp_bus_info = wv_palloc(sizeof bus->PnpBusInfo);
+    if (!pnp_bus_info) {
+        DBG("wv_palloc failed\n");
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        irp->IoStatus.Information = 0;
+        goto pnp_bus_info;
+      }
+
+    /* Copy the bus info */
+    RtlCopyMemory(pnp_bus_info, bus->PnpBusInfo, sizeof bus->PnpBusInfo);
+
+    irp->IoStatus.Information = (ULONG_PTR) pnp_bus_info;
+    status = STATUS_SUCCESS;
+
+    /* irp-IoStatus.Information (pnp_bus_info) not freed. */
+    pnp_bus_info:
+
+    irp->IoStatus.Status = status;
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    return status;
   }
 
 static NTSTATUS WvMainBusDispatchDeviceControlIrp(
