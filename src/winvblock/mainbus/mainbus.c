@@ -59,10 +59,6 @@ typedef struct S_WV_MAIN_BUS S_WV_MAIN_BUS;
 /** External functions */
 
 /* From ../libbus/pnp.c */
-extern NTSTATUS STDCALL WvlBusPnpQueryDevRelations(
-    IN WVL_SP_BUS_T Bus,
-    IN PIRP Irp
-  );
 extern NTSTATUS STDCALL WvlBusPnpRemoveDev(IN WVL_SP_BUS_T Bus, IN PIRP Irp);
 extern NTSTATUS STDCALL WvlBusPnpStartDev(IN WVL_SP_BUS_T Bus, IN PIRP Irp);
 
@@ -93,6 +89,7 @@ static DRIVER_ADD_DEVICE WvMainBusDriveDevice;
 static DRIVER_UNLOAD WvMainBusUnload;
 static F_WVL_DEVICE_THREAD_FUNCTION WvMainBusDriveDeviceInThread;
 static VOID WvMainBusOldProbe(DEVICE_OBJECT * DeviceObject);
+static NTSTATUS WvMainBusInitialBusRelations(DEVICE_OBJECT * DeviceObject);
 
 /** Main bus IRP dispatchers */
 static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH WvMainBusDispatchPnpIrp;
@@ -110,6 +107,8 @@ static __drv_dispatchType(IRP_MN_QUERY_BUS_INFORMATION) DRIVER_DISPATCH
   WvMainBusPnpQueryBusInfo;
 static __drv_dispatchType(IRP_MN_QUERY_CAPABILITIES) DRIVER_DISPATCH
   WvMainBusPnpQueryCapabilities;
+static __drv_dispatchType(IRP_MN_QUERY_DEVICE_RELATIONS) DRIVER_DISPATCH
+  WvMainBusPnpQueryDeviceRelations;
 
 /** Struct/union type definitions */
 
@@ -123,6 +122,12 @@ struct S_WV_MAIN_BUS {
 
     /** PnP bus information */
     PNP_BUS_INFORMATION PnpBusInfo[1];
+
+    /** PnP bus relations */
+    DEVICE_RELATIONS * BusRelations;
+
+    /** Hack until proper PDO-add support is implemented */
+    DEVICE_RELATIONS * BusRelationsHack;
   };
 
 /** Private objects */
@@ -417,6 +422,9 @@ NTSTATUS STDCALL WvBusEstablish(IN UNICODE_STRING * reg_path) {
     bus->PnpBusInfo->BusTypeGuid = GUID_MAIN_BUS_TYPE;
     bus->PnpBusInfo->LegacyBusType = PNPBus;
     bus->PnpBusInfo->BusNumber = 0;
+    bus->BusRelations = NULL;
+    /* TODO: Remove once proper PDO-add support is implemented */
+    bus->BusRelationsHack = NULL;
 
     WvBusDev.IsBus = TRUE;
     WvBus.QueryDevText = WvBusPnpQueryDevText;
@@ -560,6 +568,86 @@ NTSTATUS STDCALL WvBusRemoveDev(IN WV_SP_DEV_T Dev) {
     return STATUS_SUCCESS;
   }
 
+/**
+ * Probe the main bus for its initial set of PDOs
+ *
+ * @param DeviceObject
+ *   The main bus device
+ *
+ * @retval STATUS_SUCCESS
+ * @retval STATUS_INSUFFICIENT_RESOURCES
+ *   Returned if the initial list could not be allocated from
+ *   non-paged memory
+ *
+ * This function should _only_ be called if the current list is empty
+ */
+static NTSTATUS WvMainBusInitialBusRelations(DEVICE_OBJECT * dev_obj) {
+    S_WV_MAIN_BUS * bus;
+    BOOLEAN need_alloc;
+    DEVICE_RELATIONS * dev_relations;
+    USHORT pdo_count;
+    LIST_ENTRY * link;
+    WVL_S_BUS_NODE * node;
+
+    ASSERT(dev_obj);
+    bus = dev_obj->DeviceExtension;
+    ASSERT(bus);
+    ASSERT(!bus->BusRelations);
+
+    /*
+     * TODO: Right now this is a hack until proper PDO-add support
+     * is implemented.  With this hack, any user of the main bus'
+     * BusRelations member must reset that member to NULL to ensure
+     * we are called before each use of that member
+     */
+    dev_relations = bus->BusRelationsHack;
+    pdo_count = WvBus.BusPrivate_.NodeCount;
+
+    /* Do we need to allocate the list? */
+    need_alloc = (
+        !dev_relations ||
+        dev_relations->Count < pdo_count
+      );
+    if (need_alloc) {
+        bus->BusRelationsHack = NULL;
+        /* TODO: Move this 'if' into 'wv_free'? */
+        if (dev_relations)
+          wv_free(dev_relations);
+        dev_relations = wv_malloc(
+            sizeof *dev_relations +
+            sizeof dev_relations->Objects[0] * (pdo_count - 1)
+          );
+        if (!dev_relations)
+          return STATUS_INSUFFICIENT_RESOURCES;
+      }
+
+    /* Populate the list */
+    dev_relations->Count = pdo_count;
+    dev_relations->Objects[0] = NULL;
+    for (
+        pdo_count = 0, link = WvBus.BusPrivate_.Nodes.Flink;
+        pdo_count < WvBus.BusPrivate_.NodeCount;
+        ++pdo_count
+      ) {
+        ASSERT(link);
+        ASSERT(link != &WvBus.BusPrivate_.Nodes);
+
+        node = CONTAINING_RECORD(
+            link,
+            WVL_S_BUS_NODE,
+            BusPrivate_.Link
+          );
+        ASSERT(node);
+
+        dev_relations->Objects[pdo_count] = node->BusPrivate_.Pdo;
+      }
+
+    /* Save the list */
+    bus->BusRelations = bus->BusRelationsHack = dev_relations;
+
+    return STATUS_SUCCESS;
+  }
+
 static NTSTATUS STDCALL WvBusDevCtlDetach(
     IN PIRP irp
   ) {
@@ -680,9 +768,19 @@ WVL_M_LIB DEVICE_OBJECT * WvBusFdo(void) {
  * Signal the main bus that it's time to go away
  */
 VOID WvMainBusRemove(void) {
+    S_WV_MAIN_BUS * bus;
+
     /* This will be called from the main bus' thread */
     ASSERT(WvMainBusDevice);
+    bus = WvMainBusDevice->DeviceExtension;
+    ASSERT(bus);
+
     IoDeleteSymbolicLink(&WvBusDosname);
+
+    /* TODO: Move this 'if' into 'wv_free'? */
+    if (bus->BusRelationsHack)
+      wv_free(bus->BusRelationsHack);
+    
     WvlDeleteDevice(WvMainBusDevice);
   }
 
@@ -714,7 +812,7 @@ static NTSTATUS WvMainBusDispatchPnpIrp(
 
         case IRP_MN_QUERY_DEVICE_RELATIONS:
         DBG("IRP_MN_QUERY_DEVICE_RELATIONS\n");
-        return WvlBusPnpQueryDevRelations(&WvBus, irp);
+        return WvMainBusPnpQueryDeviceRelations(dev_obj, irp);
 
         case IRP_MN_QUERY_CAPABILITIES:
         DBG("IRP_MN_QUERY_CAPABILITIES\n");
@@ -797,8 +895,9 @@ static NTSTATUS WvMainBusDispatchPnpIrp(
 /**
  * IRP_MJ_PNP:IRP_MN_QUERY_BUS_INFORMATION handler
  *
- * IRQL == PASSIVE_LEVEL
+ * IRQL == PASSIVE_LEVEL, any thread
  * Do not send this IRP
+ * Completed by PDO
  *
  * @return
  *   Success:
@@ -849,9 +948,11 @@ static NTSTATUS STDCALL WvMainBusPnpQueryBusInfo(
 /**
  * IRP_MJ_PNP:IRP_MN_QUERY_CAPABILITIES handler
  *
- * IRQL == PASSIVE_LEVEL
+ * IRQL == PASSIVE_LEVEL, any thread
  * Ok to send this IRP
- * Completed by PDO
+ * Completed by PDO, can be hooked
+ *
+ * @param Parameters.DeviceCapabilities.Capabilities
  *
  * @return
  *   Success:
@@ -879,6 +980,160 @@ static NTSTATUS STDCALL WvMainBusPnpQueryCapabilities(
     /* Let the lower device handle the IRP */
     IoSkipCurrentIrpStackLocation(irp);
     return IoCallDriver(bus->LowerDeviceObject, irp);
+  }
+
+/**
+ * IRP_MJ_PNP:IRP_MN_QUERY_DEVICE_RELATIONS handler
+ *
+ * IRQL == PASSIVE_LEVEL
+ * Completed by PDO, must accumulate relations downwards (upwards optional)
+ * BusRelations: system thread
+ *   Yes: FDO
+ *   Maybe: filter
+ * TargetDeviceRelation: any thread
+ *   Yes: PDO
+ * RemovalRelations: system thread
+ *   Maybe: FDO
+ *   Maybe: filter
+ * PowerRelations >= Windows 7: system thread
+ *   Maybe: FDO
+ *   Maybe: filter
+ * EjectionRelations: system thread
+ *   Maybe: PDO
+ * Ok to send this IRP
+ * Completed by PDO
+ *
+ * @param Parameters.QueryDeviceRelations.Type (I/O stack location)
+ *
+ * @param FileObject (I/O stack location)
+ *
+ * @return
+ *   Success:
+ *     Irp->IoStatus.Status == STATUS_SUCCESS
+ *     Irp->IoStatus.Information populated from paged memory
+ *   Error:
+ *     Irp->IoStatus.Status == STATUS_INSUFFICIENT_RESOURCES
+ */
+static NTSTATUS STDCALL WvMainBusPnpQueryDeviceRelations(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
+  ) {
+    S_WV_MAIN_BUS * bus;
+    IO_STACK_LOCATION * io_stack_loc;
+    NTSTATUS status;
+    DEVICE_RELATIONS * dev_relations;
+    DEVICE_RELATIONS * higher_dev_relations;
+    DEVICE_RELATIONS * new_dev_relations;
+    ULONG pdo_count;
+
+    ASSERT(dev_obj);
+    bus = dev_obj->DeviceExtension;
+    ASSERT(bus);
+    ASSERT(irp);
+    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    ASSERT(io_stack_loc);
+
+    switch (io_stack_loc->Parameters.QueryDeviceRelations.Type) {
+        case BusRelations:
+        /* If we don't have any PDOs, trigger the probe */
+        if (!bus->BusRelations) {
+            status = WvMainBusInitialBusRelations(dev_obj);
+            if (!NT_SUCCESS(status)) {
+                irp->IoStatus.Status = status;
+                IoCompleteRequest(irp, IO_NO_INCREMENT);
+              }
+          }
+        dev_relations = bus->BusRelations;
+        /*
+         * TODO: The next line is a hack that needs to be removed
+         * once proper PDO-add support is implemented.  This hack
+         * causes WvMainBusInitialBusRelations to be called every
+         * time
+         */
+        bus->BusRelations = NULL;
+        break;
+
+        case TargetDeviceRelation:
+        case RemovalRelations:
+        case EjectionRelations:
+        default:
+        DBG("Unsupported device relations query\n");
+        /* TODO: Forget the floating FDO case when it's removed */
+        if (bus->LowerDeviceObject) {
+            IoSkipCurrentIrpStackLocation(irp);
+            return IoCallDriver(bus->LowerDeviceObject, irp);
+          }
+      }
+
+    pdo_count = dev_relations->Count;
+
+    /* We need to include any higher driver's PDOs */
+    higher_dev_relations = (VOID *) irp->IoStatus.Information;
+    if (higher_dev_relations) {
+        /* If we have nothing to add, pass the IRP down */
+        if (!pdo_count) {
+            /* TODO: Forget the floating FDO case when it's removed */
+            if (bus->LowerDeviceObject) {
+                IoSkipCurrentIrpStackLocation(irp);
+                return IoCallDriver(bus->LowerDeviceObject, irp);
+              }
+            status = irp->IoStatus.Status;
+            IoCompleteRequest(irp, IO_NO_INCREMENT);
+            return status;
+          }
+
+        pdo_count += higher_dev_relations->Count;
+      }
+
+    /* Allocate a response */
+    new_dev_relations = wv_palloc(
+        sizeof *new_dev_relations +
+        sizeof new_dev_relations->Objects[0] * (pdo_count - 1)
+      );
+    if (!new_dev_relations) {
+        irp->IoStatus.Status = status = STATUS_INSUFFICIENT_RESOURCES;
+        IoCompleteRequest(irp, IO_NO_INCREMENT);
+        return status;
+      }
+
+    /* Populate the response... */
+    new_dev_relations->Count = pdo_count;
+    new_dev_relations->Objects[0] = NULL;
+
+    /* ...with our PDOs... */
+    if (dev_relations->Count) {
+        RtlCopyMemory(
+            new_dev_relations->Objects,
+            dev_relations->Objects,
+            sizeof new_dev_relations->Objects[0] * dev_relations->Count
+          );
+      }
+
+    /* ...and with the higher driver's PDOs, if any */
+    if (higher_dev_relations && higher_dev_relations->Count) {
+        RtlCopyMemory(
+            new_dev_relations->Objects + dev_relations->Count,
+            higher_dev_relations->Objects,
+            sizeof new_dev_relations->Objects[0] * higher_dev_relations->Count
+          );
+      }
+
+    /* Free the higher driver's response, if any */
+    if (higher_dev_relations)
+      wv_free(higher_dev_relations);
+
+    /* Reference our PDOs.  Re-purposing pdo_count, here */
+    for (pdo_count = 0; pdo_count < dev_relations->Count; ++pdo_count)
+      ObReferenceObject(dev_relations->Objects[pdo_count]);
+
+    /* Send the IRP down */
+    irp->IoStatus.Status = status = STATUS_SUCCESS;
+    irp->IoStatus.Information = (ULONG_PTR) new_dev_relations;
+    IoSkipCurrentIrpStackLocation(irp);
+    /* TODO: Forget the floating FDO case when it's removed */
+    if (bus->LowerDeviceObject)
+      return IoCallDriver(bus->LowerDeviceObject, irp);
+    return status;
   }
 
 static NTSTATUS WvMainBusDispatchDeviceControlIrp(
