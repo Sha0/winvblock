@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2012, Shao Miller <sha0.miller@gmail.com>.
  *
  * This file is part of WinVBlock, originally derived from WinAoE.
  *
@@ -15,6 +15,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+ * @file
+ *
+ * Some C Standard Library work-alikes
  */
 
 #include <ntddk.h>
@@ -38,7 +44,8 @@ PVOID wv_pallocz(wv_size_t size) {
     return ptr ? RtlZeroMemory(ptr, size), ptr : ptr;
   }
 
-VOID wv_free(PVOID ptr) {
-    ExFreePool(ptr);
+VOID wv_free(VOID * ptr) {
+    if (ptr)
+      ExFreePool(ptr);
     return;
   }

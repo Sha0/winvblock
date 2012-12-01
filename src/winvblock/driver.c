@@ -1457,9 +1457,7 @@ static VOID WvProcessDeviceThreadWorkItem(
       }
 
     /* Possible cleanup */
-    /* TODO: Move this 'if' into 'wv_free'? */
-    if (ptrs[2])
-      wv_free(ptrs[2]);
+    wv_free(ptrs[2]);
 
     /* Signal that the work item has been completed */
     if (status_waiter) {

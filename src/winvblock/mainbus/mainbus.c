@@ -610,9 +610,7 @@ static NTSTATUS WvMainBusInitialBusRelations(DEVICE_OBJECT * dev_obj) {
       );
     if (need_alloc) {
         bus->BusRelationsHack = NULL;
-        /* TODO: Move this 'if' into 'wv_free'? */
-        if (dev_relations)
-          wv_free(dev_relations);
+        wv_free(dev_relations);
         dev_relations = wv_malloc(
             sizeof *dev_relations +
             sizeof dev_relations->Objects[0] * (pdo_count - 1)
@@ -777,9 +775,7 @@ VOID WvMainBusRemove(void) {
 
     IoDeleteSymbolicLink(&WvBusDosname);
 
-    /* TODO: Move this 'if' into 'wv_free'? */
-    if (bus->BusRelationsHack)
-      wv_free(bus->BusRelationsHack);
+    wv_free(bus->BusRelationsHack);
     
     WvlDeleteDevice(WvMainBusDevice);
   }
@@ -1119,8 +1115,7 @@ static NTSTATUS STDCALL WvMainBusPnpQueryDeviceRelations(
       }
 
     /* Free the higher driver's response, if any */
-    if (higher_dev_relations)
-      wv_free(higher_dev_relations);
+    wv_free(higher_dev_relations);
 
     /* Reference our PDOs.  Re-purposing pdo_count, here */
     for (pdo_count = 0; pdo_count < dev_relations->Count; ++pdo_count)

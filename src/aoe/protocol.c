@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2012, Shao Miller <sha0.miller@gmail.com>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
@@ -435,10 +435,8 @@ Protocol_TransferDataComplete (
     }
   if ( Header != NULL && Data != NULL )
     aoe__reply ( Header->SourceMac, Header->DestinationMac, Data, DataSize );
-  if ( Header != NULL )
-    wv_free(Header);
-  if ( Data != NULL )
-    wv_free(Data);
+  wv_free(Header);
+  wv_free(Data);
   NdisFreePacket ( Packet );
 }
 
