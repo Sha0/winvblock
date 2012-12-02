@@ -888,12 +888,18 @@ static PCHAR STDCALL Debug_SCSIOPString(IN UCHAR OperationCode) {
 #if WVL_M_DEBUG
 static VOID WvlDebugBugCheck_(PVOID buf, ULONG len) {
     static WCHAR wv_string[] = WVL_M_WLIT L": Alive\n";
+    static WCHAR missing_cddb[] =
+      WVL_M_WLIT L": Missing CriticalDeviceDatabase associations\n";
     static UNICODE_STRING wv_ustring = {
         sizeof wv_string,
         sizeof wv_string,
         wv_string
       };
 
+    if (!WvlCddbDone) {
+        wv_ustring.Buffer = missing_cddb;
+        wv_ustring.Length = wv_ustring.MaximumLength = sizeof missing_cddb;
+      }
     ZwDisplayString(&wv_ustring);
     return;
   }
