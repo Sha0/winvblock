@@ -45,7 +45,7 @@ static NTSTATUS STDCALL WvlBusPnpIoCompletion(
     return STATUS_MORE_PROCESSING_REQUIRED;
   }
 
-NTSTATUS STDCALL WvlBusPnpStartDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
+static NTSTATUS STDCALL WvlBusPnpStartDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
     NTSTATUS status;
     KEVENT event;
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;

@@ -58,9 +58,6 @@ typedef struct S_WV_MAIN_BUS S_WV_MAIN_BUS;
 
 /** External functions */
 
-/* From ../libbus/pnp.c */
-extern NTSTATUS STDCALL WvlBusPnpStartDev(IN WVL_SP_BUS_T Bus, IN PIRP Irp);
-
 /** Public functions */
 NTSTATUS STDCALL WvBusDevCtl(IN PIRP, IN ULONG POINTER_ALIGNMENT);
 WVL_F_BUS_PNP WvBusPnpQueryDevText;
@@ -113,6 +110,8 @@ static __drv_dispatchType(IRP_MN_QUERY_DEVICE_RELATIONS) DRIVER_DISPATCH
   WvMainBusPnpQueryDeviceRelations;
 static __drv_dispatchType(IRP_MN_REMOVE_DEVICE) DRIVER_DISPATCH
   WvMainBusPnpRemoveDevice;
+static __drv_dispatchType(IRP_MN_START_DEVICE) DRIVER_DISPATCH
+  WvMainBusPnpStartDevice;
 
 /** Struct/union type definitions */
 
@@ -802,7 +801,7 @@ static NTSTATUS WvMainBusDispatchPnpIrp(
 
         case IRP_MN_START_DEVICE:
         DBG("IRP_MN_START_DEVICE\n");
-        return WvlBusPnpStartDev(&WvBus, irp);
+        return WvMainBusPnpStartDevice(dev_obj, irp);
 
         case IRP_MN_QUERY_PNP_DEVICE_STATE:
         DBG("IRP_MN_QUERY_PNP_DEVICE_STATE\n");
@@ -1168,6 +1167,56 @@ static NTSTATUS STDCALL WvMainBusPnpRemoveDevice(
     c = InterlockedDecrement(&WvMainBusCreators);
     ASSERT(c >= 0);
 
+    return status;
+  }
+
+/**
+ * IRP_MJ_PNP:IRP_MN_START_DEVICE handler
+ *
+ * IRQL == PASSIVE_LEVEL, system thread
+ * Completed by PDO first, then caught by higher drivers
+ * Do not send this IRP
+ *
+ * @param Parameters.StartDevice.AllocatedResources (I/O stack location)
+ *
+ * @param Parameters.StartDevice.AllocatedResourcesTranslated
+ *   (I/O stack location)
+ *
+ * @return
+ *   Success:
+ *     Irp->IoStatus.Status == STATUS_SUCCESS
+ *     Irp->IoStatus.Status == STATUS_PENDING
+ */
+static NTSTATUS STDCALL WvMainBusPnpStartDevice(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
+  ) {
+    S_WV_MAIN_BUS * bus;
+    NTSTATUS status;
+
+    ASSERT(dev_obj);
+    bus = dev_obj->DeviceExtension;
+    ASSERT(bus);
+    ASSERT(irp);
+
+    /* Send the IRP down and wait for completion by the lower driver */
+    status = WvlWaitForIrpCompletion(bus->LowerDeviceObject, irp);
+    if (!NT_SUCCESS(status)) {
+        DBG(
+            "Lower device %p failed to start\n",
+            (VOID *) bus->LowerDeviceObject
+          );
+        goto err_lower;
+      }
+
+    WvBus.OldState = WvBus.State;
+    WvBus.State = WvlBusStateStarted;
+
+    irp->IoStatus.Status = STATUS_SUCCESS;
+
+    err_lower:
+
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
     return status;
   }
 

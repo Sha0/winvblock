@@ -105,6 +105,7 @@ static VOID WvProcessDeviceIrp(
     IN IRP * Irp,
     IN BOOLEAN DeviceNotAvailable
   );
+static IO_COMPLETION_ROUTINE WvIoCompletion;
 
 static LPWSTR STDCALL WvGetOpt(IN LPWSTR opt_name) {
     LPWSTR our_opts, the_opt;
@@ -218,6 +219,9 @@ NTSTATUS STDCALL DriverEntry(
     ULONG i;
 
     DBG("Entry\n");
+
+    /* Dummy to keep libbus linked-in */
+    { volatile INT x = 0; if (x) WvlBusPnp(NULL, NULL); }
 
     /* Have we already initialized the driver? */
     if (WvDriverObj) {
@@ -1510,4 +1514,63 @@ static VOID WvProcessDeviceIrp(
         status_waiter->Status = status;
         KeSetEvent(&status_waiter->Complete, 0, FALSE);
       }
+  }
+
+/**
+ * Simple IRP completion routine
+ *
+ * @param DeviceObject
+ *   The device associated with the IRP completion event
+ *
+ * @param Irp
+ *   The IRP that has been completed by a lower driver
+ *
+ * @param Context
+ *   The event to signal that the IRP has been completed
+ */
+static NTSTATUS STDCALL WvIoCompletion(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp,
+    IN VOID * context
+  ) {
+    KEVENT * event;
+
+    ASSERT(dev_obj);
+    (VOID) dev_obj;
+    ASSERT(irp);
+
+    event = context;
+    if (event && irp->PendingReturned)
+      KeSetEvent(event, 0, FALSE);
+
+    return STATUS_MORE_PROCESSING_REQUIRED;
+  }
+
+WVL_M_LIB NTSTATUS STDCALL WvlWaitForIrpCompletion(
+    IN DEVICE_OBJECT * lower_dev_obj,
+    IN IRP * irp
+  ) {
+    KEVENT event;
+
+    ASSERT(lower_dev_obj);
+    ASSERT(irp);
+
+    /* Prepare to wait for the IRP to complete */
+    IoCopyCurrentIrpStackLocationToNext(irp);
+    KeInitializeEvent(&event, NotificationEvent, FALSE);
+    IoSetCompletionRoutine(
+        irp,
+        WvIoCompletion,
+        &event,
+        TRUE,
+        TRUE,
+        TRUE
+      );
+
+    /* Send the IRP down and wait for completion */
+    if (IoCallDriver(lower_dev_obj, irp) == STATUS_PENDING)
+      KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, NULL);
+
+    /* Return the status from the lower driver */
+    return irp->IoStatus.Status;
   }

@@ -408,6 +408,23 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlAddIrpToDeviceQueue(
   );
 
 /**
+ * Wait for a lower device object in the device stack to complete an IRP
+ *
+ * @param LowerDeviceObject
+ *   The lower device to send the IRP to and wait for
+ *
+ * @param Irp
+ *   The IRP to send to the lower device and wait for
+ *
+ * @return
+ *   The completed IRP's status returned by the lower device's driver
+ */
+extern WVL_M_LIB NTSTATUS STDCALL WvlWaitForIrpCompletion(
+    IN DEVICE_OBJECT * LowerDeviceObject,
+    IN IRP * Irp
+  );
+
+/**
  * Miscellaneous: Grouped memory allocation functions.
  */
 
