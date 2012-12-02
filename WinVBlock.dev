@@ -811,16 +811,6 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit76]
-FileName=src\winvblock\mainbus\dummy.c
-CompileCpp=1
-Folder=WinVBlock/MainBus
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
 [Unit58]
 FileName=src\winvblock\libbus\libbus.c
 CompileCpp=1
@@ -835,6 +825,16 @@ BuildCmd=
 FileName=src\winvblock\wvlib\thread.c
 CompileCpp=1
 Folder=WinVBlock/WvLib
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit76]
+FileName=src\winvblock\mainbus\dummyirp.c
+CompileCpp=1
+Folder=WinVBlock/MainBus
 Compile=1
 Link=1
 Priority=1000
