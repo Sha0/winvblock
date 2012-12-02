@@ -971,8 +971,6 @@ static NTSTATUS STDCALL WvMainBusPnpQueryCapabilities(
  *   Maybe: filter
  * EjectionRelations: system thread
  *   Maybe: PDO
- * Ok to send this IRP
- * Completed by PDO
  *
  * @param Parameters.QueryDeviceRelations.Type (I/O stack location)
  *
@@ -1096,6 +1094,7 @@ static NTSTATUS STDCALL WvMainBusPnpQueryDeviceRelations(
     irp->IoStatus.Status = STATUS_SUCCESS;
     irp->IoStatus.Information = (ULONG_PTR) new_dev_relations;
     IoSkipCurrentIrpStackLocation(irp);
+    ASSERT(bus->LowerDeviceObject);
     return IoCallDriver(bus->LowerDeviceObject, irp);
   }
 

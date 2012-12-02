@@ -78,7 +78,7 @@ static NTSTATUS STDCALL WvlBusPnpStartDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
       );
   }
 
-NTSTATUS STDCALL WvlBusPnpRemoveDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
+static NTSTATUS STDCALL WvlBusPnpRemoveDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
     PDEVICE_OBJECT lower = bus->LowerDeviceObject;
     NTSTATUS status;
 
@@ -99,7 +99,7 @@ NTSTATUS STDCALL WvlBusPnpRemoveDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
     return status;
   }
 
-NTSTATUS STDCALL WvlBusPnpQueryDevRelations(
+static NTSTATUS STDCALL WvlBusPnpQueryDevRelations(
     IN WVL_SP_BUS_T bus,
     IN PIRP irp
   ) {
@@ -175,7 +175,7 @@ NTSTATUS STDCALL WvlBusPnpQueryDevRelations(
     return WvlIrpComplete(irp, irp->IoStatus.Information, STATUS_SUCCESS);
   }
 
-NTSTATUS STDCALL WvlBusPnpQueryCapabilities(
+static NTSTATUS STDCALL WvlBusPnpQueryCapabilities(
     IN WVL_SP_BUS_T bus,
     IN PIRP irp
   ) {
@@ -212,7 +212,7 @@ DEFINE_GUID(
     0xb1
   );
 
-NTSTATUS STDCALL WvlBusPnpQueryBusInfo(
+static NTSTATUS STDCALL WvlBusPnpQueryBusInfo(
     IN WVL_SP_BUS_T bus,
     IN PIRP irp
   ) {
@@ -239,7 +239,7 @@ NTSTATUS STDCALL WvlBusPnpQueryBusInfo(
     return status;
   }
 
-NTSTATUS STDCALL WvlBusPnpSimple(
+static NTSTATUS STDCALL WvlBusPnpSimple(
     IN WVL_SP_BUS_T bus,
     IN PIRP irp,
     IN UCHAR code
