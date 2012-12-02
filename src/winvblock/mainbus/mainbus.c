@@ -81,6 +81,7 @@ NTSTATUS WvMainBusInitialBusRelations(DEVICE_OBJECT * DeviceObject);
 
 /** Private function declarations */
 
+static BOOLEAN WvMainBusPdoDone(IN UNICODE_STRING * RegistryPath);
 /* TODO: DRIVER_ADD_DEVICE isn't available in DDK 3790.1830, it seems */
 static DRIVER_ADD_DEVICE WvMainBusDriveDevice;
 static DRIVER_UNLOAD WvMainBusUnload;
@@ -404,30 +405,13 @@ static NTSTATUS STDCALL WvBusEstablish(
     IN UNICODE_STRING * reg_path
   ) {
     NTSTATUS status;
-    HANDLE reg_key;
-    UINT32 pdo_done = 0;
     PDEVICE_OBJECT pdo = NULL;
 
     ASSERT(drv_obj);
     ASSERT(reg_path);
 
-    /* Open our Registry path */
-    status = WvlRegOpenKey(reg_path->Buffer, &reg_key);
-    if (!NT_SUCCESS(status)) {
-        DBG("Couldn't open Registry path!\n");
-        goto err_reg;
-      }
-
-    /*
-     * Check the Registry to see if we've already got a PDO.
-     * This entry is produced when the PDO has been properly
-     * installed via the .INF file
-     */
-    status = WvlRegFetchDword(reg_key, L"PdoDone", &pdo_done);
-    if (NT_SUCCESS(status) && pdo_done) {
-        status = STATUS_SUCCESS;
-        goto out;
-      }
+    if (WvMainBusPdoDone(reg_path))
+      return STATUS_SUCCESS;
 
     /* If not, create a root-enumerated PDO for our bus */
     status = IoReportDetectedDevice(
@@ -464,10 +448,51 @@ static NTSTATUS STDCALL WvBusEstablish(
 
     out:
 
+    return status;
+  }
+
+/**
+ * Check to see if the main bus PDO has been created
+ *
+ * @param RegistryPath
+ *   The Registry path for the driver, provided by Windows
+ *
+ * @retval FALSE - A PDO has not been noted as having been created
+ * @retval TRUE - A PDO has been noted as having been created
+ */
+static BOOLEAN WvMainBusPdoDone(IN UNICODE_STRING * reg_path) {
+    HANDLE reg_key;
+    BOOLEAN rv;
+    UINT32 pdo_done;
+    NTSTATUS status;
+
+    /* Assume failure */
+    rv = FALSE;
+
+    /* Open our Registry path */
+    ASSERT(reg_path);
+    status = WvlRegOpenKey(reg_path->Buffer, &reg_key);
+    if (!NT_SUCCESS(status)) {
+        DBG("Couldn't open Registry path!\n");
+        goto err_reg;
+      }
+
+    /*
+     * Check the Registry to see if we've already got a PDO.
+     * This entry is produced when the PDO has been properly
+     * installed via the .INF file
+     */
+    pdo_done = 0;
+    status = WvlRegFetchDword(reg_key, L"PdoDone", &pdo_done);
+    if (NT_SUCCESS(status) && pdo_done) {
+        DBG("PdoDone was set\n");
+        rv = TRUE;
+      }
+
     WvlRegCloseKey(reg_key);
     err_reg:
 
-    return status;
+    return rv;
   }
 
 /* TODO: Cosmetic changes */
