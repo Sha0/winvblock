@@ -59,7 +59,6 @@ typedef struct S_WV_MAIN_BUS S_WV_MAIN_BUS;
 /** External functions */
 
 /* From ../libbus/pnp.c */
-extern NTSTATUS STDCALL WvlBusPnpRemoveDev(IN WVL_SP_BUS_T Bus, IN PIRP Irp);
 extern NTSTATUS STDCALL WvlBusPnpStartDev(IN WVL_SP_BUS_T Bus, IN PIRP Irp);
 
 /** Public functions */
@@ -112,6 +111,8 @@ static __drv_dispatchType(IRP_MN_QUERY_CAPABILITIES) DRIVER_DISPATCH
   WvMainBusPnpQueryCapabilities;
 static __drv_dispatchType(IRP_MN_QUERY_DEVICE_RELATIONS) DRIVER_DISPATCH
   WvMainBusPnpQueryDeviceRelations;
+static __drv_dispatchType(IRP_MN_REMOVE_DEVICE) DRIVER_DISPATCH
+  WvMainBusPnpRemoveDevice;
 
 /** Struct/union type definitions */
 
@@ -757,32 +758,6 @@ WVL_M_LIB DEVICE_OBJECT * WvBusFdo(void) {
     return WvBus.Fdo;
   }
 
-/**
- * Signal the main bus that it's time to go away
- */
-VOID WvMainBusRemove(void) {
-    S_WV_MAIN_BUS * bus;
-    LONG c;
-
-    /* This will be called from the main bus' thread */
-    ASSERT(WvMainBusDevice);
-    bus = WvMainBusDevice->DeviceExtension;
-    ASSERT(bus);
-
-    IoDeleteSymbolicLink(&WvBusDosName);
-
-    wv_free(bus->BusRelationsHack);
-    
-    WvlDeleteDevice(WvMainBusDevice);
-
-    /*
-     * TODO: Put this somewhere where it doesn't race with another
-     * thread calling WvMainBusDriveDevice
-     */
-    c = InterlockedDecrement(&WvMainBusCreators);
-    ASSERT(c >= 0);
-  }
-
 /** PnP IRP dispatcher */
 static NTSTATUS WvMainBusDispatchPnpIrp(
     IN DEVICE_OBJECT * dev_obj,
@@ -823,7 +798,7 @@ static NTSTATUS WvMainBusDispatchPnpIrp(
 
         case IRP_MN_REMOVE_DEVICE:
         DBG("IRP_MN_REMOVE_DEVICE\n");
-        return WvlBusPnpRemoveDev(&WvBus, irp);
+        return WvMainBusPnpRemoveDevice(dev_obj, irp);
 
         case IRP_MN_START_DEVICE:
         DBG("IRP_MN_START_DEVICE\n");
@@ -1123,6 +1098,77 @@ static NTSTATUS STDCALL WvMainBusPnpQueryDeviceRelations(
     irp->IoStatus.Information = (ULONG_PTR) new_dev_relations;
     IoSkipCurrentIrpStackLocation(irp);
     return IoCallDriver(bus->LowerDeviceObject, irp);
+  }
+
+/**
+ * IRP_MJ_PNP:IRP_MN_REMOVE_DEVICE handler
+ *
+ * IRQL == PASSIVE_LEVEL, system thread
+ * Completed by PDO
+ * Do not send this IRP
+ * Any child PDOs receive one of these IRPs, first, except possibly
+ * if they've been surprise-removed
+ *
+ * @return
+ *   Success:
+ *     Irp->IoStatus.Status == STATUS_SUCCESS
+ */
+static NTSTATUS STDCALL WvMainBusPnpRemoveDevice(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
+  ) {
+    S_WV_MAIN_BUS * bus;
+    LIST_ENTRY * list;
+    LIST_ENTRY * link;
+    WVL_S_BUS_NODE * bus_node;
+    NTSTATUS status;
+    LONG c;
+
+    ASSERT(dev_obj);
+    bus = dev_obj->DeviceExtension;
+    ASSERT(bus);
+    ASSERT(irp);
+
+    IoDeleteSymbolicLink(&WvBusDosName);
+
+    /* Schedule deletion of this device when the thread finishes */
+    WvlDeleteDevice(WvMainBusDevice);
+
+    /* Delete all child PDOs */
+    wv_free(bus->BusRelationsHack);
+    list = &WvBus.BusPrivate_.Nodes;
+    while ((link = RemoveHeadList(list)) != list) {
+        bus_node = CONTAINING_RECORD(link, WVL_S_BUS_NODE, BusPrivate_.Link);
+        ASSERT(bus_node);
+
+        bus_node->Linked = FALSE;
+        DBG(
+            "Removing child PDO %p from bus FDO %p\n",
+            (VOID *) bus_node->BusPrivate_.Pdo,
+            (VOID *) dev_obj
+          );
+        ObDereferenceObject(bus_node->BusPrivate_.Pdo);
+        WvBus.BusPrivate_.NodeCount--;
+      }
+
+    /* Send the IRP down */
+    IoSkipCurrentIrpStackLocation(irp);
+    ASSERT(bus->LowerDeviceObject);
+    status = IoCallDriver(bus->LowerDeviceObject, irp);
+
+    /* Detach FDO from PDO */
+    IoDetachDevice(bus->LowerDeviceObject);
+    WvBus.LowerDeviceObject = bus->LowerDeviceObject = NULL;
+    WvBus.Pdo = NULL;
+
+    /*
+     * TODO: Put this somewhere where it doesn't race with another
+     * thread calling WvMainBusDriveDevice
+     */
+    c = InterlockedDecrement(&WvMainBusCreators);
+    ASSERT(c >= 0);
+
+    return status;
   }
 
 static NTSTATUS WvMainBusDispatchDeviceControlIrp(

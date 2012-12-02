@@ -36,10 +36,6 @@
 #include "bus.h"
 #include "debug.h"
 
-/* TODO: Remove these when the main bus module is a mini-driver */
-extern WVL_M_LIB DEVICE_OBJECT * WvBusFdo(void);
-extern VOID WvMainBusRemove(void);
-
 static NTSTATUS STDCALL WvlBusPnpIoCompletion(
     IN PDEVICE_OBJECT dev_obj,
     IN PIRP irp,
@@ -96,10 +92,6 @@ NTSTATUS STDCALL WvlBusPnpRemoveDev(IN WVL_SP_BUS_T bus, IN PIRP irp) {
         status = IoCallDriver(lower, irp);
       }
     WvlBusClear(bus);
-
-    /* TODO: Remove this when the main bus module is a mini-driver */
-    if (bus->Fdo == WvBusFdo())
-      WvMainBusRemove();
 
     /* Without a lower DEVICE_OBJECT, we have to complete the IRP. */
     if (!lower)
