@@ -1,7 +1,7 @@
 [Project]
 FileName=WinVBlock.dev
 Name=WinVBlock
-UnitCount=76
+UnitCount=77
 PchHead=-1
 PchSource=-1
 Ver=3
@@ -833,6 +833,16 @@ BuildCmd=
 
 [Unit76]
 FileName=src\winvblock\mainbus\dummyirp.c
+CompileCpp=1
+Folder=WinVBlock/MainBus
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit77]
+FileName=src\winvblock\mainbus\busirp.c
 CompileCpp=1
 Folder=WinVBlock/MainBus
 Compile=1

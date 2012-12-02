@@ -2,7 +2,7 @@
 
 set libname=mainbus
 
-set c=mainbus.c dummyirp.c
+set c=mainbus.c busirp.c dummyirp.c
 
 echo !INCLUDE $(NTMAKEENV)\makefile.def	> makefile
 

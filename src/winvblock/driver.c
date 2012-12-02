@@ -48,7 +48,6 @@
 extern WVL_S_BUS_T WvBus;
 extern DRIVER_INITIALIZE WvMainBusDriverEntry;
 extern NTSTATUS STDCALL WvBusAttach(IN PDEVICE_OBJECT);
-extern NTSTATUS STDCALL WvBusDevCtl(IN PIRP, IN ULONG POINTER_ALIGNMENT);
 
 /** Public objects */
 DRIVER_OBJECT * WvDriverObj;

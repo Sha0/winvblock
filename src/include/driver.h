@@ -83,15 +83,6 @@ extern DRIVER_INITIALIZE DriverEntry;
 /* From mainbus/mainbus.c */
 
 /**
- * Return the main bus FDO.  This function is useful for
- * drivers/mini-drivers trying to communicate with this one
- *
- * @return
- *   A pointer to the main bus FDO
- */
-extern WVL_M_LIB DEVICE_OBJECT * WvBusFdo(void);
-
-/**
  * Add a child node to the main bus
  *
  * @param Device
