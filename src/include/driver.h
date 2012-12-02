@@ -541,5 +541,6 @@ extern DRIVER_OBJECT * WvDriverObj;
 extern UINT32 WvFindDisk;
 extern KSPIN_LOCK WvFindDiskLock;
 extern S_WVL_RESOURCE_TRACKER WvDriverUsage[1];
+extern WVL_M_LIB BOOLEAN WvlCddbDone;
 
 #endif	/* WV_M_DRIVER_H_ */

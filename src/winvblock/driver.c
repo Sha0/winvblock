@@ -54,6 +54,7 @@ DRIVER_OBJECT * WvDriverObj;
 UINT32 WvFindDisk;
 KSPIN_LOCK WvFindDiskLock;
 S_WVL_RESOURCE_TRACKER WvDriverUsage[1];
+WVL_M_LIB BOOLEAN WvlCddbDone;
 
 /** Private objects */
 
@@ -73,6 +74,7 @@ static S_WVL_LOCKED_LIST WvRegisteredMiniDrivers[1];
 static KEVENT WvMiniDriversDeregistered;
 
 /* Private function declarations */
+static VOID WvDriverCheckCddb(IN UNICODE_STRING * RegistryPath);
 static DRIVER_DISPATCH WvIrpNotSupported;
 static
   __drv_dispatchType(IRP_MJ_POWER)
@@ -217,6 +219,9 @@ NTSTATUS STDCALL DriverEntry(
     NTSTATUS status;
     ULONG i;
 
+    ASSERT(drv_obj);
+    ASSERT(reg_path);
+
     DBG("Entry\n");
 
     /* Dummy to keep libbus linked-in */
@@ -244,6 +249,9 @@ NTSTATUS STDCALL DriverEntry(
         WvlDebugModuleUnload();
         return WvlError("WvlRegNoteOsLoadOpts", status);
       }
+
+    /* Check if CDDB associations have been produced by the .INF file */
+    WvDriverCheckCddb(reg_path);
 
     /* AoE doesn't support sleeping */
     WvDriverStateHandle = PoRegisterSystemState(NULL, ES_CONTINUOUS);
@@ -410,6 +418,43 @@ static VOID STDCALL WvUnload(IN DRIVER_OBJECT * drv_obj) {
     WvlWaitForResourceZeroUsage(WvDriverUsage);
 
     DBG("Done\n");
+  }
+
+/**
+ * Check if CriticalDeviceDatabase associations have been produced
+ * by installation with the .INF file
+ *
+ * @param RegistryPath
+ *   The Registry path for the driver, provided by Windows
+ *
+ * Sets the value of WvDriverCddbDone, accordingly
+ */
+static VOID WvDriverCheckCddb(IN UNICODE_STRING * reg_path) {
+    HANDLE reg_key;
+    UINT32 cddb_done;
+    NTSTATUS status;
+
+    /* Open our Registry path */
+    ASSERT(reg_path);
+    status = WvlRegOpenKey(reg_path->Buffer, &reg_key);
+    if (!NT_SUCCESS(status)) {
+        DBG("Couldn't open Registry path!\n");
+        return;
+      }
+
+    /*
+     * Check the Registry to see if we've already got a PDO.
+     * This entry is produced when the PDO has been properly
+     * installed via the .INF file
+     */
+    cddb_done = 0;
+    status = WvlRegFetchDword(reg_key, L"CddbDone", &cddb_done);
+    if (NT_SUCCESS(status) && cddb_done) {
+        DBG("CddbDone was set\n");
+        WvlCddbDone = TRUE;
+      }
+
+    WvlRegCloseKey(reg_key);
   }
 
 NTSTATUS STDCALL WvDriverGetDevCapabilities(

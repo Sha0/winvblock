@@ -77,6 +77,13 @@ winvblk.exe
 [PdoDone]
 HKR,,PdoDone,0x00010001,1
  
+[CddbDone]
+HKLM, SYSTEM\CurrentControlSet\Control\CriticalDeviceDatabase\root#winvblock,ClassGUID,,"{4D36E97B-E325-11CE-BFC1-08002BE10318}"
+HKLM, SYSTEM\CurrentControlSet\Control\CriticalDeviceDatabase\root#winvblock,Service,,"WinVBlock"
+HKLM, SYSTEM\CurrentControlSet\Control\CriticalDeviceDatabase\detected#winvblock,ClassGUID,,"{4D36E97B-E325-11CE-BFC1-08002BE10318}"
+HKLM, SYSTEM\CurrentControlSet\Control\CriticalDeviceDatabase\detected#winvblock,Service,,"WinVBlock"
+HKR,,CddbDone,0x00010001,1
+ 
 [BootStart]
 HKR,,Start,0x00010001,0
  
@@ -117,6 +124,7 @@ ErrorControl=0x00000001
 ServiceBinary=%12%\wvblk32.sys
 LoadOrderGroup=SCSI miniport
 ;AddReg=PdoDone
+AddReg=CddbDone
 AddReg=BootStart
  
  
@@ -153,6 +161,7 @@ ErrorControl=0x00000001
 ServiceBinary=%12%\wvblk64.sys
 LoadOrderGroup=SCSI miniport
 ;AddReg=PdoDone
+AddReg=CddbDone
 AddReg=BootStart
 -----EOF-----
 
@@ -488,7 +497,7 @@ set C=cd.%_%
 :: The unique character not to be used in "file" sections.  Please
 :: note that if you are displaying this very LIBRARY section, you
 :: will be missing this special character, since it's illegal!
-set _ill=#
+set _ill=`
 
 :: Goto the _main function
 goto :_main
