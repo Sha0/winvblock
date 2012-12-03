@@ -75,10 +75,9 @@ static __drv_dispatchType(IRP_MN_REMOVE_DEVICE) DRIVER_DISPATCH
 static __drv_dispatchType(IRP_MN_START_DEVICE) DRIVER_DISPATCH
   WvMainBusPnpStartDevice;
 
-static NTSTATUS STDCALL WvMainBusDeviceControlDetach(
-    IN DEVICE_OBJECT * DeviceObject,
-    IN IRP * Irp
-  );
+/** Device control handlers */
+static __drv_dispatchType(IRP_MJ_DEVICE_CONTROL) DRIVER_DISPATCH
+  WvMainBusDeviceControlDetach;
 
 /** Objects */
 static A_WVL_MJ_DISPATCH_TABLE WvMainBusMajorDispatchTable;
@@ -184,7 +183,7 @@ NTSTATUS STDCALL WvBusPnpQueryDevText(
   }
 
 /** PnP IRP dispatcher */
-static NTSTATUS WvMainBusDispatchPnpIrp(
+static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
     IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {
@@ -646,7 +645,7 @@ static NTSTATUS STDCALL WvMainBusPnpStartDevice(
   }
 
 /** Device control IRP dispatcher */
-static NTSTATUS WvMainBusDispatchDeviceControlIrp(
+static NTSTATUS STDCALL WvMainBusDispatchDeviceControlIrp(
     IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {
@@ -700,7 +699,7 @@ static NTSTATUS WvMainBusDispatchDeviceControlIrp(
  * @retval STATUS_UNSUCCESSFUL
  *   The device could not be detached
  */
-static NTSTATUS WvMainBusDeviceControlDetach(
+static NTSTATUS STDCALL WvMainBusDeviceControlDetach(
     IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {
@@ -758,7 +757,7 @@ static NTSTATUS WvMainBusDeviceControlDetach(
         goto err_dev;
       }
 
-    /* Detach the node. */
+    /* Detach the node */
     WvBusRemoveDev(dev);
     DBG("Removed unit %u\n", unit_num);
     status =  STATUS_SUCCESS;
@@ -770,7 +769,7 @@ static NTSTATUS WvMainBusDeviceControlDetach(
     return WvlIrpComplete(irp, 0, status);
   }
 
-static NTSTATUS WvMainBusDispatchPowerIrp(
+static NTSTATUS STDCALL WvMainBusDispatchPowerIrp(
     IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {
@@ -779,7 +778,7 @@ static NTSTATUS WvMainBusDispatchPowerIrp(
     return WvlIrpPassPowerToLower(WvBus.LowerDeviceObject, irp);
   }
 
-static NTSTATUS WvMainBusDispatchCreateCloseIrp(
+static NTSTATUS STDCALL WvMainBusDispatchCreateCloseIrp(
     IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {
@@ -790,7 +789,7 @@ static NTSTATUS WvMainBusDispatchCreateCloseIrp(
     return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
   }
 
-static NTSTATUS WvMainBusDispatchSystemControlIrp(
+static NTSTATUS STDCALL WvMainBusDispatchSystemControlIrp(
     IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {
