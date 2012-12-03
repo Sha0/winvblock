@@ -61,17 +61,8 @@ typedef struct S_WV_MAIN_BUS S_WV_MAIN_BUS;
 /* From busirp.c */
 
 /** Main bus IRP dispatchers */
+extern VOID WvMainBusBuildMajorDispatchTable(void);
 extern DRIVER_DISPATCH WvBusIrpDispatch;
-extern __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH WvMainBusDispatchPnpIrp;
-extern __drv_dispatchType(IRP_MJ_DEVICE_CONTROL) DRIVER_DISPATCH
-  WvMainBusDispatchDeviceControlIrp;
-extern __drv_dispatchType(IRP_MJ_POWER) DRIVER_DISPATCH
-  WvMainBusDispatchPowerIrp;
-extern __drv_dispatchType(IRP_MJ_CREATE) __drv_dispatchType(IRP_MJ_CLOSE)
-  DRIVER_DISPATCH WvMainBusDispatchCreateCloseIrp;
-extern __drv_dispatchType(IRP_MJ_SYSTEM_CONTROL) DRIVER_DISPATCH
-  WvMainBusDispatchSystemControlIrp;
-
 extern WVL_F_BUS_PNP WvBusPnpQueryDevText;
 
 /** Public functions */
@@ -110,11 +101,6 @@ struct S_WV_MAIN_BUS {
     /** Hack until proper PDO-add support is implemented */
     DEVICE_RELATIONS * BusRelationsHack;
   };
-
-/** External objects */
-
-/* From busirp.c */
-extern A_WVL_MJ_DISPATCH_TABLE WvMainBusMajorDispatchTable;
 
 /** Public objects */
 
@@ -181,16 +167,7 @@ NTSTATUS STDCALL WvMainBusDriverEntry(
     NTSTATUS status;
 
     /* Build the main bus' major dispatch table */
-    WvMainBusMajorDispatchTable[IRP_MJ_PNP] = WvMainBusDispatchPnpIrp;
-    WvMainBusMajorDispatchTable[IRP_MJ_DEVICE_CONTROL] =
-      WvMainBusDispatchDeviceControlIrp;
-    WvMainBusMajorDispatchTable[IRP_MJ_POWER] = WvMainBusDispatchPowerIrp;
-    WvMainBusMajorDispatchTable[IRP_MJ_CREATE] =
-      WvMainBusDispatchCreateCloseIrp;
-    WvMainBusMajorDispatchTable[IRP_MJ_CLOSE] =
-      WvMainBusDispatchCreateCloseIrp;
-    WvMainBusMajorDispatchTable[IRP_MJ_SYSTEM_CONTROL] =
-      WvMainBusDispatchSystemControlIrp;
+    WvMainBusBuildMajorDispatchTable();
 
     /* Register this mini-driver */
     status = WvlRegisterMiniDriver(

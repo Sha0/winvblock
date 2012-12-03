@@ -58,25 +58,24 @@ extern NTSTATUS WvMainBusInitialBusRelations(DEVICE_OBJECT * DeviceObject);
 extern NTSTATUS STDCALL WvBusRemoveDev(IN WV_S_DEV_T * Device);
 
 /** Public functions */
+VOID WvMainBusBuildMajorDispatchTable(void);
 DRIVER_DISPATCH WvBusIrpDispatch;
-__drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH WvMainBusDispatchPnpIrp;
-__drv_dispatchType(IRP_MJ_DEVICE_CONTROL) DRIVER_DISPATCH
-  WvMainBusDispatchDeviceControlIrp;
-__drv_dispatchType(IRP_MJ_POWER) DRIVER_DISPATCH
-  WvMainBusDispatchPowerIrp;
-__drv_dispatchType(IRP_MJ_CREATE) __drv_dispatchType(IRP_MJ_CLOSE)
-  DRIVER_DISPATCH WvMainBusDispatchCreateCloseIrp;
-__drv_dispatchType(IRP_MJ_SYSTEM_CONTROL) DRIVER_DISPATCH
-  WvMainBusDispatchSystemControlIrp;
 WVL_F_BUS_PNP WvBusPnpQueryDevText;
 
 /** Private function declarations */
 
-/* TODO: DRIVER_ADD_DEVICE isn't available in DDK 3790.1830, it seems */
-static DRIVER_ADD_DEVICE WvMainBusDriveDevice;
-static DRIVER_UNLOAD WvMainBusUnload;
-static VOID WvMainBusOldProbe(DEVICE_OBJECT * DeviceObject);
 static NTSTATUS STDCALL WvBusDevCtlDetach(IN IRP * Irp);
+
+/** IRP dispatchers */
+static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH WvMainBusDispatchPnpIrp;
+static __drv_dispatchType(IRP_MJ_DEVICE_CONTROL) DRIVER_DISPATCH
+  WvMainBusDispatchDeviceControlIrp;
+static __drv_dispatchType(IRP_MJ_POWER) DRIVER_DISPATCH
+  WvMainBusDispatchPowerIrp;
+static __drv_dispatchType(IRP_MJ_CREATE) __drv_dispatchType(IRP_MJ_CLOSE)
+  DRIVER_DISPATCH WvMainBusDispatchCreateCloseIrp;
+static __drv_dispatchType(IRP_MJ_SYSTEM_CONTROL) DRIVER_DISPATCH
+  WvMainBusDispatchSystemControlIrp;
 
 /** PnP handlers */
 static __drv_dispatchType(IRP_MN_QUERY_BUS_INFORMATION) DRIVER_DISPATCH
@@ -123,8 +122,24 @@ extern WVL_S_BUS_T WvBus;
 extern WV_S_DEV_T WvBusDev;
 extern volatile LONG WvMainBusCreators;
 
-/** Public objects */
-A_WVL_MJ_DISPATCH_TABLE WvMainBusMajorDispatchTable;
+/** Private objects */
+static A_WVL_MJ_DISPATCH_TABLE WvMainBusMajorDispatchTable;
+
+/** Function definitions */
+
+/** Build the main bus' major dispatch table */
+VOID WvMainBusBuildMajorDispatchTable(void) {
+    WvMainBusMajorDispatchTable[IRP_MJ_PNP] = WvMainBusDispatchPnpIrp;
+    WvMainBusMajorDispatchTable[IRP_MJ_DEVICE_CONTROL] =
+      WvMainBusDispatchDeviceControlIrp;
+    WvMainBusMajorDispatchTable[IRP_MJ_POWER] = WvMainBusDispatchPowerIrp;
+    WvMainBusMajorDispatchTable[IRP_MJ_CREATE] =
+      WvMainBusDispatchCreateCloseIrp;
+    WvMainBusMajorDispatchTable[IRP_MJ_CLOSE] =
+      WvMainBusDispatchCreateCloseIrp;
+    WvMainBusMajorDispatchTable[IRP_MJ_SYSTEM_CONTROL] =
+      WvMainBusDispatchSystemControlIrp;
+  }
 
 /**
  * Handle an IRP from the main bus' thread context
@@ -275,7 +290,7 @@ NTSTATUS STDCALL WvBusPnpQueryDevText(
   }
 
 /** PnP IRP dispatcher */
-NTSTATUS WvMainBusDispatchPnpIrp(
+static NTSTATUS WvMainBusDispatchPnpIrp(
     IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {
@@ -736,7 +751,7 @@ static NTSTATUS STDCALL WvMainBusPnpStartDevice(
     return status;
   }
 
-NTSTATUS WvMainBusDispatchDeviceControlIrp(
+static NTSTATUS WvMainBusDispatchDeviceControlIrp(
     IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {
@@ -751,7 +766,7 @@ NTSTATUS WvMainBusDispatchDeviceControlIrp(
     return WvBusDevCtl(irp, code);
   }
 
-NTSTATUS WvMainBusDispatchPowerIrp(
+static NTSTATUS WvMainBusDispatchPowerIrp(
     IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {
@@ -760,7 +775,7 @@ NTSTATUS WvMainBusDispatchPowerIrp(
     return WvlIrpPassPowerToLower(WvBus.LowerDeviceObject, irp);
   }
 
-NTSTATUS WvMainBusDispatchCreateCloseIrp(
+static NTSTATUS WvMainBusDispatchCreateCloseIrp(
     IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {
@@ -771,7 +786,7 @@ NTSTATUS WvMainBusDispatchCreateCloseIrp(
     return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
   }
 
-NTSTATUS WvMainBusDispatchSystemControlIrp(
+static NTSTATUS WvMainBusDispatchSystemControlIrp(
     IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {
