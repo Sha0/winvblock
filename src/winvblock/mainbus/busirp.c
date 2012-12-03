@@ -48,21 +48,9 @@
 #include "memdisk.h"
 #include "debug.h"
 
-/** Object types - Must match mainbus.c */
-typedef struct S_WV_MAIN_BUS S_WV_MAIN_BUS;
+#include "mainbus.h"
 
-/** External functions */
-
-/* From mainbus.c */
-extern NTSTATUS WvMainBusInitialBusRelations(DEVICE_OBJECT * DeviceObject);
-extern NTSTATUS STDCALL WvBusRemoveDev(IN WV_S_DEV_T * Device);
-
-/** Public functions */
-VOID WvMainBusBuildMajorDispatchTable(void);
-DRIVER_DISPATCH WvBusIrpDispatch;
-WVL_F_BUS_PNP WvBusPnpQueryDevText;
-
-/** Private function declarations */
+/** Function declarations */
 
 static NTSTATUS STDCALL WvBusDevCtlDetach(IN IRP * Irp);
 
@@ -94,35 +82,7 @@ static NTSTATUS STDCALL WvBusDevCtl(
     IN ULONG POINTER_ALIGNMENT Code
   );
 
-/** Struct/union type definitions */
-
-/** The bus extension type */
-struct S_WV_MAIN_BUS {
-    /** This must be the first member of all extension types */
-    WV_S_DEV_EXT DeviceExtension[1];
-
-    /** The lower device this FDO is attached to, if any */
-    DEVICE_OBJECT * LowerDeviceObject;
-
-    /** PnP bus information */
-    PNP_BUS_INFORMATION PnpBusInfo[1];
-
-    /** PnP bus relations */
-    DEVICE_RELATIONS * BusRelations;
-
-    /** Hack until proper PDO-add support is implemented */
-    DEVICE_RELATIONS * BusRelationsHack;
-  };
-
-/** External objects */
-
-/* From mainbus.c */
-extern UNICODE_STRING WvBusDosName;
-extern WVL_S_BUS_T WvBus;
-extern WV_S_DEV_T WvBusDev;
-extern volatile LONG WvMainBusCreators;
-
-/** Private objects */
+/** Objects */
 static A_WVL_MJ_DISPATCH_TABLE WvMainBusMajorDispatchTable;
 
 /** Function definitions */

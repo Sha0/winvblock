@@ -49,28 +49,18 @@
 #include "memdisk.h"
 #include "debug.h"
 
-/* Names for the main bus. */
+#include "mainbus.h"
+
+/** Macros */
+
+/* Names for the main bus */
 #define WV_M_BUS_NAME (L"\\Device\\" WVL_M_WLIT)
 #define WV_M_BUS_DOSNAME (L"\\DosDevices\\" WVL_M_WLIT)
 
-/** Object types - Must match busirp.c */
-typedef struct S_WV_MAIN_BUS S_WV_MAIN_BUS;
-
-/** External functions */
-
-/* From busirp.c */
-
-/** Main bus IRP dispatchers */
-extern VOID WvMainBusBuildMajorDispatchTable(void);
-extern DRIVER_DISPATCH WvBusIrpDispatch;
-extern WVL_F_BUS_PNP WvBusPnpQueryDevText;
-
-/** Public functions */
+/** Public function declarations */
 DRIVER_INITIALIZE WvMainBusDriverEntry;
-NTSTATUS STDCALL WvBusRemoveDev(IN WV_S_DEV_T * Device);
-NTSTATUS WvMainBusInitialBusRelations(DEVICE_OBJECT * DeviceObject);
 
-/** Private function declarations */
+/** Function declarations */
 
 static BOOLEAN WvMainBusPdoDone(IN UNICODE_STRING * RegistryPath);
 /* TODO: DRIVER_ADD_DEVICE isn't available in DDK 3790.1830, it seems */
@@ -81,26 +71,6 @@ static NTSTATUS STDCALL WvBusEstablish(
     IN DRIVER_OBJECT * DriverObject,
     IN UNICODE_STRING * RegistryPath
   );
-
-/** Struct/union type definitions */
-
-/** The bus extension type */
-struct S_WV_MAIN_BUS {
-    /** This must be the first member of all extension types */
-    WV_S_DEV_EXT DeviceExtension[1];
-
-    /** The lower device this FDO is attached to, if any */
-    DEVICE_OBJECT * LowerDeviceObject;
-
-    /** PnP bus information */
-    PNP_BUS_INFORMATION PnpBusInfo[1];
-
-    /** PnP bus relations */
-    DEVICE_RELATIONS * BusRelations;
-
-    /** Hack until proper PDO-add support is implemented */
-    DEVICE_RELATIONS * BusRelationsHack;
-  };
 
 /** Public objects */
 
@@ -116,7 +86,7 @@ WV_S_DEV_T WvBusDev = {0};
 
 volatile LONG WvMainBusCreators;
 
-/** Private objects */
+/** Objects */
 
 static UNICODE_STRING WvBusName = {
     sizeof WV_M_BUS_NAME - sizeof (WCHAR),
@@ -147,6 +117,8 @@ DEFINE_GUID(
     0x40,
     0xb1
   );
+
+/** Function definitions */
 
 /**
  * The mini-driver entry-point
