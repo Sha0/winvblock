@@ -52,8 +52,6 @@
 
 /** Function declarations */
 
-static NTSTATUS STDCALL WvBusDevCtlDetach(IN IRP * Irp);
-
 /** IRP dispatchers */
 static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH WvMainBusDispatchPnpIrp;
 static __drv_dispatchType(IRP_MJ_DEVICE_CONTROL) DRIVER_DISPATCH
@@ -80,6 +78,10 @@ static __drv_dispatchType(IRP_MN_START_DEVICE) DRIVER_DISPATCH
 static NTSTATUS STDCALL WvBusDevCtl(
     IN IRP * Irp,
     IN ULONG POINTER_ALIGNMENT Code
+  );
+static NTSTATUS STDCALL WvMainBusDeviceControlDetach(
+    IN DEVICE_OBJECT * DeviceObject,
+    IN IRP * Irp
   );
 
 /** Objects */
@@ -137,43 +139,6 @@ NTSTATUS STDCALL WvBusIrpDispatch(
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
-static NTSTATUS STDCALL WvBusDevCtlDetach(
-    IN IRP * irp
-  ) {
-    UINT32 unit_num;
-    WVL_SP_BUS_NODE walker;
-    WV_SP_DEV_T dev = NULL;
-
-    unit_num = *((PUINT32) irp->AssociatedIrp.SystemBuffer);
-    DBG("Request to detach unit %d...\n", unit_num);
-
-    walker = NULL;
-    /* For each node on the bus... */
-    WvlBusLock(&WvBus);
-    while (walker = WvlBusGetNextNode(&WvBus, walker)) {
-        /* If the unit number matches... */
-        if (WvlBusGetNodeNum(walker) == unit_num) {
-            dev = WvDevFromDevObj(WvlBusGetNodePdo(walker));
-            /* If it's not a boot-time device... */
-            if (dev->Boot) {
-                DBG("Cannot detach a boot-time device.\n");
-                /* Signal error. */
-                dev = NULL;
-              }
-            break;
-          }
-      }
-    WvlBusUnlock(&WvBus);
-    if (!dev) {
-        DBG("Unit %d not found.\n", unit_num);
-        return WvlIrpComplete(irp, 0, STATUS_INVALID_PARAMETER);
-      }
-    /* Detach the node. */
-    WvBusRemoveDev(dev);
-    DBG("Removed unit %d.\n", unit_num);
-    return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
-  }
-
 static NTSTATUS STDCALL WvBusDevCtl(
     IN IRP * irp,
     IN ULONG POINTER_ALIGNMENT code
@@ -186,7 +151,8 @@ static NTSTATUS STDCALL WvBusDevCtl(
           break;
 
         case IOCTL_FILE_DETACH:
-          return WvBusDevCtlDetach(irp);
+          /* TODO: Use the actual device object */
+          return WvMainBusDeviceControlDetach(NULL, irp);
 
         case IOCTL_WV_DUMMY:
           return WvDummyIoctl(irp);
@@ -724,6 +690,95 @@ static NTSTATUS WvMainBusDispatchDeviceControlIrp(
     ASSERT(io_stack_loc);
     code = io_stack_loc->Parameters.DeviceIoControl.IoControlCode;
     return WvBusDevCtl(irp, code);
+  }
+
+/**
+ * Try to detach a user-specified child PDO from the main bus
+ *
+ * @param DeviceObject
+ *   The main bus device
+ *
+ * @param Irp
+ *   The IRP for the request
+ *
+ * @param Irp->AssociatedIrp.SystemBuffer
+ *   Points to a buffer with the user-specified unit number to be detached
+ *
+ * @param Parameters.DeviceIoControl.InputBufferLength (I/O stack location)
+ *   The length of the user's buffer
+ *
+ * @retval STATUS_SUCCESS
+ * @retval STATUS_UNSUCCESSFUL
+ *   The device could not be detached
+ */
+static NTSTATUS WvMainBusDeviceControlDetach(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
+  ) {
+    IO_STACK_LOCATION * io_stack_loc;
+    BOOLEAN buf_sz_ok;
+    NTSTATUS status;
+    UINT32 unit_num;
+    WVL_SP_BUS_NODE walker;
+    WV_SP_DEV_T dev = NULL;
+
+    (VOID) dev_obj;
+    ASSERT(irp);
+    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    ASSERT(io_stack_loc);
+
+    /* Check the buffer */
+    buf_sz_ok = (
+        io_stack_loc->Parameters.DeviceIoControl.InputBufferLength <
+        sizeof unit_num
+      );
+    if (!buf_sz_ok || !irp->AssociatedIrp.SystemBuffer) {
+        DBG("Invalid request buffer\n");
+        status = STATUS_INVALID_PARAMETER;
+        goto err_buf;
+      }
+
+    /* Fetch the user-specified unit number to be detached */
+    unit_num = *((UINT32 *) irp->AssociatedIrp.SystemBuffer);
+    DBG("Request to detach unit %u...\n", unit_num);
+
+    /* For each node on the bus... */
+    walker = NULL;
+    WvlBusLock(&WvBus);
+    while (walker = WvlBusGetNextNode(&WvBus, walker)) {
+        /* If the unit number matches... */
+        if (WvlBusGetNodeNum(walker) == unit_num) {
+            dev = WvDevFromDevObj(WvlBusGetNodePdo(walker));
+            /* If it's a boot-time device... */
+            if (dev->Boot) {
+                DBG("Cannot detach a boot-time device\n");
+                /* Signal error */
+                dev = NULL;
+              }
+
+            /* Found */
+            break;
+          }
+      }
+    WvlBusUnlock(&WvBus);
+
+    /* Did we find a removable match? */
+    if (!dev) {
+        DBG("Unit %u not found\n", unit_num);
+        status = STATUS_INVALID_PARAMETER;
+        goto err_dev;
+      }
+
+    /* Detach the node. */
+    WvBusRemoveDev(dev);
+    DBG("Removed unit %u\n", unit_num);
+    status =  STATUS_SUCCESS;
+
+    err_dev:
+
+    err_buf:
+
+    return WvlIrpComplete(irp, 0, status);
   }
 
 static NTSTATUS WvMainBusDispatchPowerIrp(
