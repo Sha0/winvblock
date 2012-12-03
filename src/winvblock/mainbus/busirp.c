@@ -75,10 +75,6 @@ static __drv_dispatchType(IRP_MN_REMOVE_DEVICE) DRIVER_DISPATCH
 static __drv_dispatchType(IRP_MN_START_DEVICE) DRIVER_DISPATCH
   WvMainBusPnpStartDevice;
 
-static NTSTATUS STDCALL WvBusDevCtl(
-    IN IRP * Irp,
-    IN ULONG POINTER_ALIGNMENT Code
-  );
 static NTSTATUS STDCALL WvMainBusDeviceControlDetach(
     IN DEVICE_OBJECT * DeviceObject,
     IN IRP * Irp
@@ -137,34 +133,6 @@ NTSTATUS STDCALL WvBusIrpDispatch(
 
     /* Handle an unknown type */
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
-  }
-
-static NTSTATUS STDCALL WvBusDevCtl(
-    IN IRP * irp,
-    IN ULONG POINTER_ALIGNMENT code
-  ) {
-    NTSTATUS status;
-
-    switch (code) {
-        case IOCTL_FILE_ATTACH:
-          status = WvFilediskAttach(irp);
-          break;
-
-        case IOCTL_FILE_DETACH:
-          /* TODO: Use the actual device object */
-          return WvMainBusDeviceControlDetach(NULL, irp);
-
-        case IOCTL_WV_DUMMY:
-          return WvDummyIoctl(irp);
-
-        default:
-          irp->IoStatus.Information = 0;
-          status = STATUS_INVALID_DEVICE_REQUEST;
-      }
-
-    irp->IoStatus.Status = status;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
-    return status;
   }
 
 NTSTATUS STDCALL WvBusPnpQueryDevText(
@@ -677,19 +645,40 @@ static NTSTATUS STDCALL WvMainBusPnpStartDevice(
     return status;
   }
 
+/** Device control IRP dispatcher */
 static NTSTATUS WvMainBusDispatchDeviceControlIrp(
     IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {
     IO_STACK_LOCATION * io_stack_loc;
     ULONG POINTER_ALIGNMENT code;
+    NTSTATUS status;
 
     ASSERT(dev_obj);
     ASSERT(irp);
     io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     ASSERT(io_stack_loc);
+
     code = io_stack_loc->Parameters.DeviceIoControl.IoControlCode;
-    return WvBusDevCtl(irp, code);
+    switch (code) {
+        case IOCTL_FILE_ATTACH:
+        status = WvFilediskAttach(irp);
+        break;
+
+        case IOCTL_FILE_DETACH:
+        return WvMainBusDeviceControlDetach(dev_obj, irp);
+
+        case IOCTL_WV_DUMMY:
+        return WvDummyIoctl(irp);
+
+        default:
+        irp->IoStatus.Information = 0;
+        status = STATUS_INVALID_DEVICE_REQUEST;
+      }
+
+    irp->IoStatus.Status = status;
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    return status;
   }
 
 /**
