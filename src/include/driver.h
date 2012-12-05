@@ -37,7 +37,24 @@
 
 #define POOLSIZE 2048
 
+/** Constants */
+
+/** Device flags for the Flags member of a WV_DEV_EXT */
+enum E_WVL_DEVICE_FLAG {
+    CvWvlDeviceFlagSerialIrps_,
+    CvWvlDeviceFlagSerialIrpsNeedSignal_,
+    CvWvlDeviceFlagSerialIrps = 1 << CvWvlDeviceFlagSerialIrps_,
+    CvWvlDeviceFlagSerialIrpsNeedSignal =
+      1 << CvWvlDeviceFlagSerialIrpsNeedSignal_,
+    CvWvlDeviceFlagZero = 0
+  };
+
 /** Object types */
+
+/** PETHREAD is documented as a pointer type... */
+typedef struct _ETHREAD ETHREAD;
+
+typedef enum E_WVL_DEVICE_FLAG E_WVL_DEVICE_FLAG;
 
 typedef struct S_WVL_LOCKED_LIST S_WVL_LOCKED_LIST;
 
@@ -361,7 +378,7 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlCallFunctionInDeviceThread(
 /**
  * Add an IRP (or pseudo-IRP) to a device's IRP queue
  *
- * @param Device
+ * @param DeviceObject
  *   The device to process the IRP
  *
  * @param Irp
@@ -391,11 +408,57 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlCallFunctionInDeviceThread(
  * @return
  *   Other values are returned when 'Wait' is TRUE and indicate the
  *   status of processing the IRP within the device's thread context
+ *
+ * It is a programming error to call WvlPassIrpUp or to access the IRP
+ * after calling this function until the next time the device's thread
+ * schedules the IRP for processing.
+ *
+ * It is a programming error to attempt to access the device or its
+ * extension after receiving STATUS_NO_SUCH_DEVICE
  */
 extern WVL_M_LIB NTSTATUS STDCALL WvlAddIrpToDeviceQueue(
     IN DEVICE_OBJECT * Device,
     IN IRP * Irp,
     IN BOOLEAN Wait
+  );
+
+/**
+ * Pass an IRP up the device stack, or complete it, if we're at the top
+ *
+ * @param DeviceObject
+ *   The device releasing the IRP
+ *
+ * @param Irp
+ *   The IRP that has been completed by this driver
+ *
+ * @param PriorityBoost
+ *   A system-defined value specifying how to boost the priority of the
+ *   original thread that produced the IRP
+ *
+ * This function should be called instead of IoCompleteRequest, by
+ * mini-drivers
+ */
+extern WVL_M_LIB VOID STDCALL WvlPassIrpUp(
+    IN DEVICE_OBJECT * DeviceObject,
+    IN IRP * Irp,
+    IN const CHAR PriorityBoost
+  );
+
+/**
+ * Pass an IRP down the device stack
+ *
+ * @param DeviceObject
+ *   The next-lower device to process the IRP
+ *
+ * @param Irp
+ *   The IRP that will be processed by the next-lower device
+ *
+ * This function should be called instead of IoCallDriver, by
+ * mini-drivers
+ */
+extern WVL_M_LIB NTSTATUS STDCALL WvlPassIrpDown(
+    IN DEVICE_OBJECT * DeviceObject,
+    IN OUT IRP * Irp
   );
 
 /**
@@ -412,6 +475,49 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlAddIrpToDeviceQueue(
  */
 extern WVL_M_LIB NTSTATUS STDCALL WvlWaitForIrpCompletion(
     IN DEVICE_OBJECT * LowerDeviceObject,
+    IN IRP * Irp
+  );
+
+/**
+ * Test if the current thread is the mini-driver device's thread
+ *
+ * @param DeviceObject
+ *   The device object whose thread will be compared with the current thread
+ *
+ * @reval TRUE
+ * @retval FALSE
+ */
+extern WVL_M_LIB BOOLEAN STDCALL WvlInDeviceThread(
+    IN DEVICE_OBJECT * DeviceObject
+  );
+
+/**
+ * Wait for the active IRP count to reach 1
+ *
+ * @param DeviceObject
+ *   The device object to process the IRP with
+ *
+ * @param Irp
+ *   The current IRP
+ *
+ * @retval STATUS_SUCCESS
+ * @retval STATUS_NO_SUCH_DEVICE
+ *
+ * Upon success, this function will ensure that all IRPs that came before
+ * the call have completed.  In this way, it serves as a sequence point.
+ * It is beyond the scope of this function to prevent new IRPs from being
+ * processed _after_ this function returns; a different synchronization
+ * method is needed for that.
+ *
+ * This is useful for PnP IRPs that must change device state after
+ * outstanding IRPs have been completed, but before any new IRPs are
+ * processed, for example.
+ *
+ * It is a programming error to attempt to access a device or its extension
+ * after receiving STATUS_NO_SUCH_DEVICE
+ */
+extern WVL_M_LIB NTSTATUS STDCALL WvlWaitForActiveIrps(
+    IN DEVICE_OBJECT * DeviceObject,
     IN IRP * Irp
   );
 
@@ -487,11 +593,21 @@ struct WV_DEV_EXT {
     /** A handle to the device thread */
     HANDLE ThreadHandle;
 
+    /** The device's thread */
+    ETHREAD * Thread;
+
     /**
      * The device's IRP queue.  Device must be acquired for inspection
      * and modification
      */
     LIST_ENTRY IrpQueue[1];
+
+    /**
+     * Prevents the device's thread from endlessly looping over IRPs that
+     * keep re-adding themselves to the device's IRP queue.  Device must
+     * be acquired for inspection and modification
+     */
+    LIST_ENTRY * SentinelIrpLink;
 
     /**
      * Is the device available?  Device must be acquired for inspection
@@ -504,6 +620,18 @@ struct WV_DEV_EXT {
 
     /** IRQL before the spin-lock for the device was acquired */
     KIRQL PreLockIrql;
+
+    /**
+     * Device flags of CvWvlDeviceFlagXxx enumeration values.  Must be
+     * accessed atomically (such as with InterlockedXxx functions)
+     */
+    volatile LONG Flags;
+
+    /** Active IRP count.  Must be accessed atomically */
+    volatile LONG ActiveIrpCount;
+
+    /** Event for when the active IRP count reaches 1 */
+    KEVENT ActiveIrpCountOne;
 
     /** The device's mini-driver */
     S_WVL_MINI_DRIVER * MiniDriver;
