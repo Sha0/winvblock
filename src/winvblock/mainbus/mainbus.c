@@ -242,7 +242,6 @@ static NTSTATUS STDCALL WvMainBusDriveDevice(
     bus->BusRelationsHack = NULL;
 
     WvBusDev.IsBus = TRUE;
-    WvBus.QueryDevText = WvBusPnpQueryDevText;
     WvDevForDevObj(WvBus.Fdo, &WvBusDev);
     WvDevSetIrpHandler(WvBus.Fdo, WvBusIrpDispatch);
     /* TODO: Review the following two settings */

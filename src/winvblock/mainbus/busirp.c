@@ -64,6 +64,8 @@ static __drv_dispatchType(IRP_MJ_SYSTEM_CONTROL) DRIVER_DISPATCH
   WvMainBusDispatchSystemControlIrp;
 
 /** PnP handlers */
+static __drv_dispatchType(IRP_MN_QUERY_DEVICE_TEXT) DRIVER_DISPATCH
+  WvMainBusPnpQueryDeviceText;
 static __drv_dispatchType(IRP_MN_QUERY_BUS_INFORMATION) DRIVER_DISPATCH
   WvMainBusPnpQueryBusInfo;
 static __drv_dispatchType(IRP_MN_QUERY_CAPABILITIES) DRIVER_DISPATCH
@@ -151,56 +153,6 @@ NTSTATUS STDCALL WvBusIrpDispatch(
     return STATUS_NOT_SUPPORTED;
   }
 
-NTSTATUS STDCALL WvBusPnpQueryDevText(
-    IN WVL_SP_BUS_T bus,
-    IN PIRP irp
-  ) {
-    WCHAR (*str)[512];
-    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-    NTSTATUS status;
-    UINT32 str_len;
-
-    /* Allocate a string buffer. */
-    str = wv_mallocz(sizeof *str);
-    if (str == NULL) {
-        DBG("wv_malloc IRP_MN_QUERY_DEVICE_TEXT\n");
-        status = STATUS_INSUFFICIENT_RESOURCES;
-        goto alloc_str;
-      }
-    /* Determine the query type. */
-    switch (io_stack_loc->Parameters.QueryDeviceText.DeviceTextType) {
-        case DeviceTextDescription:
-          str_len = swprintf(*str, WVL_M_WLIT L" Bus") + 1;
-          irp->IoStatus.Information =
-            (ULONG_PTR) wv_palloc(str_len * sizeof **str);
-          if (irp->IoStatus.Information == 0) {
-              DBG("wv_palloc DeviceTextDescription\n");
-              status = STATUS_INSUFFICIENT_RESOURCES;
-              goto alloc_info;
-            }
-          RtlCopyMemory(
-              (PWCHAR) irp->IoStatus.Information,
-              str,
-              str_len * sizeof **str
-            );
-          status = STATUS_SUCCESS;
-          goto alloc_info;
-
-        default:
-          irp->IoStatus.Information = 0;
-          status = STATUS_NOT_SUPPORTED;
-      }
-    /* irp->IoStatus.Information not freed. */
-    alloc_info:
-
-    wv_free(str);
-    alloc_str:
-
-    irp->IoStatus.Status = status;
-    WvlPassIrpUp(bus->Fdo, irp, IO_NO_INCREMENT);
-    return status;
-  }
-
 /** PnP IRP dispatcher */
 static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
     IN DEVICE_OBJECT * dev_obj,
@@ -246,12 +198,7 @@ static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
     switch (code) {
         case IRP_MN_QUERY_DEVICE_TEXT:
         DBG("IRP_MN_QUERY_DEVICE_TEXT\n");
-        if (WvBus.QueryDevText)
-          return WvBus.QueryDevText(&WvBus, irp);
-        irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
-        irp->IoStatus.Information = 0;
-        WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
-        return STATUS_NOT_SUPPORTED;
+        return WvMainBusPnpQueryDeviceText(dev_obj, irp);
 
         case IRP_MN_QUERY_BUS_INFORMATION:
         DBG("IRP_MN_QUERY_BUS_INFORMATION\n");
@@ -334,6 +281,70 @@ static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
 
     irp->IoStatus.Status = status;
     return WvlPassIrpDown(dev_obj, irp);
+  }
+
+/**
+ * IRP_MJ_PNP:IRP_MN_QUERY_DEVICE_TEXT handler
+ *
+ * IRQL == PASSIVE_LEVEL, any thread
+ * Do not send this IRP
+ * Completed by PDO under normal circumstances, but not here
+ *
+ * @return
+ *   Success:
+ *     Irp->IoStatus.Status == STATUS_SUCCESS
+ *     Irp->IoStatus.Information populated from paged memory
+ *   Error:
+ *     Irp->IoStatus.Status == STATUS_INSUFFICIENT_RESOURCES
+ *     Irp->IoStatus.Information == 0
+ *
+ * Not supposed to be handled by function drivers, but we need to filter
+ * it to override the PnP Manager's root-enumerated device
+ */
+static NTSTATUS STDCALL WvMainBusPnpQueryDeviceText(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
+  ) {
+    static const WCHAR dev_text_desc[] = WVL_M_WLIT L" Bus";
+    IO_STACK_LOCATION * io_stack_loc;
+    WCHAR * response;
+    NTSTATUS status;
+
+    ASSERT(dev_obj);
+    ASSERT(irp);
+    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    ASSERT(io_stack_loc);
+
+    /* Determine the query type */
+    switch (io_stack_loc->Parameters.QueryDeviceText.DeviceTextType) {
+        case DeviceTextDescription:
+
+        /* Allocate the response */
+        response = wv_pallocz(sizeof dev_text_desc);
+        if (!response) {
+            DBG("Unable to allocate DeviceTextDescription\n");
+            status = STATUS_INSUFFICIENT_RESOURCES;
+            goto err_response;
+          }
+            
+        /* Populate the response */
+        RtlCopyMemory(response, dev_text_desc, sizeof dev_text_desc);
+        irp->IoStatus.Information = (ULONG_PTR) response;
+        status = STATUS_SUCCESS;
+
+        /* response not freed */
+        err_response:
+
+        break;
+
+        default:
+        irp->IoStatus.Information = 0;
+        status = STATUS_NOT_SUPPORTED;
+      }
+
+    irp->IoStatus.Status = status;
+    WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
+    return status;
   }
 
 /**
