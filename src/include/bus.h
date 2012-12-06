@@ -74,6 +74,16 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlAddDeviceToMainBus(
     IN DEVICE_OBJECT * DeviceObject
   );
 
+/**
+ * Remove a device from the main bus
+ *
+ * @param DeviceObject
+ *   The device to be removed
+ */
+extern WVL_M_LIB VOID STDCALL WvlRemoveDeviceFromMainBus(
+    IN DEVICE_OBJECT * DeviceObject
+  );
+
 /** Struct/union type definitions */
 
 /* The bus type. */

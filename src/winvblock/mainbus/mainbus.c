@@ -72,6 +72,7 @@ static NTSTATUS STDCALL WvBusEstablish(
     IN UNICODE_STRING * RegistryPath
   );
 static F_WVL_DEVICE_THREAD_FUNCTION WvMainBusAddDevice;
+static F_WVL_DEVICE_THREAD_FUNCTION WvMainBusRemoveDevice;
 
 /** Public objects */
 
@@ -589,7 +590,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlAddDeviceToMainBus(
         dev_obj,
         TRUE
       );
-    if (NT_SUCCESS(status) && !WvlInDeviceThread(dev_obj))
+    if (NT_SUCCESS(status) && !WvlInDeviceThread(WvMainBusDevice))
       IoInvalidateDeviceRelations(dev_obj, BusRelations);
     return status;
   }
@@ -653,5 +654,78 @@ static NTSTATUS WvMainBusAddDevice(
 
     wv_free(bus->BusRelations);
     bus->BusRelations = dev_relations;
+    return STATUS_SUCCESS;
+  }
+
+WVL_M_LIB VOID STDCALL WvlRemoveDeviceFromMainBus(IN DEVICE_OBJECT * dev_obj) {
+    NTSTATUS status;
+
+    ASSERT(dev_obj);
+    status = WvlCallFunctionInDeviceThread(
+        WvMainBusDevice,
+        WvMainBusRemoveDevice,
+        dev_obj,
+        TRUE
+      );
+    if (NT_SUCCESS(status) && !WvlInDeviceThread(WvMainBusDevice))
+      IoInvalidateDeviceRelations(dev_obj, BusRelations);
+  }
+
+/**
+ * Remove a device from the main bus
+ *
+ * @param DeviceObject
+ *   The main bus device
+ *
+ * @param Context
+ *   The device to be removed
+ *
+ * @retval STATUS_SUCCESS
+ * @retval STATUS_NO_SUCH_DEVICE
+ * @retval STATUS_UNSUCCESSFUL
+ */
+static NTSTATUS WvMainBusRemoveDevice(
+    IN DEVICE_OBJECT * dev_obj,
+    IN VOID * context
+  ) {
+    DEVICE_OBJECT * const rem_dev_obj = context;
+    S_WV_MAIN_BUS * bus;
+    WV_S_DEV_EXT * rem_dev_ext;
+    NTSTATUS status;
+    ULONG i;
+    UCHAR found;
+
+    ASSERT(dev_obj);
+    bus = dev_obj->DeviceExtension;
+    ASSERT(bus);
+    ASSERT(rem_dev_obj);
+    rem_dev_ext = rem_dev_obj->DeviceExtension;
+    ASSERT(rem_dev_ext);
+
+    status = WvlWaitForActiveIrps(dev_obj);
+    if (!NT_SUCCESS(status))
+      return status;
+
+    ASSERT(bus->BusRelations);
+
+    for (i = found = 0; i < bus->BusRelations->Count; ++i) {
+        if (bus->BusRelations->Objects[i] == rem_dev_obj) {
+            found = 1;
+            if (i + 1 == bus->BusRelations->Count) {
+                bus->BusRelations->Objects[i] = NULL;
+                break;
+              }
+          }
+        bus->BusRelations->Objects[i] = bus->BusRelations->Objects[i - found];
+      }
+    ASSERT(found);
+    bus->BusRelations->Count = bus->BusRelations->Count - found;
+
+    if (!found)
+      return STATUS_UNSUCCESSFUL;
+
+    WvlDecrementResourceUsage(bus->DeviceExtension->Usage);
+    WvlDecrementResourceUsage(rem_dev_ext->Usage);
+
     return STATUS_SUCCESS;
   }
