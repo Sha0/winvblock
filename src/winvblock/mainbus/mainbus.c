@@ -71,6 +71,7 @@ static NTSTATUS STDCALL WvBusEstablish(
     IN DRIVER_OBJECT * DriverObject,
     IN UNICODE_STRING * RegistryPath
   );
+static F_WVL_DEVICE_THREAD_FUNCTION WvMainBusAddDevice;
 
 /** Public objects */
 
@@ -573,5 +574,85 @@ NTSTATUS WvMainBusInitialBusRelations(DEVICE_OBJECT * dev_obj) {
     /* Save the list */
     bus->BusRelations = bus->BusRelationsHack = dev_relations;
 
+    return STATUS_SUCCESS;
+  }
+
+WVL_M_LIB NTSTATUS STDCALL WvlAddDeviceToMainBus(
+    IN DEVICE_OBJECT * dev_obj
+  ) {
+    NTSTATUS status;
+
+    ASSERT(dev_obj);
+    status = WvlCallFunctionInDeviceThread(
+        WvMainBusDevice,
+        WvMainBusAddDevice,
+        dev_obj,
+        TRUE
+      );
+    if (NT_SUCCESS(status) && !WvlInDeviceThread(dev_obj))
+      IoInvalidateDeviceRelations(dev_obj, BusRelations);
+    return status;
+  }
+
+/**
+ * Add a device to the main bus
+ *
+ * @param DeviceObject
+ *   The main bus device
+ *
+ * @param Context
+ *   The device to be added
+ *
+ * @retval STATUS_SUCCESS
+ * @retval STATUS_NO_SUCH_DEVICE
+ * @retval STATUS_INSUFFICIENT_RESOURCES
+ */
+static NTSTATUS WvMainBusAddDevice(
+    IN DEVICE_OBJECT * dev_obj,
+    IN VOID * context
+  ) {
+    DEVICE_OBJECT * const new_dev_obj = context;
+    S_WV_MAIN_BUS * bus;
+    WV_S_DEV_EXT * new_dev_ext;
+    NTSTATUS status;
+    IRP dummy;
+    DEVICE_RELATIONS * dev_relations;
+    ULONG i;
+
+    ASSERT(dev_obj);
+    bus = dev_obj->DeviceExtension;
+    ASSERT(bus);
+    ASSERT(new_dev_obj);
+    new_dev_ext = new_dev_obj->DeviceExtension;
+    ASSERT(new_dev_ext);
+
+    status = WvlWaitForActiveIrps(dev_obj, &dummy);
+    if (!NT_SUCCESS(status))
+      return status;
+
+    if (!bus->BusRelations) {
+        status = WvMainBusInitialBusRelations(dev_obj);
+        if (!NT_SUCCESS(status))
+          return status;
+      }
+    ASSERT(bus->BusRelations);
+
+    dev_relations = wv_malloc(
+        sizeof *dev_relations +
+        sizeof dev_relations->Objects[0] * bus->BusRelations->Count
+      );
+    if (!dev_relations)
+      return STATUS_INSUFFICIENT_RESOURCES;
+
+    dev_relations->Count = bus->BusRelations->Count + 1;
+    for (i = 0; i < dev_relations->Count; ++i)
+      dev_relations->Objects[i] = bus->BusRelations->Objects[i];
+    dev_relations->Objects[i] = new_dev_obj;
+
+    WvlIncrementResourceUsage(bus->DeviceExtension->Usage);
+    WvlIncrementResourceUsage(new_dev_ext->Usage);
+
+    wv_free(bus->BusRelations);
+    bus->BusRelations = dev_relations;
     return STATUS_SUCCESS;
   }

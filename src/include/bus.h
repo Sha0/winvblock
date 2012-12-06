@@ -1,9 +1,9 @@
 /**
- * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2012, Shao Miller <sha0.miller@gmail.com>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
- * This file is part of WinVBlock, derived from WinAoE.
+ * This file is part of WinVBlock, originally derived from WinAoE.
  *
  * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,11 +24,13 @@
 /**
  * @file
  *
- * Bus specifics.
+ * Bus specifics
  */
 
-/* Forward declaration. */
+/** Object types */
 struct WVL_BUS_T;
+
+/** Function types */
 
 /**
  * A bus PnP routine.
@@ -40,7 +42,9 @@ struct WVL_BUS_T;
 typedef NTSTATUS STDCALL WVL_F_BUS_PNP(IN struct WVL_BUS_T *, IN PIRP);
 typedef WVL_F_BUS_PNP * WVL_FP_BUS_PNP;
 
-/* Device state. */
+/** Constants */
+
+/* Device state */
 typedef enum WVL_BUS_STATE {
     WvlBusStateNotStarted,
     WvlBusStateStarted,
@@ -51,6 +55,26 @@ typedef enum WVL_BUS_STATE {
     WvlBusStateDeleted,
     WvlBusStates
   } WVL_E_BUS_STATE, * WVL_EP_BUS_STATE;
+
+/** Function declarations */
+
+/* From ../winvblock/mainbus/mainbus.c */
+
+/**
+ * Add a device to the main bus
+ *
+ * @param DeviceObject
+ *   The device to be added
+ *
+ * @retval STATUS_SUCCESS
+ * @retval STATUS_NO_SUCH_DEVICE
+ * @retval STATUS_INSUFFICIENT_RESOURCES
+ */
+extern WVL_M_LIB NTSTATUS STDCALL WvlAddDeviceToMainBus(
+    IN DEVICE_OBJECT * DeviceObject
+  );
+
+/** Struct/union type definitions */
 
 /* The bus type. */
 typedef struct WVL_BUS_T {
