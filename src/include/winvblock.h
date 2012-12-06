@@ -1,8 +1,7 @@
 /**
- * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2012, Shao Miller <sha0.miller@gmail.com>.
  *
- * This file is part of WinVBlock, derived from WinAoE.
- * For WinAoE contact information, see http://winaoe.org/
+ * This file is part of WinVBlock, originally derived from WinAoE.
  *
  * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,8 +22,10 @@
 /**
  * @file
  *
- * WinVBlock project common material.
+ * WinVBlock project common material
  */
+
+#define WvlCountof(array) (sizeof (array) / sizeof *(array))
 
 #define WVL_M_LIT "WinVBlock"
 #define WVL_M_WLIT L"WinVBlock"
