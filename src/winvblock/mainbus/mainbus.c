@@ -190,7 +190,6 @@ static NTSTATUS STDCALL WvMainBusDriveDevice(
     NTSTATUS status;
     DEVICE_OBJECT * fdo;
     S_WV_MAIN_BUS * bus;
-    DEVICE_OBJECT * lower;
 
     ASSERT(drv_obj);
     ASSERT(pdo);
@@ -254,12 +253,11 @@ static NTSTATUS STDCALL WvMainBusDriveDevice(
     #endif
 
     /* Attach the FDO to the PDO */
-    lower = IoAttachDeviceToDeviceStack(fdo, pdo);
-    if (!lower) {
+    if (!WvlAttachDeviceToDeviceStack(fdo, pdo)) {
         DBG("Error driving PDO %p!\n", (VOID *) pdo);
         goto err_lower;
       }
-    bus->LowerDeviceObject = WvBus.LowerDeviceObject = lower;
+    WvBus.LowerDeviceObject = WvlGetLowerDeviceObject(fdo);
     /* TODO: Remove these once this when the modules are mini-drivers */
     WvBus.Pdo = pdo;
     WvBus.State = WvlBusStateStarted;
@@ -288,7 +286,7 @@ static NTSTATUS STDCALL WvMainBusDriveDevice(
 
     WvBus.State = WvlBusStateNotStarted;
     WvBus.Pdo = WvBus.LowerDeviceObject = NULL;
-    IoDetachDevice(lower);
+    WvlDetachDevice(fdo);
     err_lower:
 
     WvlDeleteDevice(fdo);

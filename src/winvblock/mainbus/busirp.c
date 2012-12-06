@@ -333,8 +333,7 @@ static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
       }
 
     irp->IoStatus.Status = status;
-    ASSERT(bus->LowerDeviceObject);
-    return WvlPassIrpDown(bus->LowerDeviceObject, irp);
+    return WvlPassIrpDown(dev_obj, irp);
   }
 
 /**
@@ -411,16 +410,11 @@ static NTSTATUS STDCALL WvMainBusPnpQueryCapabilities(
     IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {
-    S_WV_MAIN_BUS * bus;
-
     ASSERT(dev_obj);
-    bus = dev_obj->DeviceExtension;
-    ASSERT(bus);
     ASSERT(irp);
 
     /* Let the lower device handle the IRP */
-    ASSERT(bus->LowerDeviceObject);
-    return WvlPassIrpDown(bus->LowerDeviceObject, irp);
+    return WvlPassIrpDown(dev_obj, irp);
   }
 
 /**
@@ -497,8 +491,7 @@ static NTSTATUS STDCALL WvMainBusPnpQueryDeviceRelations(
         case EjectionRelations:
         default:
         DBG("Unsupported device relations query\n");
-        ASSERT(bus->LowerDeviceObject);
-        return WvlPassIrpDown(bus->LowerDeviceObject, irp);
+        return WvlPassIrpDown(dev_obj, irp);
       }
 
     pdo_count = dev_relations->Count;
@@ -508,8 +501,7 @@ static NTSTATUS STDCALL WvMainBusPnpQueryDeviceRelations(
     if (higher_dev_relations) {
         /* If we have nothing to add, pass the IRP down */
         if (!pdo_count) {
-            ASSERT(bus->LowerDeviceObject);
-            return WvlPassIrpDown(bus->LowerDeviceObject, irp);
+            return WvlPassIrpDown(dev_obj, irp);
             status = irp->IoStatus.Status;
             WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
             return status;
@@ -561,8 +553,7 @@ static NTSTATUS STDCALL WvMainBusPnpQueryDeviceRelations(
     /* Send the IRP down */
     irp->IoStatus.Status = STATUS_SUCCESS;
     irp->IoStatus.Information = (ULONG_PTR) new_dev_relations;
-    ASSERT(bus->LowerDeviceObject);
-    return WvlPassIrpDown(bus->LowerDeviceObject, irp);
+    return WvlPassIrpDown(dev_obj, irp);
   }
 
 /**
@@ -617,12 +608,11 @@ static NTSTATUS STDCALL WvMainBusPnpRemoveDevice(
       }
 
     /* Send the IRP down */
-    ASSERT(bus->LowerDeviceObject);
-    status = WvlPassIrpDown(bus->LowerDeviceObject, irp);
+    status = WvlPassIrpDown(dev_obj, irp);
 
     /* Detach FDO from PDO */
-    IoDetachDevice(bus->LowerDeviceObject);
-    WvBus.LowerDeviceObject = bus->LowerDeviceObject = NULL;
+    WvlDetachDevice(dev_obj);
+    WvBus.LowerDeviceObject = NULL;
     WvBus.Pdo = NULL;
 
     /*
@@ -665,11 +655,11 @@ static NTSTATUS STDCALL WvMainBusPnpStartDevice(
     ASSERT(irp);
 
     /* Send the IRP down and wait for completion by the lower driver */
-    status = WvlWaitForIrpCompletion(bus->LowerDeviceObject, irp);
+    status = WvlWaitForIrpCompletion(dev_obj, irp);
     if (!NT_SUCCESS(status)) {
         DBG(
             "Lower device %p failed to start\n",
-            (VOID *) bus->LowerDeviceObject
+            (VOID *) WvlGetLowerDeviceObject(dev_obj)
           );
         goto err_lower;
       }

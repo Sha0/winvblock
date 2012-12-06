@@ -560,9 +560,17 @@ static NTSTATUS WvDriverDispatchIrp(
          * Set a default completion routine that will call WvlPassIrpUp.
          * This might be overridden by the device's IRP dispatcher
          */
-        /* TODO: Deal with the PDO case, which has no next stack */
-        IoCopyCurrentIrpStackLocationToNext(irp);
-        IoSetCompletionRoutine(irp, WvIoCompletion, NULL, TRUE, TRUE, TRUE);
+        if (dev_ext->LowerDeviceObject) {
+            IoCopyCurrentIrpStackLocationToNext(irp);
+            IoSetCompletionRoutine(
+                irp,
+                WvIoCompletion,
+                NULL,
+                TRUE,
+                TRUE,
+                TRUE
+              );
+          }
 
         /* Clear context */
         ptrs = irp->Tail.Overlay.DriverContext;
@@ -1062,6 +1070,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlCreateDevice(
         FALSE
       );
     new_dev_ext->MiniDriver = minidriver;
+    new_dev_ext->LowerDeviceObject = NULL;
     WvlInitializeResourceTracker(new_dev_ext->Usage);
 
     /* Start the device thread */
@@ -1828,10 +1837,15 @@ WVL_M_LIB NTSTATUS STDCALL WvlPassIrpDown(
     IN DEVICE_OBJECT * dev_obj,
     IN OUT IRP * irp
   ) {
+    WV_S_DEV_EXT * dev_ext;
+
     ASSERT(dev_obj);
+    dev_ext = dev_obj->DeviceExtension;
+    ASSERT(dev_ext);
+    ASSERT(dev_ext->LowerDeviceObject);
     ASSERT(irp);
     DBG("Passing IRP %p down\n", (VOID *) irp);
-    return IoCallDriver(dev_obj, irp);
+    return IoCallDriver(dev_ext->LowerDeviceObject, irp);
   }
 
 /**
@@ -1873,12 +1887,12 @@ static NTSTATUS STDCALL WvIoCompletion(
   }
 
 WVL_M_LIB NTSTATUS STDCALL WvlWaitForIrpCompletion(
-    IN DEVICE_OBJECT * lower_dev_obj,
+    IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {
     KEVENT event;
 
-    ASSERT(lower_dev_obj);
+    ASSERT(dev_obj);
     ASSERT(irp);
 
     /* Prepare to wait for the IRP to complete */
@@ -1894,7 +1908,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlWaitForIrpCompletion(
       );
 
     /* Send the IRP down and wait for completion */
-    if (WvlPassIrpDown(lower_dev_obj, irp) == STATUS_PENDING)
+    if (WvlPassIrpDown(dev_obj, irp) == STATUS_PENDING)
       KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, NULL);
 
     /* Return the status from the lower driver */
@@ -1983,4 +1997,47 @@ WVL_M_LIB NTSTATUS STDCALL WvlWaitForActiveIrps(
         irp,
         TRUE
       );
+  }
+
+WVL_M_LIB BOOLEAN STDCALL WvlAttachDeviceToDeviceStack(
+    IN DEVICE_OBJECT * upper,
+    IN DEVICE_OBJECT * base
+  ) {
+    WV_S_DEV_EXT * dev_ext;
+    DEVICE_OBJECT * lower;
+
+    ASSERT(upper);
+    ASSERT(base);
+
+    lower = IoAttachDeviceToDeviceStack(upper, base);
+    if (!lower)
+      return FALSE;
+
+    dev_ext = upper->DeviceExtension;
+    ASSERT(dev_ext);
+    ASSERT(!dev_ext->LowerDeviceObject);
+    dev_ext->LowerDeviceObject = lower;
+    return TRUE;
+  }
+
+WVL_M_LIB VOID STDCALL WvlDetachDevice(IN OUT DEVICE_OBJECT * dev_obj) {
+    WV_S_DEV_EXT * dev_ext;
+
+    ASSERT(dev_obj);
+    dev_ext = dev_obj->DeviceExtension;
+    ASSERT(dev_ext);
+    ASSERT(dev_ext->LowerDeviceObject);
+    IoDetachDevice(dev_ext->LowerDeviceObject);
+    dev_ext->LowerDeviceObject = NULL;
+  }
+
+WVL_M_LIB DEVICE_OBJECT * STDCALL WvlGetLowerDeviceObject(
+    IN DEVICE_OBJECT * dev_obj
+  ) {
+    WV_S_DEV_EXT * dev_ext;
+
+    ASSERT(dev_obj);
+    dev_ext = dev_obj->DeviceExtension;
+    ASSERT(dev_ext);
+    return dev_ext->LowerDeviceObject;
   }

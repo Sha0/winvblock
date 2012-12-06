@@ -58,9 +58,6 @@ struct S_WV_MAIN_BUS {
     /** This must be the first member of all extension types */
     WV_S_DEV_EXT DeviceExtension[1];
 
-    /** The lower device this FDO is attached to, if any */
-    DEVICE_OBJECT * LowerDeviceObject;
-
     /** Flags for state that must be accessed atomically */
     volatile LONG Flags;
 

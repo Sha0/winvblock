@@ -448,7 +448,7 @@ extern WVL_M_LIB VOID STDCALL WvlPassIrpUp(
  * Pass an IRP down the device stack
  *
  * @param DeviceObject
- *   The next-lower device to process the IRP
+ *   The device at the current level of the IRP's processing
  *
  * @param Irp
  *   The IRP that will be processed by the next-lower device
@@ -464,17 +464,17 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlPassIrpDown(
 /**
  * Wait for a lower device object in the device stack to complete an IRP
  *
- * @param LowerDeviceObject
- *   The lower device to send the IRP to and wait for
+ * @param DeviceObject
+ *   The device at the current level of the IRP's processing
  *
  * @param Irp
  *   The IRP to send to the lower device and wait for
  *
  * @return
- *   The completed IRP's status returned by the lower device's driver
+ *   The completed IRP's status returned by the lower device driver(s)
  */
 extern WVL_M_LIB NTSTATUS STDCALL WvlWaitForIrpCompletion(
-    IN DEVICE_OBJECT * LowerDeviceObject,
+    IN DEVICE_OBJECT * DeviceObject,
     IN IRP * Irp
   );
 
@@ -519,6 +519,52 @@ extern WVL_M_LIB BOOLEAN STDCALL WvlInDeviceThread(
 extern WVL_M_LIB NTSTATUS STDCALL WvlWaitForActiveIrps(
     IN DEVICE_OBJECT * DeviceObject,
     IN IRP * Irp
+  );
+
+/**
+ * Attach a device to a base device's device-stack
+ *
+ * @param DeviceObject
+ *   The device to attach
+ *
+ * @param BaseDeviceObject
+ *   The base device of the device-stack to attach to
+ *
+ * @retval TRUE
+ * @retval FALSE
+ *
+ * A device cannot be attached to more than one device-stack
+ */
+extern WVL_M_LIB BOOLEAN STDCALL WvlAttachDeviceToDeviceStack(
+    IN DEVICE_OBJECT * DeviceObject,
+    IN DEVICE_OBJECT * BaseDeviceObject
+  );
+
+/**
+ * Remove a device from a device-stack
+ *
+ * @param DeviceObject
+ *   The device to remove from the stack
+ *
+ * The device must already be a member of a device-stack
+ */
+extern WVL_M_LIB VOID STDCALL WvlDetachDevice(
+    IN OUT DEVICE_OBJECT * DeviceObject
+  );
+
+/**
+ * Find the next-lower device in a device-stack
+ *
+ * @param DeviceObject
+ *   The device above the device to find
+ *
+ * @return
+ *   The next-lower device in the device-stack
+ *
+ * The device parameter needn't already be a member of a device-stack
+ */
+extern WVL_M_LIB DEVICE_OBJECT * STDCALL WvlGetLowerDeviceObject(
+    IN DEVICE_OBJECT * dev_obj
   );
 
 /**
@@ -635,6 +681,9 @@ struct WV_DEV_EXT {
 
     /** The device's mini-driver */
     S_WVL_MINI_DRIVER * MiniDriver;
+
+    /** The device's lower object, if any */
+    DEVICE_OBJECT * LowerDeviceObject;
 
     /** The device usage */
     S_WVL_RESOURCE_TRACKER Usage[1];
