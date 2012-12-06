@@ -497,9 +497,6 @@ extern WVL_M_LIB BOOLEAN STDCALL WvlInDeviceThread(
  * @param DeviceObject
  *   The device object to process the IRP with
  *
- * @param Irp
- *   The current IRP
- *
  * @retval STATUS_SUCCESS
  * @retval STATUS_NO_SUCH_DEVICE
  *
@@ -517,8 +514,7 @@ extern WVL_M_LIB BOOLEAN STDCALL WvlInDeviceThread(
  * after receiving STATUS_NO_SUCH_DEVICE
  */
 extern WVL_M_LIB NTSTATUS STDCALL WvlWaitForActiveIrps(
-    IN DEVICE_OBJECT * DeviceObject,
-    IN IRP * Irp
+    IN DEVICE_OBJECT * DeviceObject
   );
 
 /**

@@ -185,7 +185,7 @@ static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
         case IRP_MN_REMOVE_DEVICE:
         case IRP_MN_SURPRISE_REMOVAL:
         flags = InterlockedOr(&bus->Flags, CvWvMainBusFlagIrpsHeld);
-        status = WvlWaitForActiveIrps(dev_obj, irp);
+        status = WvlWaitForActiveIrps(dev_obj);
         if (status == STATUS_NO_SUCH_DEVICE) {
             /* The IRP will have been completed for us */
             return status;

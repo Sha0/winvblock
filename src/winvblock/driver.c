@@ -1931,7 +1931,7 @@ WVL_M_LIB BOOLEAN STDCALL WvlInDeviceThread(IN DEVICE_OBJECT * dev_obj) {
  *   The device object whose thread will call this function
  *
  * @param Context
- *   The IRP currently being processed
+ *   Ignored
  *
  * @retval STATUS_SUCCESS
  *   The active IRP count reached one
@@ -1940,17 +1940,11 @@ static NTSTATUS WvDriverWaitForActiveIrps(
     IN DEVICE_OBJECT * dev_obj,
     IN VOID * context
   ) {
-    IRP * const irp = context;
-
     ASSERT(dev_obj);
-    ASSERT(irp);
-    return WvlWaitForActiveIrps(dev_obj, irp);
+    return WvlWaitForActiveIrps(dev_obj);
   }
 
-WVL_M_LIB NTSTATUS STDCALL WvlWaitForActiveIrps(
-    IN DEVICE_OBJECT * dev_obj,
-    IN IRP * irp
-  ) {
+WVL_M_LIB NTSTATUS STDCALL WvlWaitForActiveIrps(IN DEVICE_OBJECT * dev_obj) {
     const LONG serial_irp_flags =
       CvWvlDeviceFlagSerialIrps | CvWvlDeviceFlagSerialIrpsNeedSignal;
     WV_S_DEV_EXT * dev_ext;
@@ -1960,7 +1954,6 @@ WVL_M_LIB NTSTATUS STDCALL WvlWaitForActiveIrps(
     ASSERT(dev_obj);
     dev_ext = dev_obj->DeviceExtension;
     ASSERT(dev_ext);
-    ASSERT(irp);
 
     /*
      * Change the IRP-processing mode to serial as soon as possible,
@@ -1994,7 +1987,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlWaitForActiveIrps(
     return WvlCallFunctionInDeviceThread(
         dev_obj,
         WvDriverWaitForActiveIrps,
-        irp,
+        NULL,
         TRUE
       );
   }

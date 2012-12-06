@@ -615,7 +615,6 @@ static NTSTATUS WvMainBusAddDevice(
     S_WV_MAIN_BUS * bus;
     WV_S_DEV_EXT * new_dev_ext;
     NTSTATUS status;
-    IRP dummy;
     DEVICE_RELATIONS * dev_relations;
     ULONG i;
 
@@ -626,7 +625,7 @@ static NTSTATUS WvMainBusAddDevice(
     new_dev_ext = new_dev_obj->DeviceExtension;
     ASSERT(new_dev_ext);
 
-    status = WvlWaitForActiveIrps(dev_obj, &dummy);
+    status = WvlWaitForActiveIrps(dev_obj);
     if (!NT_SUCCESS(status))
       return status;
 
