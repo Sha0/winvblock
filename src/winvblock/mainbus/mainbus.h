@@ -29,7 +29,15 @@
 /** Macros */
 #define M_WV_MAINBUS_H_
 
+/** Constants */
+enum E_WV_MAIN_BUS_FLAG {
+    CvWvMainBusFlagIrpsHeld_,
+    CvWvMainBusFlagIrpsHeld = 1 << CvWvMainBusFlagIrpsHeld_,
+    CvWvMainBusFlagZero = 0
+  };
+
 /** Object types */
+typedef enum E_WV_MAIN_BUS_FLAG E_WV_MAIN_BUS_FLAG;
 typedef struct S_WV_MAIN_BUS S_WV_MAIN_BUS;
 
 /** Function declarations */
@@ -52,6 +60,9 @@ struct S_WV_MAIN_BUS {
 
     /** The lower device this FDO is attached to, if any */
     DEVICE_OBJECT * LowerDeviceObject;
+
+    /** Flags for state that must be accessed atomically */
+    volatile LONG Flags;
 
     /** PnP bus information */
     PNP_BUS_INFORMATION PnpBusInfo[1];

@@ -234,6 +234,7 @@ static NTSTATUS STDCALL WvMainBusDriveDevice(
 
     bus = fdo->DeviceExtension;
     ASSERT(bus);
+    bus->Flags = CvWvMainBusFlagIrpsHeld;
     bus->PnpBusInfo->BusTypeGuid = GUID_MAIN_BUS_TYPE;
     bus->PnpBusInfo->LegacyBusType = PNPBus;
     bus->PnpBusInfo->BusNumber = 0;

@@ -114,13 +114,27 @@ NTSTATUS STDCALL WvBusIrpDispatch(
     IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {
+    S_WV_MAIN_BUS * bus;
     PIO_STACK_LOCATION io_stack_loc;
+    LONG flags;
+    BOOLEAN do_dispatch;
 
     ASSERT(dev_obj);
+    bus = dev_obj->DeviceExtension;
+    ASSERT(bus);
     ASSERT(irp);
 
     io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     ASSERT(io_stack_loc);
+
+    /* Check if non-PnP IRPs are being held */
+    flags = InterlockedOr(&bus->Flags, 0);
+    do_dispatch = (
+        !(flags & CvWvMainBusFlagIrpsHeld) ||
+        io_stack_loc->MajorFunction == IRP_MJ_PNP
+      );
+    if (!do_dispatch)
+      return WvlAddIrpToDeviceQueue(dev_obj, irp, FALSE);
 
     /* Handle a known IRP major type */
     if (WvMainBusMajorDispatchTable[io_stack_loc->MajorFunction]) {
@@ -131,7 +145,10 @@ NTSTATUS STDCALL WvBusIrpDispatch(
       }
 
     /* Handle an unknown type */
-    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+    irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
+    irp->IoStatus.Information = 0;
+    WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
+    return STATUS_NOT_SUPPORTED;
   }
 
 NTSTATUS STDCALL WvBusPnpQueryDevText(
@@ -179,7 +196,9 @@ NTSTATUS STDCALL WvBusPnpQueryDevText(
     wv_free(str);
     alloc_str:
 
-    return WvlIrpComplete(irp, irp->IoStatus.Information, status);
+    irp->IoStatus.Status = status;
+    WvlPassIrpUp(bus->Fdo, irp, IO_NO_INCREMENT);
+    return status;
   }
 
 /** PnP IRP dispatcher */
@@ -190,6 +209,7 @@ static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
     S_WV_MAIN_BUS * bus;
     IO_STACK_LOCATION * io_stack_loc;
     UCHAR code;
+    LONG flags;
     NTSTATUS status;
 
     ASSERT(dev_obj);
@@ -201,12 +221,37 @@ static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
 
     code = io_stack_loc->MinorFunction;
 
+    /* Check for IRPs that require exclusive access to the device */
+    switch (code) {
+        /* Each of these cases must wait for oustanding IRPs to complete */
+        case IRP_MN_START_DEVICE:
+        case IRP_MN_QUERY_STOP_DEVICE:
+        case IRP_MN_CANCEL_STOP_DEVICE:
+        case IRP_MN_STOP_DEVICE:
+        case IRP_MN_QUERY_REMOVE_DEVICE:
+        case IRP_MN_CANCEL_REMOVE_DEVICE:
+        case IRP_MN_REMOVE_DEVICE:
+        case IRP_MN_SURPRISE_REMOVAL:
+        flags = InterlockedOr(&bus->Flags, CvWvMainBusFlagIrpsHeld);
+        status = WvlWaitForActiveIrps(dev_obj, irp);
+        if (status == STATUS_NO_SUCH_DEVICE) {
+            /* The IRP will have been completed for us */
+            return status;
+          }
+        ASSERT(NT_SUCCESS(status));
+        break;
+      }
+
+    /* Continue processing the IRP's specific type */
     switch (code) {
         case IRP_MN_QUERY_DEVICE_TEXT:
         DBG("IRP_MN_QUERY_DEVICE_TEXT\n");
         if (WvBus.QueryDevText)
           return WvBus.QueryDevText(&WvBus, irp);
-        return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+        irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
+        irp->IoStatus.Information = 0;
+        WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
+        return STATUS_NOT_SUPPORTED;
 
         case IRP_MN_QUERY_BUS_INFORMATION:
         DBG("IRP_MN_QUERY_BUS_INFORMATION\n");
@@ -244,6 +289,7 @@ static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
         case IRP_MN_CANCEL_STOP_DEVICE:
         DBG("IRP_MN_CANCEL_STOP_DEVICE\n");
         WvBus.State = WvBus.OldState;
+        InterlockedAnd(&bus->Flags, ~CvWvMainBusFlagIrpsHeld);
         status = STATUS_SUCCESS;
         break;
 
@@ -264,6 +310,7 @@ static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
         case IRP_MN_CANCEL_REMOVE_DEVICE:
         DBG("IRP_MN_CANCEL_REMOVE_DEVICE\n");
         WvBus.State = WvBus.OldState;
+        InterlockedAnd(&bus->Flags, ~CvWvMainBusFlagIrpsHeld);
         status = STATUS_SUCCESS;
         break;
 
@@ -277,7 +324,7 @@ static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
         case IRP_MN_QUERY_RESOURCES:
         case IRP_MN_QUERY_RESOURCE_REQUIREMENTS:
         DBG("IRP_MN_QUERY_RESOURCE*\n");
-        IoCompleteRequest(irp, IO_NO_INCREMENT);
+        WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
         return STATUS_SUCCESS;
 
         default:
@@ -286,9 +333,8 @@ static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
       }
 
     irp->IoStatus.Status = status;
-    IoSkipCurrentIrpStackLocation(irp);
     ASSERT(bus->LowerDeviceObject);
-    return IoCallDriver(bus->LowerDeviceObject, irp);
+    return WvlPassIrpDown(bus->LowerDeviceObject, irp);
   }
 
 /**
@@ -340,7 +386,7 @@ static NTSTATUS STDCALL WvMainBusPnpQueryBusInfo(
     pnp_bus_info:
 
     irp->IoStatus.Status = status;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
     return status;
   }
 
@@ -373,9 +419,8 @@ static NTSTATUS STDCALL WvMainBusPnpQueryCapabilities(
     ASSERT(irp);
 
     /* Let the lower device handle the IRP */
-    IoSkipCurrentIrpStackLocation(irp);
     ASSERT(bus->LowerDeviceObject);
-    return IoCallDriver(bus->LowerDeviceObject, irp);
+    return WvlPassIrpDown(bus->LowerDeviceObject, irp);
   }
 
 /**
@@ -434,7 +479,7 @@ static NTSTATUS STDCALL WvMainBusPnpQueryDeviceRelations(
             status = WvMainBusInitialBusRelations(dev_obj);
             if (!NT_SUCCESS(status)) {
                 irp->IoStatus.Status = status;
-                IoCompleteRequest(irp, IO_NO_INCREMENT);
+                WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
               }
           }
         dev_relations = bus->BusRelations;
@@ -452,9 +497,8 @@ static NTSTATUS STDCALL WvMainBusPnpQueryDeviceRelations(
         case EjectionRelations:
         default:
         DBG("Unsupported device relations query\n");
-        IoSkipCurrentIrpStackLocation(irp);
         ASSERT(bus->LowerDeviceObject);
-        return IoCallDriver(bus->LowerDeviceObject, irp);
+        return WvlPassIrpDown(bus->LowerDeviceObject, irp);
       }
 
     pdo_count = dev_relations->Count;
@@ -464,11 +508,10 @@ static NTSTATUS STDCALL WvMainBusPnpQueryDeviceRelations(
     if (higher_dev_relations) {
         /* If we have nothing to add, pass the IRP down */
         if (!pdo_count) {
-            IoSkipCurrentIrpStackLocation(irp);
             ASSERT(bus->LowerDeviceObject);
-            return IoCallDriver(bus->LowerDeviceObject, irp);
+            return WvlPassIrpDown(bus->LowerDeviceObject, irp);
             status = irp->IoStatus.Status;
-            IoCompleteRequest(irp, IO_NO_INCREMENT);
+            WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
             return status;
           }
 
@@ -482,7 +525,7 @@ static NTSTATUS STDCALL WvMainBusPnpQueryDeviceRelations(
       );
     if (!new_dev_relations) {
         irp->IoStatus.Status = status = STATUS_INSUFFICIENT_RESOURCES;
-        IoCompleteRequest(irp, IO_NO_INCREMENT);
+        WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
         return status;
       }
 
@@ -518,9 +561,8 @@ static NTSTATUS STDCALL WvMainBusPnpQueryDeviceRelations(
     /* Send the IRP down */
     irp->IoStatus.Status = STATUS_SUCCESS;
     irp->IoStatus.Information = (ULONG_PTR) new_dev_relations;
-    IoSkipCurrentIrpStackLocation(irp);
     ASSERT(bus->LowerDeviceObject);
-    return IoCallDriver(bus->LowerDeviceObject, irp);
+    return WvlPassIrpDown(bus->LowerDeviceObject, irp);
   }
 
 /**
@@ -575,9 +617,8 @@ static NTSTATUS STDCALL WvMainBusPnpRemoveDevice(
       }
 
     /* Send the IRP down */
-    IoSkipCurrentIrpStackLocation(irp);
     ASSERT(bus->LowerDeviceObject);
-    status = IoCallDriver(bus->LowerDeviceObject, irp);
+    status = WvlPassIrpDown(bus->LowerDeviceObject, irp);
 
     /* Detach FDO from PDO */
     IoDetachDevice(bus->LowerDeviceObject);
@@ -635,12 +676,13 @@ static NTSTATUS STDCALL WvMainBusPnpStartDevice(
 
     WvBus.OldState = WvBus.State;
     WvBus.State = WvlBusStateStarted;
+    InterlockedAnd(&bus->Flags, ~CvWvMainBusFlagIrpsHeld);
 
     irp->IoStatus.Status = STATUS_SUCCESS;
 
     err_lower:
 
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
     return status;
   }
 
@@ -676,7 +718,7 @@ static NTSTATUS STDCALL WvMainBusDispatchDeviceControlIrp(
       }
 
     irp->IoStatus.Status = status;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
     return status;
   }
 
@@ -766,7 +808,10 @@ static NTSTATUS STDCALL WvMainBusDeviceControlDetach(
 
     err_buf:
 
-    return WvlIrpComplete(irp, 0, status);
+    irp->IoStatus.Status = status;
+    irp->IoStatus.Information = 0;
+    WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
+    return status;
   }
 
 static NTSTATUS STDCALL WvMainBusDispatchPowerIrp(
@@ -786,7 +831,10 @@ static NTSTATUS STDCALL WvMainBusDispatchCreateCloseIrp(
     ASSERT(irp);
     /* Always succeed with nothing to do */
     /* TODO: Track resource usage */
-    return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
+    irp->IoStatus.Status = STATUS_SUCCESS;
+    irp->IoStatus.Information = 0;
+    WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
+    return STATUS_SUCCESS;
   }
 
 static NTSTATUS STDCALL WvMainBusDispatchSystemControlIrp(

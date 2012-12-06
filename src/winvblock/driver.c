@@ -538,6 +538,7 @@ static NTSTATUS WvDriverDispatchIrp(
   ) {
     WV_S_DEV_EXT * dev_ext;
     VOID ** ptrs;
+    LONG flags;
     DRIVER_DISPATCH * irp_handler;
 
     ASSERT(dev_obj);
@@ -552,12 +553,40 @@ static NTSTATUS WvDriverDispatchIrp(
     ASSERT(dev_ext);
 
     if (dev_ext->MiniDriver) {
+        /* Signal our intention as soon as possible */
+        WvIncrementActiveIrpCount(dev_ext);
+
+        /*
+         * Set a default completion routine that will call WvlPassIrpUp.
+         * This might be overridden by the device's IRP dispatcher
+         */
+        /* TODO: Deal with the PDO case, which has no next stack */
+        IoCopyCurrentIrpStackLocationToNext(irp);
+        IoSetCompletionRoutine(irp, WvIoCompletion, NULL, TRUE, TRUE, TRUE);
+
         /* Clear context */
         ptrs = irp->Tail.Overlay.DriverContext;
         RtlZeroMemory(ptrs, sizeof irp->Tail.Overlay.DriverContext);
 
-        /* Add the IRP to the device's queue and wait for result */
-        return WvDriverAddIrpToDeviceQueueInternal(dev_obj, irp, TRUE, TRUE);
+        /* Check if the IRP should be enqueued */
+        flags = InterlockedOr(&dev_ext->Flags, 0);
+        if (flags & CvWvlDeviceFlagSerialIrps) {
+            return WvDriverAddIrpToDeviceQueueInternal(
+                dev_obj,
+                irp,
+                TRUE,
+                TRUE
+              );
+          }
+
+        /*
+         * Otherwise, dispatch the IRP immediately.  The eventual call
+         * to WvlPassIrpUp will decrement the active IRP count.  A call
+         * to WvlPassIrpUp could either be by the default completion
+         * routine or explicitly
+         */
+        ASSERT(dev_ext->IrpDispatch);
+        return dev_ext->IrpDispatch(dev_obj, irp);
       }
 
     /* Handle the old, non-mini-driver case */
@@ -1025,7 +1054,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlCreateDevice(
     new_dev_ext->SentinelIrpLink = NULL;
     new_dev_ext->NotAvailable = FALSE;
     KeInitializeSpinLock(&new_dev_ext->Lock);
-    new_dev_ext->Flags = CvWvlDeviceFlagSerialIrps;
+    new_dev_ext->Flags = CvWvlDeviceFlagZero;
     new_dev_ext->ActiveIrpCount = 0;
     KeInitializeEvent(
         &new_dev_ext->ActiveIrpCountOne,
@@ -1286,6 +1315,9 @@ WVL_M_LIB NTSTATUS STDCALL WvlCallFunctionInDeviceThread(
 
     work_item->Function = func;
 
+    /* Signal the work item */
+    WvIncrementActiveIrpCount(dev_ext);
+
     /**
      * We use some of the 4 driver-owned pointers in the dummy IRP.
      * The first lets WvDeviceThread recognize and find the work item.
@@ -1435,41 +1467,17 @@ static NTSTATUS STDCALL WvDriverAddIrpToDeviceQueueInternal(
     ASSERT(dev_ext);
     ASSERT(irp);
 
-    /*
-     * Signal our intention.  If this function was _not_ called for
-     * internal use, then it was invoked as a result of a call to
-     * WvlAddIrpToDeviceQueue, which means that the IRP is already active
-     */
-    if (internal)
-      WvIncrementActiveIrpCount(dev_ext);
-
     ptrs = irp->Tail.Overlay.DriverContext;
-
-    /*
-     * Set a default completion routine that will call WvlPassIrpUp.
-     * This might be overridden by the device's IRP dispatcher
-     */
-    if (!ptrs[0])
-      IoSetCompletionRoutine(irp, WvIoCompletion, NULL, TRUE, TRUE, TRUE);
 
     /*
      * Check if we should process the IRP or work item asynchronously.
      * If not, this overrides the user's Wait argument
      */
-    flags = InterlockedOr(&dev_ext->Flags, 0);
-    wait = wait || flags & CvWvlDeviceFlagSerialIrps;
     if (!wait) {
-        /*
-         * The eventual call to either WvlPassIrpUp or
-         * WvProcessDeviceThreadWorkItem will decrement the active IRP
-         * count.  A call to WvlPassIrpUp could either be by the default
-         * completion routine or explicitly
-         */
-        ASSERT(dev_ext->IrpDispatch);
-        return dev_ext->IrpDispatch(dev_obj, irp);
+        flags = InterlockedOr(&dev_ext->Flags, 0);
+        if (flags & CvWvlDeviceFlagSerialIrps)
+          wait = TRUE;
       }
-
-    /* Otherwise, enqueue the IRP */
 
     /*
      * If we wait for status, we tell the thread where to return that
@@ -1497,7 +1505,6 @@ static NTSTATUS STDCALL WvDriverAddIrpToDeviceQueueInternal(
          */
         WvDecrementActiveIrpCount(dev_ext);
       }
-    KeSetEvent(&dev_ext->IrpArrival, 0, FALSE);
 
     /*
      * If we are invoked as a result of a call to WvlAddIrpToDeviceQueue,
@@ -1506,11 +1513,12 @@ static NTSTATUS STDCALL WvDriverAddIrpToDeviceQueueInternal(
      * endlessly looping over any IRPs that keep adding themselves to the
      * queue.  Thus, if this is a possibility, make a note of this IRP as a
      * sentinel value for the thread to check to know if it's about to
-     * loop endlessly.
+     * loop endlessly
      */
     if (!internal && !dev_ext->SentinelIrpLink)
       dev_ext->SentinelIrpLink = &irp->Tail.Overlay.ListEntry;
 
+    KeSetEvent(&dev_ext->IrpArrival, 0, FALSE);
     WvlUnlockDevice(dev_obj);
 
     /* If the device wasn't available, we decrement the active IRP count */
@@ -1581,9 +1589,7 @@ static VOID STDCALL WvDeviceThread(IN VOID * context) {
         /* Did we finish our pass through the IRP queue? */
         if (link == dev_ext->IrpQueue) {
             /* Yes.  We can clear the serial IRP mode */
-            /* TODO: Once mainbus is using WvlPassIrpUp, etc. */
-            if (0)
-            InterlockedXor(&dev_ext->Flags, serial_irp_flags);
+            InterlockedAnd(&dev_ext->Flags, ~serial_irp_flags);
             KeClearEvent(&dev_ext->ActiveIrpCountOne);
 
             /* Clear any sentinel value, since the list is empty */
@@ -1743,7 +1749,7 @@ static VOID WvProcessDeviceThreadWorkItem(
 
     /*
      * Decrement the active IRP count that was incremented by either
-     * WvDriverAddIrpToDeviceQueueInternal or by WvDeviceThread
+     * WvlCallFunctionInDeviceThread or by WvDeviceThread
      */
     WvDecrementActiveIrpCount(dev_ext);
 
@@ -1813,6 +1819,7 @@ WVL_M_LIB VOID STDCALL WvlPassIrpUp(
     ASSERT(dev_ext);
     ASSERT(irp);
 
+    DBG("Passing IRP %p up\n", (VOID *) irp);
     WvDecrementActiveIrpCount(dev_ext);
     IoCompleteRequest(irp, boost);
   }
@@ -1823,6 +1830,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlPassIrpDown(
   ) {
     ASSERT(dev_obj);
     ASSERT(irp);
+    DBG("Passing IRP %p down\n", (VOID *) irp);
     return IoCallDriver(dev_obj, irp);
   }
 
@@ -1853,7 +1861,7 @@ static NTSTATUS STDCALL WvIoCompletion(
 
     /*
      * For mini-drivers, we will pass up/complete the IRP if this
-     * completion routine was set by WvDriverAddIrpToDeviceQueueInternal
+     * completion routine was set by WvDriverDispatchIrp
      */
     if (!event && dev_ext->MiniDriver)
       WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
