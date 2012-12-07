@@ -256,6 +256,19 @@ WVL_M_LIB NTSTATUS STDCALL WvlCreateSafeHookDevice(
     return status;
   }
 
+WVL_M_LIB S_WV_SAFEHOOK_PDO * STDCALL WvlGetSafeHook(
+    IN DEVICE_OBJECT * dev_obj
+  ) {
+    WV_S_DEV_EXT * dev_ext;
+
+    ASSERT(dev_obj);
+    dev_ext = dev_obj->DeviceExtension;
+    if (!dev_ext || dev_ext->MiniDriver != WvSafeHookMiniDriver)
+      return NULL;
+
+    return dev_obj->DeviceExtension;
+  }
+
 /** Process a GRUB4DOS drive mapping slot.  Probably belongs elsewhere */
 static BOOLEAN WvGrub4dosProcessSlot(SP_WV_G4D_DRIVE_MAPPING slot) {
     WVL_E_DISK_MEDIA_TYPE media_type;

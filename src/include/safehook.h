@@ -67,6 +67,22 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlCreateSafeHookDevice(
     IN OUT DEVICE_OBJECT ** DeviceObject
   );
 
+/**
+ * Check if a device is an INT 0x13 "safe hook"
+ *
+ * @param DeviceObject
+ *   The device to check.  This device must have been created via
+ *   WvlCreateDevice
+ *
+ * @retval NULL
+ *   The device is not a safe hook
+ * @return
+ *   Otherwise, returns a pointer to the safe hook device details
+ */
+extern WVL_M_LIB S_WV_SAFEHOOK_PDO * STDCALL WvlGetSafeHook(
+    IN DEVICE_OBJECT * DeviceObject
+  );
+
 /** Struct/union type definitions */
 #ifdef _MSC_VER
 #  pragma pack(1)
