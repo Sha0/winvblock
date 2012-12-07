@@ -28,9 +28,19 @@
  */
 
 /** Object types */
+typedef struct S_WVL_MAIN_BUS_PROBE_REGISTRATION
+  S_WVL_MAIN_BUS_PROBE_REGISTRATION;
 struct WVL_BUS_T;
 
 /** Function types */
+
+/**
+ * Callback for the main bus' initial bus relations probe
+ *
+ * @param DeviceObject
+ *   The main bus device
+ */
+typedef VOID F_WVL_MAIN_BUS_PROBE_REGISTRATION(IN DEVICE_OBJECT *);
 
 /**
  * A bus PnP routine.
@@ -84,7 +94,29 @@ extern WVL_M_LIB VOID STDCALL WvlRemoveDeviceFromMainBus(
     IN DEVICE_OBJECT * DeviceObject
   );
 
+/**
+ * Register a callback for the main bus' initial bus relations probe
+ *
+ * @param RegistrationRecord
+ *   A record in non-paged memory noting the callback to be performed
+ *   during the initial probe
+ *
+ * The record will be deregistered after the callback has been called
+ */
+extern WVL_M_LIB VOID STDCALL WvlRegisterMainBusInitialProbeCallback(
+    IN S_WVL_MAIN_BUS_PROBE_REGISTRATION * reg
+  );
+
 /** Struct/union type definitions */
+
+/** Registration for the main bus' initial bus relations probe */
+struct S_WVL_MAIN_BUS_PROBE_REGISTRATION {
+    /** The link in the linked list of all registrations */
+    LIST_ENTRY Link[1];
+
+    /** The callback to be performed during the initial probe */
+    F_WVL_MAIN_BUS_PROBE_REGISTRATION * Callback;
+  };
 
 /* The bus type. */
 typedef struct WVL_BUS_T {

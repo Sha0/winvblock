@@ -242,6 +242,7 @@ static NTSTATUS STDCALL WvMainBusDriveDevice(
     bus->BusRelations = NULL;
     /* TODO: Remove once proper PDO-add support is implemented */
     bus->BusRelationsHack = NULL;
+    WvlInitializeLockedList(bus->InitialProbeRegistrations);
 
     WvBusDev.IsBus = TRUE;
     WvDevForDevObj(WvBus.Fdo, &WvBusDev);
@@ -728,4 +729,19 @@ static NTSTATUS WvMainBusRemoveDevice(
     WvlDecrementResourceUsage(rem_dev_ext->Usage);
 
     return STATUS_SUCCESS;
+  }
+
+WVL_M_LIB VOID STDCALL WvlRegisterMainBusInitialProbeCallback(
+    IN S_WVL_MAIN_BUS_PROBE_REGISTRATION * reg
+  ) {
+    S_WV_MAIN_BUS * bus;
+
+    ASSERT(reg);
+    ASSERT(reg->Callback);
+    ASSERT(WvMainBusDevice);
+    bus = WvMainBusDevice->DeviceExtension;
+    ASSERT(bus);
+    WvlAcquireLockedList(bus->InitialProbeRegistrations);
+    WvlAppendLockedListLink(bus->InitialProbeRegistrations, reg->Link);
+    WvlReleaseLockedList(bus->InitialProbeRegistrations);
   }

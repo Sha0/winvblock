@@ -68,6 +68,9 @@ struct S_WV_MAIN_BUS {
 
     /** Hack until proper PDO-add support is implemented */
     DEVICE_RELATIONS * BusRelationsHack;
+
+    /** Registrations for the initial bus relations probe */
+    S_WVL_LOCKED_LIST InitialProbeRegistrations[1];
   };
 
 /** External objects */
