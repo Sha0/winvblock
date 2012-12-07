@@ -44,9 +44,6 @@
 /*** Macros */
 #define M_FUNC_ENTRY()
 
-/*** Object types */
-typedef struct S_WV_SAFEHOOK_PDO_ S_WV_SAFEHOOK_PDO, * SP_WV_SAFEHOOK_PDO;
-
 /*** Function declarations */
 static NTSTATUS STDCALL WvSafeHookPdoIrpComplete(IN PIRP);
 static DRIVER_DISPATCH WvSafeHookPdoIrpDispatch;
@@ -65,16 +62,6 @@ static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH
   WvSafeHookPdoIrpPnpSuccess;
 static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH
   WvSafeHookPdoIrpPnpSuccessNoInfo;
-
-/*** Struct/union definitions */
-struct S_WV_SAFEHOOK_PDO_ {
-    WV_S_DEV_EXT DevExt;
-    WV_S_PROBE_SAFE_MBR_HOOK SafeHookCopy;
-    S_X86_SEG16OFF16 Whence;
-    PDEVICE_OBJECT ParentBus;
-    PDEVICE_OBJECT Self;
-    SP_WV_SAFEHOOK_PDO Next;
-  };
 
 /*** Objects */
 DEFINE_GUID(
@@ -421,11 +408,12 @@ static NTSTATUS STDCALL WvSafeHookPdoIrpPnpQueryDevRelations(
 
           /* Have we checked the next hook in the chain? */
           if (bus->Next == bus) {
-              PDEVICE_OBJECT next;
+              /* TODO: Fix this logic */
+              DEVICE_OBJECT * next;
 
-              next = WvSafeHookProbe(
+              WvlCreateSafeHookDevice(
                   &bus->SafeHookCopy.PrevHook,
-                  dev_obj
+                  &next
                 );
               if (next)
                 bus->Next = next->DeviceExtension;

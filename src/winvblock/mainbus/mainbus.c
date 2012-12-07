@@ -66,7 +66,6 @@ static BOOLEAN WvMainBusPdoDone(IN UNICODE_STRING * RegistryPath);
 /* TODO: DRIVER_ADD_DEVICE isn't available in DDK 3790.1830, it seems */
 static DRIVER_ADD_DEVICE WvMainBusDriveDevice;
 static DRIVER_UNLOAD WvMainBusUnload;
-static VOID WvMainBusOldProbe(DEVICE_OBJECT * DeviceObject);
 static NTSTATUS STDCALL WvBusEstablish(
     IN DRIVER_OBJECT * DriverObject,
     IN UNICODE_STRING * RegistryPath
@@ -278,9 +277,6 @@ static NTSTATUS STDCALL WvMainBusDriveDevice(
     WvBus.Fdo->Flags &= ~DO_DEVICE_INITIALIZING;
     DBG("Driving PDO %p\n", (VOID *) pdo);
 
-    /* TODO: Mini-drivers will take care of adding themselves */
-    WvMainBusOldProbe(fdo);
-
     return STATUS_SUCCESS;
 
     IoDeleteSymbolicLink(&WvBusDosName);
@@ -313,29 +309,6 @@ static VOID STDCALL WvMainBusUnload(IN DRIVER_OBJECT * drv_obj) {
     (VOID) drv_obj;
     WvlDeregisterMiniDriver(WvMainBusMiniDriver);
     return;
-  }
-
-/**
- * Probe for default children of the main bus
- *
- * @param DeviceObject
- *   The main bus FDO
- */
-static VOID WvMainBusOldProbe(DEVICE_OBJECT * dev_obj) {
-    S_X86_SEG16OFF16 int_13h;
-    PDEVICE_OBJECT safe_hook_child;
-
-    ASSERT(dev_obj);
-
-    /* Probe for children */
-    int_13h.Segment = 0;
-    int_13h.Offset = 0x13 * sizeof int_13h;
-    safe_hook_child = WvSafeHookProbe(&int_13h, dev_obj);
-    if (safe_hook_child) {
-        WvlBusInitNode(&WvBusSafeHookChild, safe_hook_child);
-        WvlBusAddNode(&WvBus, &WvBusSafeHookChild);
-      }
-    WvMemdiskFind();
   }
 
 /**
@@ -518,7 +491,7 @@ NTSTATUS WvMainBusInitialBusRelations(DEVICE_OBJECT * dev_obj) {
     S_WV_MAIN_BUS * bus;
     BOOLEAN need_alloc;
     DEVICE_RELATIONS * dev_relations;
-    USHORT pdo_count;
+    ULONG pdo_count;
     LIST_ENTRY * link;
     WVL_S_BUS_NODE * node;
 
@@ -527,6 +500,43 @@ NTSTATUS WvMainBusInitialBusRelations(DEVICE_OBJECT * dev_obj) {
     ASSERT(bus);
     ASSERT(!bus->BusRelations);
 
+    pdo_count = 0;
+
+    /* TODO: Change this hack once initial probe stuff works */
+    if (!bus->InitialBusRelationsHack) {
+        LIST_ENTRY * link;
+        S_WVL_MAIN_BUS_PROBE_REGISTRATION * reg;
+
+        bus->BusRelations = wv_malloc(sizeof *bus->BusRelations);
+        if (!bus->BusRelations)
+          return STATUS_INSUFFICIENT_RESOURCES;
+        bus->BusRelations->Count = 0;
+        bus->BusRelations->Objects[0] = NULL;
+
+        WvlAcquireLockedList(bus->InitialProbeRegistrations);
+        for (
+            link = bus->InitialProbeRegistrations->List->Flink;
+            link != bus->InitialProbeRegistrations->List;
+            link = link->Flink
+          ) {
+            ASSERT(link);
+            reg = CONTAINING_RECORD(
+                link,
+                S_WVL_MAIN_BUS_PROBE_REGISTRATION,
+                Link
+              );
+            ASSERT(reg);
+            ASSERT(reg->Callback);
+            reg->Callback(dev_obj);
+          }
+        WvlReleaseLockedList(bus->InitialProbeRegistrations);
+        WvMemdiskFind();
+        bus->InitialBusRelationsHack = bus->BusRelations;
+        bus->BusRelations = NULL;
+      }
+    if (bus->InitialBusRelationsHack)
+      pdo_count += bus->InitialBusRelationsHack->Count;
+
     /*
      * TODO: Right now this is a hack until proper PDO-add support
      * is implemented.  With this hack, any user of the main bus'
@@ -534,7 +544,7 @@ NTSTATUS WvMainBusInitialBusRelations(DEVICE_OBJECT * dev_obj) {
      * we are called before each use of that member
      */
     dev_relations = bus->BusRelationsHack;
-    pdo_count = WvBus.BusPrivate_.NodeCount;
+    pdo_count += WvBus.BusPrivate_.NodeCount;
 
     /* Do we need to allocate the list? */
     need_alloc = (
@@ -571,6 +581,14 @@ NTSTATUS WvMainBusInitialBusRelations(DEVICE_OBJECT * dev_obj) {
         ASSERT(node);
 
         dev_relations->Objects[pdo_count] = node->BusPrivate_.Pdo;
+      }
+    if (bus->InitialBusRelationsHack) {
+        ULONG i;
+
+        for (i = 0; i < bus->InitialBusRelationsHack->Count; ++i) {
+            dev_relations->Objects[pdo_count++] =
+              bus->InitialBusRelationsHack->Objects[i];
+          }
       }
 
     /* Save the list */
@@ -646,7 +664,7 @@ static NTSTATUS WvMainBusAddDevice(
       return STATUS_INSUFFICIENT_RESOURCES;
 
     dev_relations->Count = bus->BusRelations->Count + 1;
-    for (i = 0; i < dev_relations->Count; ++i)
+    for (i = 0; i < bus->BusRelations->Count; ++i)
       dev_relations->Objects[i] = bus->BusRelations->Objects[i];
     dev_relations->Objects[i] = new_dev_obj;
 
@@ -720,7 +738,7 @@ static NTSTATUS WvMainBusRemoveDevice(
         bus->BusRelations->Objects[i] = bus->BusRelations->Objects[i - found];
       }
     ASSERT(found);
-    bus->BusRelations->Count = bus->BusRelations->Count - found;
+    bus->BusRelations->Count -= found;
 
     if (!found)
       return STATUS_UNSUCCESSFUL;
@@ -741,7 +759,5 @@ WVL_M_LIB VOID STDCALL WvlRegisterMainBusInitialProbeCallback(
     ASSERT(WvMainBusDevice);
     bus = WvMainBusDevice->DeviceExtension;
     ASSERT(bus);
-    WvlAcquireLockedList(bus->InitialProbeRegistrations);
     WvlAppendLockedListLink(bus->InitialProbeRegistrations, reg->Link);
-    WvlReleaseLockedList(bus->InitialProbeRegistrations);
   }

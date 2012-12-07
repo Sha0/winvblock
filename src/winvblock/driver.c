@@ -47,7 +47,9 @@
 /* From mainbus/mainbus.c */
 extern WVL_S_BUS_T WvBus;
 extern DRIVER_INITIALIZE WvMainBusDriverEntry;
-extern NTSTATUS STDCALL WvBusAttach(IN PDEVICE_OBJECT);
+
+/* From safehook/probe.c */
+extern DRIVER_INITIALIZE WvSafeHookDriverEntry;
 
 /** Public objects */
 DRIVER_OBJECT * WvDriverObj;
@@ -299,6 +301,9 @@ NTSTATUS STDCALL DriverEntry(
      * mini-drivers have a higher priority for driving devices
      */
     status = WvMainBusDriverEntry(drv_obj, reg_path);
+    if(!NT_SUCCESS(status))
+      goto err_internal_minidriver;
+    status = WvSafeHookDriverEntry(drv_obj, reg_path);
     if(!NT_SUCCESS(status))
       goto err_internal_minidriver;
 
@@ -1307,6 +1312,13 @@ WVL_M_LIB NTSTATUS STDCALL WvlCallFunctionInDeviceThread(
     if (!dev_obj || !func)
       return STATUS_INVALID_PARAMETER;
 
+    /*
+     * If we're already in the device thread and we're supposed to wait,
+     * then simply call the function
+     */
+    if (wait && WvlInDeviceThread(dev_obj))
+      return func(dev_obj, context);
+
     dev_ext = dev_obj->DeviceExtension;
     ASSERT(dev_ext);
 
@@ -1524,7 +1536,7 @@ static NTSTATUS STDCALL WvDriverAddIrpToDeviceQueueInternal(
      * sentinel value for the thread to check to know if it's about to
      * loop endlessly
      */
-    if (!internal && !dev_ext->SentinelIrpLink)
+    if (!internal && !wait && !dev_ext->SentinelIrpLink)
       dev_ext->SentinelIrpLink = &irp->Tail.Overlay.ListEntry;
 
     KeSetEvent(&dev_ext->IrpArrival, 0, FALSE);

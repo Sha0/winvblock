@@ -171,54 +171,54 @@ static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
     io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     ASSERT(io_stack_loc);
 
+    /*
+     * All PnP IRPs will have exclusive access to the device.  This
+     * simplifies things
+     */
+    if (!WvlInDeviceThread(dev_obj))
+      return WvlAddIrpToDeviceQueue(dev_obj, irp, TRUE);
+
+    status = WvlWaitForActiveIrps(dev_obj);
+    if (status == STATUS_NO_SUCH_DEVICE) {
+        /* The IRP will have been completed for us */
+        return status;
+      }
+    ASSERT(NT_SUCCESS(status));
+
     code = io_stack_loc->MinorFunction;
 
-    /* Check for IRPs that require exclusive access to the device */
-    switch (code) {
-        /* Each of these cases must wait for oustanding IRPs to complete */
-        case IRP_MN_START_DEVICE:
-        case IRP_MN_QUERY_STOP_DEVICE:
-        case IRP_MN_CANCEL_STOP_DEVICE:
-        case IRP_MN_STOP_DEVICE:
-        case IRP_MN_QUERY_REMOVE_DEVICE:
-        case IRP_MN_CANCEL_REMOVE_DEVICE:
-        case IRP_MN_REMOVE_DEVICE:
-        case IRP_MN_SURPRISE_REMOVAL:
-        flags = InterlockedOr(&bus->Flags, CvWvMainBusFlagIrpsHeld);
-        status = WvlWaitForActiveIrps(dev_obj);
-        if (status == STATUS_NO_SUCH_DEVICE) {
-            /* The IRP will have been completed for us */
-            return status;
-          }
-        ASSERT(NT_SUCCESS(status));
-        break;
-      }
-
-    /* Continue processing the IRP's specific type */
     switch (code) {
         case IRP_MN_QUERY_DEVICE_TEXT:
         DBG("IRP_MN_QUERY_DEVICE_TEXT\n");
-        return WvMainBusPnpQueryDeviceText(dev_obj, irp);
+        status = WvMainBusPnpQueryDeviceText(dev_obj, irp);
+        goto completed;
 
         case IRP_MN_QUERY_BUS_INFORMATION:
         DBG("IRP_MN_QUERY_BUS_INFORMATION\n");
-        return WvMainBusPnpQueryBusInfo(dev_obj, irp);
+        status = WvMainBusPnpQueryBusInfo(dev_obj, irp);
+        goto completed;
 
         case IRP_MN_QUERY_DEVICE_RELATIONS:
         DBG("IRP_MN_QUERY_DEVICE_RELATIONS\n");
-        return WvMainBusPnpQueryDeviceRelations(dev_obj, irp);
+        status = WvMainBusPnpQueryDeviceRelations(dev_obj, irp);
+        goto completed;
 
         case IRP_MN_QUERY_CAPABILITIES:
         DBG("IRP_MN_QUERY_CAPABILITIES\n");
-        return WvMainBusPnpQueryCapabilities(dev_obj, irp);
+        status = WvMainBusPnpQueryCapabilities(dev_obj, irp);
+        goto completed;
 
         case IRP_MN_REMOVE_DEVICE:
         DBG("IRP_MN_REMOVE_DEVICE\n");
-        return WvMainBusPnpRemoveDevice(dev_obj, irp);
+        flags = InterlockedOr(&bus->Flags, CvWvMainBusFlagIrpsHeld);
+        status = WvMainBusPnpRemoveDevice(dev_obj, irp);
+        goto completed;
 
         case IRP_MN_START_DEVICE:
         DBG("IRP_MN_START_DEVICE\n");
-        return WvMainBusPnpStartDevice(dev_obj, irp);
+        status = WvMainBusPnpStartDevice(dev_obj, irp);
+        flags = InterlockedAnd(&bus->Flags, ~CvWvMainBusFlagIrpsHeld);
+        goto completed;
 
         case IRP_MN_QUERY_PNP_DEVICE_STATE:
         DBG("IRP_MN_QUERY_PNP_DEVICE_STATE\n");
@@ -230,13 +230,14 @@ static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
         DBG("IRP_MN_QUERY_STOP_DEVICE\n");
         WvBus.OldState = WvBus.State;
         WvBus.State = WvlBusStateStopPending;
+        flags = InterlockedOr(&bus->Flags, CvWvMainBusFlagIrpsHeld);
         status = STATUS_SUCCESS;
         break;
 
         case IRP_MN_CANCEL_STOP_DEVICE:
         DBG("IRP_MN_CANCEL_STOP_DEVICE\n");
         WvBus.State = WvBus.OldState;
-        InterlockedAnd(&bus->Flags, ~CvWvMainBusFlagIrpsHeld);
+        flags = InterlockedAnd(&bus->Flags, ~CvWvMainBusFlagIrpsHeld);
         status = STATUS_SUCCESS;
         break;
 
@@ -244,6 +245,7 @@ static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
         DBG("IRP_MN_STOP_DEVICE\n");
         WvBus.OldState = WvBus.State;
         WvBus.State = WvlBusStateStopped;
+        flags = InterlockedOr(&bus->Flags, CvWvMainBusFlagIrpsHeld);
         status = STATUS_SUCCESS;
         break;
 
@@ -251,13 +253,14 @@ static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
         DBG("IRP_MN_QUERY_REMOVE_DEVICE\n");
         WvBus.OldState = WvBus.State;
         WvBus.State = WvlBusStateRemovePending;
+        flags = InterlockedOr(&bus->Flags, CvWvMainBusFlagIrpsHeld);
         status = STATUS_SUCCESS;
         break;
 
         case IRP_MN_CANCEL_REMOVE_DEVICE:
         DBG("IRP_MN_CANCEL_REMOVE_DEVICE\n");
         WvBus.State = WvBus.OldState;
-        InterlockedAnd(&bus->Flags, ~CvWvMainBusFlagIrpsHeld);
+        flags = InterlockedAnd(&bus->Flags, ~CvWvMainBusFlagIrpsHeld);
         status = STATUS_SUCCESS;
         break;
 
@@ -265,6 +268,7 @@ static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
         DBG("IRP_MN_SURPRISE_REMOVAL\n");
         WvBus.OldState = WvBus.State;
         WvBus.State = WvlBusStateSurpriseRemovePending;
+        flags = InterlockedOr(&bus->Flags, CvWvMainBusFlagIrpsHeld);
         status = STATUS_SUCCESS;
         break;
 
@@ -275,12 +279,15 @@ static NTSTATUS STDCALL WvMainBusDispatchPnpIrp(
         return STATUS_SUCCESS;
 
         default:
-        DBG("Unhandled IRP_MN_*: %d\n", code);
+        DBG("Unhandled IRP_MN_*: %u\n", code);
         status = irp->IoStatus.Status;
       }
 
     irp->IoStatus.Status = status;
     return WvlPassIrpDown(dev_obj, irp);
+
+    completed:
+    return status;
   }
 
 /**
@@ -585,6 +592,7 @@ static NTSTATUS STDCALL WvMainBusPnpRemoveDevice(
     IN IRP * irp
   ) {
     S_WV_MAIN_BUS * bus;
+    ULONG i;
     LIST_ENTRY * list;
     LIST_ENTRY * link;
     WVL_S_BUS_NODE * bus_node;
@@ -601,7 +609,15 @@ static NTSTATUS STDCALL WvMainBusPnpRemoveDevice(
     /* Schedule deletion of this device when the thread finishes */
     WvlDeleteDevice(dev_obj);
 
-    /* Delete all child PDOs */
+    /* TODO: Delete all child PDOs.  This is a hack, for now */
+    if (bus->InitialBusRelationsHack) {
+        ASSERT(!bus->BusRelations);
+        bus->BusRelations = bus->InitialBusRelationsHack;
+        for (i = 0; i < bus->InitialBusRelationsHack->Count; ++i)
+          WvlRemoveDeviceFromMainBus(bus->BusRelations->Objects[i]);
+        bus->BusRelations = NULL;
+        wv_free(bus->InitialBusRelationsHack);
+      }
     wv_free(bus->BusRelationsHack);
     list = &WvBus.BusPrivate_.Nodes;
     while ((link = RemoveHeadList(list)) != list) {

@@ -1,9 +1,7 @@
 /**
- * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
- * Copyright 2006-2008, V.
- * For WinAoE contact information, see http://winaoe.org/
+ * Copyright (C) 2009-2012, Shao Miller <sha0.miller@gmail.com>.
  *
- * This file is part of WinVBlock, derived from WinAoE.
+ * This file is part of WinVBlock, originally derived from WinAoE.
  *
  * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,12 +22,13 @@
 /****
  * @file
  *
- * Boot-time disk probing specifics.
+ * Boot-time disk probing specifics
  */
 
-/*** Types. */
+/** Object types */
 typedef struct WV_PROBE_SAFE_MBR_HOOK
   WV_S_PROBE_SAFE_MBR_HOOK, * WV_SP_PROBE_SAFE_MBR_HOOK;
+typedef struct S_WV_SAFEHOOK_PDO_ S_WV_SAFEHOOK_PDO, * SP_WV_SAFEHOOK_PDO;
 
 /*** Function declarations. */
 
@@ -48,19 +47,27 @@ extern PDEVICE_OBJECT STDCALL WvSafeHookPdoCreate(
   );
 
 /**
- * Probe a SEG16:OFF16 for a "safe INT 0x13 hook" and create a bus PDO
+ * Process a potential INT 0x13 "safe hook"
  *
- * @v HookAddr          The SEG16:OFF16 address to probe
- * @v ParentBus         If a safe hook is found, it will be a child bus to
- *                      this parent bus
- * @ret PDEVICE_OBJECT  A child bus, if found, else NULL
+ * @param HookAddress
+ *   The SEG16:OFF16 address to probe for a safe hook
+ *
+ * @param DeviceObject
+ *   Points to the DEVICE_OBJECT pointer to populate with a pointer to
+ *   the created safe hook device
+ *
+ * @retval STATUS_SUCCESS
+ * @retval STATUS_NOT_SUPPORTED
+ *   The address does not appear to contain a safe hook
+ * @retval STATUS_INSUFFICIENT_RESOURCES
+ *   A device for the safe hook could not be created
  */
-extern PDEVICE_OBJECT STDCALL WvSafeHookProbe(
-    IN SP_X86_SEG16OFF16 HookAddr,
-    IN PDEVICE_OBJECT ParentBus
+extern WVL_M_LIB NTSTATUS STDCALL WvlCreateSafeHookDevice(
+    IN S_X86_SEG16OFF16 * HookAddress,
+    IN OUT DEVICE_OBJECT ** DeviceObject
   );
 
-/*** Struct/union definitions */
+/** Struct/union type definitions */
 #ifdef _MSC_VER
 #  pragma pack(1)
 #endif
@@ -75,5 +82,14 @@ struct WV_PROBE_SAFE_MBR_HOOK {
 #ifdef _MSC_VER
 #  pragma pack()
 #endif
+
+struct S_WV_SAFEHOOK_PDO_ {
+    WV_S_DEV_EXT DevExt;
+    WV_S_PROBE_SAFE_MBR_HOOK SafeHookCopy;
+    S_X86_SEG16OFF16 Whence;
+    DEVICE_OBJECT * ParentBus;
+    DEVICE_OBJECT * Self;
+    S_WV_SAFEHOOK_PDO * Next;
+  };
 
 #endif  /* WV_M_PROBE_H_ */

@@ -1,9 +1,7 @@
 /**
- * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
- * Copyright 2006-2008, V.
- * For WinAoE contact information, see http://winaoe.org/
+ * Copyright (C) 2009-2012, Shao Miller <sha0.miller@gmail.com>.
  *
- * This file is part of WinVBlock, derived from WinAoE.
+ * This file is part of WinVBlock, originally derived from WinAoE.
  *
  * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,10 +17,10 @@
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/****
+/**
  * @file
  *
- * "Safe INT 0x13 hook" probing/walking
+ * "Safe INT 0x13 hook" mini-driver
  */
 
 #include <ntddk.h>
@@ -45,7 +43,16 @@
 #include "safehook.h"
 #include "memdisk.h"
 
-/*** Function declarations */
+/* From mainbus/mainbus.c */
+extern WVL_S_BUS_T WvBus;
+
+/** Public function declarations */
+DRIVER_INITIALIZE WvSafeHookDriverEntry;
+
+/** Function declarations */
+static DRIVER_ADD_DEVICE WvSafeHookDriveDevice;
+static DRIVER_UNLOAD WvSafeHookUnload;
+static VOID WvSafeHookInitialProbe(IN DEVICE_OBJECT * DeviceObject);
 static BOOLEAN WvGrub4dosProcessSlot(SP_WV_G4D_DRIVE_MAPPING);
 static BOOLEAN WvGrub4dosProcessSafeHook(
     PUCHAR,
@@ -53,44 +60,164 @@ static BOOLEAN WvGrub4dosProcessSafeHook(
     WV_SP_PROBE_SAFE_MBR_HOOK
   );
 
-/*** Function definitions */
+/** Objects */
+static S_WVL_MINI_DRIVER * WvSafeHookMiniDriver;
 
-/* Process a potential INT 0x13 "safe hook" */
-PDEVICE_OBJECT STDCALL WvSafeHookProbe(
-    IN SP_X86_SEG16OFF16 HookAddr,
-    IN PDEVICE_OBJECT ParentBus
+/** Function definitions */
+
+/**
+ * The mini-driver entry-point
+ *
+ * @param DriverObject
+ *   The driver object provided by the caller
+ *
+ * @param RegistryPath
+ *   The Registry path provided by the caller
+ *
+ * @return
+ *   The status of the operation
+ */
+NTSTATUS WvSafeHookDriverEntry(
+    IN DRIVER_OBJECT * drv_obj,
+    IN UNICODE_STRING * reg_path
+  ) {
+    static S_WVL_MAIN_BUS_PROBE_REGISTRATION probe_reg;
+    NTSTATUS status;
+
+    /* TODO: Build the PDO and FDO IRP dispatch tables */
+
+    /* Register this mini-driver */
+    status = WvlRegisterMiniDriver(
+        &WvSafeHookMiniDriver,
+        drv_obj,
+        WvSafeHookDriveDevice,
+        WvSafeHookUnload
+      );
+    if (!NT_SUCCESS(status))
+      goto err_register;
+    ASSERT(WvSafeHookMiniDriver);
+
+    probe_reg.Callback = WvSafeHookInitialProbe;
+    WvlRegisterMainBusInitialProbeCallback(&probe_reg);
+
+    return STATUS_SUCCESS;
+
+    err_register:
+
+    return status;
+  }
+
+/**
+ * Drive a safe hook PDO with a safe hook FDO
+ *
+ * @param DriverObject
+ *   The driver object provided by the caller
+ *
+ * @param PhysicalDeviceObject
+ *   The PDO to probe and attach the safe hook FDO to
+ *
+ * @return
+ *   The status of the operation
+ */
+static NTSTATUS STDCALL WvSafeHookDriveDevice(
+    IN DRIVER_OBJECT * drv_obj,
+    IN DEVICE_OBJECT * pdo
+  ) {
+    DBG("Refusing to drive PDO %p\n", (VOID *) pdo);
+    return STATUS_NOT_SUPPORTED;
+  }
+
+/**
+ * Release resources and unwind state
+ *
+ * @param DriverObject
+ *   The driver object provided by the caller
+ */
+static VOID STDCALL WvSafeHookUnload(IN DRIVER_OBJECT * drv_obj) {
+    ASSERT(drv_obj);
+    (VOID) drv_obj;
+    WvlDeregisterMiniDriver(WvSafeHookMiniDriver);
+  }
+
+/**
+ * Main bus initial bus relations probe callback
+ *
+ * @param DeviceObject
+ *   The main bus device
+ */
+static VOID WvSafeHookInitialProbe(IN DEVICE_OBJECT * dev_obj) {
+    S_X86_SEG16OFF16 int_13h;
+    NTSTATUS status;
+    DEVICE_OBJECT * first_hook;
+    S_WV_SAFEHOOK_PDO * safe_hook;
+
+    ASSERT(dev_obj);
+    (VOID) dev_obj;
+
+    /* Probe the first INT 0x13 vector for a safe hook */
+    int_13h.Segment = 0;
+    int_13h.Offset = 0x13 * sizeof int_13h;
+    status = WvlCreateSafeHookDevice(&int_13h, &first_hook);
+    if (!NT_SUCCESS(status))
+      return;
+    ASSERT(first_hook);
+
+    status = WvlAddDeviceToMainBus(first_hook);
+    if (!NT_SUCCESS(status)) {
+        DBG("Couldn't add safe hook to main bus\n");
+        IoDeleteDevice(first_hook);
+        return;
+      }
+
+    /* Hack */
+    safe_hook = first_hook->DeviceExtension;
+    ASSERT(safe_hook);
+    safe_hook->ParentBus = WvBus.Fdo;
+  }
+
+WVL_M_LIB NTSTATUS STDCALL WvlCreateSafeHookDevice(
+    IN S_X86_SEG16OFF16 * hook_addr,
+    IN OUT DEVICE_OBJECT ** dev_obj
   ) {
     static const CHAR sig[] = "$INT13SF";
+    const SIZE_T one_mib = 0x100000;
     PHYSICAL_ADDRESS phys_addr;
-    PUCHAR phys_mem;
-    PDEVICE_OBJECT dev;
-    UINT32 hook_addr;
-    WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook;
+    UCHAR * phys_mem;
+    NTSTATUS status;
+    UINT32 hook_phys_addr;
+    WV_S_PROBE_SAFE_MBR_HOOK * safe_mbr_hook;
+    DEVICE_OBJECT * new_dev;
 
-    dev = NULL;
+    ASSERT(hook_addr);
+    ASSERT(dev_obj);
 
     /* Map the first MiB of memory */
     phys_addr.QuadPart = 0LL;
-    phys_mem = MmMapIoSpace(phys_addr, 0x100000, MmNonCached);
+    phys_mem = MmMapIoSpace(phys_addr, one_mib, MmNonCached);
     if (!phys_mem) {
-        DBG("Could not map low memory!\n");
+        DBG("Could not map low memory\n");
+        status = STATUS_INSUFFICIENT_RESOURCES;
         goto err_map;
       }
 
-    /* Special-case 0:004C to use the IVT entry for INT 0x13 */
-    if (HookAddr->Segment == 0 && HookAddr->Offset == (4 * 0x13))
-      HookAddr = (PVOID) (phys_mem + 4 * 0x13);
+    /* Special-case the IVT entry for INT 0x13 */
+    if (
+        hook_addr->Segment == 0 &&
+        hook_addr->Offset == (sizeof *hook_addr * 0x13)
+      ) {
+        hook_addr = (VOID *) (phys_mem + sizeof *hook_addr * 0x13);
+      }
 
-    hook_addr = M_X86_SEG16OFF16_ADDR(HookAddr);
+    hook_phys_addr = M_X86_SEG16OFF16_ADDR(hook_addr);
     DBG(
         "Probing for safe hook at %04X:%04X (0x%08X)...\n",
-        HookAddr->Segment,
-        HookAddr->Offset,
-        hook_addr
+        hook_addr->Segment,
+        hook_addr->Offset,
+        hook_phys_addr
       );
 
     /* Check for the signature */
-    safe_mbr_hook = (WV_SP_PROBE_SAFE_MBR_HOOK) (phys_mem + hook_addr);
+    safe_mbr_hook = (VOID *) (phys_mem + hook_phys_addr);
     if (!wv_memcmpeq(safe_mbr_hook->Signature, sig, sizeof sig - 1)) {
         DBG("Invalid safe INT 0x13 hook signature.  End of chain\n");
         goto err_sig;
@@ -98,14 +225,35 @@ PDEVICE_OBJECT STDCALL WvSafeHookProbe(
 
     /* Found one */
     DBG("Found safe hook with vendor ID: %.8s\n", safe_mbr_hook->VendorId);
-    dev = WvSafeHookPdoCreate(HookAddr, safe_mbr_hook, ParentBus);
+    new_dev = WvSafeHookPdoCreate(hook_addr, safe_mbr_hook, NULL);
+    if (!new_dev) {
+        DBG("Could not create safe hook object\n");
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto err_new_dev;
+      }
+
+    /* TODO: This is a hack while porting to mini-driver style */
+    {
+        WV_S_DEV_EXT * dev_ext = new_dev->DeviceExtension;
+        WvlInitializeResourceTracker(dev_ext->Usage);
+        WvlIncrementResourceUsage(dev_ext->Usage);
+      }
+
+    *dev_obj = new_dev;
+    status = STATUS_SUCCESS;
+    goto out;
+
+    IoDeleteDevice(new_dev);
+    err_new_dev:
 
     err_sig:
 
-    MmUnmapIoSpace(phys_mem, 0x100000);
+    out:
+
+    MmUnmapIoSpace(phys_mem, one_mib);
     err_map:
 
-    return dev;
+    return status;
   }
 
 /** Process a GRUB4DOS drive mapping slot.  Probably belongs elsewhere */
