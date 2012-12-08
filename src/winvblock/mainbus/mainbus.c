@@ -82,7 +82,7 @@ UNICODE_STRING WvBusDosName = {
   };
 
 /* The main bus */
-WVL_S_BUS_T WvBus = {0};
+WVL_M_LIB WVL_S_BUS_T WvBus = {0};
 WV_S_DEV_T WvBusDev = {0};
 
 volatile LONG WvMainBusCreators;

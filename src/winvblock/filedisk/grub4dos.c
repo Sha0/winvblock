@@ -45,9 +45,6 @@
 #include "byte.h"
 #include "msvhd.h"
 
-/* From ../mainbus/mainbus.c */
-extern WVL_S_BUS_T WvBus;
-
 /**
  * Check if a disk might be the matching backing disk for
  * a GRUB4DOS sector-mapped disk by checking for an MBR signature.

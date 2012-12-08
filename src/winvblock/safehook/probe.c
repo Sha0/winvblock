@@ -43,9 +43,6 @@
 #include "safehook.h"
 #include "memdisk.h"
 
-/* From mainbus/mainbus.c */
-extern WVL_S_BUS_T WvBus;
-
 /** Public function declarations */
 DRIVER_INITIALIZE WvSafeHookDriverEntry;
 

@@ -146,6 +146,13 @@ typedef struct WVL_BUS_NODE {
     BOOLEAN Linked;
   } WVL_S_BUS_NODE, * WVL_SP_BUS_NODE;
 
+/** Objects */
+
+/* From mainbus.c */
+extern WVL_M_LIB WVL_S_BUS_T WvBus;
+
+/** More function declarations (TODO: Reorganize) */
+
 /* Exports. */
 extern WVL_M_LIB VOID WvlBusInit(WVL_SP_BUS_T);
 extern WVL_M_LIB VOID STDCALL WvlBusClear(IN WVL_SP_BUS_T);

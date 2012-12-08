@@ -45,7 +45,6 @@
 #include "debug.h"
 
 /* From mainbus/mainbus.c */
-extern WVL_S_BUS_T WvBus;
 extern DRIVER_INITIALIZE WvMainBusDriverEntry;
 
 /* From safehook/probe.c */

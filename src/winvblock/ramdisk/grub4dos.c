@@ -39,9 +39,6 @@
 #include "safehook.h"
 #include "grub4dos.h"
 
-/* From ../mainbus/mainbus.c */
-extern WVL_S_BUS_T WvBus;
-
 /** Create a GRUB4DOS RAM disk and add it to the WinVBlock bus. */
 VOID WvRamdiskCreateG4dDisk(
     SP_WV_G4D_DRIVE_MAPPING slot,

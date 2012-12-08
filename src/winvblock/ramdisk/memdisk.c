@@ -39,9 +39,6 @@
 #include "x86.h"
 #include "safehook.h"
 
-/* From ../mainbus/mainbus.c */
-extern WVL_S_BUS_T WvBus;
-
 static BOOLEAN STDCALL WvMemdiskCheckMbft_(
     PUCHAR phys_mem,
     UINT32 offset,

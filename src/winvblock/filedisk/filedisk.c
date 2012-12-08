@@ -42,7 +42,6 @@
 #include "debug.h"
 
 /* From ../mainbus/mainbus.c */
-extern WVL_S_BUS_T WvBus;
 extern NTSTATUS STDCALL WvBusRemoveDev(IN WV_SP_DEV_T);
 
 /* From filedisk/security.c */
