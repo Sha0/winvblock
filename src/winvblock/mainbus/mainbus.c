@@ -66,7 +66,7 @@ static BOOLEAN WvMainBusPdoDone(IN UNICODE_STRING * RegistryPath);
 /* TODO: DRIVER_ADD_DEVICE isn't available in DDK 3790.1830, it seems */
 static DRIVER_ADD_DEVICE WvMainBusDriveDevice;
 static DRIVER_UNLOAD WvMainBusUnload;
-static NTSTATUS STDCALL WvBusEstablish(
+static NTSTATUS STDCALL WvMainBusEstablish(
     IN DRIVER_OBJECT * DriverObject,
     IN UNICODE_STRING * RegistryPath
   );
@@ -154,7 +154,7 @@ NTSTATUS STDCALL WvMainBusDriverEntry(
     ASSERT(WvMainBusMiniDriver);
 
     /* Create the bus PDO and FDO, if required */
-    status = WvBusEstablish(drv_obj, reg_path);
+    status = WvMainBusEstablish(drv_obj, reg_path);
     if (!NT_SUCCESS(status))
       goto err_bus;
 
@@ -241,6 +241,7 @@ static NTSTATUS STDCALL WvMainBusDriveDevice(
     bus->BusRelations = NULL;
     /* TODO: Remove once proper PDO-add support is implemented */
     bus->BusRelationsHack = NULL;
+    bus->InitialBusRelationsHack = NULL;
     WvlInitializeLockedList(bus->InitialProbeRegistrations);
 
     WvBusDev.IsBus = TRUE;
@@ -323,7 +324,7 @@ static VOID STDCALL WvMainBusUnload(IN DRIVER_OBJECT * drv_obj) {
  * @return
  *   The status of the operation
  */
-static NTSTATUS STDCALL WvBusEstablish(
+static NTSTATUS STDCALL WvMainBusEstablish(
     IN DRIVER_OBJECT * drv_obj,
     IN UNICODE_STRING * reg_path
   ) {
@@ -359,6 +360,8 @@ static NTSTATUS STDCALL WvBusEstablish(
         DBG("WvMainBusDriveDevice() failed!\n");
         goto err_attach;
       }
+
+    IoInvalidateDeviceRelations(pdo, BusRelations);
 
     status = STATUS_SUCCESS;
     goto out;
