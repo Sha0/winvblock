@@ -95,83 +95,79 @@ static NTSTATUS WvDummyIrpDispatch(
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
-typedef struct WV_ADD_DUMMY {
-    const WV_S_DUMMY_IDS * DummyIds;
-    DEVICE_TYPE DevType;
-    ULONG DevCharacteristics;
-    PKEVENT Event;
-    NTSTATUS Status;
-    PDEVICE_OBJECT Pdo;
-  } WV_S_ADD_DUMMY, * WV_SP_ADD_DUMMY;
+/* Only used by WvDummyAdd_ */
+typedef struct S_WV_DUMMY_PDO_HACK S_WV_DUMMY_PDO_HACK;
+struct S_WV_DUMMY_PDO_HACK {
+    S_WVL_DUMMY_PDO PdoExtension[1];
+    WV_S_DEV_T OldDevice[1];
+    WV_S_DUMMY_IDS DummyIds[1];
+  };
 
 /* Produce a dummy PDO node on the main bus.  Internal */
 static NTSTATUS STDCALL WvDummyAdd_(
-    IN WV_SP_DUMMY_IDS DummyIds,
-    IN PDEVICE_OBJECT * Pdo
+    IN WV_S_DUMMY_IDS * dummy_ids,
+    IN DEVICE_OBJECT ** pdo
   ) {
+    PDEVICE_OBJECT new_pdo;
     NTSTATUS status;
-    PDEVICE_OBJECT pdo = NULL;
-    WV_SP_DEV_T dev;
-    WV_SP_DUMMY_IDS new_dummy_ids;
+    S_WV_DUMMY_PDO_HACK * pdo_hack;
+    WV_S_DEV_T * dev;
+    WV_S_DUMMY_IDS * new_dummy_ids;
+
+    ASSERT(dummy_ids);
+    ASSERT(dummy_ids->Len >= sizeof *dummy_ids);
+
+    new_pdo = NULL;
 
     status = IoCreateDevice(
         WvDriverObj,
-        sizeof (WV_S_DEV_EXT),
+        sizeof *pdo_hack + dummy_ids->Len - sizeof *dummy_ids,
         NULL,
-        DummyIds->DevType,
-        DummyIds->DevCharacteristics,
+        dummy_ids->DevType,
+        dummy_ids->DevCharacteristics,
         FALSE,
-        &pdo
+        &new_pdo
       );
-    if (!NT_SUCCESS(status) || !pdo) {
-        DBG("Couldn't create dummy device.\n");
+    if (!NT_SUCCESS(status)) {
+        DBG("Couldn't create dummy device\n");
         status = STATUS_INSUFFICIENT_RESOURCES;
-        goto err_create_pdo;
+        goto err_new_pdo;
       }
+    ASSERT(new_pdo);
 
-    dev = wv_malloc(sizeof *dev);
-    if (!dev) {
-        DBG("Couldn't allocate dummy device.\n");
-        status = STATUS_INSUFFICIENT_RESOURCES;
-        goto err_dev;
-      }
+    pdo_hack = new_pdo->DeviceExtension;
+    ASSERT(pdo_hack);
 
-    new_dummy_ids = wv_malloc(DummyIds->Len);
-    if (!new_dummy_ids) {
-        DBG("Couldn't allocate dummy IDs.\n");
-        status = STATUS_INSUFFICIENT_RESOURCES;
-        goto err_dummy_ids;
-      }
+    pdo_hack->PdoExtension->DummyIds = pdo_hack->DummyIds;
 
-    /* Copy the IDs' offsets and lengths. */
-    RtlCopyMemory(new_dummy_ids, DummyIds, DummyIds->Len);
+    /* Copy the dummy IDs, which means the whole wrapper */
+    RtlCopyMemory(pdo_hack->DummyIds, dummy_ids, dummy_ids->Len);
 
-    /* Ok! */
-    WvDevInit(dev);
-    dev->ext = new_dummy_ids;   /* TODO: Implement a dummy free.  Leaking. */
-    dev->Self = pdo;
-    /* Optionally fill the caller's PDO pointer. */
-    if (Pdo)
-      *Pdo = pdo;
-    WvDevForDevObj(pdo, dev);
-    WvDevSetIrpHandler(pdo, WvDummyIrpDispatch);
-    WvlBusInitNode(&dev->BusNode, pdo);
-    /* Associate the parent bus. */
-    dev->Parent = WvBus.Fdo;
-    /* Add the new PDO device to the bus' list of children. */
-    WvlBusAddNode(&WvBus, &dev->BusNode);
-    pdo->Flags &= ~DO_DEVICE_INITIALIZING;
+    /* Initialize the old device stuff */
+    WvDevInit(pdo_hack->OldDevice);
+    pdo_hack->OldDevice->ext = pdo_hack->DummyIds;
+    pdo_hack->OldDevice->Self = new_pdo;
+    pdo_hack->OldDevice->Ops.Free = NULL;
+
+    WvDevForDevObj(new_pdo, pdo_hack->OldDevice);
+    WvDevSetIrpHandler(new_pdo, WvDummyIrpDispatch);
+    WvlBusInitNode(&pdo_hack->OldDevice->BusNode, new_pdo);
+
+    /* Associate the parent bus */
+    pdo_hack->OldDevice->Parent = WvBus.Fdo;
+
+    /* Add the new PDO device to the bus' list of children */
+    WvlBusAddNode(&WvBus, &pdo_hack->OldDevice->BusNode);
+    new_pdo->Flags &= ~DO_DEVICE_INITIALIZING;
+
+    /* Optionally fill the caller's PDO pointer */
+    if (pdo)
+      *pdo = new_pdo;
 
     return STATUS_SUCCESS;
 
-    wv_free(new_dummy_ids);
-    err_dummy_ids:
-
-    wv_free(dev);
-    err_dev:
-
-    IoDeleteDevice(pdo);
-    err_create_pdo:
+    IoDeleteDevice(new_pdo);
+    err_new_pdo:
 
     return status;
   }
