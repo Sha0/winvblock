@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2010-2012, Shao Miller <sha0.miller@gmail.com>.
  *
  * This file is part of WinVBlock, originally derived from WinAoE.
  *
@@ -132,6 +132,28 @@ Qualifiers struct Name ## Struct_ Name = {                            \
 
 extern WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(IN const WV_S_DUMMY_IDS *);
 extern WVL_M_LIB NTSTATUS STDCALL WvDummyRemove(IN PDEVICE_OBJECT);
-extern NTSTATUS STDCALL WvDummyIoctl(IN PIRP);
+
+/**
+ * Handle an IOCTL for creating a dummy PDO
+ *
+ * @param DeviceObject
+ *   The device handling the IOCTL and creating the dummy
+ *
+ * @param Irp
+ *   An IRP with an associated buffer containing WV_S_DUMMY_IDS data
+ *
+ * @param Irp->AssociatedIrp.SystemBuffer
+ *   The input buffer with the dummy PDO details
+ *
+ * @param Parameters.DeviceIoControl.InputBufferLength (I/O stack location)
+ *   The length of the input buffer
+ *
+ * @return
+ *   The status of the operation
+ */
+extern NTSTATUS STDCALL WvDummyIoctl(
+    IN DEVICE_OBJECT * DeviceObject,
+    IN IRP * Irp
+  );
 
 #endif	/* WV_M_DUMMY_H_ */

@@ -727,7 +727,7 @@ static NTSTATUS STDCALL WvMainBusDispatchDeviceControlIrp(
         return WvMainBusDeviceControlDetach(dev_obj, irp);
 
         case IOCTL_WV_DUMMY:
-        return WvDummyIoctl(irp);
+        return WvDummyIoctl(dev_obj, irp);
 
         default:
         irp->IoStatus.Information = 0;

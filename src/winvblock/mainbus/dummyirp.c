@@ -245,26 +245,40 @@ WVL_M_LIB NTSTATUS STDCALL WvDummyRemove(IN PDEVICE_OBJECT Pdo) {
     return STATUS_INVALID_PARAMETER;
   }
 
-/**
- * Handle a dummy IOCTL for creating a dummy PDO.
- *
- * @v Irp               An IRP with an associated buffer containing
- *                      WV_S_DUMMY_IDS data.
- * @ret NTSTATUS        The status of the operation.
- */
-NTSTATUS STDCALL WvDummyIoctl(IN PIRP Irp) {
-    WV_SP_DUMMY_IDS dummy_ids = Irp->AssociatedIrp.SystemBuffer;
-    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(Irp);
+NTSTATUS STDCALL WvDummyIoctl(IN DEVICE_OBJECT * dev_obj, IN IRP * irp) {
+    IO_STACK_LOCATION * io_stack_loc;
+    WV_S_DUMMY_IDS * dummy_ids;
+    NTSTATUS status;
+
+    ASSERT(dev_obj);
+    (VOID) dev_obj;
+    ASSERT(irp);
+    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    ASSERT(io_stack_loc);
 
     if (
         io_stack_loc->Parameters.DeviceIoControl.InputBufferLength <
         sizeof *dummy_ids
       ) {
-        DBG("Dummy IDs too small in IRP %p.\n", Irp);
-        return WvlIrpComplete(Irp, 0, STATUS_INVALID_PARAMETER);
+        DBG(
+            "Input buffer too small for dummy details in IRP %p\n",
+            (VOID *) irp
+          );
+        status = STATUS_INVALID_PARAMETER;
+        irp->IoStatus.Information = 0;
+        goto err_sz;
       }
 
-    return WvlIrpComplete(Irp, 0, WvDummyAdd_(dummy_ids, NULL));
+    dummy_ids = irp->AssociatedIrp.SystemBuffer;
+    ASSERT(dummy_ids);
+
+    status = WvDummyAdd_(dummy_ids, NULL);
+
+    err_sz:
+
+    irp->IoStatus.Status = status;
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    return status;
   }
 
 /**
