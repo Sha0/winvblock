@@ -27,6 +27,7 @@
 
 #include "portable.h"
 #include "winvblock.h"
+#include "driver.h"
 #include "debug.h"
 #include "dummy.h"
 #include "bus.h"

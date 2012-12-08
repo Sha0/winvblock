@@ -136,6 +136,7 @@ Qualifiers const WV_S_DUMMY_IDS * Name = &Name ## _.DummyIds
 
 /** Objects types */
 typedef struct WV_DUMMY_IDS WV_S_DUMMY_IDS, * WV_SP_DUMMY_IDS;
+typedef struct S_WVL_DUMMY_PDO S_WVL_DUMMY_PDO;
 
 /** Function declarations */
 
@@ -205,6 +206,15 @@ struct WV_DUMMY_IDS {
 
     /** The FILE_DEVICE_xxx characteristics of the device */
     ULONG DevCharacteristics;
+  };
+
+/** The dummy PDO type */
+struct S_WVL_DUMMY_PDO {
+    /** This must be the first member of all extension types */
+    WV_S_DEV_EXT DeviceExtension[1];
+
+    /** Points to the device's dummy IDs */
+    WV_S_DUMMY_IDS * DummyIds;
   };
 
 #endif	/* M_WV_DUMMY_H_ */
