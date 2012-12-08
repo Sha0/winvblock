@@ -141,7 +141,25 @@ typedef struct S_WVL_DUMMY_PDO S_WVL_DUMMY_PDO;
 /** Function declarations */
 
 /* From ../winvblock/mainbus/dummyirp.c */
-extern WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(IN const WV_S_DUMMY_IDS *);
+
+/**
+ * Create a dummy PDO and add it to the main bus
+ *
+ * @param DummyIds
+ *   The dummy IDs to populate the new device with
+ *
+ * @param DeviceObject
+ *   Optional.  Points to the DEVICE_OBJECT pointer to populate with a
+ *   pointer to the created device
+ *
+ * @return
+ *   The status of the operation
+ */
+extern WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
+    IN const WV_S_DUMMY_IDS * DummyIds,
+    OUT DEVICE_OBJECT ** DeviceObject
+  );
+
 extern WVL_M_LIB NTSTATUS STDCALL WvDummyRemove(IN PDEVICE_OBJECT);
 
 /**

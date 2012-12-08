@@ -284,7 +284,7 @@ NTSTATUS STDCALL AoeBusAttachFdo(
  * @ret NTSTATUS        The status of the operation.
  */
 static NTSTATUS AoeBusCreatePdo_(void) {
-    return WvDummyAdd(AoeBusDummyIds);
+    return WvDummyAdd(AoeBusDummyIds, NULL);
   }
 
 /**

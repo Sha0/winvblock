@@ -244,7 +244,7 @@ static NTSTATUS STDCALL HttpdiskBusCreatePdo_(void) {
         FILE_DEVICE_SECURE_OPEN
       );
 
-    status = WvDummyAdd(HttpdiskBusDummyIds);
+    status = WvDummyAdd(HttpdiskBusDummyIds, NULL);
     if (!NT_SUCCESS(status)) {
         DBG("PDO not created.\n");
         return status;
