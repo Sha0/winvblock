@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2010-2012, Shao Miller <sha0.miller@gmail.com>.
  *
  * This file is part of WinVBlock, originally derived from WinAoE.
  *
@@ -231,10 +231,10 @@ static NTSTATUS STDCALL HttpdiskBusCreateFdo_(void) {
 static NTSTATUS STDCALL HttpdiskBusCreatePdo_(void) {
     NTSTATUS status;
 
-    /* Generate dummy IDs for the HTTPDisk bus PDO. */
+    /* Generate dummy IDs for the HTTPDisk bus PDO */
     WV_M_DUMMY_ID_GEN(
-        static const,
-        HttpdiskBusDummyIds_,
+        static,
+        HttpdiskBusDummyIds,
         WVL_M_WLIT L"\\HTTPDisk",
         L"0",
         WVL_M_WLIT L"\\HTTPDisk\0",
@@ -243,7 +243,7 @@ static NTSTATUS STDCALL HttpdiskBusCreatePdo_(void) {
         FILE_DEVICE_SECURE_OPEN
       );
 
-    status = WvDummyAdd(&HttpdiskBusDummyIds_.DummyIds);
+    status = WvDummyAdd(HttpdiskBusDummyIds);
     if (!NT_SUCCESS(status)) {
         DBG("PDO not created.\n");
         return status;

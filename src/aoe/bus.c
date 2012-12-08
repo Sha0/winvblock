@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2010-2012, Shao Miller <sha0.miller@gmail.com>.
  *
  * This file is part of WinVBlock, originally derived from WinAoE.
  *
@@ -127,10 +127,10 @@ NTSTATUS STDCALL AoeBusDevCtl(
       }
   }
 
-/* Generate dummy IDs for the AoE bus PDO. */
+/* Generate dummy IDs for the AoE bus PDO */
 WV_M_DUMMY_ID_GEN(
-    static const,
-    AoeBusDummyIds_,
+    static,
+    AoeBusDummyIds,
     WVL_M_WLIT L"\\AoE",
     L"0",
     WVL_M_WLIT L"\\AoE\0",
@@ -284,7 +284,7 @@ NTSTATUS STDCALL AoeBusAttachFdo(
  * @ret NTSTATUS        The status of the operation.
  */
 static NTSTATUS AoeBusCreatePdo_(void) {
-    return WvDummyAdd(&AoeBusDummyIds_.DummyIds);
+    return WvDummyAdd(AoeBusDummyIds);
   }
 
 /**

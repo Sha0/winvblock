@@ -33,23 +33,51 @@ CTL_CODE(                   \
     FILE_WRITE_DATA         \
   )
 
-/* PnP IDs for a dummy device. */
-typedef struct WV_DUMMY_IDS {
+/** Objects types */
+typedef struct WV_DUMMY_IDS WV_S_DUMMY_IDS, * WV_SP_DUMMY_IDS;
+
+/** Struct/union type definitions */
+
+/**
+ * PnP IDs for a dummy device
+ *
+ * Each of the offsets _before_ the 'Offset' member is relative to
+ * where the IDs begin in the wrapper struct
+ */
+struct WV_DUMMY_IDS {
+    /** For BusQueryDeviceID */
     UINT32 DevOffset;
     UINT32 DevLen;
+
+    /** For BusQueryInstanceID */
     UINT32 InstanceOffset;
     UINT32 InstanceLen;
+
+    /** For BusQueryHardwareIDs */
     UINT32 HardwareOffset;
     UINT32 HardwareLen;
+
+    /** For BusQueryCompatibleIDs */
     UINT32 CompatOffset;
     UINT32 CompatLen;
-    UINT32 Len;
-    UINT32 Offset;
-    DEVICE_TYPE DevType;
-    ULONG DevCharacteristics;
-  } WV_S_DUMMY_IDS, * WV_SP_DUMMY_IDS;
 
-/* Macro support for dummy ID generation. */
+    /** The length of the wrapper struct, which includes all data */
+    UINT32 Len;
+
+    /**
+     * The offset from the beginning of this struct to the IDs in
+     * the wrapper struct
+     */
+    UINT32 Offset;
+
+    /** The FILE_DEVICE_xxx type of device */
+    DEVICE_TYPE DevType;
+
+    /** The FILE_DEVICE_xxx characteristics of the device */
+    ULONG DevCharacteristics;
+  };
+
+/* Macro support for dummy ID generation */
 #define WV_M_DUMMY_IDS_ENUM(prefix_, name_, literal_)             \
   prefix_ ## name_ ## Offset_,                                    \
   prefix_ ## name_ ## Len_ = sizeof (literal_) / sizeof (WCHAR),  \
@@ -64,9 +92,9 @@ typedef struct WV_DUMMY_IDS {
   prefix_ ## name_ ## Len_,
 
 /**
- * Generate a static const WV_S_DUMMY_IDS object.
+ * Generate a static-duration, const-qualified WV_S_DUMMY_IDS object
  *
- * @v Qualifiers        Such as 'static const', perhaps.
+ * @v Qualifiers        Such as 'static', perhaps.
  * @v Name              The name of the desired object.  Also used as prefix.
  * @v DevId             The device ID.
  * @v InstanceId        The instance ID.
@@ -90,7 +118,7 @@ typedef struct WV_DUMMY_IDS {
  *     [Name]CompatLen_
  *     [Name]CompatEnd_
  *     [Name]Len_
- *   [Qualifiers] WV_S_DUMMY_IDS:
+ *   [Qualifiers] WV_S_DUMMY_IDS *:
  *     [Name]
  */
 #define WV_M_DUMMY_ID_GEN(                                            \
@@ -116,19 +144,22 @@ struct Name ## Struct_ {                                              \
     WV_S_DUMMY_IDS DummyIds;                                          \
     WCHAR Ids[Name ## Len_];                                          \
   };                                                                  \
-Qualifiers struct Name ## Struct_ Name = {                            \
+                                                                      \
+static const struct Name ## Struct_ Name ## _ = {                     \
     {                                                                 \
         WV_M_DUMMY_IDS_FILL(Name, Dev)                                \
         WV_M_DUMMY_IDS_FILL(Name, Instance)                           \
         WV_M_DUMMY_IDS_FILL(Name, Hardware)                           \
         WV_M_DUMMY_IDS_FILL(Name, Compat)                             \
-        sizeof (struct Name ## Struct_),                              \
+        sizeof Name ## _,                                             \
         FIELD_OFFSET(struct Name ## Struct_, Ids),                    \
         DevType,                                                      \
         DevCharacts,                                                  \
       },                                                              \
     WV_M_DUMMY_IDS_LITERALS(DevId, InstanceId, HardwareId, CompatId), \
-  }
+  };                                                                  \
+                                                                      \
+Qualifiers const WV_S_DUMMY_IDS * Name = &Name ## _.DummyIds
 
 extern WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(IN const WV_S_DUMMY_IDS *);
 extern WVL_M_LIB NTSTATUS STDCALL WvDummyRemove(IN PDEVICE_OBJECT);
