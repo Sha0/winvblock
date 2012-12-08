@@ -1,3 +1,4 @@
+#ifndef M_WV_DUMMY_H_
 /**
  * Copyright (C) 2010-2012, Shao Miller <sha0.miller@gmail.com>.
  *
@@ -16,66 +17,23 @@
  * You should have received a copy of the GNU General Public License
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef WV_M_DUMMY_H_
-#  define WV_M_DUMMY_H_
 
 /**
  * @file
  *
- * Dummy device specifics.
+ * Dummy device specifics
  */
 
-#  define IOCTL_WV_DUMMY    \
+/** Macros */
+#define M_WV_DUMMY_H_
+
+#define IOCTL_WV_DUMMY      \
 CTL_CODE(                   \
     FILE_DEVICE_CONTROLLER, \
     0x806,                  \
     METHOD_IN_DIRECT,       \
     FILE_WRITE_DATA         \
   )
-
-/** Objects types */
-typedef struct WV_DUMMY_IDS WV_S_DUMMY_IDS, * WV_SP_DUMMY_IDS;
-
-/** Struct/union type definitions */
-
-/**
- * PnP IDs for a dummy device
- *
- * Each of the offsets _before_ the 'Offset' member is relative to
- * where the IDs begin in the wrapper struct
- */
-struct WV_DUMMY_IDS {
-    /** For BusQueryDeviceID */
-    UINT32 DevOffset;
-    UINT32 DevLen;
-
-    /** For BusQueryInstanceID */
-    UINT32 InstanceOffset;
-    UINT32 InstanceLen;
-
-    /** For BusQueryHardwareIDs */
-    UINT32 HardwareOffset;
-    UINT32 HardwareLen;
-
-    /** For BusQueryCompatibleIDs */
-    UINT32 CompatOffset;
-    UINT32 CompatLen;
-
-    /** The length of the wrapper struct, which includes all data */
-    UINT32 Len;
-
-    /**
-     * The offset from the beginning of this struct to the IDs in
-     * the wrapper struct
-     */
-    UINT32 Offset;
-
-    /** The FILE_DEVICE_xxx type of device */
-    DEVICE_TYPE DevType;
-
-    /** The FILE_DEVICE_xxx characteristics of the device */
-    ULONG DevCharacteristics;
-  };
 
 /* Macro support for dummy ID generation */
 #define WV_M_DUMMY_IDS_ENUM(prefix_, name_, literal_)             \
@@ -94,14 +52,29 @@ struct WV_DUMMY_IDS {
 /**
  * Generate a static-duration, const-qualified WV_S_DUMMY_IDS object
  *
- * @v Qualifiers        Such as 'static', perhaps.
- * @v Name              The name of the desired object.  Also used as prefix.
- * @v DevId             The device ID.
- * @v InstanceId        The instance ID.
- * @v HardwareId        The hardware ID(s).
- * @v CompatId          Compatible ID(s).
- * @v DevType           The device type for the dummy PDO.
- * @v DevCharacts       The device characteristics for the dummy PDO.
+ * @param Qualifiers
+ *   Such as 'static', perhaps
+ *
+ * @param Name
+ *   The name of the desired object.  Also used as prefix
+ *
+ * @param DevId
+ *   The device ID
+ *
+ * @param InstanceId
+ *   The instance ID
+ *
+ * @param HardwareId
+ *   The hardware ID(s)
+ *
+ * @param CompatId
+ *   Compatible ID(s)
+ *
+ * @param DevType
+ *   The device type for the dummy PDO
+ *
+ * @param DevCharacts
+ *   The device characteristics for the dummy PDO
  *
  * This macro will produce the following:
  *   enum values:
@@ -161,6 +134,12 @@ static const struct Name ## Struct_ Name ## _ = {                     \
                                                                       \
 Qualifiers const WV_S_DUMMY_IDS * Name = &Name ## _.DummyIds
 
+/** Objects types */
+typedef struct WV_DUMMY_IDS WV_S_DUMMY_IDS, * WV_SP_DUMMY_IDS;
+
+/** Function declarations */
+
+/* From ../winvblock/mainbus/dummyirp.c */
 extern WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(IN const WV_S_DUMMY_IDS *);
 extern WVL_M_LIB NTSTATUS STDCALL WvDummyRemove(IN PDEVICE_OBJECT);
 
@@ -187,4 +166,45 @@ extern NTSTATUS STDCALL WvDummyIoctl(
     IN IRP * Irp
   );
 
-#endif	/* WV_M_DUMMY_H_ */
+/** Struct/union type definitions */
+
+/**
+ * PnP IDs for a dummy device
+ *
+ * Each of the offsets _before_ the 'Offset' member is relative to
+ * where the IDs begin in the wrapper struct
+ */
+struct WV_DUMMY_IDS {
+    /** For BusQueryDeviceID */
+    UINT32 DevOffset;
+    UINT32 DevLen;
+
+    /** For BusQueryInstanceID */
+    UINT32 InstanceOffset;
+    UINT32 InstanceLen;
+
+    /** For BusQueryHardwareIDs */
+    UINT32 HardwareOffset;
+    UINT32 HardwareLen;
+
+    /** For BusQueryCompatibleIDs */
+    UINT32 CompatOffset;
+    UINT32 CompatLen;
+
+    /** The length of the wrapper struct, which includes all data */
+    UINT32 Len;
+
+    /**
+     * The offset from the beginning of this struct to the IDs in
+     * the wrapper struct
+     */
+    UINT32 Offset;
+
+    /** The FILE_DEVICE_xxx type of device */
+    DEVICE_TYPE DevType;
+
+    /** The FILE_DEVICE_xxx characteristics of the device */
+    ULONG DevCharacteristics;
+  };
+
+#endif	/* M_WV_DUMMY_H_ */
