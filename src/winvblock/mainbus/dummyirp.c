@@ -150,13 +150,7 @@ WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
 
     WvDevForDevObj(new_pdo, pdo_hack->OldDevice);
     WvDevSetIrpHandler(new_pdo, WvDummyIrpDispatch);
-    WvlBusInitNode(&pdo_hack->OldDevice->BusNode, new_pdo);
 
-    /* Associate the parent bus */
-    pdo_hack->OldDevice->Parent = WvBus.Fdo;
-
-    /* Add the new PDO device to the bus' list of children */
-    WvlBusAddNode(&WvBus, &pdo_hack->OldDevice->BusNode);
     new_pdo->Flags &= ~DO_DEVICE_INITIALIZING;
 
     /* Optionally fill the caller's PDO pointer */
@@ -190,6 +184,8 @@ NTSTATUS STDCALL WvDummyIoctl(IN DEVICE_OBJECT * dev_obj, IN IRP * irp) {
     IO_STACK_LOCATION * io_stack_loc;
     WV_S_DUMMY_IDS * dummy_ids;
     NTSTATUS status;
+    DEVICE_OBJECT * new_pdo;
+    WV_S_DEV_T * new_dev;
 
     ASSERT(dev_obj);
     (VOID) dev_obj;
@@ -213,10 +209,31 @@ NTSTATUS STDCALL WvDummyIoctl(IN DEVICE_OBJECT * dev_obj, IN IRP * irp) {
     dummy_ids = irp->AssociatedIrp.SystemBuffer;
     ASSERT(dummy_ids);
 
-    status = WvDummyAdd(dummy_ids, NULL);
+    status = WvDummyAdd(dummy_ids, &new_pdo);
+    if (!NT_SUCCESS(status))
+      goto err_new_pdo;
+    ASSERT(new_pdo);
+
+    new_dev = WvDevFromDevObj(new_pdo);
+    ASSERT(new_dev);
+
+    WvlBusInitNode(&new_dev->BusNode, new_pdo);
+
+    /* Make the main bus the parent bus */
+    new_dev->Parent = WvBus.Fdo;
+
+    /* Add the new PDO device to the main bus' list of children */
+    WvlBusAddNode(&WvBus, &new_dev->BusNode);
+
+    status = STATUS_SUCCESS;
+    goto out;
+
+    IoDeleteDevice(new_pdo);
+    err_new_pdo:
 
     err_sz:
 
+    out:
     irp->IoStatus.Status = status;
     IoCompleteRequest(irp, IO_NO_INCREMENT);
     return status;
