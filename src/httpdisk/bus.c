@@ -29,9 +29,9 @@
 #include "winvblock.h"
 #include "driver.h"
 #include "debug.h"
-#include "dummy.h"
 #include "bus.h"
 #include "device.h"
+#include "dummy.h"
 #include "irp.h"
 #include "disk.h"
 #include "httpdisk.h"
@@ -247,7 +247,22 @@ static NTSTATUS STDCALL HttpdiskBusCreatePdo_(void) {
         FILE_DEVICE_SECURE_OPEN
       );
 
-    status = WvDummyAdd(HttpdiskBusDummyIds, &bus_pdo);
+    status = WvDummyAdd(
+        /* Dummy IDs */
+        HttpdiskBusDummyIds,
+        /* Dummy IDs offset: Auto */
+        0,
+        /* Extra data offset: None */
+        0,
+        /* Extra data size: None */
+        0,
+        /* Device name: Not specified */
+        NULL,
+        /* Exclusive access? */
+        FALSE,
+        /* PDO pointer to populate */
+        &bus_pdo
+      );
     if (!NT_SUCCESS(status)) {
         DBG("PDO not created.\n");
         return status;

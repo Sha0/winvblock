@@ -148,6 +148,50 @@ typedef struct S_WVL_DUMMY_PDO S_WVL_DUMMY_PDO;
  * @param DummyIds
  *   The dummy IDs to populate the new device with
  *
+ * @param DummyIdsOffset
+ *   Optional.
+ *
+ *   The desired offset, in bytes, of the WV_S_DUMMY_IDS structure within
+ *   the newly-created dummy device's device extension.
+ *
+ *   If zero, this function will choose where to place the WV_S_DUMMY_IDS
+ *   structure.  If zero, the ExtraDataOffset and ExtraDataSize
+ *   parameters must also be zero.
+ *
+ *   If non-zero, the offset must be >= the size of an S_WVL_DUMMY_PDO,
+ *   since an S_WVL_DUMMY_PDO must be the first member of a dummy device's
+ *   device extension.  This offset must be properly aligned for a
+ *   WV_S_DUMMY_IDS structure
+ *
+ * @param ExtraDataOffset
+ *   Optional.
+ *
+ *   If zero, the ExtraData member of the resulting dummy device's
+ *   extension will be a null pointer value.  If zero, the ExtraDataSize
+ *   parameter must also be zero
+ *
+ *   If non-zero, this specifies the offset into the resulting dummy
+ *   device's extension where the ExtraData member should point.  This must
+ *   point beyond the WV_S_DUMMY_IDS structure _including_ the trailing
+ *   dummy ID details
+ *
+ * @param ExtraDataSize
+ *   Optional.
+ *
+ *   If zero, ExtraDataOffset must also be zero and the ExtraData member
+ *   of the resulting dummy device's extension will be a null pointer
+ *   value.
+ *
+ *   If non-zero, this specifies how much storage in the resulting dummy
+ *   device's device extension will be allocated beyond the dummy ID
+ *   details
+ *
+ * @param DeviceName
+ *   Optional.  The name of the device
+ *
+ * @param Exclusive
+ *   Determines whether or not to allow multiple handles to the device
+ *
  * @param DeviceObject
  *   Optional.  Points to the DEVICE_OBJECT pointer to populate with a
  *   pointer to the created device
@@ -157,6 +201,11 @@ typedef struct S_WVL_DUMMY_PDO S_WVL_DUMMY_PDO;
  */
 extern WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
     IN const WV_S_DUMMY_IDS * DummyIds,
+    IN ULONG DummyIdsOffset,
+    IN ULONG ExtraDataOffset,
+    IN ULONG ExtraDataSize,
+    IN UNICODE_STRING * DeviceName,
+    IN BOOLEAN Exclusive,
     OUT DEVICE_OBJECT ** DeviceObject
   );
 
@@ -231,8 +280,17 @@ struct S_WVL_DUMMY_PDO {
     /** This must be the first member of all extension types */
     WV_S_DEV_EXT DeviceExtension[1];
 
+    /** TODO: Remove this when bus-adding logic changes */
+    WV_S_DEV_T OldDevice[1];
+
     /** Points to the device's dummy IDs */
     WV_S_DUMMY_IDS * DummyIds;
+
+    /**
+     * Points to any extra data that might have been allocated when
+     * the dummy device was created
+     */
+    VOID * ExtraData;
   };
 
 #endif	/* M_WV_DUMMY_H_ */

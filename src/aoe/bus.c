@@ -43,6 +43,9 @@
 #define AOE_M_BUS_NAME_ (L"\\Device\\AoE")
 #define AOE_M_BUS_DOSNAME_ (L"\\DosDevices\\AoE")
 
+/** Object types */
+typedef struct S_AOE_BUS S_AOE_BUS;
+
 /* TODO: Remove this pull from aoe/driver.c */
 extern NTSTATUS STDCALL AoeBusDevCtlScan(IN PIRP);
 extern NTSTATUS STDCALL AoeBusDevCtlShow(IN PIRP);
@@ -288,7 +291,22 @@ static NTSTATUS AoeBusCreatePdo_(void) {
     DEVICE_OBJECT * bus_pdo;
     WV_S_DEV_T * bus_dev;
 
-    status = WvDummyAdd(AoeBusDummyIds, &bus_pdo);
+    status = WvDummyAdd(
+        /* Dummy IDs */
+        AoeBusDummyIds,
+        /* Dummy IDs offset: Auto */
+        0,
+        /* Extra data offset: None */
+        0,
+        /* Extra data size: None */
+        0,
+        /* Device name: Not specified */
+        NULL,
+        /* Exclusive access? */
+        FALSE,
+        /* PDO pointer to populate */
+        &bus_pdo
+      );
     if (!NT_SUCCESS(status))
       return status;
     ASSERT(bus_pdo);

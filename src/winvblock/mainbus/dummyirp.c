@@ -95,60 +95,94 @@ static NTSTATUS WvDummyIrpDispatch(
     return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
   }
 
-/* Only used by WvDummyAdd */
-typedef struct S_WV_DUMMY_PDO_HACK S_WV_DUMMY_PDO_HACK;
-struct S_WV_DUMMY_PDO_HACK {
-    S_WVL_DUMMY_PDO PdoExtension[1];
-    WV_S_DEV_T OldDevice[1];
-    WV_S_DUMMY_IDS DummyIds[1];
-  };
-
 WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
     IN const WV_S_DUMMY_IDS * dummy_ids,
+    IN ULONG dummy_ids_offset,
+    IN ULONG extra_data_offset,
+    IN ULONG extra_data_sz,
+    IN UNICODE_STRING * dev_name,
+    IN BOOLEAN exclusive,
     OUT DEVICE_OBJECT ** pdo
   ) {
-    PDEVICE_OBJECT new_pdo;
+    /* Next two lines calculate the minimum "safe" dummy ID offset */
+    struct wv_dummy_add_ { S_WVL_DUMMY_PDO p; WV_S_DUMMY_IDS i; };
+    const SIZE_T dummy_min_offset = FIELD_OFFSET(struct wv_dummy_add_, i);
+    BOOLEAN invalid_params;
+    ULONG dummy_end;
     NTSTATUS status;
-    S_WV_DUMMY_PDO_HACK * pdo_hack;
-    WV_S_DEV_T * dev;
-    WV_S_DUMMY_IDS * new_dummy_ids;
+    ULONG dev_ext_sz;
+    DEVICE_OBJECT * new_pdo;
+    UCHAR * ptr;
+    S_WVL_DUMMY_PDO * dummy;
 
-    ASSERT(dummy_ids);
-    ASSERT(dummy_ids->Len >= sizeof *dummy_ids);
+    /* Check parameters.  "Whoa" */
+    invalid_params = (
+        !dummy_ids ||
+        dummy_ids->Len < sizeof *dummy_ids ||
+        (!dummy_ids_offset && (extra_data_offset || extra_data_sz)) ||
+        (dummy_ids_offset && dummy_ids_offset < dummy_min_offset) ||
+        (!extra_data_offset && extra_data_sz) ||
+        /* Next line just to sneak in a calculation */
+        !(dummy_end = dummy_ids_offset + dummy_ids->Len) ||
+        (extra_data_offset && extra_data_offset < dummy_end) ||
+        (!extra_data_sz && extra_data_offset)
+      );
+    if (invalid_params) {
+        status = STATUS_INVALID_PARAMETER;
+        goto err_invalid_params;
+      }
+
+    /* If the caller didn't specify a dummy ID offset, we choose one */
+    if (!dummy_ids_offset) {
+        dummy_ids_offset = dummy_min_offset;
+        dummy_end = dummy_ids_offset + dummy_ids->Len;
+      }
+
+    dev_ext_sz = dummy_end;
+    if (extra_data_offset)
+      dev_ext_sz = extra_data_offset + extra_data_sz;
 
     new_pdo = NULL;
 
     status = IoCreateDevice(
         WvDriverObj,
-        sizeof *pdo_hack + dummy_ids->Len - sizeof *dummy_ids,
-        NULL,
+        dev_ext_sz,
+        dev_name,
         dummy_ids->DevType,
         dummy_ids->DevCharacteristics,
-        FALSE,
+        exclusive,
         &new_pdo
       );
     if (!NT_SUCCESS(status)) {
         DBG("Couldn't create dummy device\n");
-        status = STATUS_INSUFFICIENT_RESOURCES;
         goto err_new_pdo;
       }
     ASSERT(new_pdo);
 
-    pdo_hack = new_pdo->DeviceExtension;
-    ASSERT(pdo_hack);
+    /* The caller might've requested more storage */
+    ptr = new_pdo->DeviceExtension;
+    ASSERT(ptr);
 
-    pdo_hack->PdoExtension->DummyIds = pdo_hack->DummyIds;
+    /* Work with the dummy device extension */
+    dummy = new_pdo->DeviceExtension;
 
     /* Copy the dummy IDs, which means the whole wrapper */
-    RtlCopyMemory(pdo_hack->DummyIds, dummy_ids, dummy_ids->Len);
+    dummy->DummyIds = (VOID *) (ptr + dummy_ids_offset);
+    RtlCopyMemory(dummy->DummyIds, dummy_ids, dummy_ids->Len);
+
+    /* The caller might've requested more storage */
+    if (!extra_data_offset)
+      dummy->ExtraData = NULL;
+      else
+      dummy->ExtraData = (ptr + extra_data_offset);
 
     /* Initialize the old device stuff */
-    WvDevInit(pdo_hack->OldDevice);
-    pdo_hack->OldDevice->ext = pdo_hack->DummyIds;
-    pdo_hack->OldDevice->Self = new_pdo;
-    pdo_hack->OldDevice->Ops.Free = NULL;
+    WvDevInit(dummy->OldDevice);
+    dummy->OldDevice->ext = dummy->DummyIds;
+    dummy->OldDevice->Self = new_pdo;
+    dummy->OldDevice->Ops.Free = NULL;
 
-    WvDevForDevObj(new_pdo, pdo_hack->OldDevice);
+    WvDevForDevObj(new_pdo, dummy->OldDevice);
     WvDevSetIrpHandler(new_pdo, WvDummyIrpDispatch);
 
     new_pdo->Flags &= ~DO_DEVICE_INITIALIZING;
@@ -161,6 +195,8 @@ WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
 
     IoDeleteDevice(new_pdo);
     err_new_pdo:
+
+    err_invalid_params:
 
     return status;
   }
@@ -209,7 +245,22 @@ NTSTATUS STDCALL WvDummyIoctl(IN DEVICE_OBJECT * dev_obj, IN IRP * irp) {
     dummy_ids = irp->AssociatedIrp.SystemBuffer;
     ASSERT(dummy_ids);
 
-    status = WvDummyAdd(dummy_ids, &new_pdo);
+    status = WvDummyAdd(
+        /* Dummy IDs */
+        dummy_ids,
+        /* Dummy IDs offset: Auto */
+        0,
+        /* Extra data offset: None */
+        0,
+        /* Extra data size: None */
+        0,
+        /* Device name: Not specified */
+        NULL,
+        /* Exclusive access? */
+        FALSE,
+        /* PDO pointer to populate */
+        &new_pdo
+      );
     if (!NT_SUCCESS(status))
       goto err_new_pdo;
     ASSERT(new_pdo);
