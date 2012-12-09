@@ -678,8 +678,11 @@ struct WV_DEV_EXT {
     /** The device's mini-driver */
     S_WVL_MINI_DRIVER * MiniDriver;
 
-    /** The device's lower object, if any */
+    /** The device's lower object, if any (FDO) */
     DEVICE_OBJECT * LowerDeviceObject;
+
+    /** The parent bus device object, if any (PDO) */
+    DEVICE_OBJECT * ParentBusDeviceObject;
 
     /** The device usage */
     S_WVL_RESOURCE_TRACKER Usage[1];

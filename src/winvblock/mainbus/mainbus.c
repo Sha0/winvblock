@@ -671,6 +671,7 @@ static NTSTATUS WvMainBusAddDevice(
       dev_relations->Objects[i] = bus->BusRelations->Objects[i];
     dev_relations->Objects[i] = new_dev_obj;
 
+    new_dev_ext->ParentBusDeviceObject = dev_obj;
     WvlIncrementResourceUsage(bus->DeviceExtension->Usage);
     WvlIncrementResourceUsage(new_dev_ext->Usage);
 
@@ -723,6 +724,7 @@ static NTSTATUS WvMainBusRemoveDevice(
     ASSERT(rem_dev_obj);
     rem_dev_ext = rem_dev_obj->DeviceExtension;
     ASSERT(rem_dev_ext);
+    ASSERT(rem_dev_ext->ParentBusDeviceObject == dev_obj);
 
     status = WvlWaitForActiveIrps(dev_obj);
     if (!NT_SUCCESS(status))
@@ -746,6 +748,7 @@ static NTSTATUS WvMainBusRemoveDevice(
     if (!found)
       return STATUS_UNSUCCESSFUL;
 
+    rem_dev_ext->ParentBusDeviceObject = NULL;
     WvlDecrementResourceUsage(bus->DeviceExtension->Usage);
     WvlDecrementResourceUsage(rem_dev_ext->Usage);
 

@@ -1075,6 +1075,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlCreateDevice(
       );
     new_dev_ext->MiniDriver = minidriver;
     new_dev_ext->LowerDeviceObject = NULL;
+    new_dev_ext->ParentBusDeviceObject = NULL;
     WvlInitializeResourceTracker(new_dev_ext->Usage);
 
     /* Start the device thread */
