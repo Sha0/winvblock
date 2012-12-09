@@ -1064,9 +1064,8 @@ WVL_M_LIB NTSTATUS STDCALL WvlCreateDevice(
     new_dev_ext->Thread = NULL;
     InitializeListHead(new_dev_ext->IrpQueue);
     new_dev_ext->SentinelIrpLink = NULL;
-    new_dev_ext->NotAvailable = FALSE;
     KeInitializeSpinLock(&new_dev_ext->Lock);
-    new_dev_ext->Flags = CvWvlDeviceFlagZero;
+    new_dev_ext->Flags = CvWvlDeviceFlagAvailable;
     new_dev_ext->ActiveIrpCount = 0;
     KeInitializeEvent(
         &new_dev_ext->ActiveIrpCountOne,
@@ -1100,14 +1099,21 @@ WVL_M_LIB NTSTATUS STDCALL WvlCreateDevice(
 
 WVL_M_LIB VOID STDCALL WvlDeleteDevice(IN DEVICE_OBJECT * dev_obj) {
     WV_S_DEV_EXT * dev_ext;
+    LONG flags;
 
     ASSERT(dev_obj);
     dev_ext = dev_obj->DeviceExtension;
     ASSERT(dev_ext);
 
-    WvlLockDevice(dev_obj);
-    dev_ext->NotAvailable = TRUE;
-    WvlUnlockDevice(dev_obj);
+    /* Device is marked as unavailable */
+    flags = InterlockedAnd(&dev_ext->Flags, ~CvWvlDeviceFlagAvailable);
+    if (!(flags & CvWvlDeviceFlagAvailable)) {
+        DBG("Device %p already deleted!\n", (VOID *) dev_obj);
+        ASSERT(0);
+      }
+
+    /* Poke the thread */
+    KeSetEvent(&dev_ext->IrpArrival, 0, FALSE);
   }
 
 WVL_M_LIB VOID STDCALL WvlLockDevice(IN DEVICE_OBJECT * dev_obj) {
@@ -1171,6 +1177,8 @@ static NTSTATUS WvStartDeviceThread(IN DEVICE_OBJECT * dev_obj) {
       );
     if (!NT_SUCCESS(status))
       goto err_create_thread;
+
+    InterlockedOr(&dev_ext->Flags, CvWvlDeviceFlagThread);
 
     /* Decremented by WvDeviceThread */
     WvlIncrementResourceUsage(dev_ext->Usage);
@@ -1263,9 +1271,26 @@ static NTSTATUS WvStopDeviceThreadInThread(
     IN DEVICE_OBJECT * dev_obj,
     IN VOID * c
   ) {
-    ASSERT(dev_obj);
+    WV_S_DEV_EXT * dev_ext;
+    LONG flags;
+
     (VOID) c;
+
+    ASSERT(dev_obj);
+    dev_ext = dev_obj->DeviceExtension;
+    ASSERT(dev_ext);
+
     DBG("Stopping thread for device %p...\n", (VOID *) dev_obj);
+    /* Neither new IRPs nor new work items are allowed */
+    flags = InterlockedAnd(
+        &dev_ext->Flags,
+        ~CvWvlDeviceFlagThread
+      );
+    if (!(flags & CvWvlDeviceFlagThread)) {
+        DBG("Thread already stopped!\n");
+        ASSERT(0);
+      }
+
     return STATUS_SUCCESS;
   }
 
@@ -1513,7 +1538,8 @@ static NTSTATUS STDCALL WvDriverAddIrpToDeviceQueueInternal(
       }
 
     WvlLockDevice(dev_obj);
-    if (dev_ext->NotAvailable) {
+    flags = InterlockedOr(&dev_ext->Flags, 0);
+    if (!(flags & CvWvlDeviceFlagThread)) {
         status = irp->IoStatus.Status = STATUS_NO_SUCH_DEVICE;
       } else {
         /* Enqueue */
@@ -1607,10 +1633,27 @@ static VOID STDCALL WvDeviceThread(IN VOID * context) {
         link = RemoveHeadList(dev_ext->IrpQueue);
         ASSERT(link);
 
+        /* Check if we should be stopping */
+        flags = InterlockedOr(&dev_ext->Flags, 0);
+        flags &= CvWvlDeviceFlagAvailable | CvWvlDeviceFlagLinked;
+        if (!flags && InterlockedOr(&dev_ext->Usage->UsageCount, 0) == 1) {
+            /* Neither new IRPs nor new work items are allowed */
+            flags = InterlockedAnd(
+                &dev_ext->Flags,
+                ~CvWvlDeviceFlagThread
+              );
+            if (!(flags & CvWvlDeviceFlagThread)) {
+                DBG("Thread already stopped!\n");
+                ASSERT(0);
+              }
+            stop = TRUE;
+          }
+
         /* Did we finish our pass through the IRP queue? */
         if (link == dev_ext->IrpQueue) {
             /* Yes.  We can clear the serial IRP mode */
-            InterlockedAnd(&dev_ext->Flags, ~serial_irp_flags);
+            flags = InterlockedAnd(&dev_ext->Flags, ~serial_irp_flags);
+
             KeClearEvent(&dev_ext->ActiveIrpCountOne);
 
             /* Clear any sentinel value, since the list is empty */
@@ -1624,7 +1667,7 @@ static VOID STDCALL WvDeviceThread(IN VOID * context) {
             if (stop) {
                 /*
                  * Yes.  All IRPs have been processed and no more
-                 * can be added, since the device was marked as no
+                 * can be added, since the thread was marked as no
                  * longer available before 'stop' was set
                  */
                 break;
@@ -1688,10 +1731,6 @@ static VOID STDCALL WvDeviceThread(IN VOID * context) {
               );
             ASSERT(work_item);
 
-            /* Check for a stop signal */
-            if (work_item->Function == WvStopDeviceThreadInThread)
-              dev_ext->NotAvailable = TRUE;
-
             /* Unlock the device and process the work item */
             WvlUnlockDevice(dev_obj);
             WvProcessDeviceThreadWorkItem(dev_obj, work_item, stop);
@@ -1703,10 +1742,6 @@ static VOID STDCALL WvDeviceThread(IN VOID * context) {
 
         /* Continue processing the IRP queue */
         WvlLockDevice(dev_obj);
-
-        /* Check if we should be stopping, soon */
-        if (dev_ext->NotAvailable)
-          stop = TRUE;
       }
 
     minidriver = dev_ext->MiniDriver;
@@ -2009,17 +2044,27 @@ WVL_M_LIB BOOLEAN STDCALL WvlAttachDeviceToDeviceStack(
     IN DEVICE_OBJECT * base
   ) {
     WV_S_DEV_EXT * dev_ext;
+    LONG flags;
     DEVICE_OBJECT * lower;
 
     ASSERT(upper);
-    ASSERT(base);
-
-    lower = IoAttachDeviceToDeviceStack(upper, base);
-    if (!lower)
-      return FALSE;
-
     dev_ext = upper->DeviceExtension;
     ASSERT(dev_ext);
+    ASSERT(base);
+
+    flags = InterlockedOr(&dev_ext->Flags, CvWvlDeviceFlagLinked);
+    if (flags & CvWvlDeviceFlagLinked) {
+        DBG("Device %p already linked!\n", (VOID *) upper);
+        ASSERT(0);
+        return FALSE;
+      }
+
+    lower = IoAttachDeviceToDeviceStack(upper, base);
+    if (!lower) {
+        flags = InterlockedAnd(&dev_ext->Flags, ~CvWvlDeviceFlagLinked);
+        return FALSE;
+      }
+
     ASSERT(!dev_ext->LowerDeviceObject);
     dev_ext->LowerDeviceObject = lower;
     return TRUE;
@@ -2027,10 +2072,19 @@ WVL_M_LIB BOOLEAN STDCALL WvlAttachDeviceToDeviceStack(
 
 WVL_M_LIB VOID STDCALL WvlDetachDevice(IN OUT DEVICE_OBJECT * dev_obj) {
     WV_S_DEV_EXT * dev_ext;
+    LONG flags;
 
     ASSERT(dev_obj);
     dev_ext = dev_obj->DeviceExtension;
     ASSERT(dev_ext);
+
+    flags = InterlockedAnd(&dev_ext->Flags, ~CvWvlDeviceFlagLinked);
+    if (!(flags & CvWvlDeviceFlagLinked)) {
+        DBG("Device %p not linked!\n", (VOID *) dev_obj);
+        ASSERT(0);
+        return;
+      }
+
     ASSERT(dev_ext->LowerDeviceObject);
     IoDetachDevice(dev_ext->LowerDeviceObject);
     dev_ext->LowerDeviceObject = NULL;

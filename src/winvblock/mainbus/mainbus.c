@@ -577,6 +577,7 @@ static NTSTATUS WvMainBusAddDevice(
     DEVICE_OBJECT * const new_dev_obj = context;
     S_WV_MAIN_BUS * bus;
     WV_S_DEV_EXT * new_dev_ext;
+    LONG flags;
     NTSTATUS status;
     DEVICE_RELATIONS * dev_relations;
     ULONG i;
@@ -588,14 +589,25 @@ static NTSTATUS WvMainBusAddDevice(
     new_dev_ext = new_dev_obj->DeviceExtension;
     ASSERT(new_dev_ext);
 
+    /* TODO: Remove this check when everything is mini-driver */
+    if (new_dev_ext->MiniDriver) {
+        flags = InterlockedOr(&new_dev_ext->Flags, CvWvlDeviceFlagLinked);
+        if (flags & CvWvlDeviceFlagLinked) {
+            DBG("Device %p already linked!\n", (VOID *) dev_obj);
+            ASSERT(0);
+            status = STATUS_NO_SUCH_DEVICE;
+            goto err_linked;
+          }
+      }
+
     status = WvlWaitForActiveIrps(dev_obj);
     if (!NT_SUCCESS(status))
-      return status;
+      goto err_wait;
 
     if (!bus->BusRelations) {
         status = WvMainBusInitialBusRelations(dev_obj);
         if (!NT_SUCCESS(status))
-          return status;
+          goto err_bus_relations;
       }
     ASSERT(bus->BusRelations);
 
@@ -603,14 +615,17 @@ static NTSTATUS WvMainBusAddDevice(
         sizeof *dev_relations +
         sizeof dev_relations->Objects[0] * bus->BusRelations->Count
       );
-    if (!dev_relations)
-      return STATUS_INSUFFICIENT_RESOURCES;
+    if (!dev_relations) {
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto err_dev_relations;
+      }
 
     dev_relations->Count = bus->BusRelations->Count + 1;
     for (i = 0; i < bus->BusRelations->Count; ++i)
       dev_relations->Objects[i] = bus->BusRelations->Objects[i];
     dev_relations->Objects[i] = new_dev_obj;
 
+    ASSERT(!new_dev_ext->ParentBusDeviceObject);
     new_dev_ext->ParentBusDeviceObject = dev_obj;
     WvlIncrementResourceUsage(bus->DeviceExtension->Usage);
     /* TODO: Remove this check when everything is mini-driver */
@@ -620,6 +635,17 @@ static NTSTATUS WvMainBusAddDevice(
     wv_free(bus->BusRelations);
     bus->BusRelations = dev_relations;
     return STATUS_SUCCESS;
+
+    err_dev_relations:
+
+    err_bus_relations:
+
+    err_wait:
+
+    flags = InterlockedAnd(&new_dev_ext->Flags, ~CvWvlDeviceFlagLinked);
+    err_linked:
+
+    return status;
   }
 
 WVL_M_LIB VOID STDCALL WvlRemoveDeviceFromMainBus(IN DEVICE_OBJECT * dev_obj) {
@@ -666,6 +692,7 @@ static NTSTATUS WvMainBusRemoveDevice(
     NTSTATUS status;
     ULONG i;
     UCHAR found;
+    LONG flags;
 
     ASSERT(dev_obj);
     bus = dev_obj->DeviceExtension;
@@ -675,9 +702,20 @@ static NTSTATUS WvMainBusRemoveDevice(
     ASSERT(rem_dev_ext);
     ASSERT(rem_dev_ext->ParentBusDeviceObject == dev_obj);
 
+    /* TODO: Remove this check when everything is mini-driver */
+    if (rem_dev_ext->MiniDriver) {
+        flags = InterlockedAnd(&rem_dev_ext->Flags, ~CvWvlDeviceFlagLinked);
+        if (!(flags & CvWvlDeviceFlagLinked)) {
+            DBG("Device %p not linked!\n", (VOID *) dev_obj);
+            ASSERT(0);
+            status = STATUS_NO_SUCH_DEVICE;
+            goto err_linked;
+          }
+      }
+
     status = WvlWaitForActiveIrps(dev_obj);
     if (!NT_SUCCESS(status))
-      return status;
+      goto err_wait;
 
     ASSERT(bus->BusRelations);
 
@@ -694,16 +732,30 @@ static NTSTATUS WvMainBusRemoveDevice(
     ASSERT(found);
     bus->BusRelations->Count -= found;
 
-    if (!found)
-      return STATUS_UNSUCCESSFUL;
+    if (!found) {
+        status = STATUS_UNSUCCESSFUL;
+        goto err_found;
+      }
 
     rem_dev_ext->ParentBusDeviceObject = NULL;
     WvlDecrementResourceUsage(bus->DeviceExtension->Usage);
     /* TODO: Remove this check when everything is mini-driver */
-    if (rem_dev_ext->MiniDriver)
-    WvlDecrementResourceUsage(rem_dev_ext->Usage);
+    if (rem_dev_ext->MiniDriver) {
+        WvlDecrementResourceUsage(rem_dev_ext->Usage);
+        /* If linked, we take responsibility for deletion, too */
+        WvlDeleteDevice(rem_dev_obj);
+      }
 
     return STATUS_SUCCESS;
+
+    err_found:
+
+    err_wait:
+
+    flags = InterlockedOr(&rem_dev_ext->Flags, CvWvlDeviceFlagLinked);
+    err_linked:
+
+    return status;
   }
 
 WVL_M_LIB VOID STDCALL WvlRegisterMainBusInitialProbeCallback(

@@ -43,9 +43,15 @@
 enum E_WVL_DEVICE_FLAG {
     CvWvlDeviceFlagSerialIrps_,
     CvWvlDeviceFlagSerialIrpsNeedSignal_,
+    CvWvlDeviceFlagAvailable_,
+    CvWvlDeviceFlagLinked_,
+    CvWvlDeviceFlagThread_,
     CvWvlDeviceFlagSerialIrps = 1 << CvWvlDeviceFlagSerialIrps_,
     CvWvlDeviceFlagSerialIrpsNeedSignal =
       1 << CvWvlDeviceFlagSerialIrpsNeedSignal_,
+    CvWvlDeviceFlagAvailable = 1 << CvWvlDeviceFlagAvailable_,
+    CvWvlDeviceFlagLinked = 1 << CvWvlDeviceFlagLinked_,
+    CvWvlDeviceFlagThread = 1 << CvWvlDeviceFlagThread_,
     CvWvlDeviceFlagZero = 0
   };
 
@@ -650,12 +656,6 @@ struct WV_DEV_EXT {
      * be acquired for inspection and modification
      */
     LIST_ENTRY * SentinelIrpLink;
-
-    /**
-     * Is the device available?  Device must be acquired for inspection
-     * and modification
-     */
-    BOOLEAN NotAvailable;
 
     /** Spin-lock for device acquisition */
     KSPIN_LOCK Lock;

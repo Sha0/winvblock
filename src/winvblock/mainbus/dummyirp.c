@@ -37,6 +37,18 @@
 
 #include "mainbus.h"
 
+/** Constants */
+
+/** Device flags for the Flags member of an S_WVL_DUMMY_PDO */
+enum E_WV_DUMMY_FLAG {
+    CvWvDummyFlagSurpriseRemoved_,
+    CvWvDummyFlagSurpriseRemoved = 1 << CvWvDummyFlagSurpriseRemoved_,
+    CvWvDummyFlagZero = 0
+  };
+
+/** Object types */
+typedef enum E_WV_DUMMY_FLAG E_WV_DUMMY_FLAG;
+
 /** Function declarations */
 static DRIVER_DISPATCH WvDummyIrpDispatch;
 static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH WvDummyDispatchPnpIrp;
@@ -93,6 +105,7 @@ static NTSTATUS STDCALL WvDummyDispatchPnpIrp(
     IO_STACK_LOCATION * io_stack_loc;
     NTSTATUS status;
     S_WVL_DUMMY_PDO * dummy;
+    LONG flags;
 
     ASSERT(dev_obj);
     dummy = dev_obj->DeviceExtension;
@@ -111,9 +124,17 @@ static NTSTATUS STDCALL WvDummyDispatchPnpIrp(
         irp->IoStatus.Information = 0;
         break;
 
+        case IRP_MN_SURPRISE_REMOVAL:
+        WvlIncrementResourceUsage(dummy->DeviceExtension->Usage);
+        flags = InterlockedOr(&dummy->Flags, CvWvDummyFlagSurpriseRemoved);
+        status = STATUS_SUCCESS;
+        irp->IoStatus.Information = 0;
+        break;
+
         case IRP_MN_REMOVE_DEVICE:
-        if (!dummy->DeviceExtension->ParentBusDeviceObject)
-          WvlDeleteDevice(dev_obj);
+        flags = InterlockedOr(&dummy->Flags, 0);
+        if (flags & CvWvDummyFlagSurpriseRemoved)
+          WvlDecrementResourceUsage(dummy->DeviceExtension->Usage);
         status = STATUS_SUCCESS;
         irp->IoStatus.Information = 0;
         break;
@@ -295,6 +316,9 @@ WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
 
     /* Work with the dummy device extension */
     dummy = new_pdo->DeviceExtension;
+
+    /* No flags */
+    dummy->Flags = CvWvDummyFlagZero;
 
     /* Copy the dummy IDs, which means the whole wrapper */
     dummy->DummyIds = (VOID *) (ptr + dummy_ids_offset);

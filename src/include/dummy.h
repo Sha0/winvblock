@@ -278,6 +278,12 @@ struct S_WVL_DUMMY_PDO {
     /** This must be the first member of all extension types */
     WV_S_DEV_EXT DeviceExtension[1];
 
+    /**
+     * Dummy device flags.  Must be accessed atomically (such as with
+     * InterlockedXxx functions)
+     */
+    volatile LONG Flags;
+
     /** Points to the device's dummy IDs */
     WV_S_DUMMY_IDS * DummyIds;
 
