@@ -247,6 +247,8 @@ static NTSTATUS STDCALL HttpdiskBusCreatePdo_(void) {
       );
 
     status = WvDummyAdd(
+        /* Mini-driver: Main bus */
+        NULL,
         /* Dummy IDs */
         HttpdiskBusDummyIds,
         /* Dummy IDs offset: Auto */

@@ -291,6 +291,8 @@ static NTSTATUS AoeBusCreatePdo_(void) {
     DEVICE_OBJECT * bus_pdo;
 
     status = WvDummyAdd(
+        /* Mini-driver: Main bus */
+        NULL,
         /* Dummy IDs */
         AoeBusDummyIds,
         /* Dummy IDs offset: Auto */

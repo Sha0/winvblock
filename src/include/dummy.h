@@ -145,6 +145,13 @@ typedef struct S_WVL_DUMMY_PDO S_WVL_DUMMY_PDO;
 /**
  * Create a dummy PDO and add it to the main bus
  *
+ * @param MiniDriver
+ *   Optional.
+ *
+ *   If non-null, the specified mini-driver will own the dummy device.
+ *
+ *   If null, the dummy device will be owned by the main bus mini-driver
+ *
  * @param DummyIds
  *   The dummy IDs to populate the new device with
  *
@@ -200,6 +207,7 @@ typedef struct S_WVL_DUMMY_PDO S_WVL_DUMMY_PDO;
  *   The status of the operation
  */
 extern WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
+    IN S_WVL_MINI_DRIVER * MiniDriver,
     IN const WV_S_DUMMY_IDS * DummyIds,
     IN ULONG DummyIdsOffset,
     IN ULONG ExtraDataOffset,

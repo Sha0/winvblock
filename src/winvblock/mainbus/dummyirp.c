@@ -247,6 +247,7 @@ static NTSTATUS STDCALL WvDummyPnpQueryId(
   }
 
 WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
+    IN S_WVL_MINI_DRIVER * minidriver,
     IN const WV_S_DUMMY_IDS * dummy_ids,
     IN ULONG dummy_ids_offset,
     IN ULONG extra_data_offset,
@@ -296,7 +297,7 @@ WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
     new_pdo = NULL;
 
     status = WvlCreateDevice(
-        WvMainBusMiniDriver,
+        minidriver ? minidriver : WvMainBusMiniDriver,
         dev_ext_sz,
         dev_name,
         dummy_ids->DevType,
@@ -376,6 +377,8 @@ NTSTATUS STDCALL WvDummyIoctl(IN DEVICE_OBJECT * dev_obj, IN IRP * irp) {
     ASSERT(dummy_ids);
 
     status = WvDummyAdd(
+        /* Mini-driver: Main bus */
+        NULL,
         /* Dummy IDs */
         dummy_ids,
         /* Dummy IDs offset: Auto */
