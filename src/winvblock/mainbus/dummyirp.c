@@ -64,6 +64,7 @@ static NTSTATUS STDCALL WvDummyIrpDispatch(
     IN IRP * irp
   ) {
     IO_STACK_LOCATION * io_stack_loc;
+    NTSTATUS status;
 
     ASSERT(dev_obj);
     ASSERT(irp);
@@ -78,7 +79,11 @@ static NTSTATUS STDCALL WvDummyIrpDispatch(
         default:
         DBG("Unhandled IRP_MJ_*: %d\n", io_stack_loc->MajorFunction);
       }
-    return WvlIrpComplete(irp, 0, STATUS_NOT_SUPPORTED);
+
+    irp->IoStatus.Status = status = STATUS_NOT_SUPPORTED;
+    irp->IoStatus.Information = 0;
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    return status;
   }
 
 /** PnP IRP dispatcher */
@@ -88,6 +93,7 @@ static NTSTATUS STDCALL WvDummyDispatchPnpIrp(
   ) {
     IO_STACK_LOCATION * io_stack_loc;
     WV_S_DEV_T * dev;
+    NTSTATUS status;
 
     ASSERT(dev_obj);
     ASSERT(irp);
@@ -103,21 +109,25 @@ static NTSTATUS STDCALL WvDummyDispatchPnpIrp(
         return WvDummyPnpQueryId(dev_obj, irp);
 
         case IRP_MN_QUERY_REMOVE_DEVICE:
-        return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
+        status = STATUS_SUCCESS;
+        irp->IoStatus.Information = 0;
+        break;
 
         case IRP_MN_REMOVE_DEVICE:
         /* Any error status for the removal slips away, here */
         WvBusRemoveDev(dev);
-        return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
+        status = STATUS_SUCCESS;
+        irp->IoStatus.Information = 0;
+        break;
 
         default:
         /* Return whatever upper drivers in the stack yielded */
-        return WvlIrpComplete(
-            irp,
-            irp->IoStatus.Information,
-            irp->IoStatus.Status
-          );
+        status = irp->IoStatus.Status;
       }
+
+    irp->IoStatus.Status = status;
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    return status;
   }
 
 /**
