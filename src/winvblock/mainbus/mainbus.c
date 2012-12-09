@@ -87,6 +87,9 @@ WV_S_DEV_T WvBusDev = {0};
 
 volatile LONG WvMainBusCreators;
 
+/** This mini-driver */
+S_WVL_MINI_DRIVER * WvMainBusMiniDriver;
+
 /** Objects */
 
 static UNICODE_STRING WvBusName = {
@@ -96,9 +99,6 @@ static UNICODE_STRING WvBusName = {
   };
 
 static WVL_S_BUS_NODE WvBusSafeHookChild;
-
-/** This mini-driver */
-static S_WVL_MINI_DRIVER * WvMainBusMiniDriver;
 
 /** The main bus */
 static DEVICE_OBJECT * WvMainBusDevice;

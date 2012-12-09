@@ -84,4 +84,7 @@ extern WVL_S_BUS_T WvBus;
 extern WV_S_DEV_T WvBusDev;
 extern volatile LONG WvMainBusCreators;
 
+/** This mini-driver */
+extern S_WVL_MINI_DRIVER * WvMainBusMiniDriver;
+
 #endif /* M_WV_MAINBUS_H_ */
