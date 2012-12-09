@@ -233,7 +233,6 @@ static NTSTATUS STDCALL HttpdiskBusCreateFdo_(void) {
 static NTSTATUS STDCALL HttpdiskBusCreatePdo_(void) {
     NTSTATUS status;
     DEVICE_OBJECT * bus_pdo;
-    WV_S_DEV_T * bus_dev;
 
     /* Generate dummy IDs for the HTTPDisk bus PDO */
     WV_M_DUMMY_ID_GEN(
@@ -269,16 +268,8 @@ static NTSTATUS STDCALL HttpdiskBusCreatePdo_(void) {
       }
     ASSERT(bus_pdo);
 
-    bus_dev = WvDevFromDevObj(bus_pdo);
-    ASSERT(bus_dev);
-
-    WvlBusInitNode(&bus_dev->BusNode, bus_pdo);
-
-    /* Make the main bus the parent bus */
-    bus_dev->Parent = WvBus.Fdo;
-
     /* Add the new PDO device to the main bus' list of children */
-    WvlBusAddNode(&WvBus, &bus_dev->BusNode);
+    WvlAddDeviceToMainBus(bus_pdo);
 
     DBG("PDO created.\n");
     return STATUS_SUCCESS;

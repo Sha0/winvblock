@@ -209,8 +209,6 @@ extern WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
     OUT DEVICE_OBJECT ** DeviceObject
   );
 
-extern WVL_M_LIB NTSTATUS STDCALL WvDummyRemove(IN PDEVICE_OBJECT);
-
 /**
  * Handle an IOCTL for creating a dummy PDO
  *
@@ -279,9 +277,6 @@ struct WV_DUMMY_IDS {
 struct S_WVL_DUMMY_PDO {
     /** This must be the first member of all extension types */
     WV_S_DEV_EXT DeviceExtension[1];
-
-    /** TODO: Remove this when bus-adding logic changes */
-    WV_S_DEV_T OldDevice[1];
 
     /** Points to the device's dummy IDs */
     WV_S_DUMMY_IDS * DummyIds;

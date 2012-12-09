@@ -35,8 +35,7 @@
 #include "dummy.h"
 #include "debug.h"
 
-/* From mainbus.c */
-extern NTSTATUS STDCALL WvBusRemoveDev(IN WV_SP_DEV_T);
+#include "mainbus.h"
 
 /** Function declarations */
 static DRIVER_DISPATCH WvDummyIrpDispatch;
@@ -82,7 +81,7 @@ static NTSTATUS STDCALL WvDummyIrpDispatch(
 
     irp->IoStatus.Status = status = STATUS_NOT_SUPPORTED;
     irp->IoStatus.Information = 0;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
     return status;
   }
 
@@ -92,17 +91,16 @@ static NTSTATUS STDCALL WvDummyDispatchPnpIrp(
     IN IRP * irp
   ) {
     IO_STACK_LOCATION * io_stack_loc;
-    WV_S_DEV_T * dev;
     NTSTATUS status;
+    S_WVL_DUMMY_PDO * dummy;
 
     ASSERT(dev_obj);
+    dummy = dev_obj->DeviceExtension;
+    ASSERT(dummy);
     ASSERT(irp);
 
     io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     ASSERT(io_stack_loc);
-
-    dev = WvDevFromDevObj(dev_obj);
-    ASSERT(dev);
 
     switch (io_stack_loc->MinorFunction) {
         case IRP_MN_QUERY_ID:
@@ -114,8 +112,8 @@ static NTSTATUS STDCALL WvDummyDispatchPnpIrp(
         break;
 
         case IRP_MN_REMOVE_DEVICE:
-        /* Any error status for the removal slips away, here */
-        WvBusRemoveDev(dev);
+        if (!dummy->DeviceExtension->ParentBusDeviceObject)
+          WvlDeleteDevice(dev_obj);
         status = STATUS_SUCCESS;
         irp->IoStatus.Information = 0;
         break;
@@ -126,7 +124,7 @@ static NTSTATUS STDCALL WvDummyDispatchPnpIrp(
       }
 
     irp->IoStatus.Status = status;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
     return status;
   }
 
@@ -223,7 +221,7 @@ static NTSTATUS STDCALL WvDummyPnpQueryId(
     err_query_type:
 
     irp->IoStatus.Status = status;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
     return status;
   }
 
@@ -276,8 +274,8 @@ WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
 
     new_pdo = NULL;
 
-    status = IoCreateDevice(
-        WvDriverObj,
+    status = WvlCreateDevice(
+        WvMainBusMiniDriver,
         dev_ext_sz,
         dev_name,
         dummy_ids->DevType,
@@ -308,15 +306,7 @@ WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
       else
       dummy->ExtraData = (ptr + extra_data_offset);
 
-    /* Initialize the old device stuff */
-    WvDevInit(dummy->OldDevice);
-    dummy->OldDevice->ext = dummy->DummyIds;
-    dummy->OldDevice->Self = new_pdo;
-    dummy->OldDevice->Ops.Free = NULL;
-
-    WvDevForDevObj(new_pdo, dummy->OldDevice);
-    WvDevSetIrpHandler(new_pdo, WvDummyIrpDispatch);
-
+    dummy->DeviceExtension->IrpDispatch = WvDummyIrpDispatch;
     new_pdo->Flags &= ~DO_DEVICE_INITIALIZING;
 
     /* Optionally fill the caller's PDO pointer */
@@ -325,7 +315,7 @@ WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
 
     return STATUS_SUCCESS;
 
-    IoDeleteDevice(new_pdo);
+    WvlDeleteDevice(new_pdo);
     err_new_pdo:
 
     err_invalid_params:
@@ -333,27 +323,11 @@ WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
     return status;
   }
 
-/**
- * Remove a dummy PDO node on the WinVBlock bus.
- *
- * @v Pdo               The PDO to remove.
- * @ret NTSTATUS        The status of the operation.
- *
- * It might actually be better to handle a PnP remove IOCTL.
- */
-WVL_M_LIB NTSTATUS STDCALL WvDummyRemove(IN PDEVICE_OBJECT Pdo) {
-    /* Sanity check. */
-    if (Pdo->DriverObject == WvDriverObj)
-      return WvBusRemoveDev(WvDevFromDevObj(Pdo));
-    return STATUS_INVALID_PARAMETER;
-  }
-
 NTSTATUS STDCALL WvDummyIoctl(IN DEVICE_OBJECT * dev_obj, IN IRP * irp) {
     IO_STACK_LOCATION * io_stack_loc;
     WV_S_DUMMY_IDS * dummy_ids;
     NTSTATUS status;
     DEVICE_OBJECT * new_pdo;
-    WV_S_DEV_T * new_dev;
 
     ASSERT(dev_obj);
     (VOID) dev_obj;
@@ -397,27 +371,19 @@ NTSTATUS STDCALL WvDummyIoctl(IN DEVICE_OBJECT * dev_obj, IN IRP * irp) {
       goto err_new_pdo;
     ASSERT(new_pdo);
 
-    new_dev = WvDevFromDevObj(new_pdo);
-    ASSERT(new_dev);
-
-    WvlBusInitNode(&new_dev->BusNode, new_pdo);
-
     /* Make the main bus the parent bus */
-    new_dev->Parent = WvBus.Fdo;
-
-    /* Add the new PDO device to the main bus' list of children */
-    WvlBusAddNode(&WvBus, &new_dev->BusNode);
+    WvlAddDeviceToMainBus(new_pdo);
 
     status = STATUS_SUCCESS;
     goto out;
 
-    IoDeleteDevice(new_pdo);
+    WvlDeleteDevice(new_pdo);
     err_new_pdo:
 
     err_sz:
 
     out:
     irp->IoStatus.Status = status;
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
     return status;
   }

@@ -587,7 +587,6 @@ static NTSTATUS STDCALL WvMainBusPnpRemoveDevice(
     IN IRP * irp
   ) {
     S_WV_MAIN_BUS * bus;
-    ULONG i;
     NTSTATUS status;
     LONG c;
 
@@ -600,8 +599,8 @@ static NTSTATUS STDCALL WvMainBusPnpRemoveDevice(
 
     /* Delete all child PDOs */
     if (bus->BusRelations) {
-        for (i = 0; i < bus->BusRelations->Count; ++i)
-          WvlRemoveDeviceFromMainBus(bus->BusRelations->Objects[i]);
+        while (bus->BusRelations->Count)
+          WvlRemoveDeviceFromMainBus(bus->BusRelations->Objects[0]);
         wv_free(bus->BusRelations);
         bus->BusRelations = NULL;
       }

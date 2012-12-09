@@ -689,7 +689,7 @@ static NTSTATUS WvMainBusRemoveDevice(
                 break;
               }
           }
-        bus->BusRelations->Objects[i] = bus->BusRelations->Objects[i - found];
+        bus->BusRelations->Objects[i] = bus->BusRelations->Objects[i + found];
       }
     ASSERT(found);
     bus->BusRelations->Count -= found;

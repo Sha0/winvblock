@@ -289,7 +289,6 @@ NTSTATUS STDCALL AoeBusAttachFdo(
 static NTSTATUS AoeBusCreatePdo_(void) {
     NTSTATUS status;
     DEVICE_OBJECT * bus_pdo;
-    WV_S_DEV_T * bus_dev;
 
     status = WvDummyAdd(
         /* Dummy IDs */
@@ -311,16 +310,8 @@ static NTSTATUS AoeBusCreatePdo_(void) {
       return status;
     ASSERT(bus_pdo);
 
-    bus_dev = WvDevFromDevObj(bus_pdo);
-    ASSERT(bus_dev);
-
-    WvlBusInitNode(&bus_dev->BusNode, bus_pdo);
-
-    /* Make the main bus the parent bus */
-    bus_dev->Parent = WvBus.Fdo;
-
     /* Add the new PDO device to the main bus' list of children */
-    WvlBusAddNode(&WvBus, &bus_dev->BusNode);
+    WvlAddDeviceToMainBus(bus_pdo);
 
     return STATUS_SUCCESS;
   }
