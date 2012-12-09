@@ -60,17 +60,14 @@ struct S_WV_MAIN_BUS {
     /** Flags for state that must be accessed atomically */
     volatile LONG Flags;
 
+    /** The main bus' PDO (bottom of the device stack) */
+    DEVICE_OBJECT * PhysicalDeviceObject;
+
     /** PnP bus information */
     PNP_BUS_INFORMATION PnpBusInfo[1];
 
     /** PnP bus relations */
     DEVICE_RELATIONS * BusRelations;
-
-    /** Hack until proper PDO-add support is implemented */
-    DEVICE_RELATIONS * BusRelationsHack;
-
-    /** Another hack until proper PDO-add support is implemented */
-    DEVICE_RELATIONS * InitialBusRelationsHack;
 
     /** Registrations for the initial bus relations probe */
     S_WVL_LOCKED_LIST InitialProbeRegistrations[1];

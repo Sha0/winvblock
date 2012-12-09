@@ -1,9 +1,9 @@
 /**
- * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2012, Shao Miller <sha0.miller@gmail.com>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
  *
- * This file is part of WinVBlock, derived from WinAoE.
+ * This file is part of WinVBlock, originally derived from WinAoE.
  *
  * WinVBlock is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -100,6 +100,9 @@ static VOID STDCALL WvlBusAddNode_(WVL_SP_BUS_T bus, WVL_SP_BUS_NODE new_node) {
     /* We might be floating. */
     if (bus->Pdo)
       IoInvalidateDeviceRelations(bus->Pdo, BusRelations);
+    /* Hack: Use the new method for the main bus */
+    if (bus == &WvBus)
+      WvlAddDeviceToMainBus(new_node->BusPrivate_.Pdo);
     return;
   }
 
@@ -131,7 +134,10 @@ static VOID STDCALL WvlBusRemoveNode_(
     /* We might be floating. */
     if (bus->Pdo)
       IoInvalidateDeviceRelations(bus->Pdo, BusRelations);
-    return;    
+    /* Hack: Use the new method for the main bus */
+    if (bus == &WvBus)
+      WvlRemoveDeviceFromMainBus(node->BusPrivate_.Pdo);
+    return;
   }
 
 /**

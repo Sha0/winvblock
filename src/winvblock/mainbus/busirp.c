@@ -497,13 +497,6 @@ static NTSTATUS STDCALL WvMainBusPnpQueryDeviceRelations(
               }
           }
         dev_relations = bus->BusRelations;
-        /*
-         * TODO: The next line is a hack that needs to be removed
-         * once proper PDO-add support is implemented.  This hack
-         * causes WvMainBusInitialBusRelations to be called every
-         * time
-         */
-        bus->BusRelations = NULL;
         break;
 
         case TargetDeviceRelation:
@@ -595,9 +588,6 @@ static NTSTATUS STDCALL WvMainBusPnpRemoveDevice(
   ) {
     S_WV_MAIN_BUS * bus;
     ULONG i;
-    LIST_ENTRY * list;
-    LIST_ENTRY * link;
-    WVL_S_BUS_NODE * bus_node;
     NTSTATUS status;
     LONG c;
 
@@ -608,32 +598,12 @@ static NTSTATUS STDCALL WvMainBusPnpRemoveDevice(
 
     IoDeleteSymbolicLink(&WvBusDosName);
 
-    /* Schedule deletion of this device when the thread finishes */
-    WvlDeleteDevice(dev_obj);
-
-    /* TODO: Delete all child PDOs.  This is a hack, for now */
-    if (bus->InitialBusRelationsHack) {
-        ASSERT(!bus->BusRelations);
-        bus->BusRelations = bus->InitialBusRelationsHack;
-        for (i = 0; i < bus->InitialBusRelationsHack->Count; ++i)
+    /* Delete all child PDOs */
+    if (bus->BusRelations) {
+        for (i = 0; i < bus->BusRelations->Count; ++i)
           WvlRemoveDeviceFromMainBus(bus->BusRelations->Objects[i]);
+        wv_free(bus->BusRelations);
         bus->BusRelations = NULL;
-        wv_free(bus->InitialBusRelationsHack);
-      }
-    wv_free(bus->BusRelationsHack);
-    list = &WvBus.BusPrivate_.Nodes;
-    while ((link = RemoveHeadList(list)) != list) {
-        bus_node = CONTAINING_RECORD(link, WVL_S_BUS_NODE, BusPrivate_.Link);
-        ASSERT(bus_node);
-
-        bus_node->Linked = FALSE;
-        DBG(
-            "Removing child PDO %p from bus FDO %p\n",
-            (VOID *) bus_node->BusPrivate_.Pdo,
-            (VOID *) dev_obj
-          );
-        ObDereferenceObject(bus_node->BusPrivate_.Pdo);
-        WvBus.BusPrivate_.NodeCount--;
       }
 
     /* Send the IRP down */
@@ -643,6 +613,9 @@ static NTSTATUS STDCALL WvMainBusPnpRemoveDevice(
     WvlDetachDevice(dev_obj);
     WvBus.LowerDeviceObject = NULL;
     WvBus.Pdo = NULL;
+
+    /* Schedule deletion of this device when the thread finishes */
+    WvlDeleteDevice(dev_obj);
 
     /*
      * TODO: Put this somewhere where it doesn't race with another
