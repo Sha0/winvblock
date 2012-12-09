@@ -41,7 +41,9 @@ extern NTSTATUS STDCALL WvBusRemoveDev(IN WV_SP_DEV_T);
 /** Function declarations */
 static DRIVER_DISPATCH WvDummyIrpDispatch;
 static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH WvDummyDispatchPnpIrp;
-static NTSTATUS STDCALL WvDummyIds(IN PIRP, IN WV_SP_DUMMY_IDS);
+
+/** PnP handlers */
+static __drv_dispatchType(IRP_MN_QUERY_ID) DRIVER_DISPATCH WvDummyPnpQueryId;
 
 /** Function definitions */
 
@@ -98,8 +100,7 @@ static NTSTATUS STDCALL WvDummyDispatchPnpIrp(
 
     switch (io_stack_loc->MinorFunction) {
         case IRP_MN_QUERY_ID:
-        /* The WV_S_DEV_T extension points to the dummy IDs */
-        return WvDummyIds(irp, dev->ext);
+        return WvDummyPnpQueryId(dev_obj, irp);
 
         case IRP_MN_QUERY_REMOVE_DEVICE:
         return WvlIrpComplete(irp, 0, STATUS_SUCCESS);
@@ -117,6 +118,103 @@ static NTSTATUS STDCALL WvDummyDispatchPnpIrp(
             irp->IoStatus.Status
           );
       }
+  }
+
+/**
+ * IRP_MJ_PNP:IRP_MN_QUERY_ID handler
+ *
+ * IRQL == PASSIVE_LEVEL, any thread
+ * Ok to send this IRP
+ * Completed by PDO (here)
+ *
+ * @param Parameters.QueryId.IdType (I/O stack location)
+ *
+ * @return
+ *   Success:
+ *     Irp->IoStatus.Status == STATUS_SUCCESS
+ *     Irp->IoStatus.Information populated from paged memory
+ *   Error:
+ *     Irp->IoStatus.Information == 0
+ *     Irp->IoStatus.Status == STATUS_INSUFFICIENT_RESOURCES
+ *       or
+ *     Irp->IoStatus.Status == STATUS_NOT_SUPPORTED
+ */
+static NTSTATUS STDCALL WvDummyPnpQueryId(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
+  ) {
+    S_WVL_DUMMY_PDO * dummy;
+    IO_STACK_LOCATION * io_stack_loc;
+    const UCHAR * ptr;
+    const WCHAR * ids;
+    BUS_QUERY_ID_TYPE query_type;
+    UINT32 len;
+    VOID * response;
+    NTSTATUS status;
+
+    ASSERT(dev_obj);
+    dummy = dev_obj->DeviceExtension;
+    ASSERT(dummy);
+    ASSERT(irp);
+
+    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    ASSERT(io_stack_loc);
+
+    ptr = (const VOID *) dummy->DummyIds;
+    ptr += dummy->DummyIds->Offset;
+    ids = (const VOID *) ptr;
+
+    query_type = io_stack_loc->Parameters.QueryId.IdType;
+    switch (query_type) {
+        case BusQueryDeviceID:
+        ids += dummy->DummyIds->DevOffset;
+        len = dummy->DummyIds->DevLen;
+        break;
+
+        case BusQueryHardwareIDs:
+        ids += dummy->DummyIds->HardwareOffset;
+        len = dummy->DummyIds->HardwareLen;
+        break;
+
+        case BusQueryCompatibleIDs:
+        ids += dummy->DummyIds->CompatOffset;
+        len = dummy->DummyIds->CompatLen;
+        break;
+
+        case BusQueryInstanceID:
+        ids += dummy->DummyIds->InstanceOffset;
+        len = dummy->DummyIds->InstanceLen;
+        break;
+
+        default:
+        status = STATUS_NOT_SUPPORTED;
+        irp->IoStatus.Information = 0;
+        goto err_query_type;
+      }
+
+    /* Allocate the respone */
+    response = wv_palloc(len * sizeof *ids);
+    if (!response) {
+        DBG("Couldn't allocate response\n");
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        irp->IoStatus.Information = 0;
+        goto err_response;
+      }
+
+    /* Copy the IDs into the response */
+    RtlCopyMemory(response, ids, len * sizeof *ids);
+
+    irp->IoStatus.Information = (ULONG_PTR) response;
+    status = STATUS_SUCCESS;
+
+    /* irp->IoStatus.Information not freed */
+    err_response:
+
+    err_query_type:
+
+    irp->IoStatus.Status = status;
+    IoCompleteRequest(irp, IO_NO_INCREMENT);
+    return status;
   }
 
 WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
@@ -312,70 +410,4 @@ NTSTATUS STDCALL WvDummyIoctl(IN DEVICE_OBJECT * dev_obj, IN IRP * irp) {
     irp->IoStatus.Status = status;
     IoCompleteRequest(irp, IO_NO_INCREMENT);
     return status;
-  }
-
-/**
- * Handle a PnP ID query with a WV_S_DUMMY_IDS object.
- *
- * @v Irp               The PnP ID query IRP to handle.
- * @v DummyIds          The object containing the IDs to respond with.
- * @ret NTSTATUS        The status of the operation.
- */
-static NTSTATUS STDCALL WvDummyIds(
-    IN PIRP Irp,
-    IN WV_SP_DUMMY_IDS DummyIds
-  ) {
-    PIO_STACK_LOCATION io_stack_loc = IoGetCurrentIrpStackLocation(Irp);
-    BUS_QUERY_ID_TYPE query_type = io_stack_loc->Parameters.QueryId.IdType;
-    const CHAR * start;
-    const WCHAR * ids;
-    UINT32 len;
-    NTSTATUS status;
-
-    start = (const CHAR *) DummyIds + DummyIds->Offset;
-    ids = (const WCHAR *) start;
-    switch (query_type) {
-        case BusQueryDeviceID:
-          ids += DummyIds->DevOffset;
-          len = DummyIds->DevLen;
-          break;
-
-        case BusQueryInstanceID:
-          ids += DummyIds->InstanceOffset;
-          len = DummyIds->InstanceLen;
-          break;
-
-        case BusQueryHardwareIDs:
-          ids += DummyIds->HardwareOffset;
-          len = DummyIds->HardwareLen;
-          break;
-
-        case BusQueryCompatibleIDs:
-          ids += DummyIds->CompatOffset;
-          len = DummyIds->CompatLen;
-          break;
-
-        default:
-          return WvlIrpComplete(Irp, 0, STATUS_NOT_SUPPORTED);
-      }
-
-    /* Allocate the return buffer. */
-    Irp->IoStatus.Information = (ULONG_PTR) wv_palloc(len * sizeof *ids);
-    if (Irp->IoStatus.Information == 0) {
-        DBG("wv_palloc failed.\n");
-        status = STATUS_INSUFFICIENT_RESOURCES;
-        goto alloc_info;
-      }
-    /* Copy the working buffer to the return buffer. */
-    RtlCopyMemory(
-        (PVOID) Irp->IoStatus.Information,
-        ids,
-        len * sizeof *ids
-      );
-    status = STATUS_SUCCESS;
-
-    /* irp->IoStatus.Information not freed. */
-    alloc_info:
-
-    return WvlIrpComplete(Irp, Irp->IoStatus.Information, status);
   }
