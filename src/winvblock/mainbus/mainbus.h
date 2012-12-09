@@ -48,7 +48,7 @@ extern NTSTATUS WvMainBusInitialBusRelations(DEVICE_OBJECT * DeviceObject);
 
 /* From busirp.c */
 extern VOID WvMainBusBuildMajorDispatchTable(void);
-extern DRIVER_DISPATCH WvBusIrpDispatch;
+extern DRIVER_DISPATCH WvMainBusIrpDispatch;
 
 /** Struct/union type definitions */
 

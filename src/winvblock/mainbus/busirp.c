@@ -53,6 +53,8 @@
 /** Function declarations */
 
 /** IRP dispatchers */
+DRIVER_DISPATCH WvMainBusIrpDispatch;
+
 static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH WvMainBusDispatchPnpIrp;
 static __drv_dispatchType(IRP_MJ_DEVICE_CONTROL) DRIVER_DISPATCH
   WvMainBusDispatchDeviceControlIrp;
@@ -101,7 +103,7 @@ VOID WvMainBusBuildMajorDispatchTable(void) {
   }
 
 /**
- * Handle an IRP from the main bus' thread context
+ * Handle an IRP for the main bus
  *
  * @param DeviceObject
  *   The main bus device
@@ -112,7 +114,7 @@ VOID WvMainBusBuildMajorDispatchTable(void) {
  * @return
  *   The status of the operation
  */
-NTSTATUS STDCALL WvBusIrpDispatch(
+NTSTATUS STDCALL WvMainBusIrpDispatch(
     IN DEVICE_OBJECT * dev_obj,
     IN IRP * irp
   ) {

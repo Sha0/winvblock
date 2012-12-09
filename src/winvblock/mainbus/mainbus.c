@@ -246,7 +246,7 @@ static NTSTATUS STDCALL WvMainBusDriveDevice(
 
     WvBusDev.IsBus = TRUE;
     WvDevForDevObj(WvBus.Fdo, &WvBusDev);
-    WvDevSetIrpHandler(WvBus.Fdo, WvBusIrpDispatch);
+    WvDevSetIrpHandler(WvBus.Fdo, WvMainBusIrpDispatch);
     /* TODO: Review the following two settings */
     WvBus.Fdo->Flags |= DO_DIRECT_IO;
     WvBus.Fdo->Flags |= DO_POWER_INRUSH;
