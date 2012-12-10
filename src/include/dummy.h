@@ -317,6 +317,9 @@ struct S_WVL_DUMMY_PDO {
      */
     volatile LONG Flags;
 
+    /** PnP bus information */
+    PNP_BUS_INFORMATION PnpBusInfo[1];
+
     /** Points to the device's dummy IDs */
     WV_S_DUMMY_IDS * DummyIds;
 

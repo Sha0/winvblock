@@ -24,6 +24,7 @@
  */
 
 #include <ntddk.h>
+#include <initguid.h>
 
 #include "portable.h"
 #include "winvblock.h"
@@ -57,6 +58,26 @@ static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH WvDummyDispatchPnpIrp;
 static __drv_dispatchType(IRP_MN_QUERY_ID) DRIVER_DISPATCH WvDummyPnpQueryId;
 static __drv_dispatchType(IRP_MN_QUERY_DEVICE_TEXT) DRIVER_DISPATCH
   WvDummyPnpQueryDeviceText;
+static __drv_dispatchType(IRP_MN_QUERY_BUS_INFORMATION) DRIVER_DISPATCH
+  WvDummyPnpQueryBusInfo;
+
+/** Objects */
+
+/** Some bus type GUID for IRP_MJ_PNP:IRP_MN_QUERY_BUS_INFORMATION */
+DEFINE_GUID(
+    GUID_DUMMY_BUS_TYPE,
+    0x2530ea73L,
+    0x086b,
+    0x11d1,
+    0xa0,
+    0x9f,
+    0x00,
+    0xc0,
+    0x4f,
+    0xc3,
+    0x40,
+    0xb1
+  );
 
 /** Function definitions */
 
@@ -123,6 +144,9 @@ static NTSTATUS STDCALL WvDummyDispatchPnpIrp(
 
         case IRP_MN_QUERY_DEVICE_TEXT:
         return WvDummyPnpQueryDeviceText(dev_obj, irp);
+
+        case IRP_MN_QUERY_BUS_INFORMATION:
+        return WvDummyPnpQueryBusInfo(dev_obj, irp);
 
         case IRP_MN_QUERY_REMOVE_DEVICE:
         status = STATUS_SUCCESS;
@@ -326,6 +350,60 @@ static NTSTATUS STDCALL WvDummyPnpQueryDeviceText(
     return status;
   }
 
+/**
+ * IRP_MJ_PNP:IRP_MN_QUERY_BUS_INFORMATION handler
+ *
+ * IRQL == PASSIVE_LEVEL, any thread
+ * Do not send this IRP
+ * Completed by PDO (here)
+ *
+ * @return
+ *   Success:
+ *     Irp->IoStatus.Status == STATUS_SUCCESS
+ *     Irp->IoStatus.Information populated from paged memory
+ *   Error:
+ *     Irp->IoStatus.Status == STATUS_INSUFFICIENT_RESOURCES
+ *     Irp->IoStatus.Information == 0
+ *
+ * TODO: Maybe it's best for a PDO to query its parent for this info,
+ * instead of carrying it around
+ */
+static NTSTATUS STDCALL WvDummyPnpQueryBusInfo(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
+  ) {
+    S_WVL_DUMMY_PDO * dummy;
+    VOID * pnp_bus_info;
+    NTSTATUS status;
+
+    ASSERT(dev_obj);
+    ASSERT(irp);
+    dummy = dev_obj->DeviceExtension;
+    ASSERT(dummy);
+
+    /* Allocate for a copy of the bus info */
+    pnp_bus_info = wv_palloc(sizeof dummy->PnpBusInfo);
+    if (!pnp_bus_info) {
+        DBG("wv_palloc failed\n");
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        irp->IoStatus.Information = 0;
+        goto pnp_bus_info;
+      }
+
+    /* Copy the bus info */
+    RtlCopyMemory(pnp_bus_info, dummy->PnpBusInfo, sizeof dummy->PnpBusInfo);
+
+    irp->IoStatus.Information = (ULONG_PTR) pnp_bus_info;
+    status = STATUS_SUCCESS;
+
+    /* irp->IoStatus.Information (pnp_bus_info) not freed */
+    pnp_bus_info:
+
+    irp->IoStatus.Status = status;
+    WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
+    return status;
+  }
+
 WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
     IN S_WVL_MINI_DRIVER * minidriver,
     IN const WV_S_DUMMY_IDS * dummy_ids,
@@ -400,6 +478,11 @@ WVL_M_LIB NTSTATUS STDCALL WvDummyAdd(
 
     /* No flags */
     dummy->Flags = CvWvDummyFlagZero;
+
+    /* PnP bus info */
+    dummy->PnpBusInfo->BusTypeGuid = GUID_DUMMY_BUS_TYPE;
+    dummy->PnpBusInfo->LegacyBusType = PNPBus;
+    dummy->PnpBusInfo->BusNumber = 0;
 
     /* Copy the dummy IDs, which means the whole wrapper */
     dummy->DummyIds = (VOID *) (ptr + dummy_ids_offset);
