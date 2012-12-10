@@ -317,17 +317,24 @@ WVL_M_LIB NTSTATUS STDCALL WvlCreateSafeHookDevice(
     return status;
   }
 
-WVL_M_LIB S_WV_SAFEHOOK_PDO * STDCALL WvlGetSafeHook(
+WVL_M_LIB S_X86_SEG16OFF16 * STDCALL WvlGetSafeHook(
     IN DEVICE_OBJECT * dev_obj
   ) {
     WV_S_DEV_EXT * dev_ext;
+    S_WVL_DUMMY_PDO * dummy;
 
     ASSERT(dev_obj);
     dev_ext = dev_obj->DeviceExtension;
+
     if (!dev_ext || dev_ext->MiniDriver != WvSafeHookMiniDriver)
       return NULL;
 
-    return dev_obj->DeviceExtension;
+    /* Never call this function on an FDO.  We assume PDO */
+    dummy = dev_obj->DeviceExtension;
+
+    /* The dummy extra data should have the SEG16:OFF16 of the hook */
+    ASSERT(dummy->ExtraData);
+    return dummy->ExtraData;
   }
 
 /** Process a GRUB4DOS drive mapping slot.  Probably belongs elsewhere */

@@ -77,9 +77,9 @@ extern WVL_M_LIB NTSTATUS STDCALL WvlCreateSafeHookDevice(
  * @retval NULL
  *   The device is not a safe hook
  * @return
- *   Otherwise, returns a pointer to the safe hook device details
+ *   Otherwise, returns a pointer to the safe hook SEG16:OFF16
  */
-extern WVL_M_LIB S_WV_SAFEHOOK_PDO * STDCALL WvlGetSafeHook(
+extern WVL_M_LIB S_X86_SEG16OFF16 * STDCALL WvlGetSafeHook(
     IN DEVICE_OBJECT * DeviceObject
   );
 
