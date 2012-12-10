@@ -242,6 +242,7 @@ static NTSTATUS STDCALL HttpdiskBusCreatePdo_(void) {
         L"0",
         WVL_M_WLIT L"\\HTTPDisk\0",
         WVL_M_WLIT L"\\HTTPDisk\0",
+        L"HTTPDisk Bus",
         FILE_DEVICE_CONTROLLER,
         FILE_DEVICE_SECURE_OPEN
       );

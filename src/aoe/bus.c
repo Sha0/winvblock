@@ -138,6 +138,7 @@ WV_M_DUMMY_ID_GEN(
     L"0",
     WVL_M_WLIT L"\\AoE\0",
     WVL_M_WLIT L"\\AoE\0",
+    L"AoE Bus",
     FILE_DEVICE_CONTROLLER,
     FILE_DEVICE_SECURE_OPEN
   );

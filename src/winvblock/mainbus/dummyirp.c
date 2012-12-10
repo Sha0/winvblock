@@ -55,6 +55,8 @@ static __drv_dispatchType(IRP_MJ_PNP) DRIVER_DISPATCH WvDummyDispatchPnpIrp;
 
 /** PnP handlers */
 static __drv_dispatchType(IRP_MN_QUERY_ID) DRIVER_DISPATCH WvDummyPnpQueryId;
+static __drv_dispatchType(IRP_MN_QUERY_DEVICE_TEXT) DRIVER_DISPATCH
+  WvDummyPnpQueryDeviceText;
 
 /** Function definitions */
 
@@ -118,6 +120,9 @@ static NTSTATUS STDCALL WvDummyDispatchPnpIrp(
     switch (io_stack_loc->MinorFunction) {
         case IRP_MN_QUERY_ID:
         return WvDummyPnpQueryId(dev_obj, irp);
+
+        case IRP_MN_QUERY_DEVICE_TEXT:
+        return WvDummyPnpQueryDeviceText(dev_obj, irp);
 
         case IRP_MN_QUERY_REMOVE_DEVICE:
         status = STATUS_SUCCESS;
@@ -240,6 +245,81 @@ static NTSTATUS STDCALL WvDummyPnpQueryId(
     err_response:
 
     err_query_type:
+
+    irp->IoStatus.Status = status;
+    WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
+    return status;
+  }
+
+/**
+ * IRP_MJ_PNP:IRP_MN_QUERY_DEVICE_TEXT handler
+ *
+ * IRQL == PASSIVE_LEVEL, any thread
+ * Do not send this IRP
+ * Completed by PDO (here)
+ *
+ * @param Parameters.QueryDeviceText.DeviceTextType (I/O stack location)
+ *
+ * @return
+ *   Success:
+ *     Irp->IoStatus.Status == STATUS_SUCCESS
+ *     Irp->IoStatus.Information populated from paged memory
+ *   Error:
+ *     Irp->IoStatus.Status == STATUS_INSUFFICIENT_RESOURCES
+ *     Irp->IoStatus.Information == 0
+ */
+static NTSTATUS STDCALL WvDummyPnpQueryDeviceText(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
+  ) {
+    S_WVL_DUMMY_PDO * dummy;
+    IO_STACK_LOCATION * io_stack_loc;
+    const UCHAR * ptr;
+    SIZE_T response_sz;
+    WCHAR * response;
+    NTSTATUS status;
+
+    ASSERT(dev_obj);
+    dummy = dev_obj->DeviceExtension;
+    ASSERT(dummy);
+    ASSERT(irp);
+
+    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    ASSERT(io_stack_loc);
+
+    ptr = (const VOID *) dummy->DummyIds;
+    ptr += dummy->DummyIds->Offset;
+
+    /* Determine the query type */
+    switch (io_stack_loc->Parameters.QueryDeviceText.DeviceTextType) {
+        case DeviceTextDescription:
+
+        /* Allocate the response */
+        response_sz = dummy->DummyIds->TextDescLen * sizeof *response;
+        response = wv_pallocz(response_sz);
+        if (!response) {
+            DBG("Unable to allocate DeviceTextDescription\n");
+            status = STATUS_INSUFFICIENT_RESOURCES;
+            goto err_response;
+          }
+
+        /* Point to the device text description */
+        ptr += dummy->DummyIds->TextDescOffset * sizeof *response;
+
+        /* Populate the response */
+        RtlCopyMemory(response, ptr, response_sz);
+        irp->IoStatus.Information = (ULONG_PTR) response;
+        status = STATUS_SUCCESS;
+
+        /* response not freed */
+        err_response:
+
+        break;
+
+        default:
+        irp->IoStatus.Information = 0;
+        status = STATUS_NOT_SUPPORTED;
+      }
 
     irp->IoStatus.Status = status;
     WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);

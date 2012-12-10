@@ -42,8 +42,14 @@ CTL_CODE(                   \
   prefix_ ## name_ ## End_ =                                      \
     prefix_ ## name_ ## Offset_ + prefix_ ## name_ ## Len_ - 1,
 
-#define WV_M_DUMMY_IDS_LITERALS(dev_id_, inst_id_, hard_id_, compat_id_) \
-  dev_id_ L"\0" inst_id_ L"\0" hard_id_ L"\0" compat_id_
+#define WV_M_DUMMY_IDS_LITERALS( \
+    dev_id_,                     \
+    inst_id_,                    \
+    hard_id_,                    \
+    compat_id_,                  \
+    dev_text_desc_               \
+  )                              \
+  dev_id_ L"\0" inst_id_ L"\0" hard_id_ L"\0" compat_id_ L"\0" dev_text_desc_
 
 #define WV_M_DUMMY_IDS_FILL(prefix_, name_) \
   prefix_ ## name_ ## Offset_,              \
@@ -70,6 +76,9 @@ CTL_CODE(                   \
  * @param CompatId
  *   Compatible ID(s)
  *
+ * @param DevTextDesc
+ *   Device text description ("Found New Hardware" name)
+ *
  * @param DevType
  *   The device type for the dummy PDO
  *
@@ -90,6 +99,9 @@ CTL_CODE(                   \
  *     [Name]CompatOffset_
  *     [Name]CompatLen_
  *     [Name]CompatEnd_
+ *     [Name]TextDescOffset_
+ *     [Name]TextDescLen_
+ *     [Name]TextDescEnd_
  *     [Name]Len_
  *   [Qualifiers] WV_S_DUMMY_IDS *:
  *     [Name]
@@ -101,6 +113,7 @@ CTL_CODE(                   \
     InstanceId,                                                       \
     HardwareId,                                                       \
     CompatId,                                                         \
+    DevTextDesc,                                                      \
     DevType,                                                          \
     DevCharacts                                                       \
   )                                                                   \
@@ -110,6 +123,7 @@ enum {                                                                \
     WV_M_DUMMY_IDS_ENUM(Name, Instance, InstanceId)                   \
     WV_M_DUMMY_IDS_ENUM(Name, Hardware, HardwareId)                   \
     WV_M_DUMMY_IDS_ENUM(Name, Compat, CompatId)                       \
+    WV_M_DUMMY_IDS_ENUM(Name, TextDesc, DevTextDesc)                  \
     Name ## Len_                                                      \
   };                                                                  \
                                                                       \
@@ -124,12 +138,19 @@ static const struct Name ## Struct_ Name ## _ = {                     \
         WV_M_DUMMY_IDS_FILL(Name, Instance)                           \
         WV_M_DUMMY_IDS_FILL(Name, Hardware)                           \
         WV_M_DUMMY_IDS_FILL(Name, Compat)                             \
+        WV_M_DUMMY_IDS_FILL(Name, TextDesc)                           \
         sizeof Name ## _,                                             \
         FIELD_OFFSET(struct Name ## Struct_, Ids),                    \
         DevType,                                                      \
         DevCharacts,                                                  \
       },                                                              \
-    WV_M_DUMMY_IDS_LITERALS(DevId, InstanceId, HardwareId, CompatId), \
+    WV_M_DUMMY_IDS_LITERALS(                                          \
+        DevId,                                                        \
+        InstanceId,                                                   \
+        HardwareId,                                                   \
+        CompatId,                                                     \
+        DevTextDesc                                                   \
+      ),                                                              \
   };                                                                  \
                                                                       \
 Qualifiers const WV_S_DUMMY_IDS * Name = &Name ## _.DummyIds
@@ -264,6 +285,10 @@ struct WV_DUMMY_IDS {
     /** For BusQueryCompatibleIDs */
     UINT32 CompatOffset;
     UINT32 CompatLen;
+
+    /** For DeviceTextDescription */
+    UINT32 TextDescOffset;
+    UINT32 TextDescLen;
 
     /** The length of the wrapper struct, which includes all data */
     UINT32 Len;
