@@ -60,6 +60,8 @@ static __drv_dispatchType(IRP_MN_QUERY_DEVICE_TEXT) DRIVER_DISPATCH
   WvDummyPnpQueryDeviceText;
 static __drv_dispatchType(IRP_MN_QUERY_BUS_INFORMATION) DRIVER_DISPATCH
   WvDummyPnpQueryBusInfo;
+static __drv_dispatchType(IRP_MN_QUERY_CAPABILITIES) DRIVER_DISPATCH
+  WvDummyPnpQueryCapabilities;
 
 /** Objects */
 
@@ -147,6 +149,9 @@ static NTSTATUS STDCALL WvDummyDispatchPnpIrp(
 
         case IRP_MN_QUERY_BUS_INFORMATION:
         return WvDummyPnpQueryBusInfo(dev_obj, irp);
+
+        case IRP_MN_QUERY_CAPABILITIES:
+        return WvDummyPnpQueryCapabilities(dev_obj, irp);
 
         case IRP_MN_QUERY_REMOVE_DEVICE:
         status = STATUS_SUCCESS;
@@ -399,6 +404,71 @@ static NTSTATUS STDCALL WvDummyPnpQueryBusInfo(
     /* irp->IoStatus.Information (pnp_bus_info) not freed */
     pnp_bus_info:
 
+    irp->IoStatus.Status = status;
+    WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
+    return status;
+  }
+
+/**
+ * IRP_MJ_PNP:IRP_MN_QUERY_CAPABILITIES handler
+ *
+ * IRQL == PASSIVE_LEVEL, any thread
+ * Ok to send this IRP
+ * Completed by PDO (here), can be hooked
+ *
+ * @param Parameters.DeviceCapabilities.Capabilities (I/O stack location)
+ *
+ * @return
+ *   Success:
+ *     Irp->IoStatus.Status == STATUS_SUCCESS
+ *     I/O stack location: Parameters.DeviceCapabilities.Capabilities
+ *       populated
+ *   Error:
+ *     Irp->IoStatus.Status == STATUS_UNSUCCESSFUL
+ */
+static NTSTATUS STDCALL WvDummyPnpQueryCapabilities(
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
+  ) {
+    IO_STACK_LOCATION * io_stack_loc;
+    DEVICE_CAPABILITIES * dev_caps;
+    S_WVL_DUMMY_PDO * dummy;
+    NTSTATUS status;
+    DEVICE_CAPABILITIES parent_dev_caps;
+
+    ASSERT(dev_obj);
+    ASSERT(irp);
+
+    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
+    ASSERT(io_stack_loc);
+
+    dev_caps = io_stack_loc->Parameters.DeviceCapabilities.Capabilities;
+    ASSERT(dev_caps);
+
+    if (dev_caps->Version != 1 || dev_caps->Size < sizeof *dev_caps) {
+        status = STATUS_UNSUCCESSFUL;
+        DBG("Wrong version!\n");
+        goto err_version;
+      }
+
+    dummy = dev_obj->DeviceExtension;
+    ASSERT(dummy);
+
+    status = WvDriverGetDevCapabilities(
+        dummy->DeviceExtension->ParentBusDeviceObject,
+        &parent_dev_caps
+      );
+    if (!NT_SUCCESS(status))
+      goto err_parent_caps;
+
+    RtlCopyMemory(dev_caps, &parent_dev_caps, sizeof *dev_caps);
+    goto out;
+
+    err_parent_caps:
+
+    err_version:
+
+    out:
     irp->IoStatus.Status = status;
     WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
     return status;
