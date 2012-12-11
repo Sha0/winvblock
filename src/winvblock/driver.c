@@ -2100,3 +2100,64 @@ WVL_M_LIB DEVICE_OBJECT * STDCALL WvlGetLowerDeviceObject(
     ASSERT(dev_ext);
     return dev_ext->LowerDeviceObject;
   }
+
+WVL_M_LIB DEVICE_RELATIONS * WvlMergeDeviceRelations(
+    IN DEVICE_RELATIONS * fixed,
+    IN DEVICE_RELATIONS * freeable
+  ) {
+    ULONG pdo_count;
+    UCHAR * mem;
+    DEVICE_RELATIONS * dev_relations;
+    DEVICE_OBJECT ** pdo;
+    ULONG i;
+
+    /* Nothing to merge? */
+    if (freeable && (!fixed || !fixed->Count))
+      return freeable;
+
+    /* Special case where we can merge into a single, empty slot */
+    if (fixed && freeable && fixed->Count == 1 && freeable->Count == 0) {
+        RtlCopyMemory(freeable, fixed, sizeof *freeable);
+        return freeable;
+      }
+
+    /* Calculate total count */
+    pdo_count = 0;
+
+    if (fixed)
+      pdo_count += fixed->Count;
+
+    if (freeable)
+      pdo_count += freeable->Count;
+
+    /* Allocate for total count */
+    mem = wv_palloc(
+        sizeof *dev_relations +
+        (pdo_count ? (sizeof dev_relations->Objects[0] * (pdo_count - 1)) : 0)
+      );
+    dev_relations = (VOID *) mem;
+    if (!dev_relations)
+      return dev_relations;
+
+    /* Work with the first object */
+    pdo = (VOID *) (mem + FIELD_OFFSET(DEVICE_RELATIONS, Objects[0]));
+
+    /* Initialize */
+    dev_relations->Count = pdo_count;
+    *pdo = NULL;
+
+    /* Copy in the fixed list's items, if any */
+    if (fixed) {
+        for (i = 0; i < fixed->Count; ++i, ++pdo)
+          *pdo = fixed->Objects[i];
+      }
+
+    /* Copy in the freeable list's items, if any.  Free the freeable list */
+    if (freeable) {
+        for (i = 0; i < freeable->Count; ++i, ++pdo)
+          *pdo = freeable->Objects[i];
+        wv_free(freeable);
+      }
+
+    return dev_relations;
+  }

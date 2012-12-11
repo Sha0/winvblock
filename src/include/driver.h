@@ -570,6 +570,27 @@ extern WVL_M_LIB DEVICE_OBJECT * STDCALL WvlGetLowerDeviceObject(
   );
 
 /**
+ * Produce a DEVICE_RELATIONS object, possibly merging two others
+ *
+ * @param FixedRelations
+ *   Optional.  If non-null, these relations will be listed in the output
+ *
+ * @param FreeableRelations
+ *   Optional.  If non-null, these relations will be listed in the output
+ *   and the FreeableRelations list will be freed
+ *
+ * @retval NULL - Failed to allocate the output list
+ * @return
+ *   A pointer to the output DEVICE_RELATIONS object, with zero or more
+ *   DEVICE_OBJECT pointers in its list.  This object is allocated from
+ *   paged memory and can be freed
+ */
+WVL_M_LIB DEVICE_RELATIONS * WvlMergeDeviceRelations(
+    IN DEVICE_RELATIONS * FixedRelations,
+    IN DEVICE_RELATIONS * FreeableRelations
+  );
+
+/**
  * Miscellaneous: Grouped memory allocation functions.
  */
 
