@@ -1,7 +1,7 @@
 [Project]
 FileName=WinVBlock.dev
 Name=WinVBlock
-UnitCount=78
+UnitCount=79
 PchHead=-1
 PchSource=-1
 Ver=3
@@ -855,6 +855,16 @@ BuildCmd=
 FileName=src\winvblock\mainbus\mainbus.h
 CompileCpp=1
 Folder=WinVBlock/MainBus
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit79]
+FileName=src\winvblock\safehook\fdo.c
+CompileCpp=1
+Folder=WinVBlock/SafeHook
 Compile=1
 Link=1
 Priority=1000

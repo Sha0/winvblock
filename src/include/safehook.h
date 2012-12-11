@@ -19,21 +19,22 @@
 #ifndef WV_M_PROBE_H_
 #  define WV_M_PROBE_H_
 
-/****
+/**
  * @file
  *
- * Boot-time disk probing specifics
+ * "Safe INT 0x13 hook" mini-driver
  */
 
 /** Object types */
 typedef struct WV_PROBE_SAFE_MBR_HOOK
   WV_S_PROBE_SAFE_MBR_HOOK, * WV_SP_PROBE_SAFE_MBR_HOOK;
 typedef struct S_WV_SAFEHOOK_PDO_ S_WV_SAFEHOOK_PDO, * SP_WV_SAFEHOOK_PDO;
+typedef struct S_WV_SAFE_HOOK_BUS S_WV_SAFE_HOOK_BUS;
 
-/*** Function declarations. */
+/** Function declarations */
 
 /**
- * Create a "safe INT 0x13 hook" bus PDO
+ * Create a "safe INT 0x13 hook" PDO
  *
  * @v HookAddr          The SEG16:OFF16 address for the hook
  * @v SafeHook          Points to the safe hook
@@ -83,7 +84,13 @@ extern WVL_M_LIB S_X86_SEG16OFF16 * STDCALL WvlGetSafeHook(
     IN DEVICE_OBJECT * DeviceObject
   );
 
+/* From ../src/winvblock/safehook/fdo.c */
+
+/** FDO IRP dispatcher */
+DRIVER_DISPATCH WvSafeHookIrpDispatch;
+
 /** Struct/union type definitions */
+
 #ifdef _MSC_VER
 #  pragma pack(1)
 #endif
@@ -106,6 +113,20 @@ struct S_WV_SAFEHOOK_PDO_ {
     DEVICE_OBJECT * ParentBus;
     DEVICE_OBJECT * Self;
     S_WV_SAFEHOOK_PDO * Next;
+  };
+
+struct S_WV_SAFE_HOOK_BUS {
+    /** This must be the first member of all extension types */
+    WV_S_DEV_EXT DeviceExtension[1];
+
+    /** Flags for state that must be accessed atomically */
+    volatile LONG Flags;
+
+    /** The safe hook's PDO (bottom of the device stack) */
+    DEVICE_OBJECT * PhysicalDeviceObject;
+
+    /** PnP bus relations.  A safe hook can only have one child, at most */
+    DEVICE_RELATIONS BusRelations[1];
   };
 
 #endif  /* WV_M_PROBE_H_ */
