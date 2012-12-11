@@ -476,8 +476,8 @@ static NTSTATUS STDCALL WvMainBusPnpQueryDeviceRelations(
     NTSTATUS status;
     DEVICE_RELATIONS * dev_relations;
     DEVICE_RELATIONS * higher_dev_relations;
-    DEVICE_RELATIONS * new_dev_relations;
-    ULONG pdo_count;
+    DEVICE_RELATIONS * response;
+    ULONG i;
 
     ASSERT(dev_obj);
     bus = dev_obj->DeviceExtension;
@@ -507,65 +507,33 @@ static NTSTATUS STDCALL WvMainBusPnpQueryDeviceRelations(
         return WvlPassIrpDown(dev_obj, irp);
       }
 
-    pdo_count = dev_relations->Count;
-
     /* We need to include any higher driver's PDOs */
     higher_dev_relations = (VOID *) irp->IoStatus.Information;
-    if (higher_dev_relations) {
-        /* If we have nothing to add, pass the IRP down */
-        if (!pdo_count) {
-            return WvlPassIrpDown(dev_obj, irp);
-            status = irp->IoStatus.Status;
-            WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
-            return status;
+    response = WvlMergeDeviceRelations(dev_relations, higher_dev_relations);
+    if (!response) {
+        /*
+         * It's not clear whether or not we should do the following,
+         * but it can't hurt...  Right?
+         */
+        if (higher_dev_relations) {
+            for (i = 0; i < higher_dev_relations->Count; ++i)
+              ObDereferenceObject(higher_dev_relations->Objects[i]);
+            wv_free(higher_dev_relations);
           }
 
-        pdo_count += higher_dev_relations->Count;
-      }
-
-    /* Allocate a response */
-    new_dev_relations = wv_palloc(
-        sizeof *new_dev_relations +
-        sizeof new_dev_relations->Objects[0] * (pdo_count - 1)
-      );
-    if (!new_dev_relations) {
         irp->IoStatus.Status = status = STATUS_INSUFFICIENT_RESOURCES;
+        irp->IoStatus.Information = 0;
         WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
         return status;
       }
 
-    /* Populate the response... */
-    new_dev_relations->Count = pdo_count;
-    new_dev_relations->Objects[0] = NULL;
-
-    /* ...with our PDOs... */
-    if (dev_relations->Count) {
-        RtlCopyMemory(
-            new_dev_relations->Objects,
-            dev_relations->Objects,
-            sizeof new_dev_relations->Objects[0] * dev_relations->Count
-          );
-      }
-
-    /* ...and with the higher driver's PDOs, if any */
-    if (higher_dev_relations && higher_dev_relations->Count) {
-        RtlCopyMemory(
-            new_dev_relations->Objects + dev_relations->Count,
-            higher_dev_relations->Objects,
-            sizeof new_dev_relations->Objects[0] * higher_dev_relations->Count
-          );
-      }
-
-    /* Free the higher driver's response, if any */
-    wv_free(higher_dev_relations);
-
-    /* Reference our PDOs.  Re-purposing pdo_count, here */
-    for (pdo_count = 0; pdo_count < dev_relations->Count; ++pdo_count)
-      ObReferenceObject(dev_relations->Objects[pdo_count]);
+    /* Reference our PDOs */
+    for (i = 0; i < dev_relations->Count; ++i)
+      ObReferenceObject(dev_relations->Objects[i]);
 
     /* Send the IRP down */
     irp->IoStatus.Status = STATUS_SUCCESS;
-    irp->IoStatus.Information = (ULONG_PTR) new_dev_relations;
+    irp->IoStatus.Information = (ULONG_PTR) response;
     return WvlPassIrpDown(dev_obj, irp);
   }
 
