@@ -117,6 +117,8 @@ static VOID WvProcessDeviceIrp(
   );
 static IO_COMPLETION_ROUTINE WvIoCompletion;
 static F_WVL_DEVICE_THREAD_FUNCTION WvDriverWaitForActiveIrps;
+static BOOLEAN WvDriverLinkDevice(IN DEVICE_OBJECT * DeviceObject);
+static BOOLEAN WvDriverUnlinkDevice(IN DEVICE_OBJECT * DeviceObject);
 
 static LPWSTR STDCALL WvGetOpt(IN LPWSTR opt_name) {
     LPWSTR our_opts, the_opt;
@@ -2044,7 +2046,6 @@ WVL_M_LIB BOOLEAN STDCALL WvlAttachDeviceToDeviceStack(
     IN DEVICE_OBJECT * base
   ) {
     WV_S_DEV_EXT * dev_ext;
-    LONG flags;
     DEVICE_OBJECT * lower;
 
     ASSERT(upper);
@@ -2052,39 +2053,36 @@ WVL_M_LIB BOOLEAN STDCALL WvlAttachDeviceToDeviceStack(
     ASSERT(dev_ext);
     ASSERT(base);
 
-    flags = InterlockedOr(&dev_ext->Flags, CvWvlDeviceFlagLinked);
-    if (flags & CvWvlDeviceFlagLinked) {
-        DBG("Device %p already linked!\n", (VOID *) upper);
-        ASSERT(0);
-        return FALSE;
-      }
+    if (!WvDriverLinkDevice(upper))
+      goto err_link;
 
     lower = IoAttachDeviceToDeviceStack(upper, base);
-    if (!lower) {
-        flags = InterlockedAnd(&dev_ext->Flags, ~CvWvlDeviceFlagLinked);
-        return FALSE;
-      }
+    if (!lower)
+      goto err_lower;
 
     ASSERT(!dev_ext->LowerDeviceObject);
     dev_ext->LowerDeviceObject = lower;
     return TRUE;
+
+    IoDetachDevice(lower);
+    err_lower:
+
+    WvDriverUnlinkDevice(upper);
+    err_link:
+
+    return FALSE;
   }
 
 WVL_M_LIB VOID STDCALL WvlDetachDevice(IN OUT DEVICE_OBJECT * dev_obj) {
     WV_S_DEV_EXT * dev_ext;
-    LONG flags;
 
     ASSERT(dev_obj);
+
+    if (!WvDriverUnlinkDevice(dev_obj))
+      return;
+
     dev_ext = dev_obj->DeviceExtension;
     ASSERT(dev_ext);
-
-    flags = InterlockedAnd(&dev_ext->Flags, ~CvWvlDeviceFlagLinked);
-    if (!(flags & CvWvlDeviceFlagLinked)) {
-        DBG("Device %p not linked!\n", (VOID *) dev_obj);
-        ASSERT(0);
-        return;
-      }
-
     ASSERT(dev_ext->LowerDeviceObject);
     IoDetachDevice(dev_ext->LowerDeviceObject);
     dev_ext->LowerDeviceObject = NULL;
@@ -2160,4 +2158,64 @@ WVL_M_LIB DEVICE_RELATIONS * WvlMergeDeviceRelations(
       }
 
     return dev_relations;
+  }
+
+/**
+ * Set a mini-driver device's flags to indicate the device is linked
+ *
+ * @param DeviceObject
+ *   The device to be noted as linked
+ *
+ * @retval FALSE - Not a mini-driver device or already linked
+ * @retval TRUE - The device has been marked as linked
+ */
+static BOOLEAN WvDriverLinkDevice(IN DEVICE_OBJECT * dev_obj) {
+    WV_S_DEV_EXT * dev_ext;
+    LONG flags;
+
+    ASSERT(dev_obj);
+    dev_ext = dev_obj->DeviceExtension;
+    ASSERT(dev_ext);
+
+    if (!dev_ext->MiniDriver)
+      return FALSE;
+
+    flags = InterlockedOr(&dev_ext->Flags, CvWvlDeviceFlagLinked);
+    if (flags & CvWvlDeviceFlagLinked) {
+        DBG("Device %p already linked!\n", (VOID *) dev_obj);
+        ASSERT(0);
+        return FALSE;
+      }
+
+    return TRUE;
+  }
+
+/**
+ * Set a mini-driver device's flags to indicate the device is not linked
+ *
+ * @param DeviceObject
+ *   The device to be noted as not linked
+ *
+ * @retval FALSE - Not a mini-driver device or already not linked
+ * @retval TRUE - The device has been marked as not linked
+ */
+static BOOLEAN WvDriverUnlinkDevice(IN DEVICE_OBJECT * dev_obj) {
+    WV_S_DEV_EXT * dev_ext;
+    LONG flags;
+
+    ASSERT(dev_obj);
+    dev_ext = dev_obj->DeviceExtension;
+    ASSERT(dev_ext);
+
+    if (!dev_ext->MiniDriver)
+      return FALSE;
+
+    flags = InterlockedAnd(&dev_ext->Flags, ~CvWvlDeviceFlagLinked);
+    if (!(flags & CvWvlDeviceFlagLinked)) {
+        DBG("Device %p not linked!\n", (VOID *) dev_obj);
+        ASSERT(0);
+        return FALSE;
+      }
+
+    return TRUE;
   }
