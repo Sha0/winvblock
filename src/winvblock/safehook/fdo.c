@@ -162,14 +162,14 @@ static NTSTATUS STDCALL WvSafeHookDispatchPnpIrp(
  *     Irp->IoStatus.Status == STATUS_INSUFFICIENT_RESOURCES
  */
 static NTSTATUS STDCALL WvSafeHookPnpQueryDeviceRelations(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
+    IN DEVICE_OBJECT * dev_obj,
+    IN IRP * irp
   ) {
-    S_WV_SAFE_HOOK_BUS* bus;
+    S_WV_SAFE_HOOK_BUS * bus;
     IO_STACK_LOCATION * io_stack_loc;
-    DEVICE_RELATIONS * higher_dev_relations;
-    ULONG pdo_count;
     DEVICE_RELATIONS * dev_relations;
+    DEVICE_RELATIONS * higher_dev_relations;
+    DEVICE_RELATIONS * response;
     NTSTATUS status;
     ULONG i;
 
@@ -184,69 +184,45 @@ static NTSTATUS STDCALL WvSafeHookPnpQueryDeviceRelations(
 
     switch (io_stack_loc->Parameters.QueryDeviceRelations.Type) {
         case BusRelations:
-        pdo_count = bus->BusRelations->Count;
-
-        /* If we've nothing to report, pass it down */
-        if (!pdo_count)
-          return WvlPassIrpDown(dev_obj, irp);
-
-        /* Should we add to a higher device's list? */
-        if (higher_dev_relations && higher_dev_relations->Count)
-          pdo_count += higher_dev_relations->Count;
-
-        /* Allocate the response */
-        if (higher_dev_relations && !higher_dev_relations->Count) {
-            /* A higher device has conveniently left us a slot */
-            dev_relations = higher_dev_relations;
-          } else {
-            dev_relations = wv_palloc(
-                sizeof *dev_relations +
-                sizeof dev_relations->Objects[0] * (pdo_count - 1)
-              );
-          }
-        if (!dev_relations) {
-            status = STATUS_INSUFFICIENT_RESOURCES;
-            irp->IoStatus.Information = 0;
-
-            /*
-             * It's not clear whether or not we should do the following,
-             * but it can't hurt...  Right?
-             */
-            if (higher_dev_relations)
-              wv_free(higher_dev_relations);
-            goto err_dev_relations;
-          }
-
-        /* Populate the response */
-        dev_relations->Count = pdo_count;
-        i = 0;
-        if (higher_dev_relations) {
-            for (/* i == 0 */; i < higher_dev_relations->Count; ++i)
-              dev_relations->Objects[i] = higher_dev_relations->Objects[i];
-
-            /* Don't free if we're using a slot that an upper device left */
-            if (higher_dev_relations->Count)
-              wv_free(higher_dev_relations);
-          }
-        dev_relations->Objects[i] = bus->BusRelations->Objects[0];
-
-        status = STATUS_SUCCESS;
-        irp->IoStatus.Information = (ULONG_PTR) dev_relations;
+        dev_relations = bus->BusRelations;
         break;
 
+        case TargetDeviceRelation:
+        case RemovalRelations:
+        case EjectionRelations:
         default:
         DBG("Unsupported device relations query\n");
         return WvlPassIrpDown(dev_obj, irp);
       }
 
-    irp->IoStatus.Status = status;
+    /* We need to include any higher driver's PDOs */
+    higher_dev_relations = (VOID *) irp->IoStatus.Information;
+    response = WvlMergeDeviceRelations(dev_relations, higher_dev_relations);
+    if (!response) {
+        /*
+         * It's not clear whether or not we should do the following,
+         * but it can't hurt...  Right?
+         */
+        if (higher_dev_relations) {
+            for (i = 0; i < higher_dev_relations->Count; ++i)
+              ObDereferenceObject(higher_dev_relations->Objects[i]);
+            wv_free(higher_dev_relations);
+          }
+
+        irp->IoStatus.Status = status = STATUS_INSUFFICIENT_RESOURCES;
+        irp->IoStatus.Information = 0;
+        WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
+        return status;
+      }
+
+    /* Reference our PDOs */
+    for (i = 0; i < dev_relations->Count; ++i)
+      ObReferenceObject(dev_relations->Objects[i]);
+
+    /* Send the IRP down */
+    irp->IoStatus.Status = STATUS_SUCCESS;
+    irp->IoStatus.Information = (ULONG_PTR) response;
     return WvlPassIrpDown(dev_obj, irp);
-
-    err_dev_relations:
-
-    irp->IoStatus.Status = status;
-    WvlPassIrpUp(dev_obj, irp, IO_NO_INCREMENT);
-    return status;
   }
 
 /**
