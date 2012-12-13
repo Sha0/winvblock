@@ -585,7 +585,7 @@ extern WVL_M_LIB DEVICE_OBJECT * STDCALL WvlGetLowerDeviceObject(
  *   DEVICE_OBJECT pointers in its list.  This object is allocated from
  *   paged memory and can be freed
  */
-WVL_M_LIB DEVICE_RELATIONS * WvlMergeDeviceRelations(
+extern WVL_M_LIB DEVICE_RELATIONS * WvlMergeDeviceRelations(
     IN DEVICE_RELATIONS * FixedRelations,
     IN DEVICE_RELATIONS * FreeableRelations
   );
@@ -608,7 +608,7 @@ WVL_M_LIB DEVICE_RELATIONS * WvlMergeDeviceRelations(
  * That reference count must be decremented by unassigning the child
  * device before the bus device can be deleted
  */
-WVL_M_LIB BOOLEAN STDCALL WvlAssignDeviceToBus(
+extern WVL_M_LIB BOOLEAN STDCALL WvlAssignDeviceToBus(
     IN DEVICE_OBJECT * DeviceObject,
     IN DEVICE_OBJECT * ParentBusDeviceObject
   );
