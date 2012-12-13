@@ -314,7 +314,7 @@ static VOID WvSafeHookInitialProbe(IN DEVICE_OBJECT * dev_obj) {
     status = WvlAddDeviceToMainBus(first_hook);
     if (!NT_SUCCESS(status)) {
         DBG("Couldn't add safe hook to main bus\n");
-        IoDeleteDevice(first_hook);
+        WvlDeleteDevice(first_hook);
         return;
       }
   }
@@ -416,7 +416,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlCreateSafeHookDevice(
     status = STATUS_SUCCESS;
     goto out;
 
-    IoDeleteDevice(new_dev_obj);
+    WvlDeleteDevice(new_dev_obj);
     err_new_dev_obj:
 
     out:
