@@ -181,8 +181,60 @@ static NTSTATUS STDCALL WvSafeHookDriveDevice(
     IN DRIVER_OBJECT * drv_obj,
     IN DEVICE_OBJECT * pdo
   ) {
+    NTSTATUS status;
+    S_X86_SEG16OFF16 * safe_hook;
+    DEVICE_OBJECT * fdo;
+    S_WV_SAFE_HOOK_BUS * bus;
+
+    if (pdo->DriverObject != drv_obj || !(safe_hook = WvlGetSafeHook(pdo))) {
+        status = STATUS_NOT_SUPPORTED;
+        goto err_safe_hook;
+      }
+
+    /* Ok, we'll try to drive this PDO with an FDO */
+    fdo = NULL;
+    status = WvlCreateDevice(
+        WvSafeHookMiniDriver,
+        sizeof *bus,
+        NULL,
+        FILE_DEVICE_CONTROLLER,
+        FILE_DEVICE_SECURE_OPEN,
+        FALSE,
+        &fdo
+      );
+    if (!NT_SUCCESS(status))
+      goto err_fdo;
+    ASSERT(fdo);
+
+    bus = fdo->DeviceExtension;
+    ASSERT(bus);
+
+    bus->DeviceExtension->IrpDispatch = WvSafeHookIrpDispatch;
+    bus->Flags = 0;
+    bus->PhysicalDeviceObject = pdo;
+    bus->BusRelations->Count = 0;
+    bus->BusRelations->Objects[0] = NULL;
+
+    /* Attach the FDO to the PDO */
+    if (!WvlAttachDeviceToDeviceStack(fdo, pdo)) {
+        DBG("Error driving PDO %p!\n", (VOID *) pdo);
+        status = STATUS_DRIVER_INTERNAL_ERROR;
+        goto err_lower;
+      }
+
+    fdo->Flags &= ~DO_DEVICE_INITIALIZING;
+    DBG("Driving PDO %p with FDO %p\n", (VOID *) pdo, (VOID *) fdo);
+    return STATUS_SUCCESS;
+
+    err_lower:
+
+    WvlDeleteDevice(fdo);
+    err_fdo:
+
+    err_safe_hook:
+
     DBG("Refusing to drive PDO %p\n", (VOID *) pdo);
-    return STATUS_NOT_SUPPORTED;
+    return status;
   }
 
 /**
