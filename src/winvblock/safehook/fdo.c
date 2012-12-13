@@ -200,6 +200,10 @@ static NTSTATUS STDCALL WvSafeHookPnpQueryDeviceRelations(
             if (child) {
                 bus->BusRelations->Count = 1;
                 bus->BusRelations->Objects[0] = child;
+                if (!WvlAssignDeviceToBus(child, dev_obj)) {
+                    DBG("Couldn't add PDO\n");
+                    WvlDeleteDevice(child);
+                  }
               }
           }
 
@@ -282,7 +286,7 @@ static NTSTATUS STDCALL WvSafeHookPnpRemoveDevice(
         bus->BusRelations->Objects[0] = NULL;
         /* Best effort */
         WvlAssignDeviceToBus(child, NULL);
-        WvlDeleteDevice(bus->BusRelations->Objects[0]);
+        WvlDeleteDevice(child);
       }
 
     /* Send the IRP down */

@@ -173,6 +173,10 @@ static NTSTATUS STDCALL WvDummyDispatchPnpIrp(
         irp->IoStatus.Information = 0;
         break;
 
+        case IRP_MN_START_DEVICE:
+        status = STATUS_SUCCESS;
+        break;
+
         default:
         /* Return whatever upper drivers in the stack yielded */
         status = irp->IoStatus.Status;

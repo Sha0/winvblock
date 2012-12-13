@@ -80,6 +80,9 @@ typedef WCHAR
 
 /** This type is used for an alignment calculation */
 typedef struct S_WV_SAFE_HOOK_DUMMY_WRAPPER {
+    /** A dummy PDO extension */
+    S_WVL_DUMMY_PDO DummyPdo[1];
+
     /** The type of this member was produced by WV_M_DUMMY_ID_GEN */
     struct WvSafeHookDefaultDummyIdsStruct_ DummyIdsWrapper[1];
 
@@ -92,7 +95,9 @@ typedef struct S_WV_SAFE_HOOK_DUMMY_WRAPPER {
 static const ULONG CvWvSafeHookDummyIdsSize =
   sizeof (struct WvSafeHookDefaultDummyIdsStruct_);
 
-/** An alignment calculation */
+/** Alignment calculations */
+static const ULONG CvWvSafeHookDummyIdsOffset =
+  FIELD_OFFSET(S_WV_SAFE_HOOK_DUMMY_WRAPPER, DummyIdsWrapper);
 static const ULONG CvWvSafeHookDummyIdsExtraDataOffset =
   FIELD_OFFSET(S_WV_SAFE_HOOK_DUMMY_WRAPPER, Whence);
 
@@ -294,7 +299,6 @@ static VOID WvSafeHookInitialProbe(IN DEVICE_OBJECT * dev_obj) {
     S_X86_SEG16OFF16 int_13h;
     NTSTATUS status;
     DEVICE_OBJECT * first_hook;
-    S_WV_SAFEHOOK_PDO * safe_hook;
 
     ASSERT(dev_obj);
     (VOID) dev_obj;
@@ -313,11 +317,6 @@ static VOID WvSafeHookInitialProbe(IN DEVICE_OBJECT * dev_obj) {
         IoDeleteDevice(first_hook);
         return;
       }
-
-    /* Hack */
-    safe_hook = first_hook->DeviceExtension;
-    ASSERT(safe_hook);
-    safe_hook->ParentBus = WvBus.Fdo;
   }
 
 WVL_M_LIB NTSTATUS STDCALL WvlCreateSafeHookDevice(
@@ -329,7 +328,10 @@ WVL_M_LIB NTSTATUS STDCALL WvlCreateSafeHookDevice(
     NTSTATUS status;
     UINT32 hook_phys_addr;
     WV_S_PROBE_SAFE_MBR_HOOK * safe_mbr_hook;
-    DEVICE_OBJECT * new_dev;
+    WV_S_DUMMY_IDS * dummy_ids;
+    A_WV_SAFE_HOOK_VENDOR_STRING vendor;
+    DEVICE_OBJECT * new_dev_obj;
+    S_WVL_DUMMY_PDO * dummy;
 
     ASSERT(hook_addr);
     ASSERT(dev_obj);
@@ -362,6 +364,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlCreateSafeHookDevice(
     safe_mbr_hook = (VOID *) (phys_mem + hook_phys_addr);
     if (!wv_memcmpeq(safe_mbr_hook->Signature, sig, sizeof sig - 1)) {
         DBG("Invalid safe INT 0x13 hook signature.  End of chain\n");
+        status = STATUS_NOT_SUPPORTED;
         goto err_sig;
       }
 
@@ -369,31 +372,59 @@ WVL_M_LIB NTSTATUS STDCALL WvlCreateSafeHookDevice(
     DBG("Found safe hook with vendor ID: %.8s\n", safe_mbr_hook->VendorId);
 
     /* Build the IDs */
-
-    new_dev = WvSafeHookPdoCreate(hook_addr, safe_mbr_hook, NULL);
-    if (!new_dev) {
-        DBG("Could not create safe hook object\n");
+    RtlCopyMemory(
+        vendor,
+        safe_mbr_hook->VendorId,
+        sizeof safe_mbr_hook->VendorId
+      );
+    dummy_ids = WvSafeHookDummyIds(&vendor, hook_addr);
+    if (!dummy_ids) {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        goto err_new_dev;
+        goto err_dummy_ids;
       }
 
-    /* TODO: This is a hack while porting to mini-driver style */
-    {
-        WV_S_DEV_EXT * dev_ext = new_dev->DeviceExtension;
-        WvlInitializeResourceTracker(dev_ext->Usage);
-        WvlIncrementResourceUsage(dev_ext->Usage);
-      }
+    new_dev_obj = NULL;
+    status = WvDummyAdd(
+        /* Mini-driver: Us */
+        WvSafeHookMiniDriver,
+        /* Dummy IDs */
+        dummy_ids,
+        /* Dummy IDs offset */
+        CvWvSafeHookDummyIdsOffset,
+        /* Extra data offset */
+        CvWvSafeHookDummyIdsExtraDataOffset,
+        /* Extra data size */
+        sizeof *hook_addr,
+        /* Device name: Not specified */
+        NULL,
+        /* Exclusive access? */
+        FALSE,
+        /* PDO pointer to populate */
+        &new_dev_obj
+      );
+    if (!NT_SUCCESS(status))
+      goto err_new_dev_obj;
+    ASSERT(new_dev_obj);
 
-    *dev_obj = new_dev;
+    dummy = new_dev_obj->DeviceExtension;
+    ASSERT(dummy);
+    *((S_X86_SEG16OFF16 *) dummy->ExtraData) = *hook_addr;
+
+    if (dev_obj)
+      *dev_obj = new_dev_obj;
+
     status = STATUS_SUCCESS;
     goto out;
 
-    IoDeleteDevice(new_dev);
-    err_new_dev:
-
-    err_sig:
+    IoDeleteDevice(new_dev_obj);
+    err_new_dev_obj:
 
     out:
+
+    wv_free(dummy_ids);
+    err_dummy_ids:
+
+    err_sig:
 
     WvlMapUnmapLowMemory(phys_mem);
     err_map:
