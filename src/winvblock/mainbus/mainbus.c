@@ -567,7 +567,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlAddDeviceToMainBus(
  *   The device to be added
  *
  * @retval STATUS_SUCCESS
- * @retval STATUS_NO_SUCH_DEVICE
+ * @retval STATUS_INVALID_PARAMETER - The child device could not be assigned
  * @retval STATUS_INSUFFICIENT_RESOURCES
  */
 static NTSTATUS WvMainBusAddDevice(
@@ -590,14 +590,10 @@ static NTSTATUS WvMainBusAddDevice(
     ASSERT(new_dev_ext);
 
     /* TODO: Remove this check when everything is mini-driver */
-    if (new_dev_ext->MiniDriver) {
-        flags = InterlockedOr(&new_dev_ext->Flags, CvWvlDeviceFlagLinked);
-        if (flags & CvWvlDeviceFlagLinked) {
-            DBG("Device %p already linked!\n", (VOID *) dev_obj);
-            ASSERT(0);
-            status = STATUS_NO_SUCH_DEVICE;
-            goto err_linked;
-          }
+    if (new_dev_ext->MiniDriver)
+    if (!WvlAssignDeviceToBus(new_dev_obj, dev_obj)) {
+        status = STATUS_INVALID_PARAMETER;
+        goto err_assign;
       }
 
     status = WvlWaitForActiveIrps(dev_obj);
@@ -625,13 +621,6 @@ static NTSTATUS WvMainBusAddDevice(
       dev_relations->Objects[i] = bus->BusRelations->Objects[i];
     dev_relations->Objects[i] = new_dev_obj;
 
-    ASSERT(!new_dev_ext->ParentBusDeviceObject);
-    new_dev_ext->ParentBusDeviceObject = dev_obj;
-    WvlIncrementResourceUsage(bus->DeviceExtension->Usage);
-    /* TODO: Remove this check when everything is mini-driver */
-    if (new_dev_ext->MiniDriver)
-    WvlIncrementResourceUsage(new_dev_ext->Usage);
-
     wv_free(bus->BusRelations);
     bus->BusRelations = dev_relations;
     return STATUS_SUCCESS;
@@ -642,8 +631,9 @@ static NTSTATUS WvMainBusAddDevice(
 
     err_wait:
 
-    flags = InterlockedAnd(&new_dev_ext->Flags, ~CvWvlDeviceFlagLinked);
-    err_linked:
+    /* Best effort */
+    WvlAssignDeviceToBus(new_dev_obj, NULL);
+    err_assign:
 
     return status;
   }
@@ -702,17 +692,6 @@ static NTSTATUS WvMainBusRemoveDevice(
     ASSERT(rem_dev_ext);
     ASSERT(rem_dev_ext->ParentBusDeviceObject == dev_obj);
 
-    /* TODO: Remove this check when everything is mini-driver */
-    if (rem_dev_ext->MiniDriver) {
-        flags = InterlockedAnd(&rem_dev_ext->Flags, ~CvWvlDeviceFlagLinked);
-        if (!(flags & CvWvlDeviceFlagLinked)) {
-            DBG("Device %p not linked!\n", (VOID *) dev_obj);
-            ASSERT(0);
-            status = STATUS_NO_SUCH_DEVICE;
-            goto err_linked;
-          }
-      }
-
     status = WvlWaitForActiveIrps(dev_obj);
     if (!NT_SUCCESS(status))
       goto err_wait;
@@ -732,28 +711,21 @@ static NTSTATUS WvMainBusRemoveDevice(
     ASSERT(found);
     bus->BusRelations->Count -= found;
 
-    if (!found) {
+    if (!found || !WvlAssignDeviceToBus(rem_dev_obj, NULL)) {
         status = STATUS_UNSUCCESSFUL;
         goto err_found;
       }
 
-    rem_dev_ext->ParentBusDeviceObject = NULL;
-    WvlDecrementResourceUsage(bus->DeviceExtension->Usage);
     /* TODO: Remove this check when everything is mini-driver */
-    if (rem_dev_ext->MiniDriver) {
-        WvlDecrementResourceUsage(rem_dev_ext->Usage);
-        /* If linked, we take responsibility for deletion, too */
-        WvlDeleteDevice(rem_dev_obj);
-      }
+    if (rem_dev_ext->MiniDriver)
+    /* If linked, we take responsibility for deletion, too */
+    WvlDeleteDevice(rem_dev_obj);
 
     return STATUS_SUCCESS;
 
     err_found:
 
     err_wait:
-
-    flags = InterlockedOr(&rem_dev_ext->Flags, CvWvlDeviceFlagLinked);
-    err_linked:
 
     return status;
   }
