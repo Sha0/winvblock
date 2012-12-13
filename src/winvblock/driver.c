@@ -2255,3 +2255,24 @@ WVL_M_LIB BOOLEAN STDCALL WvlAssignDeviceToBus(
 
     return TRUE;
   }
+
+WVL_M_LIB VOID * WvlMapUnmapLowMemory(VOID * ptr) {
+    const SIZE_T one_mib = 0x100000;
+    PHYSICAL_ADDRESS phys_addr;
+    VOID * phys_mem;
+
+    if (!ptr) {
+        /* Map the first MiB of memory */
+        phys_addr.QuadPart = 0LL;
+        phys_mem = MmMapIoSpace(phys_addr, one_mib, MmNonCached);
+        if (!phys_mem) {
+            DBG("Could not map low memory\n");
+            return phys_mem;
+          }
+
+        return phys_mem;
+      } else {
+        MmUnmapIoSpace(ptr, one_mib);
+        return NULL;
+      }
+  }

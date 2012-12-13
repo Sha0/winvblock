@@ -614,6 +614,19 @@ WVL_M_LIB BOOLEAN STDCALL WvlAssignDeviceToBus(
   );
 
 /**
+ * Map or unmap low memory (the first 1 MiB)
+ *
+ * @param Pointer
+ *   Optional.  If null, map low memory.  If non-null, unmap the low
+ *   memory pointed to by this parameter
+ *
+ * @retval NULL - The memory could not be mapped or has been unmapped
+ * @return
+ *   If low memory was mapped, a pointer pointing to the mapped low memory
+ */
+extern WVL_M_LIB VOID * WvlMapUnmapLowMemory(VOID * Pointer);
+
+/**
  * Miscellaneous: Grouped memory allocation functions.
  */
 
