@@ -591,6 +591,29 @@ WVL_M_LIB DEVICE_RELATIONS * WvlMergeDeviceRelations(
   );
 
 /**
+ * Assign a device to a parent bus device
+ *
+ * @param DeviceObject
+ *   The device to be assigned
+ *
+ * @param ParentBusDeviceObject
+ *   Optional.  The parent bus device to be assigned-to.  If null, the
+ *   device is unassigned from its previous parent bus, if any
+ *
+ * @retval FALSE - The device could not be assigned
+ * @retval TRUE - The device has been assigned to the parent bus device
+ *
+ * This function has nothing to do with a bus device's response to a
+ * BusRelations query, but it does increment a reference count on the bus.
+ * That reference count must be decremented by unassigning the child
+ * device before the bus device can be deleted
+ */
+WVL_M_LIB BOOLEAN STDCALL WvlAssignDeviceToBus(
+    IN DEVICE_OBJECT * DeviceObject,
+    IN DEVICE_OBJECT * ParentBusDeviceObject
+  );
+
+/**
  * Miscellaneous: Grouped memory allocation functions.
  */
 

@@ -2219,3 +2219,39 @@ static BOOLEAN WvDriverUnlinkDevice(IN DEVICE_OBJECT * dev_obj) {
 
     return TRUE;
   }
+
+WVL_M_LIB BOOLEAN STDCALL WvlAssignDeviceToBus(
+    IN DEVICE_OBJECT * dev_obj,
+    IN DEVICE_OBJECT * parent
+  ) {
+    WV_S_DEV_EXT * dev_ext;
+
+    ASSERT(dev_obj);
+    dev_ext = dev_obj->DeviceExtension;
+    ASSERT(dev_ext);
+
+    if (parent) {
+      if (!WvDriverLinkDevice(dev_obj))
+        return FALSE;
+
+        ASSERT(!dev_ext->ParentBusDeviceObject);
+        dev_ext->ParentBusDeviceObject = parent;
+
+        dev_ext = parent->DeviceExtension;
+        ASSERT(dev_ext);
+        WvlIncrementResourceUsage(dev_ext->Usage);
+      } else {
+      if (!WvDriverUnlinkDevice(dev_obj))
+        return FALSE;
+
+        ASSERT(dev_ext->ParentBusDeviceObject);
+        parent = dev_ext->ParentBusDeviceObject;
+        dev_ext->ParentBusDeviceObject = NULL;
+
+        dev_ext = parent->DeviceExtension;
+        ASSERT(dev_ext);
+        WvlDecrementResourceUsage(dev_ext->Usage);
+      }
+
+    return TRUE;
+  }
