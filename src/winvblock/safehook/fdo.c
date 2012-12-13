@@ -167,10 +167,11 @@ static NTSTATUS STDCALL WvSafeHookPnpQueryDeviceRelations(
   ) {
     S_WV_SAFE_HOOK_BUS * bus;
     IO_STACK_LOCATION * io_stack_loc;
+    NTSTATUS status;
+    DEVICE_OBJECT * child;
     DEVICE_RELATIONS * dev_relations;
     DEVICE_RELATIONS * higher_dev_relations;
     DEVICE_RELATIONS * response;
-    NTSTATUS status;
     ULONG i;
 
     ASSERT(dev_obj);
@@ -184,6 +185,24 @@ static NTSTATUS STDCALL WvSafeHookPnpQueryDeviceRelations(
 
     switch (io_stack_loc->Parameters.QueryDeviceRelations.Type) {
         case BusRelations:
+
+        /*
+         * Have we already created a PDO for the previous
+         * INT 0x13 handler?
+         */
+        if (!bus->BusRelations->Count) {
+            /* No.  Try to create one */
+            child = NULL;
+            status = WvlCreateSafeHookDevice(
+                bus->PreviousInt13hHandler,
+                &child
+              );
+            if (child) {
+                bus->BusRelations->Count = 1;
+                bus->BusRelations->Objects[0] = child;
+              }
+          }
+
         dev_relations = bus->BusRelations;
         break;
 
