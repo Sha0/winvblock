@@ -238,6 +238,7 @@ static NTSTATUS STDCALL WvSafeHookDriveDevice(
     bus->PhysicalDeviceObject = pdo;
     bus->BusRelations->Count = 0;
     bus->BusRelations->Objects[0] = NULL;
+    bus->PreviousInt13hHandler[0] = hook->PrevHook;
 
     /* Attach the FDO to the PDO */
     if (!WvlAttachDeviceToDeviceStack(fdo, pdo)) {

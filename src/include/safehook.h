@@ -127,6 +127,9 @@ struct S_WV_SAFE_HOOK_BUS {
 
     /** PnP bus relations.  A safe hook can only have one child, at most */
     DEVICE_RELATIONS BusRelations[1];
+
+    /** A record of the previous INT 0x13 handler in the chain */
+    S_X86_SEG16OFF16 PreviousInt13hHandler[1];
   };
 
 #endif  /* WV_M_PROBE_H_ */
