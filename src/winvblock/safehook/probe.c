@@ -183,6 +183,10 @@ static NTSTATUS STDCALL WvSafeHookDriveDevice(
   ) {
     NTSTATUS status;
     S_X86_SEG16OFF16 * safe_hook;
+    UCHAR * phys_mem;
+    UINT32 hook_phys_addr;
+    WV_S_PROBE_SAFE_MBR_HOOK * hook;
+    LONG flags;
     DEVICE_OBJECT * fdo;
     S_WV_SAFE_HOOK_BUS * bus;
 
@@ -192,6 +196,26 @@ static NTSTATUS STDCALL WvSafeHookDriveDevice(
       }
 
     /* Ok, we'll try to drive this PDO with an FDO */
+    phys_mem = WvlMapUnmapLowMemory(NULL);
+    if (!phys_mem) {
+        status = STATUS_INSUFFICIENT_RESOURCES;
+        goto err_phys_mem;
+      }
+
+    hook_phys_addr = M_X86_SEG16OFF16_ADDR(safe_hook);
+    hook = (VOID *) (phys_mem + hook_phys_addr);
+
+    /*
+     * Quickly claim the safe hook.  Let's hope other drivers offer
+     * the same courtesy
+     */
+    flags = InterlockedOr(&hook->Flags, 1);
+    if (flags & 1) {
+        DBG("Safe hook already claimed\n");
+        status = STATUS_DEVICE_BUSY;
+        goto err_claimed;
+      }
+
     fdo = NULL;
     status = WvlCreateDevice(
         WvSafeHookMiniDriver,
@@ -224,16 +248,26 @@ static NTSTATUS STDCALL WvSafeHookDriveDevice(
 
     fdo->Flags &= ~DO_DEVICE_INITIALIZING;
     DBG("Driving PDO %p with FDO %p\n", (VOID *) pdo, (VOID *) fdo);
-    return STATUS_SUCCESS;
+    status = STATUS_SUCCESS;
+    goto out;
 
     err_lower:
 
     WvlDeleteDevice(fdo);
     err_fdo:
 
+    flags = InterlockedAnd(&hook->Flags, ~1);
+    err_claimed:
+
+    out:
+
+    WvlMapUnmapLowMemory(phys_mem);
+    err_phys_mem:
+
     err_safe_hook:
 
-    DBG("Refusing to drive PDO %p\n", (VOID *) pdo);
+    if (!NT_SUCCESS(status))
+      DBG("Refusing to drive PDO %p\n", (VOID *) pdo);
     return status;
   }
 
@@ -290,8 +324,6 @@ WVL_M_LIB NTSTATUS STDCALL WvlCreateSafeHookDevice(
     IN OUT DEVICE_OBJECT ** dev_obj
   ) {
     static const UCHAR sig[] = M_WV_SAFE_HOOK_SIGNATURE;
-    const SIZE_T one_mib = 0x100000;
-    PHYSICAL_ADDRESS phys_addr;
     UCHAR * phys_mem;
     NTSTATUS status;
     UINT32 hook_phys_addr;
@@ -302,8 +334,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlCreateSafeHookDevice(
     ASSERT(dev_obj);
 
     /* Map the first MiB of memory */
-    phys_addr.QuadPart = 0LL;
-    phys_mem = MmMapIoSpace(phys_addr, one_mib, MmNonCached);
+    phys_mem = WvlMapUnmapLowMemory(NULL);
     if (!phys_mem) {
         DBG("Could not map low memory\n");
         status = STATUS_INSUFFICIENT_RESOURCES;
@@ -363,7 +394,7 @@ WVL_M_LIB NTSTATUS STDCALL WvlCreateSafeHookDevice(
 
     out:
 
-    MmUnmapIoSpace(phys_mem, one_mib);
+    WvlMapUnmapLowMemory(phys_mem);
     err_map:
 
     return status;

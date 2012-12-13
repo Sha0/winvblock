@@ -245,6 +245,11 @@ static NTSTATUS STDCALL WvSafeHookPnpRemoveDevice(
     S_WV_SAFE_HOOK_BUS * bus;
     DEVICE_OBJECT * child;
     NTSTATUS status;
+    S_X86_SEG16OFF16 * safe_hook;
+    UCHAR * phys_mem;
+    UINT32 hook_phys_addr;
+    WV_S_PROBE_SAFE_MBR_HOOK * hook;
+    LONG flags;
 
     ASSERT(dev_obj);
     bus = dev_obj->DeviceExtension;
@@ -269,6 +274,17 @@ static NTSTATUS STDCALL WvSafeHookPnpRemoveDevice(
 
     /* Schedule deletion of this device when the thread finishes */
     WvlDeleteDevice(dev_obj);
+
+    /* Best effort to "unclaim" the safe hook */
+    phys_mem = WvlMapUnmapLowMemory(NULL);
+    if (phys_mem) {
+        safe_hook = WvlGetSafeHook(bus->PhysicalDeviceObject);
+        ASSERT(safe_hook);
+        hook_phys_addr = M_X86_SEG16OFF16_ADDR(safe_hook);
+        hook = (VOID *) (phys_mem + hook_phys_addr);
+        flags = InterlockedAnd(&hook->Flags, ~1);
+        WvlMapUnmapLowMemory(phys_mem);
+      }
 
     return status;
   }
