@@ -243,6 +243,7 @@ static NTSTATUS STDCALL WvSafeHookPnpRemoveDevice(
     IN IRP * irp
   ) {
     S_WV_SAFE_HOOK_BUS * bus;
+    DEVICE_OBJECT * child;
     NTSTATUS status;
 
     ASSERT(dev_obj);
@@ -250,11 +251,14 @@ static NTSTATUS STDCALL WvSafeHookPnpRemoveDevice(
     ASSERT(bus);
     ASSERT(irp);
 
-    /* TODO: Unlink the child PDO, if any */
+    /* Unlink the child PDO, if any */
     if (bus->BusRelations->Count) {
-        WvlDeleteDevice(bus->BusRelations->Objects[0]);
+        child = bus->BusRelations->Objects[0];
         bus->BusRelations->Count = 0;
         bus->BusRelations->Objects[0] = NULL;
+        /* Best effort */
+        WvlAssignDeviceToBus(child, NULL);
+        WvlDeleteDevice(bus->BusRelations->Objects[0]);
       }
 
     /* Send the IRP down */
