@@ -47,6 +47,9 @@
 /* From mainbus/mainbus.c */
 extern DRIVER_INITIALIZE WvMainBusDriverEntry;
 
+/* From memdisk/memdisk.c */
+extern DRIVER_INITIALIZE WvMemdiskDriverEntry;
+
 /* From safehook/probe.c */
 extern DRIVER_INITIALIZE WvSafeHookDriverEntry;
 
@@ -302,6 +305,9 @@ NTSTATUS STDCALL DriverEntry(
      * mini-drivers have a higher priority for driving devices
      */
     status = WvMainBusDriverEntry(drv_obj, reg_path);
+    if(!NT_SUCCESS(status))
+      goto err_internal_minidriver;
+    status = WvMemdiskDriverEntry(drv_obj, reg_path);
     if(!NT_SUCCESS(status))
       goto err_internal_minidriver;
     status = WvSafeHookDriverEntry(drv_obj, reg_path);

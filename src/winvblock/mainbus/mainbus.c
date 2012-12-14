@@ -528,7 +528,6 @@ NTSTATUS WvMainBusInitialBusRelations(DEVICE_OBJECT * dev_obj) {
         reg->Callback(dev_obj);
       }
     WvlReleaseLockedList(bus->InitialProbeRegistrations);
-    WvMemdiskFind();
 
     return STATUS_SUCCESS;
   }
