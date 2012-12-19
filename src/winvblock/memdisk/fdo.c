@@ -229,6 +229,10 @@ static NTSTATUS STDCALL WvMemdiskPnpQueryDeviceRelations(
               }
             break;
 
+            case 2:
+            /* All PDOs already produced */
+            break;
+
             default:
             DBG("Unexpected count of BusRelations!\n");
             ASSERT(0);
