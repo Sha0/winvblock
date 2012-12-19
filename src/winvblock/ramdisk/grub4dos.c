@@ -39,9 +39,10 @@
 #include "safehook.h"
 #include "grub4dos.h"
 
-/** Create a GRUB4DOS RAM disk and add it to the WinVBlock bus. */
-VOID WvRamdiskCreateG4dDisk(
+/** Create a GRUB4DOS RAM disk and set its parent bus */
+DEVICE_OBJECT * WvRamdiskCreateG4dDisk(
     SP_WV_G4D_DRIVE_MAPPING slot,
+    DEVICE_OBJECT * bus_dev_obj,
     WVL_E_DISK_MEDIA_TYPE media_type,
     UINT32 sector_size
   ) {
@@ -50,7 +51,7 @@ VOID WvRamdiskCreateG4dDisk(
     ramdisk = WvRamdiskCreatePdo(media_type);
     if (!ramdisk) {
         DBG("Could not create GRUB4DOS disk!\n");
-        return;
+        return NULL;
       }
     DBG("RAM Drive is type: %d\n", media_type);
 
@@ -67,9 +68,10 @@ VOID WvRamdiskCreateG4dDisk(
     ramdisk->disk->SectorSize = sector_size;
     ramdisk->Dev->Boot = TRUE;
      /* Add the ramdisk to the bus. */
-    ramdisk->disk->ParentBus = WvBus.Fdo;
-    if (!WvBusAddDev(ramdisk->Dev))
-      WvDevFree(ramdisk->Dev);
+    ramdisk->disk->ParentBus = bus_dev_obj;
+    WvlBusInitNode(&ramdisk->Dev->BusNode, ramdisk->Dev->Self);
+    ramdisk->Dev->BusNode.Linked = TRUE;
+    ramdisk->Dev->Self->Flags &= ~DO_DEVICE_INITIALIZING;
 
-    return;
+    return ramdisk->Dev->Self;
   }

@@ -39,10 +39,10 @@
 #include "debug.h"
 #include "bus.h"
 #include "ramdisk.h"
+#include "x86.h"
 #include "grub4dos.h"
 #include "thread.h"
 #include "filedisk.h"
-#include "x86.h"
 #include "safehook.h"
 #include "memdisk.h"
 
@@ -108,12 +108,6 @@ DRIVER_INITIALIZE WvSafeHookDriverEntry;
 static DRIVER_ADD_DEVICE WvSafeHookDriveDevice;
 static DRIVER_UNLOAD WvSafeHookUnload;
 static VOID WvSafeHookInitialProbe(IN DEVICE_OBJECT * DeviceObject);
-static BOOLEAN WvGrub4dosProcessSlot(SP_WV_G4D_DRIVE_MAPPING);
-static BOOLEAN WvGrub4dosProcessSafeHook(
-    PUCHAR,
-    SP_X86_SEG16OFF16,
-    WV_SP_PROBE_SAFE_MBR_HOOK
-  );
 static WV_S_DUMMY_IDS * WvSafeHookDummyIds(
     IN A_WV_SAFE_HOOK_VENDOR_STRING * Vendor,
     IN S_X86_SEG16OFF16 * Whence
@@ -450,83 +444,6 @@ WVL_M_LIB S_X86_SEG16OFF16 * STDCALL WvlGetSafeHook(
     /* The dummy extra data should have the SEG16:OFF16 of the hook */
     ASSERT(dummy->ExtraData);
     return dummy->ExtraData;
-  }
-
-/** Process a GRUB4DOS drive mapping slot.  Probably belongs elsewhere */
-static BOOLEAN WvGrub4dosProcessSlot(SP_WV_G4D_DRIVE_MAPPING slot) {
-    WVL_E_DISK_MEDIA_TYPE media_type;
-    UINT32 sector_size;
-
-    /* Check for an empty mapping */
-    if (slot->SectorCount == 0)
-      return FALSE;
-    DBG("GRUB4DOS SourceDrive: 0x%02x\n", slot->SourceDrive);
-    DBG("GRUB4DOS DestDrive: 0x%02x\n", slot->DestDrive);
-    DBG("GRUB4DOS MaxHead: %d\n", slot->MaxHead);
-    DBG("GRUB4DOS MaxSector: %d\n", slot->MaxSector);
-    DBG("GRUB4DOS DestMaxCylinder: %d\n", slot->DestMaxCylinder);
-    DBG("GRUB4DOS DestMaxHead: %d\n", slot->DestMaxHead);
-    DBG("GRUB4DOS DestMaxSector: %d\n", slot->DestMaxSector);
-    DBG("GRUB4DOS SectorStart: 0x%08x\n", slot->SectorStart);
-    DBG("GRUB4DOS SectorCount: %d\n", slot->SectorCount);
-
-    if (slot->SourceODD) {
-        media_type = WvlDiskMediaTypeOptical;
-        sector_size = 2048;
-      } else {
-        media_type =
-          (slot->SourceDrive & 0x80) ?
-          WvlDiskMediaTypeHard :
-          WvlDiskMediaTypeFloppy;
-        sector_size = 512;
-      }
-
-    /* Check for a RAM disk mapping */
-    if (slot->DestDrive == 0xFF) {
-        WvRamdiskCreateG4dDisk(slot, media_type, sector_size);
-      } else {
-        WvFilediskCreateG4dDisk(slot, media_type, sector_size);
-      }
-    return TRUE;
-  }
-
-/** Process a GRUB4DOS "safe hook".  Probably belongs elsewhere */
-static BOOLEAN WvGrub4dosProcessSafeHook(
-    PUCHAR phys_mem,
-    SP_X86_SEG16OFF16 segoff,
-    WV_SP_PROBE_SAFE_MBR_HOOK safe_mbr_hook
-  ) {
-    enum {CvG4dSlots = 8};
-    static const UCHAR sig[sizeof safe_mbr_hook->VendorId] = "GRUB4DOS";
-    SP_WV_G4D_DRIVE_MAPPING g4d_map;
-    #ifdef TODO_RESTORE_FILE_MAPPED_G4D_DISKS
-    WV_SP_FILEDISK_GRUB4DOS_DRIVE_FILE_SET sets;
-    #endif
-    int i;
-    BOOLEAN found = FALSE;
-
-    if (!wv_memcmpeq(safe_mbr_hook->VendorId, sig, sizeof sig)) {
-        DBG("Not a GRUB4DOS safe hook\n");
-        return FALSE;
-      }
-    DBG("Processing GRUB4DOS safe hook...\n");
-
-    #ifdef TODO_RESTORE_FILE_MAPPED_G4D_DISKS
-    sets = wv_mallocz(sizeof *sets * CvG4dSlots);
-    if (!sets) {
-        DBG("Couldn't allocate GRUB4DOS file mapping!\n");
-    #endif
-
-    g4d_map = (SP_WV_G4D_DRIVE_MAPPING) (
-        phys_mem + (((UINT32) segoff->Segment) << 4) + 0x20
-      );
-    /* Process each drive mapping slot */
-    i = CvG4dSlots;
-    while (i--)
-      found |= WvGrub4dosProcessSlot(g4d_map + i);
-    DBG("%sGRUB4DOS drives found\n", found ? "" : "No ");
-
-    return TRUE;
   }
 
 static WV_S_DUMMY_IDS * WvSafeHookDummyIds(

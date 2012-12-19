@@ -2,7 +2,7 @@
 
 set libname=grub4dos
 
-set c=g4dbus.c
+set c=g4dbus.c fdo.c
 
 echo !INCLUDE $(NTMAKEENV)\makefile.def	> makefile
 

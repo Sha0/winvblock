@@ -50,6 +50,9 @@ extern DRIVER_INITIALIZE WvMainBusDriverEntry;
 /* From memdisk/memdisk.c */
 extern DRIVER_INITIALIZE WvMemdiskDriverEntry;
 
+/* From grub4dos/g4dbus.c */
+extern DRIVER_INITIALIZE WvG4dDriverEntry;
+
 /* From safehook/probe.c */
 extern DRIVER_INITIALIZE WvSafeHookDriverEntry;
 
@@ -308,6 +311,9 @@ NTSTATUS STDCALL DriverEntry(
     if(!NT_SUCCESS(status))
       goto err_internal_minidriver;
     status = WvMemdiskDriverEntry(drv_obj, reg_path);
+    if(!NT_SUCCESS(status))
+      goto err_internal_minidriver;
+    status = WvG4dDriverEntry(drv_obj, reg_path);
     if(!NT_SUCCESS(status))
       goto err_internal_minidriver;
     status = WvSafeHookDriverEntry(drv_obj, reg_path);

@@ -1,7 +1,5 @@
 /**
- * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
- * Copyright 2006-2008, V.
- * For WinAoE contact information, see http://winaoe.org/
+ * Copyright (C) 2012, Shao Miller <sha0.miller@gmail.com>.
  *
  * This file is part of WinVBlock, originally derived from WinAoE.
  *
@@ -19,424 +17,284 @@
  * along with WinVBlock.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/****
+/**
  * @file
  *
- * GRUB4DOS bus specifics; both PDO and FDO together.
+ * GRUB4DOS mini-driver
  */
 
 #include <ntddk.h>
-#include <initguid.h>
-#include <stdio.h>
 
 #include "portable.h"
 #include "winvblock.h"
 #include "wv_stdlib.h"
+#include "wv_string.h"
 #include "driver.h"
 #include "bus.h"
 #include "device.h"
 #include "disk.h"
-#include "grub4dos.h"
+#include "ramdisk.h"
 #include "debug.h"
+#include "x86.h"
+#include "safehook.h"
+#include "grub4dos.h"
 
-/*** Macros. */
-#define M_FUNC_ENTRY()
+/** Macros */
+#define M_WV_G4D_SAFE_HOOK_SIGNATURE "GRUB4DOS"
 
-/*** Object types. */
-typedef struct S_WVG4DBUS_ S_WVG4DBUS, * SP_WVG4DBUS;
+/** Public function declarations */
+DRIVER_INITIALIZE WvG4dDriverEntry;
 
-/*** Struct/union definitions. */
-struct S_WVG4DBUS_ {
-    WV_S_DEV_EXT DevExt;
-    struct {
-        DEVICE_RELATIONS Data;
-        /*
-         * 'DevRelations' has an array of one PDEVICE_OBJECT.
-         * We need a total of M_G4D_SLOTS + 1 (for an INT 0x13 hook), so...
-         */
-        PDEVICE_OBJECT Padding[M_G4D_SLOTS];
-      } BusRelations;
-    WV_S_DEV_T Dev;
-    PDEVICE_OBJECT ParentBus;
-    PVOID Int13hHook;
-  };
+/** Function declarations */
+static DRIVER_ADD_DEVICE WvG4dDriveDevice;
+static DRIVER_UNLOAD WvG4dUnload;
+/** Objects */
+static S_WVL_MINI_DRIVER * WvG4dMiniDriver;
 
-/*** Function declarations. */
-static NTSTATUS STDCALL WvG4dBusIrpComplete(IN PIRP);
-static NTSTATUS WvG4dBusIrpDispatch(IN PDEVICE_OBJECT, IN PIRP);
-static NTSTATUS STDCALL WvG4dBusIrpPnp(IN PDEVICE_OBJECT, IN PIRP);
-static NTSTATUS STDCALL WvG4dBusIrpPnpQueryId(IN PDEVICE_OBJECT, IN PIRP);
-static NTSTATUS STDCALL WvG4dBusIrpPnpQueryDevText(IN PDEVICE_OBJECT, IN PIRP);
-static NTSTATUS STDCALL WvG4dBusIrpPnpQueryBusInfo(IN PDEVICE_OBJECT, IN PIRP);
-static NTSTATUS STDCALL WvG4dBusIrpPnpQueryDevRelations(
-    IN PDEVICE_OBJECT,
-    IN PIRP
-  );
-static NTSTATUS STDCALL WvG4dBusIrpPnpQueryCapabilities(
-    IN PDEVICE_OBJECT,
-    IN PIRP
-  );
+/** Function definitions */
 
-/*** Objects. */
-DEFINE_GUID(
-    GUID_BUS_TYPE_INTERNAL,
-    0x2530ea73L,
-    0x086b,
-    0x11d1,
-    0xa0,
-    0x9f,
-    0x00,
-    0xc0,
-    0x4f,
-    0xc3,
-    0x40,
-    0xb1
-  );
-
-/*** Function definitions. */
-
-/* Complete an IRP. */
-static NTSTATUS STDCALL WvG4dBusIrpComplete(IN PIRP irp) {
-    IoCompleteRequest(irp, IO_NO_INCREMENT);
-    WVL_M_DEBUG_IRP_END(irp, irp->IoStatus.Status);
-    return irp->IoStatus.Status;
-  }
-
-/* Dispatch an IRP. */
-static NTSTATUS WvG4dBusIrpDispatch(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
+/**
+ * The mini-driver entry-point
+ *
+ * @param DriverObject
+ *   The driver object provided by the caller
+ *
+ * @param RegistryPath
+ *   The Registry path provided by the caller
+ *
+ * @return
+ *   The status of the operation
+ */
+NTSTATUS WvG4dDriverEntry(
+    IN DRIVER_OBJECT * drv_obj,
+    IN UNICODE_STRING * reg_path
   ) {
-    PIO_STACK_LOCATION io_stack_loc;
-    M_FUNC_ENTRY();
-
-    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-    switch (io_stack_loc->MajorFunction) {
-        case IRP_MJ_PNP:
-          return WvG4dBusIrpPnp(dev_obj, irp);
-
-        default:
-          ;
-      }
-    irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
-    irp->IoStatus.Information = 0;
-    return WvG4dBusIrpComplete(irp);
-  }
-
-/* Handle a PnP IRP. */
-static NTSTATUS STDCALL WvG4dBusIrpPnp(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    UCHAR code;
-    M_FUNC_ENTRY();
-
-    code = IoGetCurrentIrpStackLocation(irp)->MinorFunction;
-    switch (code) {
-        case IRP_MN_QUERY_ID:
-          return WvG4dBusIrpPnpQueryId(dev_obj, irp);
-
-        case IRP_MN_QUERY_DEVICE_TEXT:
-          return WvG4dBusIrpPnpQueryDevText(dev_obj, irp);
-
-        case IRP_MN_QUERY_BUS_INFORMATION:
-          return WvG4dBusIrpPnpQueryBusInfo(dev_obj, irp);
-
-        case IRP_MN_QUERY_DEVICE_RELATIONS:
-          return WvG4dBusIrpPnpQueryDevRelations(dev_obj, irp);
-
-        case IRP_MN_QUERY_CAPABILITIES:
-          return WvG4dBusIrpPnpQueryCapabilities(dev_obj, irp);
-
-        case IRP_MN_REMOVE_DEVICE:
-        case IRP_MN_START_DEVICE:
-        case IRP_MN_QUERY_STOP_DEVICE:
-        case IRP_MN_CANCEL_STOP_DEVICE:
-        case IRP_MN_STOP_DEVICE:
-        case IRP_MN_QUERY_REMOVE_DEVICE:
-        case IRP_MN_CANCEL_REMOVE_DEVICE:
-        case IRP_MN_SURPRISE_REMOVAL:
-        case IRP_MN_QUERY_RESOURCES:
-        case IRP_MN_QUERY_RESOURCE_REQUIREMENTS:
-          irp->IoStatus.Status = STATUS_SUCCESS;
-          break;
-
-        case IRP_MN_QUERY_PNP_DEVICE_STATE:
-          irp->IoStatus.Information = 0;
-          irp->IoStatus.Status = STATUS_SUCCESS;
-          break;
-
-        default:
-          irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
-      }
-    return WvG4dBusIrpComplete(irp);
-  }
-
-/* Return device IDs .*/
-static NTSTATUS STDCALL WvG4dBusIrpPnpQueryId(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    static const WCHAR hw_id[] = WVL_M_WLIT L"\\Int13hHook\0";
-    static const WCHAR instance_id[] = L"HOOK_at_%08X\0\0\0\0";
-    BUS_QUERY_ID_TYPE query_type;
-    SIZE_T buf_size;
-    WCHAR * buf;
     NTSTATUS status;
-    INT copied;
-    SP_WVG4DBUS bus;
-    M_FUNC_ENTRY();
 
-    query_type = IoGetCurrentIrpStackLocation(irp)->Parameters.QueryId.IdType;
+    /* Register this mini-driver */
+    status = WvlRegisterMiniDriver(
+        &WvG4dMiniDriver,
+        drv_obj,
+        WvG4dDriveDevice,
+        WvG4dUnload
+      );
+    if (!NT_SUCCESS(status))
+      goto err_register;
+    ASSERT(WvG4dMiniDriver);
 
-    /* Determine the buffer size to allocate */
-    switch (query_type) {
-        case BusQueryDeviceID:
-        case BusQueryHardwareIDs:
-        case BusQueryCompatibleIDs:
-          buf_size = sizeof hw_id;
-          break;
+    return STATUS_SUCCESS;
 
-        case BusQueryInstanceID:
-          buf_size = sizeof instance_id;
-          break;
+    err_register:
 
-        default:
-          DBG("Unknown query type for G4D bus dev %p!", (PVOID) dev_obj);
-          status = STATUS_INVALID_PARAMETER;
-          goto err_query_type;
+    return status;
+  }
+
+/**
+ * Drive a safe hook PDO with a GRUB4DOS FDO
+ *
+ * @param DriverObject
+ *   The driver object provided by the caller
+ *
+ * @param PhysicalDeviceObject
+ *   The PDO to probe and attach the GRUB4DOS FDO to
+ *
+ * @return
+ *   The status of the operation
+ */
+static NTSTATUS STDCALL WvG4dDriveDevice(
+    IN DRIVER_OBJECT * drv_obj,
+    IN DEVICE_OBJECT * pdo
+  ) {
+    static const UCHAR g4d_sig[] = M_WV_G4D_SAFE_HOOK_SIGNATURE;
+    S_X86_SEG16OFF16 * safe_hook;
+    NTSTATUS status;
+    UCHAR * phys_mem;
+    UINT32 hook_phys_addr;
+    WV_S_PROBE_SAFE_MBR_HOOK * hook;
+    LONG flags;
+    DEVICE_OBJECT * fdo;
+    S_WV_G4D_BUS * bus;
+    UINT i;
+
+    ASSERT(drv_obj);
+    ASSERT(pdo);
+
+    if (pdo->DriverObject != drv_obj || !(safe_hook = WvlGetSafeHook(pdo))) {
+        status = STATUS_NOT_SUPPORTED;
+        goto err_safe_hook;
       }
 
-    /* Allocate the buffer */
-    buf = wv_mallocz(buf_size);
-    if (!buf) {
+    /* Examine the hook */
+    phys_mem = WvlMapUnmapLowMemory(NULL);
+    if (!phys_mem) {
         status = STATUS_INSUFFICIENT_RESOURCES;
-        goto err_buf;
+        goto err_phys_mem;
       }
 
-    /* Populate the buffer with the ID */
-    switch (query_type) {
-        case BusQueryDeviceID:
-        case BusQueryHardwareIDs:
-        case BusQueryCompatibleIDs:
-          copied = swprintf(buf, hw_id);
-          break;
+    hook_phys_addr = M_X86_SEG16OFF16_ADDR(safe_hook);
+    hook = (VOID *) (phys_mem + hook_phys_addr);
 
-        case BusQueryInstanceID:
-        	/* "Location" */
-        	bus = CONTAINING_RECORD(
-              dev_obj->DeviceExtension,
-              S_WVG4DBUS,
-              DevExt
-            );
-          copied = swprintf(buf, instance_id, bus->Int13hHook);
-          break;
-
-        default:
-          /* Impossible thanks to earlier 'switch' */
-          ;
-      }
-    if (!copied) {
-        DBG("swprintf() error!\n");
-        status = STATUS_UNSUCCESSFUL;
-        goto err_copied;
+    /* Check if this is a GRUB4DOS hook */
+    if (!wv_memcmpeq(hook->VendorId, g4d_sig, sizeof g4d_sig - 1)) {
+        status = STATUS_NOT_SUPPORTED;
+        goto err_sig;
       }
 
-    DBG("IRP_MN_QUERY_ID for G4D bus dev %p\n", (PVOID) dev_obj);
-    irp->IoStatus.Information = (ULONG_PTR) buf;
-    irp->IoStatus.Status = STATUS_SUCCESS;
-    return WvG4dBusIrpComplete(irp);
-
-    err_copied:
-
-    wv_free(buf);
-    err_buf:
-
-    err_query_type:
-
-    irp->IoStatus.Information = 0;
-    irp->IoStatus.Status = status;
-    return WvG4dBusIrpComplete(irp);
-  }
-
-/* Return device text. */
-static NTSTATUS STDCALL WvG4dBusIrpPnpQueryDevText(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    static const WCHAR name[] = L"GRUB4DOS Bus";
-    PIO_STACK_LOCATION io_stack_loc;
-    PWCHAR result;
-    M_FUNC_ENTRY();
-
-    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-    switch (io_stack_loc->Parameters.QueryDeviceText.DeviceTextType) {
-        case DeviceTextDescription:
-          result = wv_palloc(sizeof name);
-          if (!result) {
-              DBG("wv_palloc failed!\n");
-              irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-              irp->IoStatus.Information = 0;
-              goto err_alloc_result;
-            }
-
-          RtlCopyMemory(result, name, sizeof name);
-          irp->IoStatus.Status = STATUS_SUCCESS;
-          irp->IoStatus.Information = (ULONG_PTR) result;
-          break;
-
-          wv_free(result);
-          err_alloc_result:
-
-          break;
-
-        default:
-          irp->IoStatus.Status = STATUS_NOT_SUPPORTED;
-          irp->IoStatus.Information = 0;
-          break;
-      }
-    return WvG4dBusIrpComplete(irp);
-  }
-
-/* Return parent bus info (the WinVBlock bus). */
-static NTSTATUS STDCALL WvG4dBusIrpPnpQueryBusInfo(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    PPNP_BUS_INFORMATION pnp_bus_info;
-    M_FUNC_ENTRY();
-
-    pnp_bus_info = wv_palloc(sizeof *pnp_bus_info);
-    if (!pnp_bus_info) {
-        DBG("wv_palloc failed!\n");
-        irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-        irp->IoStatus.Information = 0;
-        goto err_alloc_pnp_bus_info;
+    /*
+     * Quickly claim the safe hook.  Let's hope other drivers offer
+     * the same courtesy
+     */
+    flags = InterlockedOr(&hook->Flags, 1);
+    if (flags & 1) {
+        DBG("Safe hook already claimed\n");
+        /*
+         * This is a known bug with some versions of GRUB4DOS.  Hack
+         * around it and accept it anyway.  Hopefully another driver
+         * doesn't conflict with us, else there'll be two drivers both
+         * providing access to the same device, which'll result in having
+         * the same single-system filesystem(s) mounted with write
+         * capabilities, twice.  That'd be trouble for that FS (and the OS)
+         */
+        hook->VendorId[6] = '0';
       }
 
-    pnp_bus_info->BusTypeGuid = GUID_BUS_TYPE_INTERNAL;
-    pnp_bus_info->LegacyBusType = PNPBus;
-    pnp_bus_info->BusNumber = 0;
-    irp->IoStatus.Status = STATUS_SUCCESS;
-    irp->IoStatus.Information = (ULONG_PTR) pnp_bus_info;
+    fdo = NULL;
+    status = WvlCreateDevice(
+        WvG4dMiniDriver,
+        sizeof *bus,
+        NULL,
+        FILE_DEVICE_CONTROLLER,
+        FILE_DEVICE_SECURE_OPEN,
+        FALSE,
+        &fdo
+      );
+    if (!NT_SUCCESS(status))
+      goto err_fdo;
+    ASSERT(fdo);
+
+    bus = fdo->DeviceExtension;
+    ASSERT(bus);
+
+    bus->DeviceExtension->IrpDispatch = WvG4dIrpDispatch;
+    bus->Flags = 0;
+    bus->PhysicalDeviceObject = pdo;
+    bus->BusRelations->Count = 0;
+    bus->BusRelations->Objects[0] = NULL;
+    RtlCopyMemory(
+        bus->DriveMappings,
+        phys_mem + (((UINT32) safe_hook->Segment) << 4) + 0x20,
+        sizeof bus->DriveMappings
+      );
+    /* Always try to create a PDO for the previous INT 0x13 handler */
+    bus->NodesNeeded = 1 << M_G4D_SLOTS;
+    bus->PreviousInt13hHandler[0] = hook->PrevHook;
+
+    /* Examine the drive mappings and note which of them need a PDO */
+    for (i = 0; i < M_G4D_SLOTS; ++i) {
+        if (!bus->DriveMappings[i].SectorCount)
+          continue;
+        bus->NodesNeeded |= 1 << i;
+      }
+
+    /* Attach the FDO to the PDO */
+    if (!WvlAttachDeviceToDeviceStack(fdo, pdo)) {
+        DBG("Error driving PDO %p!\n", (VOID *) pdo);
+        status = STATUS_DRIVER_INTERNAL_ERROR;
+        goto err_lower;
+      }
+
+    fdo->Flags &= ~DO_DEVICE_INITIALIZING;
+    DBG("Driving PDO %p with FDO %p\n", (VOID *) pdo, (VOID *) fdo);
+    status = STATUS_SUCCESS;
     goto out;
 
-    wv_free(pnp_bus_info);
-    err_alloc_pnp_bus_info:
+    err_lower:
+
+    WvlDeleteDevice(fdo);
+    err_fdo:
+
+    flags = InterlockedAnd(&hook->Flags, ~1);
+
+    err_sig:
 
     out:
-    return WvG4dBusIrpComplete(irp);
+
+    WvlMapUnmapLowMemory(phys_mem);
+    err_phys_mem:
+
+    err_safe_hook:
+
+    if (!NT_SUCCESS(status))
+      DBG("Refusing to drive PDO %p\n", (VOID *) pdo);
+    return status;
   }
 
-/* Return device relations info. */
-static NTSTATUS STDCALL WvG4dBusIrpPnpQueryDevRelations(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
-  ) {
-    PIO_STACK_LOCATION io_stack_loc;
-    DEVICE_RELATION_TYPE type;
-    wv_size_t size;
-    SP_WVG4DBUS bus;
-    PDEVICE_RELATIONS dev_relations;
-    ULONG i;
-    M_FUNC_ENTRY();
-
-    io_stack_loc = IoGetCurrentIrpStackLocation(irp);    
-    type = io_stack_loc->Parameters.QueryDeviceRelations.Type;
-    if (irp->IoStatus.Information) {
-        DBG("IRP already handled!\n");
-        goto err_handled;
-      }
-
-    switch (type) {
-        case BusRelations:
-          size = sizeof bus->BusRelations;
-          break;
-
-        case TargetDeviceRelation:
-          size = sizeof *dev_relations;
-          break;
-
-        default:
-          DBG("Unsupported!\n");
-          goto err_type;
-      }
-    dev_relations = wv_palloc(size);
-    if (!dev_relations) {
-        DBG("wv_palloc failed!\n");
-        irp->IoStatus.Status = STATUS_INSUFFICIENT_RESOURCES;
-        irp->IoStatus.Information = 0;
-        goto err_alloc_dev_relations;
-      }
-
-    switch (type) {
-        case BusRelations:
-          bus = dev_obj->DeviceExtension;
-          RtlCopyMemory(
-              dev_relations,
-              &bus->BusRelations,
-              sizeof bus->BusRelations
-            );
-          for (i = 0; i < dev_relations->Count; ++i)
-            ObReferenceObject(dev_relations->Objects[i]);
-          break;
-
-        case TargetDeviceRelation:
-          dev_relations->Count = 1;
-          dev_relations->Objects[0] = dev_obj;
-          break;
-
-        default:
-          /* Impossible thanks to earlier 'switch' */
-          ;
-      }
-    irp->IoStatus.Status = STATUS_SUCCESS;
-    irp->IoStatus.Information = (ULONG_PTR) dev_relations;
-    goto out;
-
-    wv_free(dev_relations);
-    err_alloc_dev_relations:
-
-    err_type:
-
-    err_handled:
-
-    out:
-    return WvG4dBusIrpComplete(irp);
+/**
+ * Release resources and unwind state
+ *
+ * @param DriverObject
+ *   The driver object provided by the caller
+ */
+static VOID STDCALL WvG4dUnload(IN DRIVER_OBJECT * drv_obj) {
+    ASSERT(drv_obj);
+    (VOID) drv_obj;
+    WvlDeregisterMiniDriver(WvG4dMiniDriver);
   }
 
-/* Return device capabilities info. */
-static NTSTATUS STDCALL WvG4dBusIrpPnpQueryCapabilities(
-    IN PDEVICE_OBJECT dev_obj,
-    IN PIRP irp
+DEVICE_OBJECT * WvG4dProcessSlot(
+    IN DEVICE_OBJECT * bus_dev_obj,
+    IN S_WV_G4D_DRIVE_MAPPING * slot
   ) {
-    PIO_STACK_LOCATION io_stack_loc;
-    PDEVICE_CAPABILITIES dev_caps;
-    SP_WVG4DBUS bus;
-    DEVICE_CAPABILITIES parent_dev_caps;
-    M_FUNC_ENTRY();
+    WVL_E_DISK_MEDIA_TYPE media_type;
+    UINT32 sector_size;
+    DEVICE_OBJECT * new_dev_obj;
 
-    io_stack_loc = IoGetCurrentIrpStackLocation(irp);
-    dev_caps = io_stack_loc->Parameters.DeviceCapabilities.Capabilities;
-    if (dev_caps->Version != 1 || dev_caps->Size < sizeof *dev_caps) {
-        irp->IoStatus.Status = STATUS_UNSUCCESSFUL;
-        DBG("Wrong version!\n");
-        goto err_version;
+    ASSERT(slot->SectorCount);
+
+    DBG("GRUB4DOS SourceDrive: 0x%02x\n", slot->SourceDrive);
+    DBG("GRUB4DOS DestDrive: 0x%02x\n", slot->DestDrive);
+    DBG("GRUB4DOS MaxHead: %d\n", slot->MaxHead);
+    DBG("GRUB4DOS MaxSector: %d\n", slot->MaxSector);
+    DBG("GRUB4DOS DestMaxCylinder: %d\n", slot->DestMaxCylinder);
+    DBG("GRUB4DOS DestMaxHead: %d\n", slot->DestMaxHead);
+    DBG("GRUB4DOS DestMaxSector: %d\n", slot->DestMaxSector);
+    DBG("GRUB4DOS SectorStart: 0x%08x\n", slot->SectorStart);
+    DBG("GRUB4DOS SectorCount: %d\n", slot->SectorCount);
+
+    if (slot->SourceODD) {
+        media_type = WvlDiskMediaTypeOptical;
+        sector_size = 2048;
+      } else {
+        media_type =
+          (slot->SourceDrive & 0x80) ?
+          WvlDiskMediaTypeHard :
+          WvlDiskMediaTypeFloppy;
+        sector_size = 512;
       }
 
-    bus = dev_obj->DeviceExtension;
-    irp->IoStatus.Status =
-      WvDriverGetDevCapabilities(bus->ParentBus, &parent_dev_caps);
-    if (!NT_SUCCESS(irp->IoStatus.Status))
-      goto err_parent_caps;
+    /* Check for a RAM disk mapping */
+    if (slot->DestDrive == 0xFF) {
+        new_dev_obj = WvRamdiskCreateG4dDisk(
+            slot,
+            bus_dev_obj,
+            media_type,
+            sector_size
+          );
+      } else {
+        new_dev_obj = WvFilediskCreateG4dDisk(
+            slot,
+            bus_dev_obj,
+            media_type,
+            sector_size
+          );
+      }
 
-    RtlCopyMemory(dev_caps, &parent_dev_caps, sizeof *dev_caps);
-    goto out;
+    return new_dev_obj;
+  }
 
-    err_parent_caps:
-
-    err_version:
-
-    out:
-    return WvG4dBusIrpComplete(irp);
+NTSTATUS WvG4dCreateDisk(
+    IN DEVICE_OBJECT * parent,
+    IN DEVICE_OBJECT ** pdo
+  ) {
+    return STATUS_SUCCESS;
   }

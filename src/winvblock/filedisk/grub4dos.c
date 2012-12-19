@@ -376,8 +376,6 @@ static VOID STDCALL WvFilediskG4dFindBackingDisk_(
       goto retry;
     /* Use the backing disk and report the sector-mapped disk. */
     filedisk_ptr->file = file;
-    if (!WvBusAddDev(filedisk_ptr->Dev))
-      WvDevFree(filedisk_ptr->Dev);
 
     /* Release the driver re-initialization stall. */
     KeAcquireSpinLock(&WvFindDiskLock, &irql);
@@ -513,9 +511,10 @@ static VOID STDCALL process_param_block(
       } /* while */
   }
 
-/** Create a GRUB4DOS sector-mapped disk and add it to the WinVBlock bus. */
-VOID WvFilediskCreateG4dDisk(
+/** Create a GRUB4DOS sector-mapped disk and sets its parent bus */
+DEVICE_OBJECT * WvFilediskCreateG4dDisk(
     SP_WV_G4D_DRIVE_MAPPING slot,
+    DEVICE_OBJECT * bus_dev_obj,
     WVL_E_DISK_MEDIA_TYPE media_type,
     UINT32 sector_size
   ) {
@@ -533,7 +532,7 @@ VOID WvFilediskCreateG4dDisk(
     filedisk_ptr = WvFilediskCreatePdo(media_type);
     if (!filedisk_ptr) {
         DBG("Could not create GRUB4DOS sector-mapped disk!\n");
-        return;
+        return NULL;
       }
     DBG("Sector-mapped disk is type: %d\n", media_type);
 
@@ -585,10 +584,16 @@ VOID WvFilediskCreateG4dDisk(
     filedisk_ptr->hash = 'G4DX';
     ((PUCHAR) &filedisk_ptr->hash)[0] = slot->SourceDrive;
     filedisk_ptr->Dev->Boot = TRUE;
-    /* Add the filedisk to the bus. */
-    filedisk_ptr->disk->ParentBus = WvBus.Fdo;
-    if (!WvFilediskG4dFindBackingDisk(filedisk_ptr))
-      WvDevFree(filedisk_ptr->Dev);
+    if (!WvFilediskG4dFindBackingDisk(filedisk_ptr)) {
+        WvDevFree(filedisk_ptr->Dev);
+        return NULL;
+      }
 
-    return;
+    /* Add the filedisk to the bus. */
+    filedisk_ptr->disk->ParentBus = bus_dev_obj;
+    WvlBusInitNode(&filedisk_ptr->Dev->BusNode, filedisk_ptr->Dev->Self);
+    filedisk_ptr->Dev->BusNode.Linked = TRUE;
+    filedisk_ptr->Dev->Self->Flags &= ~DO_DEVICE_INITIALIZING;
+
+    return filedisk_ptr->Dev->Self;
   }
