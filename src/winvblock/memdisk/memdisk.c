@@ -126,6 +126,9 @@ static NTSTATUS STDCALL WvMemdiskDriveDevice(
     DEVICE_OBJECT * fdo;
     S_WV_MEMDISK_BUS * bus;
 
+    ASSERT(drv_obj);
+    ASSERT(pdo);
+
     if (pdo->DriverObject != drv_obj || !(safe_hook = WvlGetSafeHook(pdo))) {
         status = STATUS_NOT_SUPPORTED;
         goto err_safe_hook;
