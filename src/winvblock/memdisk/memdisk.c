@@ -227,7 +227,7 @@ static NTSTATUS STDCALL WvMemdiskDriveDevice(
  */
 static VOID STDCALL WvMemdiskUnload(IN DRIVER_OBJECT * drv_obj) {
     ASSERT(drv_obj);
-    (VOID) drv_obj;
+    WvlUnusedParameter(drv_obj);
     WvlDeregisterMiniDriver(WvMemdiskMiniDriver);
   }
 

@@ -592,7 +592,7 @@ NTSTATUS STDCALL WvDummyIoctl(IN DEVICE_OBJECT * dev_obj, IN IRP * irp) {
     DEVICE_OBJECT * new_pdo;
 
     ASSERT(dev_obj);
-    (VOID) dev_obj;
+    WvlUnusedParameter(dev_obj);
     ASSERT(irp);
     io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     ASSERT(io_stack_loc);

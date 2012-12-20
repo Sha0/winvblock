@@ -279,7 +279,7 @@ static NTSTATUS STDCALL WvSafeHookDriveDevice(
  */
 static VOID STDCALL WvSafeHookUnload(IN DRIVER_OBJECT * drv_obj) {
     ASSERT(drv_obj);
-    (VOID) drv_obj;
+    WvlUnusedParameter(drv_obj);
     WvlDeregisterMiniDriver(WvSafeHookMiniDriver);
   }
 
@@ -295,7 +295,7 @@ static VOID WvSafeHookInitialProbe(IN DEVICE_OBJECT * dev_obj) {
     DEVICE_OBJECT * first_hook;
 
     ASSERT(dev_obj);
-    (VOID) dev_obj;
+    WvlUnusedParameter(dev_obj);
 
     /* Probe the first INT 0x13 vector for a safe hook */
     int_13h.Segment = 0;

@@ -711,7 +711,7 @@ static NTSTATUS STDCALL WvMainBusDeviceControlDetach(
     WVL_SP_BUS_NODE walker;
     WV_SP_DEV_T dev = NULL;
 
-    (VOID) dev_obj;
+    WvlUnusedParameter(dev_obj);
     ASSERT(irp);
     io_stack_loc = IoGetCurrentIrpStackLocation(irp);
     ASSERT(io_stack_loc);

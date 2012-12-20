@@ -132,8 +132,8 @@ static NTSTATUS STDCALL WvFilediskDriveDevice(
     IN DEVICE_OBJECT * pdo
   ) {
     ASSERT(drv_obj);
-    (VOID) drv_obj;
-    (VOID) pdo;
+    WvlUnusedParameter(drv_obj);
+    WvlUnusedParameter(pdo);
     return STATUS_NOT_SUPPORTED;
   }
 
@@ -145,7 +145,7 @@ static NTSTATUS STDCALL WvFilediskDriveDevice(
  */
 static VOID STDCALL WvFilediskUnload(IN DRIVER_OBJECT * drv_obj) {
     ASSERT(drv_obj);
-    (VOID) drv_obj;
+    WvlUnusedParameter(drv_obj);
     WvlDeregisterMiniDriver(WvFilediskMiniDriver);
   }
 

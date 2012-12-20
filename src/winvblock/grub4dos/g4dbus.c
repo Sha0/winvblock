@@ -237,7 +237,7 @@ static NTSTATUS STDCALL WvG4dDriveDevice(
  */
 static VOID STDCALL WvG4dUnload(IN DRIVER_OBJECT * drv_obj) {
     ASSERT(drv_obj);
-    (VOID) drv_obj;
+    WvlUnusedParameter(drv_obj);
     WvlDeregisterMiniDriver(WvG4dMiniDriver);
   }
 

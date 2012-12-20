@@ -364,7 +364,7 @@ static NTSTATUS STDCALL WvDriveDevice(
     NTSTATUS status;
 
     /* Ignore the main driver object that Windows will pass */
-    (VOID) driver_obj;
+    WvlUnusedParameter(driver_obj);
 
     /* Assume failure */
     status = STATUS_NOT_SUPPORTED;
@@ -1291,7 +1291,7 @@ static NTSTATUS WvStopDeviceThreadInThread(
     WV_S_DEV_EXT * dev_ext;
     LONG flags;
 
-    (VOID) c;
+    WvlUnusedParameter(c);
 
     ASSERT(dev_obj);
     dev_ext = dev_obj->DeviceExtension;
@@ -1325,7 +1325,7 @@ static NTSTATUS WvStopDeviceThreadInThread(
 static NTSTATUS WvTestDeviceThread(IN DEVICE_OBJECT * dev_obj, IN VOID * c) {
     WV_S_DEV_EXT * dev_ext;
 
-    (VOID) c;
+    WvlUnusedParameter(c);
 
     ASSERT(dev_obj);
     dev_ext = dev_obj->DeviceExtension;

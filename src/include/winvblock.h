@@ -26,6 +26,7 @@
  */
 
 #define WvlCountof(array) (sizeof (array) / sizeof *(array))
+#define WvlUnusedParameter(param) ((void) param)
 
 #define WVL_M_LIT "WinVBlock"
 #define WVL_M_WLIT L"WinVBlock"
