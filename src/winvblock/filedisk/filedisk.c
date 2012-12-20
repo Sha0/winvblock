@@ -54,6 +54,8 @@ extern VOID STDCALL WvFilediskDeleteClientSecurity(IN OUT PVOID *);
 DRIVER_INITIALIZE WvFilediskDriverEntry;
 
 /** Private function declarations. */
+static DRIVER_ADD_DEVICE WvFilediskDriveDevice;
+static DRIVER_UNLOAD WvFilediskUnload;
 static WVL_F_DISK_IO WvFilediskIo_;
 static NTSTATUS STDCALL WvFilediskPnpQueryId_(
     IN PDEVICE_OBJECT,
@@ -99,8 +101,8 @@ NTSTATUS WvFilediskDriverEntry(
         &WvFilediskMiniDriver,
         drv_obj,
         /* TODO */
-        0 /* WvFilediskDriveDevice */,
-        0 /* WvFilediskUnload */
+        WvFilediskDriveDevice,
+        WvFilediskUnload
       );
     if (!NT_SUCCESS(status))
       goto err_register;
@@ -111,6 +113,40 @@ NTSTATUS WvFilediskDriverEntry(
     err_register:
 
     return status;
+  }
+
+/**
+ * Called when we're asked to drive a PDO with an FDO
+ *
+ * @param DriverObject
+ *   The driver object provided by the caller
+ *
+ * @param PhysicalDeviceObject
+ *   The PDO that we are being asked to drive with an FDO
+ *
+ * @return
+ *   STATUS_NOT_SUPPORTED
+ */
+static NTSTATUS STDCALL WvFilediskDriveDevice(
+    IN DRIVER_OBJECT * drv_obj,
+    IN DEVICE_OBJECT * pdo
+  ) {
+    ASSERT(drv_obj);
+    (VOID) drv_obj;
+    (VOID) pdo;
+    return STATUS_NOT_SUPPORTED;
+  }
+
+/**
+ * Release resources and unwind state
+ *
+ * @param DriverObject
+ *   The driver object provided by the caller
+ */
+static VOID STDCALL WvFilediskUnload(IN DRIVER_OBJECT * drv_obj) {
+    ASSERT(drv_obj);
+    (VOID) drv_obj;
+    WvlDeregisterMiniDriver(WvFilediskMiniDriver);
   }
 
 /* Attach a file as a disk, based on an IRP. */
