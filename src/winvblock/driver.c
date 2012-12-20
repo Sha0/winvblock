@@ -56,6 +56,9 @@ extern DRIVER_INITIALIZE WvG4dDriverEntry;
 /* From safehook/probe.c */
 extern DRIVER_INITIALIZE WvSafeHookDriverEntry;
 
+/* From filedisk/filedisk.c */
+extern DRIVER_INITIALIZE WvFilediskDriverEntry;
+
 /** Public objects */
 DRIVER_OBJECT * WvDriverObj;
 UINT32 WvFindDisk;

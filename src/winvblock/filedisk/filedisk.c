@@ -50,6 +50,9 @@ extern VOID WvFilediskStopImpersonating(void);
 extern NTSTATUS STDCALL WvFilediskCreateClientSecurity(OUT PVOID *);
 extern VOID STDCALL WvFilediskDeleteClientSecurity(IN OUT PVOID *);
 
+/** Function declarations */
+DRIVER_INITIALIZE WvFilediskDriverEntry;
+
 /** Private function declarations. */
 static WVL_F_DISK_IO WvFilediskIo_;
 static NTSTATUS STDCALL WvFilediskPnpQueryId_(
@@ -68,7 +71,47 @@ static BOOLEAN STDCALL WvFilediskHotSwap_(
   );
 static WVL_F_THREAD_ITEM WvFilediskHotSwapThread_;
 
+/** Objects */
+static S_WVL_MINI_DRIVER * WvFilediskMiniDriver;
+
 /** Exported function definitions. */
+
+/**
+ * The mini-driver entry-point
+ *
+ * @param DriverObject
+ *   The driver object provided by the caller
+ *
+ * @param RegistryPath
+ *   The Registry path provided by the caller
+ *
+ * @return
+ *   The status of the operation
+ */
+NTSTATUS WvFilediskDriverEntry(
+    IN DRIVER_OBJECT * drv_obj,
+    IN UNICODE_STRING * reg_path
+  ) {
+    NTSTATUS status;
+
+    /* Register this mini-driver */
+    status = WvlRegisterMiniDriver(
+        &WvFilediskMiniDriver,
+        drv_obj,
+        /* TODO */
+        0 /* WvFilediskDriveDevice */,
+        0 /* WvFilediskUnload */
+      );
+    if (!NT_SUCCESS(status))
+      goto err_register;
+    ASSERT(WvFilediskMiniDriver);
+
+    return STATUS_SUCCESS;
+
+    err_register:
+
+    return status;
+  }
 
 /* Attach a file as a disk, based on an IRP. */
 NTSTATUS STDCALL WvFilediskAttach(IN PIRP irp) {
