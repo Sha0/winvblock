@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2009-2011, Shao Miller <shao.miller@yrdsb.edu.on.ca>.
+ * Copyright (C) 2009-2012, Shao Miller <sha0.miller@gmail.com>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
  *
@@ -22,8 +22,34 @@
 /**
  * @file
  *
- * File-backed disk specifics.
+ * File-backed disk specifics
  */
+
+/** Constants */
+
+/** Device flags for the Flags member of an S_WVL_FILEDISK */
+enum E_WVL_FILEDISK_FLAG {
+    CvWvlFilediskFlagStarted_,
+    CvWvlFilediskFlagStopping_,
+    CvWvlFilediskFlagRemoving_,
+    CvWvlFilediskFlagSurpriseRemoved_,
+    CvWvlFilediskFlagStarted = 1 << CvWvlFilediskFlagStarted_,
+    CvWvlFilediskFlagStopping = 1 << CvWvlFilediskFlagStopping_,
+    CvWvlFilediskFlagRemoving = 1 << CvWvlFilediskFlagRemoving_,
+    CvWvlFilediskFlagSurpriseRemoved = 1 << CvWvlFilediskFlagSurpriseRemoved_,
+    CvWvlFilediskFlagZero = 0
+  };
+
+enum E_WVL_FILEDISK_MEDIA_TYPE {
+    CvWvlFilediskMediaTypeFloppy,
+    CvWvlFilediskMediaTypeHard,
+    CvWvlFilediskMediaTypeOptical,
+    CvWvlFilediskMediaTypes
+  };
+
+/** Object types */
+typedef struct S_WVL_FILEDISK S_WVL_FILEDISK;
+typedef enum E_WVL_FILEDISK_MEDIA_TYPE E_WVL_FILEDISK_MEDIA_TYPE;
 
 typedef struct WV_FILEDISK_T {
     WV_S_DEV_EXT DevExt;
@@ -41,5 +67,19 @@ typedef struct WV_FILEDISK_T {
 extern NTSTATUS STDCALL WvFilediskAttach(IN PIRP);
 extern WV_SP_FILEDISK_T STDCALL WvFilediskCreatePdo(IN WVL_E_DISK_MEDIA_TYPE);
 extern VOID STDCALL WvFilediskHotSwap(IN WV_SP_FILEDISK_T, IN PCHAR);
+
+/** Struct/union type definitions */
+struct S_WVL_FILEDISK {
+    /** This must be the first member of all extension types */
+    WV_S_DEV_EXT DeviceExtension[1];
+
+    /**
+     * Filedisk device flags.  Must be accessed atomically (such as with
+     * InterlockedXxx functions)
+     */
+    volatile LONG Flags;
+    /** The media type */
+    E_WVL_FILEDISK_MEDIA_TYPE MediaType;
+  };
 
 #endif  /* WV_M_FILEDISK_H_ */
