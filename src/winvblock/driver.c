@@ -1,4 +1,6 @@
 /**
+ * Copyright (C) 2016, Synthetel Corporation.
+ *   Author: Shao Miller <winvblock@synthetel.com>
  * Copyright (C) 2009-2012, Shao Miller <sha0.miller@gmail.com>.
  * Copyright 2006-2008, V.
  * For WinAoE contact information, see http://winaoe.org/
@@ -25,6 +27,7 @@
  * Driver specifics.
  */
 
+#include <ntifs.h>
 #include <ntddk.h>
 #include <scsi.h>
 

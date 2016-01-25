@@ -1,4 +1,6 @@
 /**
+ * Copyright (C) 2016, Synthetel Corporation.
+ *   Author: Shao Miller <winvblock@synthetel.com>
  * Copyright (C) 2009-2012, Shao Miller <sha0.miller@gmail.com>.
  *
  * This file is part of WinVBlock, derived from WinAoE.
@@ -72,7 +74,11 @@ extern VOID STDCALL WvFilediskHotSwap(IN WV_SP_FILEDISK_T, IN PCHAR);
 struct S_WVL_FILEDISK {
     /** This must be the first member of all extension types */
     WV_S_DEV_EXT DeviceExtension[1];
-
+    /* Security context for file I/O, if impersonating */
+    SECURITY_CLIENT_CONTEXT * SecurityContext;
+    /* Offset (in bytes) into the file */
+    LARGE_INTEGER FileOffset;
+    HANDLE FileHandle;
     /**
      * Filedisk device flags.  Must be accessed atomically (such as with
      * InterlockedXxx functions)
@@ -80,6 +86,12 @@ struct S_WVL_FILEDISK {
     volatile LONG Flags;
     /** The media type */
     E_WVL_FILEDISK_MEDIA_TYPE MediaType;
+    /* The size of the disk, in logical blocks (sectors) */
+    ULONGLONG LbaDiskSize;
+    /* The size of a logical block (sector) */
+    UINT32 SectorSize;
+    /* Do we impersonate the user who opened the file? */
+    BOOLEAN Impersonate;
   };
 
 #endif  /* WV_M_FILEDISK_H_ */

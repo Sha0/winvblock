@@ -1,4 +1,6 @@
 /**
+ * Copyright (C) 2016, Synthetel Corporation.
+ *   Author: Shao Miller <winvblock@synthetel.com>
  * Copyright (C) 2012, Shao Miller <sha0.miller@gmail.com>.
  *
  * This file is part of WinVBlock, originally derived from WinAoE.
@@ -24,6 +26,7 @@
  */
 
 #include <stdio.h>
+#include <ntifs.h>
 #include <ntddk.h>
 #include <initguid.h>
 
